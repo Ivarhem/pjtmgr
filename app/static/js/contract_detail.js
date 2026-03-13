@@ -38,12 +38,30 @@ let lastForecastTotals = { sales: 0, gp: 0 };
 let lastReceiptTotal = 0;
 let fullLedger = [];       // 전체 원장 (멀티뷰 필터용)
 let fullReceipts = [];     // 전체 입금 (멀티뷰 필터용)
+let fullAllocations = [];  // 전체 배분 (기간 필터용)
 let me = null;  // 현재 사용자 정보 (permissions 포함)
 // 통합/분리 뷰 모드
 // TODO: 통합 보기 기능 방향 결정 필요 — 현재 기본값 분리(off), 토글 UI 숨김 상태.
 //       유지할 경우 토글 UI 노출 방식 결정, 불필요하면 관련 코드 제거.
 const UNIFIED_VIEW_KEY = 'contract-unified-view';
 let unifiedView = localStorage.getItem(UNIFIED_VIEW_KEY) === 'true'; // 기본값: 분리
+// 현재 period 완료 여부
+function _isPeriodCompleted() { return periodData?.is_completed === true; }
+
+/** 컬럼 정의 배열의 editable을 완료 상태 체크로 래핑 */
+function _wrapEditableWithCompleted(colDefs) {
+  colDefs.forEach(col => {
+    if (col.children) { _wrapEditableWithCompleted(col.children); return; }
+    const orig = col.editable;
+    if (orig === false || orig === undefined) return;
+    col.editable = (p) => {
+      if (_isPeriodCompleted()) return false;
+      return typeof orig === 'function' ? orig(p) : orig;
+    };
+  });
+  return colDefs;
+}
+
 // dirty state tracking
 let dirtyForecast = false;
 let dirtyLedger = false;
@@ -158,6 +176,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sel = document.getElementById('repeat-customer');
     sel.innerHTML = '<option value="">-- 선택 --</option>' +
       customers.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    // Forecast 매입 기준 체크박스 초기화
+    const chkFc = document.getElementById('repeat-use-forecast');
+    chkFc.checked = false;
+    document.getElementById('repeat-amount').disabled = false;
     document.getElementById('modal-repeat').showModal();
   });
 });
@@ -215,15 +237,8 @@ async function loadAll() {
   const ledger = await ledgerRes.json();
   const receipts = await receiptsRes.json();
   const allocations = allocRes.ok ? await allocRes.json() : [];
-  // allocation 맵 구축
-  const allocMap = {};
-  let totalAllocated = 0;
-  for (const a of allocations) {
-    allocMap[a.transaction_line_id] = (allocMap[a.transaction_line_id] || 0) + a.matched_amount;
-    totalAllocated += a.matched_amount;
-  }
-  window._allocationMap = allocMap;
-  window._lastAllocatedTotal = totalAllocated;
+  // allocation 맵 구축 (전체 기준 — 입금 컬럼 등에서 사용)
+  _buildAllocationMap(allocations);
 
   // Period 선택을 먼저 설정 (필터링에 필요)
   viewMode = 'period';
@@ -232,8 +247,10 @@ async function loadAll() {
 
   fullLedger = ledger;
   fullReceipts = receipts;
+  fullAllocations = allocations;
   const filteredLedger = _filterBySelectedPeriods(ledger);
   const filteredReceipts = _filterBySelectedPeriods(receipts);
+  const filteredAllocations = _filterBySelectedPeriods(allocations);
   lastLedger = filteredLedger;
   lastReceipts = filteredReceipts;
   lastReceiptTotal = filteredReceipts.reduce((s, p) => s + (p.amount || 0), 0);
@@ -249,10 +266,23 @@ async function loadAll() {
   const mergedRows = unifiedView ? _mergeLedgerAndReceipts(filteredLedger, filteredReceipts) : filteredLedger;
   initLedgerGrid(mergedRows);
   initReceiptGrid(filteredReceipts);
-  initReceiptMatchGrid(allocations);
+  initReceiptMatchGrid(filteredAllocations);
   applyViewMode();
 
   markCleanAll();
+
+  // 완료된 기간은 편집 버튼 숨김
+  if (_isPeriodCompleted()) {
+    setElementHidden(document.querySelector('.btn-save-forecast'), true);
+    setElementHidden(document.getElementById('btn-fc-edit-expected'), true);
+    ['btn-save-ledger', 'btn-add-ledger-bottom', 'btn-delete-ledger',
+     'btn-confirm-ledger', 'dropdown-ledger-add', 'btn-bulk-confirm'
+    ].forEach(id => setElementHidden(document.getElementById(id), true));
+    ['btn-save-receipt', 'btn-add-receipt', 'btn-add-receipt-bottom', 'btn-delete-receipt',
+     'dropdown-receipt-add', 'btn-add-receipt-match'
+    ].forEach(id => { const el = document.getElementById(id); if (el) setElementHidden(el, true); });
+  }
+
   if (window.location.hash === '#period') {
     window.history.replaceState(null, '', window.location.pathname);
   }
@@ -777,6 +807,17 @@ function _getSelectedMonthRange() {
 }
 
 /** revenue_month 기반으로 선택된 period 월 범위에 해당하는 행만 필터 */
+function _buildAllocationMap(allocations) {
+  const allocMap = {};
+  let totalAllocated = 0;
+  for (const a of allocations) {
+    allocMap[a.transaction_line_id] = (allocMap[a.transaction_line_id] || 0) + a.matched_amount;
+    totalAllocated += a.matched_amount;
+  }
+  window._allocationMap = allocMap;
+  window._lastAllocatedTotal = totalAllocated;
+}
+
 function _filterBySelectedPeriods(rows) {
   const { minMonth, maxMonth } = _getSelectedMonthRange();
   if (!minMonth || !maxMonth) return rows;
@@ -814,7 +855,7 @@ async function switchToMultiView() {
   renderGpSummary();
   initAllForecastGrid(filtered);
 
-  // 원장/입금 그리드 갱신
+  // 원장/입금/배분 그리드 갱신
   const mergedRows = unifiedView ? _mergeLedgerAndReceipts(filteredLedger, filteredReceipts) : filteredLedger;
   if (ledgerApi) {
     ledgerApi.setGridOption('rowData', mergedRows);
@@ -823,6 +864,12 @@ async function switchToMultiView() {
   if (receiptApi) {
     receiptApi.setGridOption('rowData', filteredReceipts);
     refreshReceiptSummary();
+  }
+  const filteredAllocations = _filterBySelectedPeriods(fullAllocations);
+  if (receiptMatchApi) {
+    receiptMatchApi.setGridOption('rowData', filteredAllocations);
+    receiptMatchApi.setGridOption('domLayout', filteredAllocations.length > 8 ? 'normal' : 'autoHeight');
+    refreshReceiptMatchSummary(filteredAllocations);
   }
 
   // 멀티뷰에서는 읽기 전용 — 편집 버튼 숨김
@@ -852,19 +899,25 @@ function switchToPeriodView() {
   selectedPeriodIds.add(CONTRACT_PERIOD_ID);
   renderPeriodTabs(allPeriods);
 
-  // 편집 버튼 복원
-  setElementHidden(document.querySelector('.btn-save-forecast'), false);
-  setElementHidden(document.getElementById('btn-fc-edit-expected'), false);
+  // 편집 버튼 복원 (완료된 기간은 읽기 전용 유지)
+  const completed = _isPeriodCompleted();
+  setElementHidden(document.querySelector('.btn-save-forecast'), completed);
+  setElementHidden(document.getElementById('btn-fc-edit-expected'), completed);
   ['btn-save-ledger', 'btn-add-ledger-bottom', 'btn-delete-ledger',
    'btn-confirm-ledger', 'dropdown-ledger-add', 'btn-bulk-confirm'
-  ].forEach(id => setElementHidden(document.getElementById(id), false));
+  ].forEach(id => setElementHidden(document.getElementById(id), completed));
+  // 입금 관련 버튼
+  ['btn-save-receipt', 'btn-add-receipt', 'btn-add-receipt-bottom', 'btn-delete-receipt',
+   'dropdown-receipt-add', 'btn-add-receipt-match'
+  ].forEach(id => { const el = document.getElementById(id); if (el) setElementHidden(el, completed); });
 
   // 헤더 복원
   renderHeader(currentContract, periodData);
 
-  // 원장/입금을 현재 Period 범위로 필터
+  // 원장/입금/배분을 현재 Period 범위로 필터
   const filteredLedger = _filterBySelectedPeriods(fullLedger);
   const filteredReceipts = _filterBySelectedPeriods(fullReceipts);
+  const filteredAllocations = _filterBySelectedPeriods(fullAllocations);
   lastLedger = filteredLedger;
   lastReceipts = filteredReceipts;
   lastReceiptTotal = filteredReceipts.reduce((s, p) => s + (p.amount || 0), 0);
@@ -874,8 +927,13 @@ function switchToPeriodView() {
     refreshLedgerSummary();
   }
   if (receiptApi) {
-    receiptApi.setGridOption('rowData', fullReceipts);
+    receiptApi.setGridOption('rowData', filteredReceipts);
     refreshReceiptSummary();
+  }
+  if (receiptMatchApi) {
+    receiptMatchApi.setGridOption('rowData', filteredAllocations);
+    receiptMatchApi.setGridOption('domLayout', filteredAllocations.length > 8 ? 'normal' : 'autoHeight');
+    refreshReceiptMatchSummary(filteredAllocations);
   }
 
   // Forecast 그리드 복원 — 원래 period 데이터로
@@ -900,9 +958,10 @@ function renderGpSummary() {
   const gpPct = totalSales > 0 ? gp / totalSales : null;
   const fc = lastForecastTotals;
 
-  // 미수금 = 매출확정 - 배분완료 (Allocation 기반)
+  // 미수금 = 매출확정 - 배분완료 (Allocation 기반, 현재 필터 기준)
   const receiptTotal = lastReceiptTotal;
-  const allocatedTotal = window._lastAllocatedTotal || 0;
+  const allocMap = window._allocationMap || {};
+  const allocatedTotal = rows.filter(r => r.type === '매출' && confirmed(r)).reduce((s, r) => s + (allocMap[r.transaction_line_id] || 0), 0);
   const ar = totalSales - allocatedTotal;
 
   document.getElementById('gp-summary').innerHTML = `
@@ -914,7 +973,7 @@ function renderGpSummary() {
       <div class="summary-item highlight"><div class="summary-label">GP</div><div class="summary-value">${fmt(gp)}<span class="unit">원</span></div></div>
       <div class="summary-item highlight"><div class="summary-label">GP%</div><div class="summary-value">${fmtPct(gpPct)}</div></div>
       <div class="summary-item"><div class="summary-label">입금 합계</div><div class="summary-value">${fmt(receiptTotal)}<span class="unit">원</span></div></div>
-      <div class="summary-item ${ar > 0 ? 'warn' : ''}"><div class="summary-label">미수(AR)</div><div class="summary-value">${fmt(ar)}<span class="unit">원</span></div></div>
+      <div class="summary-item ${ar > 0 ? 'warn' : ''}"><div class="summary-label">${ar < 0 ? '선수금' : '미수(AR)'}</div><div class="summary-value">${fmt(Math.abs(ar))}<span class="unit">원</span></div></div>
     </div>
     <p class="data-note">※ 확정 기준. 예정 상태는 제외. 미수 = 매출확정 - 배분완료. VAT 별도.</p>`;
 }
@@ -963,30 +1022,26 @@ function initForecastGrid(forecasts) {
 
   // 연도별 그룹 컬럼 생성 (여러 연도에 걸치는 경우 그룹 헤더 사용)
   const years = [...new Set(months.map(m => parseInt(m.slice(0, 4))))];
+  const useFlex = months.length <= 12;
+  const monthColBase = { editable: () => !_isPeriodCompleted(), type: 'numericColumn',
+    valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
+    valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+  };
+  const monthColSize = useFlex ? { flex: 1, minWidth: 80 } : { width: 90 };
   const monthColDefs = years.length > 1
     ? years.map(year => {
         const yearMonths = months.filter(m => m.startsWith(`${year}-`));
         return {
           headerName: `${year}년`,
           children: yearMonths.map(key => ({
-            field: key,
-            headerName: `${parseInt(key.slice(5, 7))}월`,
-            editable: true,
-            type: 'numericColumn',
-            width: 90,
-            valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
-            valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+            field: key, headerName: `${parseInt(key.slice(5, 7))}월`,
+            ...monthColBase, ...monthColSize,
           })),
         };
       })
     : months.map(key => ({
-        field: key,
-        headerName: `${parseInt(key.slice(5, 7))}월`,
-        editable: true,
-        type: 'numericColumn',
-        width: 100,
-        valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
-        valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+        field: key, headerName: `${parseInt(key.slice(5, 7))}월`,
+        ...monthColBase, ...(useFlex ? { flex: 1, minWidth: 80 } : { width: 100 }),
       }));
 
   const colDefs = [
@@ -1001,7 +1056,7 @@ function initForecastGrid(forecasts) {
   const el = document.getElementById('grid-forecast');
   el.innerHTML = '';
   forecastApi = agGrid.createGrid(el, {
-    columnDefs: colDefs,
+    columnDefs: _wrapEditableWithCompleted(colDefs),
     rowData: [salesRow, gpRow],
     defaultColDef: { resizable: true, sortable: false },
     getRowClass: p => p.data?._rowType === 'sales' ? 'forecast-row-sales' : 'forecast-row-gp',
@@ -1243,6 +1298,7 @@ function initAllForecastGrid(allForecasts) {
   gpRow._total = months.reduce((s, k) => s + (gpRow[k] || 0), 0);
 
   // 연도별 그룹 컬럼 생성
+  const colSize = months.length <= 12 ? { flex: 1, minWidth: 80 } : { width: 90 };
   const yearGroups = years.map(year => {
     const yearMonths = months.filter(m => m.startsWith(`${year}-`));
     return {
@@ -1254,7 +1310,7 @@ function initAllForecastGrid(allForecasts) {
           headerName: `${monthNum}월`,
           editable: false,
           type: 'numericColumn',
-          width: 90,
+          ...colSize,
           valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
           cellClass: 'cell-readonly-soft',
         };
@@ -1282,6 +1338,9 @@ function initAllForecastGrid(allForecasts) {
     ensureDomOrder: true,
     domLayout: 'autoHeight',
   });
+  if (months.length > 12) {
+    forecastApi.autoSizeAllColumns();
+  }
 }
 
 // ── Ledger Grid (매출/매입 실적 + 통합시 입금) ──────────────────
@@ -1305,14 +1364,14 @@ function initLedgerGrid(ledgerRows) {
   };
   const colDefs = [
     { headerName: '', field: '_chk', width: 40, pinned: 'left', lockPosition: true,
-      headerCheckboxSelection: true, checkboxSelection: true,
+      headerCheckboxSelection: true, headerCheckboxSelectionFilteredOnly: true, checkboxSelection: true,
       editable: false, sortable: false, resizable: false, suppressMovable: true },
     { field: 'revenue_month', headerName: '귀속월', editable: true, width: 110,
       cellEditor: MonthCellEditor,
       valueFormatter: p => p.value ? p.value.slice(0, 7) : '',
       valueSetter: p => { p.data.revenue_month = toMonthFirst(p.newValue); return true; },
       cellClassRules: { 'cell-missing': p => p.data._missingFields?.includes('revenue_month') } },
-    { field: 'type', headerName: '구분', editable: true, width: 80,
+    { field: 'type', headerName: '구분', editable: () => !_isPeriodCompleted(), width: 80,
       cellEditor: 'agSelectCellEditor',
       cellEditorParams: () => ({ values: _ledgerTypeValues() }),
       cellClassRules: { 'cell-missing': p => p.data._missingFields?.includes('type') },
@@ -1334,34 +1393,27 @@ function initLedgerGrid(ledgerRows) {
       cellEditorParams: { values: ['예정', '확정'] },
       cellRenderer: p => p.node.rowPinned ? '' : renderStatusBadge(p.value),
     },
-    { field: 'matched_amount', headerName: '배분', width: 90,
+    { field: '_receipt_status', headerName: '입금', width: 160,
       editable: false,
       valueGetter: p => {
         if (p.node.rowPinned || p.data.type !== '매출') return null;
+        const amt = p.data.amount || 0;
+        if (amt <= 0) return null;
         const alloc = (window._allocationMap || {})[p.data.transaction_line_id] || 0;
-        return alloc;
+        return amt - alloc;
       },
-      valueFormatter: p => p.value != null ? fmtNumber(p.value) : '',
-      cellClassRules: {
-        'cell-paid': p => p.data.type === '매출' && ((window._allocationMap || {})[p.data.transaction_line_id] || 0) >= (p.data.amount || 0),
-        'cell-unpaid': p => p.data.type === '매출' && ((window._allocationMap || {})[p.data.transaction_line_id] || 0) < (p.data.amount || 0),
+      cellRenderer: p => {
+        if (p.value == null) return '';
+        if (p.value <= 0) return '<span class="receipt-badge receipt-badge-paid">완료</span>';
+        return `<span class="receipt-badge receipt-badge-unpaid">${fmt(p.value)}원 미수</span>`;
       },
     },
     { field: 'description', headerName: '메모', editable: true, flex: 1 },
-    { headerName: '', width: 40, pinned: 'right', sortable: false,
-      cellRenderer: p => {
-        if (p.node.rowPinned || p.data.type === '입금') return '';
-        const btn = document.createElement('button');
-        btn.className = 'btn-icon'; btn.title = '복제';
-        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
-        btn.onclick = () => cloneLedgerRows(p.data);
-        return btn;
-      }, editable: false },
   ];
 
   const el = document.getElementById('grid-ledger');
   ledgerApi = agGrid.createGrid(el, {
-    columnDefs: colDefs,
+    columnDefs: _wrapEditableWithCompleted(colDefs),
     rowData: ledgerRows,
     defaultColDef: { resizable: true, sortable: false },
     tooltipShowDelay: 300,
@@ -1379,7 +1431,31 @@ function initLedgerGrid(ledgerRows) {
     },
     onCellValueChanged: (e) => {
       dirtyLedger = true; _updateDirtyIndicators();
-      if (e.column.getColId() === 'type') ledgerApi.redrawRows({ rowNodes: [e.node] });
+      if (e.column.getColId() === 'type') {
+        ledgerApi.redrawRows({ rowNodes: [e.node] });
+        // 매입으로 변경 시 같은 귀속월 매출의 계산서발행일 + Forecast 기준 금액 자동 입력
+        if (e.newValue === '매입' && e.data.revenue_month) {
+          const month = e.data.revenue_month;
+          const refreshCols = [];
+          // 계산서발행일
+          if (!e.data.date) {
+            let invoiceDate = null;
+            ledgerApi.forEachNode(n => {
+              if (!n.rowPinned && n.data.type === '매출' && n.data.revenue_month === month && n.data.date) {
+                invoiceDate = n.data.date;
+              }
+            });
+            if (invoiceDate) { e.data.date = invoiceDate; refreshCols.push('date'); }
+          }
+          // 금액: Forecast 매출 - GP
+          if (!e.data.amount) {
+            const costMap = _getForecastCostMap();
+            const cost = costMap[month] || 0;
+            if (cost > 0) { e.data.amount = cost; refreshCols.push('amount'); }
+          }
+          if (refreshCols.length) e.api.refreshCells({ rowNodes: [e.node], columns: refreshCols });
+        }
+      }
       refreshLedgerSummary();
     },
     isExternalFilterPresent: () => _hasLedgerFilter(),
@@ -1388,39 +1464,6 @@ function initLedgerGrid(ledgerRows) {
   });
   applyColumnOrder('ledger', ledgerApi);
   addPasteHandlerLedger(el, ledgerApi);
-  refreshLedgerSummary();
-}
-
-function cloneLedgerRows(sourceRow) {
-  // 같은 귀속월 + 구분(매출/매입)의 전체 행 수집
-  const srcMonth = sourceRow.revenue_month;
-  const srcType = sourceRow.type;
-  const siblings = [];
-  ledgerApi.forEachNode(n => {
-    if (!n.rowPinned && n.data.revenue_month === srcMonth && n.data.type === srcType) {
-      siblings.push(n.data);
-    }
-  });
-
-  const count = siblings.length;
-  const monthLabel = srcMonth ? srcMonth.slice(0, 7) : '?';
-  const targetInput = prompt(
-    `${monthLabel} ${srcType} ${count}건을 복제합니다.\n대상 귀속월을 입력하세요. (예: 2025-08)`,
-    ''
-  );
-  if (!targetInput) return;
-
-  const targetMonth = toMonthFirst(targetInput);
-  if (!targetMonth) { alert('올바른 월 형식이 아닙니다. (예: 2025-08)'); return; }
-
-  const newRows = siblings.map(row => ({
-    ...row,
-    transaction_line_id: null,
-    row_key: null,
-    revenue_month: targetMonth,
-  }));
-  ledgerApi.applyTransaction({ add: newRows });
-  dirtyLedger = true; _updateDirtyIndicators();
   refreshLedgerSummary();
 }
 
@@ -1441,7 +1484,7 @@ function refreshLedgerSummary() {
     `<span class="summary-entry"><span class="label">매입(확정)</span> <span class="value summary-value-expense">${fmt(cost)}원</span></span>` +
     `<span class="summary-entry"><span class="label">GP</span> <span class="value">${fmt(gp)}원</span></span>` +
     `<span class="summary-entry"><span class="label">입금</span> <span class="value summary-value-receipt">${fmt(paid)}원</span></span>` +
-    `<span class="summary-entry"><span class="label">미수</span> <span class="value${ar > 0 ? ' cell-warn' : ''}">${fmt(ar)}원</span></span>`;
+    `<span class="summary-entry"><span class="label">${ar < 0 ? '선수금' : '미수'}</span> <span class="value${ar > 0 ? ' cell-warn' : ''}">${fmt(Math.abs(ar))}원</span></span>`;
   html += `<span class="summary-entry"><span class="label">행 수</span> <span class="value">${rows.length}</span></span>`;
   document.getElementById('ledger-summary-bar').innerHTML = html;
 }
@@ -1450,6 +1493,13 @@ async function deleteSelectedLedgerRows() {
   if (!me?.permissions?.can_delete_transaction_line) { alert('관리자만 삭제할 수 있습니다.'); return; }
   const selected = ledgerApi.getSelectedRows();
   if (!selected.length) { alert('삭제할 행을 선택해주세요.'); return; }
+  // 입금 매칭이 있는 행 사전 차단
+  const allocMap = window._allocationMap || {};
+  const matched = selected.filter(r => r.type === '매출' && r.transaction_line_id && (allocMap[r.transaction_line_id] || 0) > 0);
+  if (matched.length) {
+    alert(`입금 매칭이 존재하는 ${matched.length}건은 삭제할 수 없습니다.\n매칭을 먼저 해제하세요.`);
+    return;
+  }
   if (!confirm(`선택한 ${selected.length}건을 삭제하시겠습니까?`)) return;
   const toRemove = [];
   for (const row of selected) {
@@ -1458,7 +1508,11 @@ async function deleteSelectedLedgerRows() {
       if (!r.ok) { alert(`입금 삭제 실패: ${row.customer_name || ''} ${row.date || ''}`); continue; }
     } else if (row.transaction_line_id) {
       const r = await fetch(`/api/v1/transaction-lines/${row.transaction_line_id}`, { method: 'DELETE' });
-      if (!r.ok) { alert(`삭제 실패: ${row.customer_name || ''} ${row.revenue_month || ''}`); continue; }
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        alert(err.detail || `삭제 실패: ${row.customer_name || ''} ${row.revenue_month || ''}`);
+        continue;
+      }
     }
     toRemove.push(row);
   }
@@ -1610,21 +1664,15 @@ async function reloadLedger() {
   customers = await customersRes.json();
   const receipts = await receiptsRes.json();
   const allocations = allocRes.ok ? await allocRes.json() : [];
-  // allocation 맵 구축: transaction_line_id → 배분 합계
-  const allocMap = {};
-  let totalAllocated = 0;
-  for (const a of allocations) {
-    allocMap[a.transaction_line_id] = (allocMap[a.transaction_line_id] || 0) + a.matched_amount;
-    totalAllocated += a.matched_amount;
-  }
-  window._allocationMap = allocMap;
-  window._lastAllocatedTotal = totalAllocated;
+  _buildAllocationMap(allocations);
   const _dl = document.getElementById('customer-list');
   if (_dl) _dl.innerHTML = customers.map(c => `<option value="${c.name}">`).join('');
   fullLedger = ledger;
   fullReceipts = receipts;
+  fullAllocations = allocations;
   const filteredLedger = _filterBySelectedPeriods(ledger);
   const filteredReceipts = _filterBySelectedPeriods(receipts);
+  const filteredAllocations = _filterBySelectedPeriods(allocations);
   lastLedger = filteredLedger;
   lastReceipts = filteredReceipts;
   lastReceiptTotal = filteredReceipts.reduce((s, p) => s + (p.amount || 0), 0);
@@ -1638,10 +1686,11 @@ async function reloadLedger() {
   }
   // 배분 현황 그리드 갱신
   if (receiptMatchApi) {
-    receiptMatchApi.setGridOption('rowData', allocations);
-    refreshReceiptMatchSummary(allocations);
+    receiptMatchApi.setGridOption('rowData', filteredAllocations);
+    receiptMatchApi.setGridOption('domLayout', filteredAllocations.length > 8 ? 'normal' : 'autoHeight');
+    refreshReceiptMatchSummary(filteredAllocations);
   } else {
-    initReceiptMatchGrid(allocations);
+    initReceiptMatchGrid(filteredAllocations);
   }
   renderGpSummary();
 }
@@ -1714,11 +1763,23 @@ function _lastLedgerRowOfType(targetType) {
   return last;
 }
 
+function _findOldestEmptyMonth(rowType) {
+  // 사업기간 내에서 해당 구분(매출/매입)의 행이 없는 가장 오래된 월 탐색
+  const months = _getPeriodMonths();
+  if (!months.length || !ledgerApi) return null;
+  const existingMonths = new Set();
+  ledgerApi.forEachNode(n => {
+    if (!n.rowPinned && n.data.type === rowType) existingMonths.add(n.data.revenue_month);
+  });
+  return months.find(m => !existingMonths.has(m)) || null;
+}
+
 function addLedgerRow(scrollToNew, type) {
   const today = new Date();
   const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
-  const rowType = type || '매출';
+  const rowType = type || '매입';
   const prev = _lastLedgerRowOfType(rowType);
+  const emptyMonth = _findOldestEmptyMonth(rowType);
   let newRow;
   if (rowType === '입금') {
     const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -1732,13 +1793,24 @@ function addLedgerRow(scrollToNew, type) {
       description: '',
     };
   } else {
+    const month = emptyMonth || prev?.revenue_month || ym;
     newRow = {
-      revenue_month: prev?.revenue_month || ym,
+      revenue_month: month,
       type: rowType,
       customer_name: prev?.customer_name || '',
       amount: 0,
       status: '예정',
     };
+    // 매입: 같은 귀속월 매출에서 발행일, Forecast에서 금액 자동 입력
+    if (rowType === '매입') {
+      let salesRow = null;
+      ledgerApi.forEachNode(n => {
+        if (!n.rowPinned && n.data.type === '매출' && n.data.revenue_month === month) salesRow = n.data;
+      });
+      if (salesRow?.date) newRow.date = salesRow.date;
+      const costMap = _getForecastCostMap();
+      if (costMap[month] > 0) newRow.amount = costMap[month];
+    }
   }
   const res = ledgerApi.applyTransaction({ add: [newRow] });
   dirtyLedger = true; _updateDirtyIndicators();
@@ -1854,6 +1926,21 @@ async function _openAddPeriodModal() {
 function setupModals() {
   document.getElementById('btn-repeat-cancel').addEventListener('click', () => document.getElementById('modal-repeat').close());
   document.getElementById('btn-repeat-submit').addEventListener('click', generateRepeatRows);
+
+  // Forecast 매입 기준 체크박스: 매입 선택 시만 활성, 체크 시 금액 비활성
+  const repeatType = document.getElementById('repeat-line-type');
+  const repeatChk = document.getElementById('repeat-use-forecast');
+  const repeatAmt = document.getElementById('repeat-amount');
+  repeatChk.addEventListener('change', () => {
+    repeatAmt.disabled = repeatChk.checked;
+    if (repeatChk.checked) repeatAmt.value = '';
+  });
+  repeatType.addEventListener('change', () => {
+    if (repeatType.value !== '매입') {
+      repeatChk.checked = false;
+      repeatAmt.disabled = false;
+    }
+  });
   document.getElementById('add-period-invoice-day-type').addEventListener('change', (e) => {
     setElementHidden(document.getElementById('label-add-period-invoice-day'), e.target.value !== '특정일');
   });
@@ -1974,27 +2061,53 @@ function _calcInvoiceDate(revenueMonth, src) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
+function _getForecastCostMap() {
+  // Forecast 그리드에서 월별 cost(매출 - GP) 맵 생성
+  const costMap = {};
+  if (!forecastApi) return costMap;
+  const rows = [];
+  forecastApi.forEachNode(n => rows.push(n.data));
+  const salesRow = rows.find(r => r._rowType === 'sales');
+  const gpRow = rows.find(r => r._rowType === 'gp');
+  if (!salesRow || !gpRow) return costMap;
+  const months = _getPeriodMonths();
+  months.forEach(m => {
+    const rev = salesRow[m] || 0;
+    const gp = gpRow[m] || 0;
+    costMap[m] = Math.max(0, rev - gp);
+  });
+  return costMap;
+}
+
 function generateRepeatRows() {
   const start = document.getElementById('repeat-start').value;
   const end = document.getElementById('repeat-end').value;
   const type = document.getElementById('repeat-line-type').value; // 매출 / 매입
   const customer_name = document.getElementById('repeat-customer').value;
+  const useForecast = document.getElementById('repeat-use-forecast').checked;
   const amount = parseInt(document.getElementById('repeat-amount').value) || 0;
   const desc = document.getElementById('repeat-desc').value;
 
-  if (!start || !end || amount <= 0) { alert('시작월, 종료월, 금액을 입력하세요.'); return; }
+  if (!start || !end) { alert('시작월, 종료월을 입력하세요.'); return; }
+  if (!useForecast && amount <= 0) { alert('금액을 입력하세요.'); return; }
+
+  const costMap = useForecast ? _getForecastCostMap() : {};
 
   const rows = [];
   let cur = new Date(start + '-01');
   const endDate = new Date(end + '-01');
   while (cur <= endDate) {
     const ym = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-01`;
-    const row = { revenue_month: ym, type, customer_name, amount, description: desc };
-    const invoiceDate = _calcInvoiceDate(ym, periodData);
-    if (invoiceDate) row.date = invoiceDate;
-    rows.push(row);
+    const rowAmount = useForecast ? (costMap[ym] || 0) : amount;
+    if (rowAmount > 0) {
+      const row = { revenue_month: ym, type, customer_name, amount: rowAmount, description: desc };
+      const invoiceDate = _calcInvoiceDate(ym, periodData);
+      if (invoiceDate) row.date = invoiceDate;
+      rows.push(row);
+    }
     cur.setMonth(cur.getMonth() + 1);
   }
+  if (rows.length === 0) { alert('생성할 행이 없습니다. Forecast 데이터를 확인하세요.'); return; }
   ledgerApi.applyTransaction({ add: rows });
   dirtyLedger = true; _updateDirtyIndicators();
   refreshLedgerSummary();
@@ -2108,7 +2221,7 @@ class MonthCellEditor {
     const v = this.input.value; // YYYY-MM
     return v ? v + '-01' : this.value;
   }
-  isPopup() { return false; }
+  isPopup() { return true; }
 }
 
 // ── 날짜 선택 셀 에디터 (input type="date") ──────────────────────
@@ -2184,7 +2297,7 @@ class DateCellEditor {
     const normalized = _normalizeDate(this.input.value);
     return normalized || this.value;
   }
-  isPopup() { return false; }
+  isPopup() { return true; }
 }
 
 // ── 거래처 검색 셀 에디터 ────────────────────────────────────────
@@ -2204,7 +2317,7 @@ class CustomerCellEditor {
 
     this.dropdown = document.createElement('div');
     this.dropdown.className = 'ag-cell-customer-dropdown is-hidden';
-    this.container.appendChild(this.dropdown);
+    document.body.appendChild(this.dropdown);
 
     this.input.addEventListener('input', () => this._renderList());
     this.input.addEventListener('focus', () => this._renderList());
@@ -2265,6 +2378,11 @@ class CustomerCellEditor {
     html += `<div class="cust-option-new">+ 신규 거래처 등록</div>`;
 
     this.dropdown.innerHTML = html;
+    // input 위치 기준으로 드롭다운 배치
+    const rect = this.input.getBoundingClientRect();
+    this.dropdown.style.left = rect.left + 'px';
+    this.dropdown.style.top = rect.bottom + 'px';
+    this.dropdown.style.width = rect.width + 'px';
     setElementHidden(this.dropdown, false);
 
     this.dropdown.querySelectorAll('.cust-option').forEach(el => {
@@ -2294,7 +2412,8 @@ class CustomerCellEditor {
   getGui() { return this.container; }
   afterGuiAttached() { this.input.focus(); this.input.select(); }
   getValue() { return this.value; }
-  isPopup() { return false; }
+  destroy() { this.dropdown.remove(); }
+  isPopup() { return true; }
 }
 
 function _openNewCustomerPopup(prefill) {
@@ -2480,7 +2599,7 @@ function addPasteHandlerLedger(el, api) {
 function initReceiptGrid(receipts) {
   const colDefs = [
     { headerName: '', field: '_chk', width: 40, pinned: 'left', lockPosition: true,
-      headerCheckboxSelection: true, checkboxSelection: true,
+      headerCheckboxSelection: true, headerCheckboxSelectionFilteredOnly: true, checkboxSelection: true,
       editable: false, sortable: false, resizable: false, suppressMovable: true },
     { field: 'receipt_date', headerName: '입금일', editable: true, width: 130,
       cellEditor: DateCellEditor,
@@ -2501,7 +2620,7 @@ function initReceiptGrid(receipts) {
   const el = document.getElementById('grid-receipt');
   el.innerHTML = '';
   receiptApi = agGrid.createGrid(el, {
-    columnDefs: colDefs,
+    columnDefs: _wrapEditableWithCompleted(colDefs),
     rowData: receipts,
     defaultColDef: { resizable: true, sortable: false },
     tooltipShowDelay: 300,
@@ -2534,7 +2653,19 @@ function addReceiptRow(scrollToNew) {
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const ym = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
 
-  // 가장 오래된 미배분 확정 매출 행 탐색
+  // 그리드 내 미저장 입금 행의 금액을 귀속월별로 합산
+  const pendingByMonth = {};
+  if (receiptApi) {
+    receiptApi.forEachNode(n => {
+      if (n.rowPinned) return;
+      const d = n.data;
+      if (!d._isNew && d.id) return;  // 저장된 행은 이미 allocation에 반영됨
+      const m = d.revenue_month;
+      if (m) pendingByMonth[m] = (pendingByMonth[m] || 0) + (d.amount || 0);
+    });
+  }
+
+  // 가장 오래된 미배분 확정 매출 행 탐색 (미저장 입금 반영)
   const allocMap = window._allocationMap || {};
   let oldest = null;
   if (ledgerApi) {
@@ -2542,10 +2673,10 @@ function addReceiptRow(scrollToNew) {
       if (n.rowPinned) return;
       const d = n.data;
       if (d.type !== '매출' || d.status !== '확정') return;
-      const remaining = (d.amount || 0) - (allocMap[d.transaction_line_id] || 0);
+      const remaining = (d.amount || 0) - (allocMap[d.transaction_line_id] || 0) - (pendingByMonth[d.revenue_month] || 0);
       if (remaining <= 0) return;
       if (!oldest || (d.revenue_month || '') < (oldest.revenue_month || '')) {
-        oldest = { revenue_month: d.revenue_month, customer_name: d.customer_name, amount: remaining };
+        oldest = { revenue_month: d.revenue_month, customer_name: d.customer_name, amount: remaining, date: d.date };
       }
     });
   }
@@ -2554,7 +2685,7 @@ function addReceiptRow(scrollToNew) {
   let prevReceipt = null;
   receiptApi.forEachNode(n => { if (!n.rowPinned) prevReceipt = n.data; });
   const res = receiptApi.applyTransaction({ add: [{
-    receipt_date: dateStr,
+    receipt_date: oldest?.date || dateStr,
     revenue_month: oldest?.revenue_month || prevReceipt?.revenue_month || ym,
     customer_name: oldest?.customer_name || prevReceipt?.customer_name || currentContract?.end_customer_name || '',
     amount: oldest?.amount || 0,

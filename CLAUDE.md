@@ -23,7 +23,8 @@
 | 담당자 (ContractContact) | Period별 영업/세금계산서 담당자. ContractPeriod 레벨에 귀속 |
 | 거래처 (Customer) | 매출처(고객사) 또는 매입처(공급사) |
 | 매출처 (Period.customer) | ContractPeriod별 매출처. 미지정 시 Contract.end_customer 사용 |
-| 입금 매칭 (ReceiptMatch) | Receipt를 매출 라인(TransactionLine)에 매핑. FIFO 자동 + 수동 |
+| 입금 매칭 (ReceiptMatch) | Receipt를 매출 라인(TransactionLine)에 매핑. FIFO 자동(귀속기간 내) + 수동 |
+| 선수금 | 입금 배분 합계 > 매출 확정 합계일 때의 초과 금액 (AR 음수) |
 | GP | Gross Profit = 매출 합계 - 매입 합계 |
 | GP% | GP ÷ 매출 × 100 |
 | 미수금 | 매출 확정 합계 - 매칭완료(ReceiptMatch) 합계 |
@@ -126,6 +127,8 @@
 - 월 범위는 `YYYY-MM-01` 문자열로 저장.
 - 생성일시·수정일시는 `TimestampMixin`으로 공통 적용.
 - `created_by`는 라우터에서 `get_current_user`를 통해 서비스로 전달.
+- FIFO 자동 배분은 입금의 `revenue_month`가 속하는 **ContractPeriod 범위 내** 매출만 대상. 기간 간 배분 격리.
+- 완료된 귀속기간(`is_completed`)의 데이터는 생성/수정/삭제 불가 (프론트+백엔드 이중 보호).
 
 ---
 

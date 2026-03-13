@@ -122,43 +122,7 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .cust-tab-panel { display: none; }
 .cust-tab-panel.active { display: flex; flex-direction: column; gap: 12px; }
 
-/* 요약 카드 그리드 */
-.summary-grid {
-  display: flex;
-  gap: 10px;
-}
-.summary-item {
-  flex: 1;
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 10px 14px;
-  min-width: 0;
-}
-.summary-label {
-  font-size: 11px;
-  color: var(--text-color-secondary);
-  margin-bottom: 2px;
-}
-.summary-value {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text-color);
-}
-.summary-value .unit {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-color-secondary);
-  margin-left: 2px;
-}
-.summary-item.highlight {
-  border-color: var(--primary-color);
-  background: color-mix(in srgb, var(--primary-color) 5%, var(--surface-color));
-}
-.summary-item.warn {
-  border-color: var(--warning-soft-border);
-  background: var(--warning-soft-bg);
-}
+/* 요약 카드 — .summary-grid/.summary-item은 components.css에 정의 */
 
 /* 역할 배지 */
 .role-badge {

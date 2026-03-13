@@ -23,6 +23,7 @@
   - JS 조건부 숨김: `el.style.display='none'` 대신 `el.classList.add('is-hidden')` / `classList.toggle('is-hidden', condition)` 사용
   - 테이블 열 너비: `style="width:..."` 대신 CSS 클래스 또는 `<col>` 사용
   - 공통 상태 전환은 `utils.js` helper와 `is-hidden`, `is-disabled` 같은 상태 클래스를 우선 사용
+  - 예외: `position: fixed` 드롭다운의 동적 좌표 계산(`el.style.left/top/width`)은 허용
 
 ## CSS 작업 규칙
 
@@ -46,6 +47,7 @@
   - 행 단위 복사(Ctrl+C), 붙여넣기(Ctrl+V) 지원
   - 열 단위 선택 및 복사 지원
   - 셀 인라인 편집 허용 여부는 화면별로 명시
+  - 커스텀 셀 에디터(CellEditor 클래스)는 `isPopup() { return true; }`로 설정한다. `false`이면 드롭다운/달력 등이 셀 `overflow`에 잘린다.
 - 페이지 전환 없는 동적 업데이트는 HTMX를 사용한다.
 - 테이블 중심 업무 화면으로 구성하며, 데이터 밀도를 우선한다.
 

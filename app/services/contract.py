@@ -110,6 +110,7 @@ def get_contract_periods(db: Session, contract_id: int) -> list[dict]:
             "invoice_day_type": p.invoice_day_type,
             "invoice_day": p.invoice_day,
             "invoice_holiday_adjust": p.invoice_holiday_adjust,
+            "is_completed": p.is_completed,
             "notes": p.notes,
         }
         for p in periods
@@ -492,6 +493,9 @@ def list_all_forecasts(db: Session, contract_id: int) -> list[dict]:
 
 
 def upsert_forecasts(db: Session, period_id: int, items: list, *, created_by: int | None = None) -> list:
+    period = db.get(ContractPeriod, period_id)
+    if period and period.is_completed:
+        raise BusinessRuleError("완료된 귀속기간의 Forecast는 수정할 수 없습니다.")
     from app.models.monthly_forecast import MonthlyForecast
     existing = {
         f.forecast_month: f
@@ -567,12 +571,31 @@ def _resolve_customer(db: Session, data_dict: dict) -> dict:
     return data_dict
 
 
+def _check_period_not_completed(db: Session, contract_id: int, revenue_month: str | None = None) -> None:
+    """해당 사업의 완료된 period에 속하는 월이면 수정 차단."""
+    if not revenue_month:
+        return
+    period = (
+        db.query(ContractPeriod)
+        .filter(
+            ContractPeriod.contract_id == contract_id,
+            ContractPeriod.is_completed.is_(True),
+            ContractPeriod.start_month <= revenue_month,
+            ContractPeriod.end_month >= revenue_month,
+        )
+        .first()
+    )
+    if period:
+        raise BusinessRuleError("완료된 귀속기간의 데이터는 수정할 수 없습니다.")
+
+
 def create_transaction_line(db: Session, contract_id: int, data: TransactionLineCreate, *, created_by: int | None = None) -> dict:
     contract = db.get(Contract, contract_id)
     if not contract:
         raise NotFoundError("사업을 찾을 수 없습니다.")
     if contract.status == "cancelled":
         raise BusinessRuleError("삭제된 사업에는 매출/매입을 추가할 수 없습니다.")
+    _check_period_not_completed(db, contract_id, data.revenue_month)
     fields = _resolve_customer(db, data.model_dump())
     # status: 명시적으로 전달되지 않았으면 자동 판별
     if not fields.get("status"):
@@ -592,6 +615,7 @@ def update_transaction_line(db: Session, transaction_line_id: int, data: Transac
         raise NotFoundError("실적을 찾을 수 없습니다.")
     if current_user:
         check_contract_access(db, row.contract_id, current_user)
+    _check_period_not_completed(db, row.contract_id, row.revenue_month)
     fields = _resolve_customer(db, data.model_dump(exclude_unset=True))
     for field, value in fields.items():
         setattr(row, field, value)
@@ -604,6 +628,17 @@ def delete_transaction_line(db: Session, transaction_line_id: int) -> None:
     row = db.get(TransactionLine, transaction_line_id)
     if not row:
         raise NotFoundError("실적을 찾을 수 없습니다.")
+    _check_period_not_completed(db, row.contract_id, row.revenue_month)
+    # 입금 매칭이 존재하면 삭제 불가
+    from app.models.receipt_match import ReceiptMatch
+    from sqlalchemy import func as sa_func
+    matched = (
+        db.query(sa_func.coalesce(sa_func.sum(ReceiptMatch.matched_amount), 0))
+        .filter(ReceiptMatch.transaction_line_id == transaction_line_id)
+        .scalar()
+    )
+    if matched and matched > 0:
+        raise BusinessRuleError("입금 매칭이 존재하는 행은 삭제할 수 없습니다. 매칭을 먼저 해제하세요.")
     db.delete(row)
     db.commit()
 

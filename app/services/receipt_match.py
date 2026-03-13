@@ -1,7 +1,7 @@
 """수금 대사 (ReceiptMatch) 서비스.
 
 핵심 로직:
-- FIFO 자동 대사: Receipt 등록/수정 시 같은 Contract의 미대사 매출을 귀속월 순서로 대사
+- FIFO 자동 대사: Receipt의 귀속월이 속하는 ContractPeriod 범위 내 미대사 매출을 귀속월 순서로 대사
 - 수동 대사: 사용자가 직접 대사 생성/수정/삭제
 - 제약: receipt 초과 대사 불가, transaction_line 초과 대사 불가
 """
@@ -11,6 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.exceptions import BusinessRuleError, NotFoundError
+from app.models.contract_period import ContractPeriod
 from app.models.receipt_match import ReceiptMatch
 from app.models.transaction_line import TransactionLine, STATUS_CONFIRMED
 from app.models.receipt import Receipt
@@ -84,8 +85,9 @@ def auto_match_receipt(
     if remaining <= 0:
         return []
 
-    # 같은 Contract의 미대사 매출 라인 (귀속월 ASC, id ASC)
-    unmatched = _get_unmatched_sales(db, receipt.contract_id)
+    # 같은 귀속기간의 미대사 매출 라인 (귀속월 ASC, id ASC)
+    month_range = _get_period_month_range(db, receipt.contract_id, receipt.revenue_month)
+    unmatched = _get_unmatched_sales(db, receipt.contract_id, month_range=month_range)
 
     created: list[ReceiptMatch] = []
     for transaction_line_id, supply_amount, already_matched in unmatched:
@@ -115,6 +117,7 @@ def auto_match_contract(
     """Contract의 전체 Receipt에 대해 FIFO 자동 대사를 재계산.
 
     모든 auto 대사를 삭제하고, Receipt를 수금일 순서로 재대사한다.
+    각 Receipt는 귀속월이 속하는 ContractPeriod 범위 내 매출만 대상으로 한다.
     """
     # Contract의 모든 auto 대사 삭제
     receipt_ids = [
@@ -143,7 +146,9 @@ def auto_match_contract(
         if remaining <= 0:
             continue
 
-        unmatched = _get_unmatched_sales(db, contract_id)
+        db.flush()  # 이전 receipt의 배분을 서브쿼리에 반영
+        month_range = _get_period_month_range(db, contract_id, rcpt.revenue_month)
+        unmatched = _get_unmatched_sales(db, contract_id, month_range=month_range)
         for transaction_line_id, supply_amount, already_matched in unmatched:
             if remaining <= 0:
                 break
@@ -314,12 +319,39 @@ def _sum_matched_for_transaction_line(
     return int(q.scalar())
 
 
+def _get_period_month_range(
+    db: Session, contract_id: int, revenue_month: str | None,
+) -> tuple[str, str] | None:
+    """입금의 revenue_month가 속하는 ContractPeriod의 월 범위를 반환.
+
+    해당하는 기간이 없으면 None (전체 계약 대상 fallback).
+    """
+    if not revenue_month:
+        return None
+    period = (
+        db.query(ContractPeriod)
+        .filter(
+            ContractPeriod.contract_id == contract_id,
+            ContractPeriod.start_month <= revenue_month,
+            ContractPeriod.end_month >= revenue_month,
+        )
+        .first()
+    )
+    if not period or not period.start_month or not period.end_month:
+        return None
+    return (period.start_month, period.end_month)
+
+
 def _get_unmatched_sales(
-    db: Session, contract_id: int,
+    db: Session,
+    contract_id: int,
+    *,
+    month_range: tuple[str, str] | None = None,
 ) -> list[tuple[int, int, int]]:
     """미대사 매출 라인 목록: [(transaction_line_id, supply_amount, already_matched), ...]
 
     귀속월 ASC, id ASC 순서 (FIFO).
+    month_range가 주어지면 해당 기간의 매출만 대상으로 한다.
     """
     matched_sub = (
         db.query(
@@ -330,7 +362,7 @@ def _get_unmatched_sales(
         .subquery()
     )
 
-    rows = (
+    q = (
         db.query(
             TransactionLine.id,
             TransactionLine.supply_amount,
@@ -343,9 +375,13 @@ def _get_unmatched_sales(
             TransactionLine.status == STATUS_CONFIRMED,
             func.coalesce(matched_sub.c.total, 0) < TransactionLine.supply_amount,
         )
-        .order_by(TransactionLine.revenue_month, TransactionLine.id)
-        .all()
     )
+    if month_range:
+        q = q.filter(
+            TransactionLine.revenue_month >= month_range[0],
+            TransactionLine.revenue_month <= month_range[1],
+        )
+    rows = q.order_by(TransactionLine.revenue_month, TransactionLine.id).all()
     return [(r[0], int(r[1]), int(r[2])) for r in rows]
 
 
