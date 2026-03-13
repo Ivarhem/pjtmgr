@@ -1,0 +1,175 @@
+/* ═══ 시스템 관리 스타일 ════════════════════════════════════════ */
+/* 대시보드(dash-section, dash-table) 디자인 패턴을 따름 */
+
+/* ── 섹션 카드 ─────────────────────────────────────────────── */
+.sys-section {
+  background: var(--surface-color);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+  max-width: 780px;
+}
+
+.sys-section-narrow { max-width: 480px; }
+
+.sys-note { margin-bottom: 12px; }
+
+.sys-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.sys-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.sys-section-header .sys-section-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* ── 테이블 열 너비 ───────────────────────────────────────── */
+.col-w50  { width: 50px; }
+.col-w55  { width: 55px; }
+.col-w60  { width: 60px; }
+.col-w80  { width: 80px; }
+.col-w90  { width: 90px; }
+.col-w130 { width: 130px; }
+
+/* ── 테이블 (dash-table 패턴) ──────────────────────────────── */
+.sys-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+  border: 1px solid var(--border-color-light);
+  border-radius: 6px;
+}
+
+.sys-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.sys-table th,
+.sys-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.sys-table thead th {
+  background: var(--secondary-color);
+  font-weight: 500;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom-color: var(--border-color);
+}
+
+.sys-table tbody tr {
+  transition: background-color 0.15s;
+}
+
+.sys-table tbody tr:hover {
+  background-color: var(--secondary-color);
+}
+
+.sys-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── 행 상태 ───────────────────────────────────────────────── */
+.sys-table tbody tr.row-inactive {
+  opacity: 0.45;
+}
+.sys-table tbody tr.row-inactive:hover {
+  opacity: 0.7;
+}
+
+/* ── 셀 스타일 ─────────────────────────────────────────────── */
+.cell-code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  background: var(--secondary-color);
+  color: var(--text-color);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color-light);
+}
+
+.cell-muted {
+  color: var(--text-color-tertiary);
+}
+
+.cell-center {
+  text-align: center;
+}
+
+.cell-text-sm {
+  font-size: 12px;
+}
+
+/* ── 배지 ──────────────────────────────────────────────────── */
+.badge-active, .badge-inactive {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.badge-active {
+  background: var(--success-soft-bg);
+  color: var(--success-soft-text);
+  border: 1px solid var(--success-soft-border);
+}
+.badge-inactive {
+  background: var(--secondary-color);
+  color: var(--text-color-tertiary);
+  border: 1px solid var(--border-color);
+}
+
+.badge-customized {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  background: var(--info-soft-bg);
+  color: var(--info-soft-text);
+  border: 1px solid var(--info-soft-border);
+}
+
+.badge-category {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.badge-category[data-cat="entity"] {
+  background: var(--violet-soft-bg);
+  color: var(--violet-soft-text);
+  border: 1px solid var(--violet-soft-border);
+}
+.badge-category[data-cat="metric"] {
+  background: var(--warning-soft-bg);
+  color: var(--warning-soft-text);
+  border: 1px solid var(--warning-soft-border);
+}
+.badge-category[data-cat="report"] {
+  background: var(--info-soft-bg);
+  color: var(--info-soft-text);
+  border: 1px solid var(--info-soft-border);
+}

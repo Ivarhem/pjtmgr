@@ -1,0 +1,238 @@
+/* ═══ 보고서 페이지 스타일 ═══════════════════════════════════════ */
+
+/* ── 탭 ────────────────────────────────────────────────────────── */
+.report-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--primary-color);
+  margin: 0 24px;
+}
+
+.report-tab {
+  padding: 8px 24px;
+  border: none;
+  background: var(--secondary-color);
+  color: var(--text-color-secondary);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  margin-right: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+.report-tab:hover { background: var(--secondary-color-hover); }
+.report-tab.active {
+  background: var(--primary-color);
+  color: var(--primary-text-color);
+  font-weight: bold;
+}
+
+.report-tab-content { padding: 0; }
+
+/* ── KPI 카드 ──────────────────────────────────────────────────── */
+.kpi-cards {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  flex-wrap: wrap;
+}
+
+.kpi-card {
+  flex: 1;
+  min-width: 140px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: var(--text-color-tertiary);
+  margin-bottom: 4px;
+}
+
+.kpi-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--primary-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text-color-tertiary);
+  margin-top: 2px;
+}
+
+.kpi-warn {
+  border-color: var(--cell-negative-color);
+  background: color-mix(in srgb, var(--cell-negative-color) 5%, var(--surface-color));
+}
+.kpi-warn .kpi-value {
+  color: var(--cell-negative-color);
+}
+
+/* ── 보고서 레이아웃 ───────────────────────────────────────────── */
+.rpt-filter-bar { margin: 12px 24px; }
+.rpt-date-range { display: flex; gap: 4px; align-items: center; }
+.rpt-date-input { width: 140px; }
+.rpt-note { margin: 0 24px 8px; }
+.rpt-table-wrap { padding: 0 24px 24px; }
+.rpt-grid { margin: 0 24px 24px; height: calc(100vh - 280px); }
+
+/* ── 보고서 필터바 ─────────────────────────────────────────────── */
+#report-filter-bar .filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  flex-direction: row;
+}
+.filter-input {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 280px;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+}
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+#report-filter-bar .filter-select {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  background-color: var(--surface-color);
+  color: var(--text-color);
+}
+
+/* ── 요약 테이블 ───────────────────────────────────────────────── */
+.rpt-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+.rpt-table th,
+.rpt-table td {
+  border: 1px solid var(--border-color-light);
+  padding: 6px 10px;
+}
+.rpt-table thead th {
+  background: var(--secondary-color);
+  color: var(--text-color);
+  font-weight: bold;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.rpt-table .cell-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.row-total td {
+  background: var(--secondary-color);
+  border-top: 2px solid var(--border-color);
+}
+
+/* ── 매입매출관리 피벗 테이블 ─────────────────────────────────── */
+.pnl-content {
+  padding: 0 24px 24px;
+}
+.pnl-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-color);
+  margin-bottom: 4px;
+}
+.pnl-subtitle {
+  font-size: 12px;
+  color: var(--text-color-tertiary);
+  margin-bottom: 12px;
+}
+.pnl-table-wrap {
+  overflow-x: auto;
+  max-height: calc(100vh - 280px);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+.pnl-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+  width: max-content;
+  min-width: 100%;
+}
+.pnl-table th,
+.pnl-table td {
+  border: 1px solid var(--border-color-light);
+  padding: 4px 8px;
+  color: var(--text-color);
+}
+.pnl-table thead th {
+  background: var(--secondary-color);
+  color: var(--text-color);
+  font-weight: bold;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.pnl-table .cell-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pnl-table .cell-total {
+  font-weight: bold;
+}
+
+/* 섹션별 스타일 */
+.row-subtotal td {
+  background: color-mix(in srgb, var(--cell-positive-color) 15%, var(--surface-color));
+  font-weight: bold;
+}
+.row-gp td {
+  background: color-mix(in srgb, var(--warning-color) 15%, var(--surface-color));
+}
+.row-ar td {
+  background: color-mix(in srgb, var(--cell-negative-color) 10%, var(--surface-color));
+}
+.row-spacer td {
+  border: none;
+  height: 8px;
+  background: transparent;
+}
+.ar-positive {
+  color: var(--cell-negative-color);
+  font-weight: bold;
+}
+
+/* placeholder */
+.placeholder-box {
+  color: var(--text-color-tertiary);
+  padding: 24px;
+  text-align: center;
+}
+
+/* ── 다중 셀 선택 ────────────────────────────────────────────── */
+.cell-selected {
+  background: color-mix(in srgb, var(--primary-color) 20%, var(--surface-color)) !important;
+  outline: 1px solid var(--primary-color);
+}
+.pnl-table:focus {
+  outline: none;
+}
+.pnl-table.selecting,
+.pnl-table.selecting * {
+  user-select: none;
+}

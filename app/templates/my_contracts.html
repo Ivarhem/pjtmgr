@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}내 사업{% endblock %}
+{% block styles %}
+<style>
+.my-contracts-summary {
+  display: flex; gap: 12px; margin-bottom: 14px;
+}
+.my-contracts-summary .summary-card {
+  flex: 1; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px;
+  padding: 12px 16px; text-align: center;
+}
+.my-contracts-summary .summary-card.highlight { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color)); }
+.my-contracts-summary .summary-card.warn { border-color: var(--warning-soft-border); background: var(--warning-soft-bg); }
+.my-contracts-summary .s-label { font-size: 12px; color: var(--text-color-secondary); margin-bottom: 3px; }
+.my-contracts-summary .s-value { font-size: 20px; font-weight: bold; color: var(--text-color); }
+.my-contracts-summary .s-value .s-unit { font-size: 12px; font-weight: normal; color: var(--text-color-tertiary); margin-left: 2px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>내 사업</h1>
+  <div class="header-actions">
+    <div class="col-chooser-wrapper">
+      <button id="btn-col-chooser" class="btn btn-secondary">⚙ 컬럼</button>
+      <div id="col-chooser-menu" class="col-chooser-menu is-hidden"></div>
+    </div>
+    <button id="btn-add" class="btn btn-primary">+ 신규 등록</button>
+    <button id="btn-delete" class="btn btn-danger">삭제</button>
+  </div>
+</div>
+
+<!-- 요약 바 -->
+<div id="my-contracts-summary" class="my-contracts-summary is-hidden"></div>
+<p class="data-note">※ 내가 담당하는 사업 목록입니다. 귀속연도 = 계약 귀속 연도(Y25 등), 사업기간 = 달력 연도 기준으로 필터링합니다.</p>
+
+<div class="filter-bar">
+  <label class="view-toggle">
+    <input type="checkbox" id="chk-active-period" checked>
+    <span class="view-toggle-label">수행중</span>
+  </label>
+  <div class="chk-drop" id="drop-period">
+    <button class="chk-drop-btn" data-label="귀속연도" data-term-key="period_year" title="계약 귀속 연도(Y25, Y26 등) 기준으로 조회합니다">귀속연도</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="grid-filter-item filter-item-ml">
+    <span data-term-key="customer">고객</span>
+    <input type="text" id="filter-customer-text" placeholder="고객명 검색" class="filter-input filter-text-sm">
+  </div>
+  <div class="chk-drop" id="drop-type">
+    <button class="chk-drop-btn" data-label="사업유형">사업유형</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="grid-filter-item">
+    <span>사업명</span>
+    <input type="text" id="filter-name-text" placeholder="사업명 검색" class="filter-input filter-text-sm">
+  </div>
+  <div class="chk-drop" id="drop-stage">
+    <button class="chk-drop-btn" data-label="진행단계">진행단계</button>
+    <div class="chk-drop-menu is-hidden">
+      <label><input type="checkbox" value="10%"> 10%</label>
+      <label><input type="checkbox" value="50%"> 50%</label>
+      <label><input type="checkbox" value="70%"> 70%</label>
+      <label><input type="checkbox" value="90%"> 90%</label>
+      <label><input type="checkbox" value="계약완료"> 계약완료</label>
+    </div>
+  </div>
+  <div class="chk-drop" id="drop-calendar-year">
+    <button class="chk-drop-btn" data-label="사업기간" title="사업기간이 해당 달력 연도에 걸치는 사업을 조회합니다">사업기간</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <button id="btn-filter" class="btn btn-secondary">조회</button>
+  <button id="btn-filter-reset" class="btn btn-secondary btn-text-muted">초기화</button>
+</div>
+
+<div id="grid-my-contracts" class="ag-theme-quartz grid-container"></div>
+
+{% include "{components}/_modal_add_contract.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/my_contracts.js"></script>
+{% endblock %}

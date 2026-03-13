@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}보고서{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/static/css/reports.css">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>보고서</h1>
+</div>
+
+<!-- 탭 -->
+<div class="report-tabs">
+  <button class="report-tab active" data-tab="summary">요약 현황</button>
+  <button class="report-tab" data-tab="forecast-actual">Forecast vs Actual</button>
+  <button class="report-tab" data-tab="receivables">미수 현황</button>
+  <button class="report-tab" data-tab="contract-pnl">매입매출관리</button>
+</div>
+
+<!-- ═══ 공통 필터바 (탭 1~3 공유) ═══ -->
+<div id="report-filter-bar" class="filter-bar rpt-filter-bar">
+  <label class="filter-label">
+    기간
+    <div class="rpt-date-range">
+      <input type="month" id="rpt-date-from" class="filter-input rpt-date-input">
+      <span>~</span>
+      <input type="month" id="rpt-date-to" class="filter-input rpt-date-input">
+    </div>
+  </label>
+  <div class="chk-drop" id="rpt-drop-type">
+    <button class="chk-drop-btn" data-label="사업유형">사업유형</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="chk-drop" id="rpt-drop-stage">
+    <button class="chk-drop-btn" data-label="진행단계">진행단계</button>
+    <div class="chk-drop-menu is-hidden">
+      <label><input type="checkbox" value="10%"> 10%</label>
+      <label><input type="checkbox" value="50%"> 50%</label>
+      <label><input type="checkbox" value="70%"> 70%</label>
+      <label><input type="checkbox" value="90%"> 90%</label>
+      <label><input type="checkbox" value="계약완료"> 계약완료</label>
+    </div>
+  </div>
+  <div class="chk-drop" id="rpt-drop-dept">
+    <button class="chk-drop-btn" data-label="부서">부서</button>
+    <div class="chk-drop-menu is-hidden"></div>
+  </div>
+  <div class="chk-drop" id="rpt-drop-owner">
+    <button class="chk-drop-btn" data-label="담당">담당</button>
+    <div class="chk-drop-menu is-hidden"></div>
+  </div>
+  <button id="btn-rpt-search" class="btn btn-secondary">조회</button>
+  <button id="btn-rpt-reset" class="btn btn-secondary btn-text-muted">초기화</button>
+  <button id="btn-rpt-export" class="btn btn-primary">↓ Excel</button>
+</div>
+
+<!-- ═══ 탭 1: 요약 현황 ═══ -->
+<div id="tab-summary" class="report-tab-content active">
+  <p class="data-note rpt-note">※ 확정 실적 기준. Forecast 매출, Actual 매출/매입, GP, 입금, 미수금을 월별로 집계합니다. VAT 별도.</p>
+  <div id="summary-kpis" class="kpi-cards"></div>
+  <div id="summary-table-wrap" class="rpt-table-wrap">
+    <table class="rpt-table" id="summary-table">
+      <thead>
+        <tr>
+          <th>월</th>
+          <th>Forecast 매출</th>
+          <th>Actual 매출</th>
+          <th>매입</th>
+          <th>GP</th>
+          <th>GP%</th>
+          <th>입금</th>
+          <th>미수금</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot></tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ 탭 2: Forecast vs Actual ═══ -->
+<div id="tab-forecast-actual" class="report-tab-content is-hidden">
+  <p class="data-note rpt-note">※ 사업별 Forecast와 Actual 매출을 비교합니다. 괴리가 큰 사업을 파악하는 데 활용하세요.</p>
+  <div id="grid-forecast-actual" class="ag-theme-quartz grid-container rpt-grid"></div>
+</div>
+
+<!-- ═══ 탭 3: 미수 현황 ═══ -->
+<div id="tab-receivables" class="report-tab-content is-hidden">
+  <p class="data-note rpt-note">※ 미수금 = 매출 확정 - 입금 합계. 입금 데이터가 없는 사업은 '확정' 상태를 입금 완료로 간주합니다.</p>
+  <div id="grid-receivables" class="ag-theme-quartz grid-container rpt-grid"></div>
+</div>
+
+<!-- ═══ 탭 4: 매입매출관리 ═══ -->
+<div id="tab-contract-pnl" class="report-tab-content is-hidden">
+  <p class="data-note rpt-note">※ 개별 사업의 매출/매입/GP를 월별로 상세 조회합니다. Excel 다운로드가 가능합니다.</p>
+  <div class="filter-bar rpt-filter-bar">
+    <label class="filter-label">
+      사업 선택
+      <input type="text" id="pnl-contract-search" list="pnl-contract-list" placeholder="사업명 검색" class="filter-input">
+    </label>
+    <label class="filter-label">
+      <span data-term-key="period_year">귀속연도</span>
+      <select id="pnl-year-select" class="filter-select">
+        <option value="">전체</option>
+      </select>
+    </label>
+    <button id="btn-pnl-search" class="btn btn-secondary">조회</button>
+    <button id="btn-pnl-export" class="btn btn-primary">↓ Excel</button>
+  </div>
+  <datalist id="pnl-contract-list"></datalist>
+  <div id="pnl-content" class="pnl-content">
+    <p class="placeholder-box">사업을 선택하고 조회 버튼을 클릭하세요.</p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/reports.js"></script>
+{% endblock %}

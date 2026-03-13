@@ -1,0 +1,619 @@
+/* 사업 상태 배지 */
+.contract-status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.contract-status-badge.active { background: var(--success-soft-bg); color: var(--success-soft-text); }
+.contract-status-badge.closed { background: var(--bg-color-secondary); color: var(--text-color-tertiary); }
+
+/* GP 요약 */
+.gp-summary { margin-bottom: 16px; }
+.summary-grid { display: flex; gap: 12px; }
+.summary-item {
+  flex: 1;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px 16px;
+  text-align: center;
+}
+.summary-item.highlight { border-color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color)); }
+.summary-item.warn { border-color: var(--warning-soft-border); background: var(--warning-soft-bg); }
+.summary-item.forecast { border-color: var(--success-soft-border); background: var(--success-soft-bg); }
+.summary-label { font-size: 12px; color: var(--text-color-secondary); margin-bottom: 4px; }
+.summary-value { font-size: 18px; font-weight: bold; color: var(--text-color); }
+.summary-value .unit { font-size: 12px; font-weight: normal; color: var(--text-color-tertiary); margin-left: 2px; }
+
+/* 페이지 구분선 */
+.page-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 28px 0 16px;
+}
+.page-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+.page-divider span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+/* 섹션 */
+.trade-section { margin-bottom: 24px; }
+.section-title { font-size: 15px; font-weight: bold; padding: 6px 12px; border-radius: 4px 4px 0 0; }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.section-header .section-title { margin: 0; flex: 1; }
+.section-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.section-grid { width: 100%; }
+
+/* Forecast 안내 힌트 */
+.forecast-hint {
+  font-size: 12px;
+  color: var(--info-soft-text);
+  background: var(--info-soft-bg);
+  padding: 6px 12px;
+  border: 1px solid var(--info-soft-border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+}
+
+/* 섹션 타이틀 색상 */
+.forecast-title { background: var(--info-soft-bg); color: var(--info-soft-text); }
+.txn-line-title { background: var(--success-soft-bg); color: var(--success-soft-text); }
+.receipt-title { background: var(--violet-soft-bg); color: var(--violet-soft-text); }
+.ledger-title { background: color-mix(in srgb, var(--info-soft-bg) 60%, var(--surface-color)); color: var(--info-color); }
+
+/* 거래 테이블 */
+.table-wrap { overflow-x: auto; }
+.trade-table { width: 100%; border-collapse: collapse; background: var(--surface-color); font-size: 13px; }
+.trade-table th { background: var(--secondary-color); padding: 7px 10px; text-align: right; border: 1px solid var(--border-color); white-space: nowrap; font-weight: 600; }
+.trade-table th.col-company, .trade-table th.col-period, .trade-table th.col-action { text-align: left; }
+.trade-table td { padding: 7px 10px; border: 1px solid var(--border-color-light); text-align: right; white-space: nowrap; }
+.trade-table td.col-company, .trade-table td.col-period, .trade-table td.col-action { text-align: left; }
+.trade-table tr:hover td { background: var(--surface-muted); }
+.trade-table .total-row td { font-weight: bold; background: var(--secondary-color); }
+
+/* 금액 셀 */
+.amount-cell { cursor: pointer; position: relative; }
+.amount-cell:hover { background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color)) !important; }
+.empty-cell { color: var(--text-color-tertiary); cursor: default; }
+.has-outstanding { color: var(--danger-strong-color); }
+.outstanding { color: var(--danger-strong-color); font-weight: bold; }
+.settled-dot { color: var(--success-color); font-size: 10px; margin-left: 3px; }
+.inv-dot { color: var(--info-color); font-size: 10px; margin-left: 2px; }
+
+/* 컬럼 너비 */
+.col-company { min-width: 120px; }
+.col-period { min-width: 140px; color: var(--text-color-secondary); font-size: 12px; }
+.col-month { min-width: 80px; }
+.col-total, .col-settled, .col-outstanding { min-width: 90px; }
+.col-action { width: 40px; }
+
+/* 그리드 금액 셀 */
+.grid-amount-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+/* 정산 등록 버튼 (그리드 셀 내) */
+.btn-settle-cell {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  font-size: 11px;
+  padding: 1px 4px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ag-row:hover .btn-settle-cell { display: inline-block; }
+.btn-settle-cell:hover { background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color)); color: var(--primary-color); border-color: var(--primary-color); }
+
+/* Period 탭 */
+.period-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.period-tab {
+  padding: 5px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--surface-color);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-color);
+}
+.period-tab.active {
+  background: var(--primary-color);
+  color: var(--primary-text-color);
+  border-color: var(--primary-color);
+}
+.period-tab.selected:not(.active) {
+  background: color-mix(in srgb, var(--primary-color) 20%, var(--surface-color));
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.period-tab:hover:not(.active):not(.selected) { background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color)); }
+.period-tab[data-view="all"] { margin-left: 8px; font-weight: 600; }
+.period-tab-multi-toggle { margin-right: 8px; font-size: 12px; border-style: dashed; }
+.period-tab-multi-toggle.selected { border-style: solid; }
+
+/* 그리드 하단 요약 바 */
+.grid-summary-bar {
+  display: flex;
+  gap: 16px;
+  padding: 8px 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  font-size: 13px;
+  color: var(--text-color);
+}
+.grid-summary-bar .summary-entry { display: flex; gap: 4px; align-items: center; }
+.grid-summary-bar .summary-entry .label { color: var(--text-color-secondary); }
+.grid-summary-bar .summary-entry .value { font-weight: 600; }
+
+/* 그리드 필터 바 */
+.grid-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.grid-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.grid-filter-item > span { color: var(--text-color-secondary); white-space: nowrap; font-weight: 500; }
+.grid-filter-item input[type="month"],
+.grid-filter-item select {
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  height: 26px;
+  background: var(--surface-color);
+  color: var(--text-color);
+}
+
+.btn-compact {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.btn-compact-wide {
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+/* .btn-text-danger, .btn-text-muted → components.css로 이동 */
+
+.inline-month-input {
+  width: 130px;
+}
+
+.inline-month-input-lg {
+  width: 160px;
+}
+
+.field-inline-hidden {
+  display: none;
+}
+
+.ag-cell-input-editor {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 0 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+  font-family: inherit;
+  background: transparent;
+  color: inherit;
+}
+
+.ag-cell-customer-editor {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.ag-cell-customer-editor .ag-cell-input-editor {
+  padding: 0 6px;
+}
+
+.ag-cell-customer-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* .inline-help-text → base.css .modal-desc로 통합 */
+
+.scroll-panel-sm {
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.grid-height-ledger { height: 420px; }
+.grid-height-receipt { height: 250px; }
+.grid-height-receipt-match { height: 220px; }
+
+.inline-select-full {
+  width: 100%;
+}
+
+/* 거래처 검색 드롭다운 */
+.cust-option {
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color-light);
+  color: var(--text-color);
+}
+.cust-option:hover { background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color)); }
+.cust-option:focus { background: var(--info-soft-bg); outline: none; }
+.cust-option-new {
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--primary-color);
+  font-weight: 600;
+  border-top: 1px solid var(--border-color);
+}
+.cust-option-new:hover { background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color)); }
+.cust-similar-warn {
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--warning-soft-text);
+  background: var(--warning-soft-bg);
+  border-top: 1px solid var(--warning-soft-border);
+}
+
+/* Forecast 동기화 프리뷰 */
+.sync-empty { color: var(--text-color-tertiary); text-align: center; padding: 16px 0; }
+.sync-section-title { margin-bottom: 12px; }
+.sync-section-title .text-success { color: var(--success-strong-color); }
+.sync-section-title .text-danger { color: var(--danger-color); }
+.sync-section-title .sync-desc { color: var(--text-color-tertiary); font-size: 12px; }
+.sync-section-gap { margin: 12px 0 8px; }
+.sync-row {
+  padding: 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color-light);
+}
+.sync-row-amount { font-weight: 600; }
+.sync-row-delete {
+  padding: 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color-light);
+  cursor: pointer;
+  flex-direction: row;
+}
+.sync-row-delete .sync-chk-wrap { display: flex; align-items: center; gap: 6px; }
+.sync-row-delete .sync-row-amount { color: var(--danger-color); }
+.sync-row-delete .sync-row-detail { color: var(--text-color-secondary); font-size: 12px; flex: 1; text-align: center; }
+.sync-summary { padding: 8px 0; font-size: 13px; color: var(--text-color-secondary); text-align: right; }
+
+/* Period 정보 카드 */
+.period-info-card {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: var(--surface-color);
+}
+.period-info-card.collapsed .period-info-body { display: none; }
+.period-info-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; cursor: pointer; font-size: 13px;
+  user-select: none;
+}
+.period-info-header:hover { background: var(--surface-muted); border-radius: 6px; }
+.period-info-toggle { font-size: 10px; color: var(--text-color-secondary); width: 12px; }
+.period-info-header .info-item { white-space: nowrap; }
+.period-header-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+.period-delete-btn { opacity: 0; transition: opacity 0.15s; }
+.period-info-header:hover .period-delete-btn { opacity: 1; }
+.period-info-body {
+  padding: 4px 14px 10px 34px;
+  border-top: 1px solid var(--border-color);
+}
+.period-info-body .info-row { margin-bottom: 4px; }
+.period-info-body .contacts-bar { margin-top: 6px; margin-bottom: 0; }
+
+/* Period 편집 그룹 */
+.edit-group {
+  border: 1px solid var(--border-color-light);
+  border-radius: 6px;
+  padding: 10px 14px 12px;
+  margin-bottom: 10px;
+  background: var(--surface-color);
+}
+.edit-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  padding: 0 4px;
+}
+
+/* 담당자 바 */
+.contacts-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  align-items: center;
+}
+.contacts-bar .contact-label { font-weight: 600; color: var(--text-color); margin-right: 2px; }
+.contacts-bar .contact-item { display: flex; align-items: center; gap: 6px; }
+.contacts-bar .contact-item .contact-role {
+  font-size: 11px; color: var(--primary-text-color); background: var(--primary-color); border-radius: 3px; padding: 1px 5px;
+}
+.contacts-bar .contact-item .contact-role.tax { background: var(--warning-soft-text); }
+
+/* 통합/분리 토글: components.css에서 공통 정의 */
+.section-actions-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  margin: 0 2px;
+}
+
+/* 드롭다운 메뉴 */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-trigger { cursor: pointer; }
+.dropdown-caret { font-size: 10px; margin-left: 2px; }
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  min-width: 180px;
+  margin-top: 2px;
+  padding: 4px 0;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: var(--modal-shadow);
+  list-style: none;
+}
+.dropdown.open .dropdown-menu { display: block; }
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-color);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dropdown-item:hover { background: var(--secondary-color); }
+.dropdown-sep { height: 1px; margin: 4px 0; background: var(--border-color-light); }
+
+/* 그리드 하단 행 추가 버튼 바 */
+.grid-add-row-bar {
+  display: flex;
+}
+.grid-add-row-btn {
+  flex: 1;
+  padding: 6px 0;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-top: 1px dashed var(--border-color);
+  border-radius: 0;
+  color: var(--text-color-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.grid-add-row-btn + .grid-add-row-btn {
+  border-left: 1px dashed var(--border-color);
+}
+.grid-add-row-btn:hover {
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color));
+  color: var(--primary-color);
+}
+.grid-add-row-receipt:hover {
+  background: var(--success-soft-bg);
+  color: var(--success-color);
+}
+
+/* 태그 입력: components.css에서 공통 정의 */
+
+/* 날짜 셀 에디터 */
+.ag-cell-date-editor { display: flex; align-items: center; width: 100%; height: 100%; }
+.ag-cell-date-editor .ag-cell-input-editor { flex: 1; min-width: 0; }
+.ag-cell-date-editor .ag-cell-date-picker { width: 22px; padding: 0; border: none; background: transparent; cursor: pointer; opacity: 0.5; }
+.ag-cell-date-editor .ag-cell-date-picker:hover { opacity: 1; }
+.ag-cell-date-editor .ag-cell-date-picker::-webkit-calendar-picker-indicator { cursor: pointer; }
+
+/* 셀 폰트 크기 축소 */
+.cell-text-sm {
+  font-size: 12px;
+}
+
+/* 수동 편집 가능 셀 배경 */
+.cell-editable-manual {
+  background: var(--cell-editable-bg) !important;
+}
+
+/* 누락 필드 하이라이트 */
+.cell-missing {
+  background: color-mix(in srgb, var(--danger-color) 16%, var(--surface-color)) !important;
+  border: 1.5px solid var(--danger-color) !important;
+}
+
+/* Forecast/원장 의미 배지 및 행 강조 */
+.cell-label-strong {
+  color: var(--text-color-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.cell-total {
+  background: var(--secondary-color);
+  color: var(--text-color);
+  font-weight: 700;
+}
+.cell-readonly-soft {
+  background: var(--surface-muted);
+}
+.forecast-row-sales .ag-cell:not(.ag-cell-focus),
+.forecast-row-sales .ag-cell-inline-editing {
+  background-color: color-mix(in srgb, var(--info-soft-bg) 55%, var(--surface-color));
+}
+.forecast-row-gp .ag-cell:not(.ag-cell-focus),
+.forecast-row-gp .ag-cell-inline-editing {
+  background-color: color-mix(in srgb, var(--success-soft-bg) 60%, var(--surface-color));
+}
+.forecast-row-sales .ag-cell.cell-total,
+.forecast-row-gp .ag-cell.cell-total {
+  background-color: var(--secondary-color);
+}
+.type-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+.type-badge-sales {
+  background: var(--info-soft-bg);
+  color: var(--info-soft-text);
+  border-color: var(--info-soft-border);
+}
+.type-badge-cost {
+  background: var(--warning-soft-bg);
+  color: var(--warning-soft-text);
+  border-color: var(--warning-soft-border);
+}
+.type-badge-receipt {
+  background: var(--success-soft-bg);
+  color: var(--success-soft-text);
+  border-color: var(--success-soft-border);
+}
+.status-badge-pending {
+  background: var(--warning-soft-bg);
+  color: var(--warning-soft-text);
+  border-color: var(--warning-soft-border);
+}
+.status-badge-confirmed {
+  background: var(--info-soft-bg);
+  color: var(--info-soft-text);
+  border-color: var(--info-soft-border);
+}
+.ledger-row-sales .ag-cell {
+  background-color: color-mix(in srgb, var(--info-soft-bg) 40%, var(--surface-color));
+}
+.ledger-row-cost .ag-cell {
+  background-color: color-mix(in srgb, var(--warning-soft-bg) 42%, var(--surface-color));
+}
+.ledger-row-receipt .ag-cell {
+  background-color: color-mix(in srgb, var(--success-soft-bg) 46%, var(--surface-color));
+}
+.ledger-row-sales .ag-cell-focus,
+.ledger-row-sales .ag-cell-inline-editing,
+.ledger-row-cost .ag-cell-focus,
+.ledger-row-cost .ag-cell-inline-editing,
+.ledger-row-receipt .ag-cell-focus,
+.ledger-row-receipt .ag-cell-inline-editing {
+  background-color: var(--surface-color);
+}
+.summary-value-income { color: var(--info-soft-text); }
+.summary-value-expense { color: var(--warning-soft-text); }
+.summary-value-receipt { color: var(--success-soft-text); }
+
+/* ── 기간 추가 모달 (그룹형) ─────────────────────────── */
+/* .modal-add-period → base.css .modal-md 사용 */
+/* .modal-hint → base.css로 이동 */
+
+/* .modal-group → base.css로 이동 */
+
+/* 실적 그리드 (2×2) */
+.form-grid-perf {
+  grid-template-columns: 1fr 1fr;
+}
+.form-grid-perf .label-readonly {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.form-grid-perf .value-korean,
+.form-grid-perf .value-computed {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-color-light);
+  min-height: 20px;
+}
+.form-grid-perf .value-korean { color: var(--text-color-secondary); }
+.perf-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-color-tertiary);
+}
+
+/* ── 예상매출정보 일괄등록 모달 → base.css .modal-sm 사용 ── */

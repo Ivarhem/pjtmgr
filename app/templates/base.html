@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}영업관리{% endblock %}</title>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  
+  <script src="/static/js/lucide.js"></script>
+
+  <!-- AG Grid Community -->
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/dist/ag-grid-community.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz-dark.css" />
+  
+  <script src="/static/js/utils.js"></script>
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  {% block styles %}{% endblock %}
+</head>
+<body>
+  <nav class="topbar">
+    <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+      <i data-lucide="menu" class="icon-menu"></i>
+      <i data-lucide="x" class="icon-close"></i>
+    </button>
+    <a href="/" class="nav-brand">
+      <img src="/static/img/logo.svg" alt="Logo" class="nav-logo">
+      <span id="nav-brand-text">영업관리 시스템</span>
+    </a>
+    <div class="topbar-right">
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+        <i data-lucide="sun" class="sun"></i>
+        <i data-lucide="moon" class="moon"></i>
+      </button>
+      <button class="theme-toggle" id="toggle-subnav-desc" title="도움말 표시/숨김">
+        <i data-lucide="help-circle"></i>
+      </button>
+      <span class="topbar-user" id="topbar-user"></span>
+      <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+    </div>
+  </nav>
+
+  <div class="nav-container">
+    <nav class="subnav">
+      <ul class="subnav-links">
+        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">KPI 요약</small></span></a></li>
+        <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내 담당 사업</small></span></a></li>
+        <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 현황</small></span></a></li>
+        <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">매출처/매입처</small></span></a></li>
+        <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">매출/GP/미수</small></span></a></li>
+        <li class="subnav-sep"></li>
+        <li class="admin-only admin-nav-item subnav-divider is-hidden"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정/권한</small></span></a></li>
+        <li class="admin-only admin-nav-item is-hidden"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직 설정</small></span></a></li>
+        <li class="admin-only admin-nav-item is-hidden"><a href="/audit-logs"><i class="icon" data-lucide="scroll-text"></i><span>활동 로그<small class="subnav-sub">변경 이력</small></span></a></li>
+      </ul>
+    </nav>
+  </div>
+  <script>
+    // Active link highlighting
+    document.querySelectorAll('.subnav-links a').forEach(a => {
+      if (a.getAttribute('href') === window.location.pathname) a.classList.add('active');
+    });
+
+    // Mobile navigation toggle
+    (function() {
+      const toggleBtn = document.getElementById('mobile-nav-toggle');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          document.body.classList.toggle('mobile-nav-open');
+        });
+      }
+    })();
+
+    // Help description toggle
+    (function() {
+      const hidden = localStorage.getItem('hide_desc') === '1';
+      if (hidden) document.body.classList.add('hide-desc');
+      document.getElementById('toggle-subnav-desc').addEventListener('click', () => {
+        document.body.classList.toggle('hide-desc');
+        localStorage.setItem('hide_desc', document.body.classList.contains('hide-desc') ? '1' : '0');
+      });
+    })();
+
+    // Auth and settings fetch
+    Promise.all([
+      fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null),
+      fetch('/api/v1/settings').then(r => r.ok ? r.json() : null),
+    ]).then(([me, settings]) => {
+      if (me) {
+        document.getElementById('topbar-user').textContent = me.name;
+        window.__me = me;
+        if (me.permissions) {
+          if (me.permissions.can_manage_users || me.permissions.can_manage_settings) {
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('is-hidden'));
+          }
+        }
+      }
+      if (settings?.org_name) {
+        document.getElementById('nav-brand-text').textContent = settings.org_name + ' 영업관리시스템';
+      }
+    });
+
+    async function doLogout() {
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    }
+  </script>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    if (window.lucide?.createIcons) {
+      window.lucide.createIcons();
+    }
+
+    // Theme toggle
+    (function() {
+      const themeToggle = document.getElementById('theme-toggle');
+      const body = document.body;
+
+      function setTheme(theme) {
+        if (theme === 'dark') {
+          body.classList.add('dark-mode');
+        } else {
+          body.classList.remove('dark-mode');
+        }
+        // AG Grid theme update
+        document.querySelectorAll('.ag-theme-quartz, .ag-theme-quartz-dark').forEach(el => {
+          el.classList.remove('ag-theme-quartz', 'ag-theme-quartz-dark');
+          el.classList.add(theme === 'dark' ? 'ag-theme-quartz-dark' : 'ag-theme-quartz');
+        });
+        window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme } }));
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const isDarkMode = body.classList.contains('dark-mode');
+        const newTheme = isDarkMode ? 'light' : 'dark';
+        localStorage.setItem('theme', newTheme);
+        setTheme(newTheme);
+      });
+
+      // Apply theme on initial load
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+      setTheme(initialTheme);
+    })();
+
+    // Auto-hide subnav on scroll
+    (function() {
+      let lastScrollY = window.scrollY;
+      let ticking = false;
+
+      function onScroll() {
+        if (window.innerWidth <= 768 || document.body.classList.contains('mobile-nav-open')) {
+            document.body.classList.remove('scrolled-down');
+            return;
+        }
+
+        if (window.scrollY > 98 && window.scrollY > lastScrollY) {
+          document.body.classList.add('scrolled-down');
+        } else if (window.scrollY < lastScrollY) {
+          document.body.classList.remove('scrolled-down');
+        }
+        lastScrollY = window.scrollY < 0 ? 0 : window.scrollY;
+        ticking = false;
+      }
+
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          window.requestAnimationFrame(onScroll);
+          ticking = true;
+        }
+      });
+    })();
+  </script>
+  <div id="toast-container"></div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

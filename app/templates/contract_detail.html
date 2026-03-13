@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}사업 상세{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/static/css/contract_detail.css">{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <a id="back-link" href="/contracts" class="back-link">← 목록으로</a>
+    <h1 id="contract-title">로딩 중...</h1>
+  </div>
+  <div class="header-actions">
+    <button id="btn-add-period" class="btn btn-secondary">+ 기간 추가</button>
+  </div>
+</div>
+
+<!-- ── 사업 정보 ──────────────────────────────────────────── -->
+<div class="info-card" id="contract-info"></div>
+<div id="period-info-container"></div>
+
+<div class="page-divider"><span>실적 요약</span></div>
+
+<!-- ── 실적 요약 ──────────────────────────────────────────── -->
+<div id="period-tabs" class="period-tabs"></div>
+<div class="gp-summary" id="gp-summary"></div>
+
+<div class="trade-section" id="section-forecast">
+  <div class="section-header">
+    <h2 class="section-title forecast-title">Forecast (예상 매출/GP)</h2>
+    <div class="section-actions">
+      <button id="btn-fc-edit-expected" class="btn btn-secondary btn-compact">✎ 일괄등록</button>
+      <button class="btn btn-primary btn-save-forecast btn-compact-wide">저장</button>
+    </div>
+  </div>
+  <div id="forecast-hint" class="forecast-hint is-hidden"></div>
+  <div id="grid-forecast" class="ag-theme-quartz"></div>
+</div>
+
+<div class="page-divider"><span>거래 원장</span></div>
+
+<!-- ── Ledger 섹션 (매출/매입 + 입금 통합) ──────────────────── -->
+<div class="trade-section" id="section-ledger">
+  <div class="section-header">
+    <h2 class="section-title ledger-title">매출/매입 원장</h2>
+    <div class="section-actions">
+      <!-- 통합 보기 토글 — 입금 그리드 숨김으로 불필요 (향후 복원용) -->
+      <input type="checkbox" id="chk-unified-view" checked class="is-hidden">
+      <div class="dropdown" id="dropdown-ledger-add">
+        <button class="btn btn-secondary dropdown-trigger btn-compact">+ 추가 <span class="dropdown-caret">&#9662;</span></button>
+        <ul class="dropdown-menu">
+          <li><button id="btn-add-ledger" class="dropdown-item" type="button">매출/매입 행 추가</button></li>
+          <li class="dropdown-sep"></li>
+          <li><button id="btn-repeat-txn-line" class="dropdown-item" type="button">반복행 생성...</button></li>
+          <li><button id="btn-from-forecast" class="dropdown-item" type="button">Forecast에서 가져오기...</button></li>
+        </ul>
+      </div>
+      <button id="btn-delete-ledger" class="btn btn-secondary btn-compact btn-text-danger">삭제</button>
+      <button id="btn-bulk-confirm" class="btn btn-secondary btn-compact">✓ 일괄 확정</button>
+      <button id="btn-save-ledger" class="btn btn-primary btn-compact-wide">저장</button>
+    </div>
+  </div>
+  <div class="grid-filter-bar" id="ledger-filter-bar">
+    <label class="grid-filter-item">
+      <span>귀속월</span>
+      <input type="month" id="ledger-filter-start" class="inline-month-input">
+      <span>~</span>
+      <input type="month" id="ledger-filter-end" class="inline-month-input">
+    </label>
+    <label class="grid-filter-item">
+      <span>구분</span>
+      <select id="filter-ledger-type">
+        <option value="">전체</option>
+        <option value="매출">매출</option>
+        <option value="매입">매입</option>
+        <option value="입금" id="filter-type-receipt" class="is-hidden">입금</option>
+      </select>
+    </label>
+    <label class="grid-filter-item">
+      <span>거래처</span>
+      <input type="text" id="ledger-filter-customer" placeholder="거래처명 검색" class="filter-text-sm">
+    </label>
+    <label class="grid-filter-item">
+      <span>상태</span>
+      <select id="filter-ledger-status">
+        <option value="">전체</option>
+        <option value="예정">예정</option>
+        <option value="확정">확정</option>
+      </select>
+    </label>
+    <label class="grid-filter-item">
+      <input type="checkbox" id="ledger-hide-future">
+      <span>미래 숨김</span>
+    </label>
+    <button id="btn-ledger-filter" class="btn btn-secondary btn-compact">조회</button>
+    <button id="btn-ledger-filter-reset" class="btn btn-secondary btn-compact btn-text-muted">초기화</button>
+  </div>
+  <div id="grid-ledger" class="ag-theme-quartz grid-height-ledger"></div>
+  <div class="grid-add-row-bar">
+    <button id="btn-add-ledger-bottom" class="grid-add-row-btn" type="button">+ 매출/매입</button>
+    <button id="btn-add-receipt-bottom-unified" class="grid-add-row-btn grid-add-row-receipt is-hidden" type="button">+ 입금</button>
+  </div>
+  <div id="ledger-summary-bar" class="grid-summary-bar"></div>
+</div>
+
+<!-- ── 입금 섹션 ──────────────────────────────────────────── -->
+<div class="trade-section" id="section-receipt">
+  <div class="section-header">
+    <h2 class="section-title receipt-title">입금 내역</h2>
+    <div class="section-actions">
+      <div class="dropdown" id="dropdown-receipt-add">
+        <button class="btn btn-secondary dropdown-trigger btn-compact">+ 추가 <span class="dropdown-caret">&#9662;</span></button>
+        <ul class="dropdown-menu">
+          <li><button id="btn-add-receipt" class="dropdown-item" type="button">입금 행 추가</button></li>
+          <li class="dropdown-sep"></li>
+          <li><button id="btn-from-ledger" class="dropdown-item" type="button">매출 원장에서 가져오기...</button></li>
+        </ul>
+      </div>
+      <button id="btn-delete-receipt" class="btn btn-secondary btn-compact btn-text-danger">삭제</button>
+      <button id="btn-save-receipt" class="btn btn-primary btn-compact-wide">저장</button>
+    </div>
+  </div>
+  <div class="grid-filter-bar" id="receipt-filter-bar">
+    <label class="grid-filter-item">
+      <span>귀속월</span>
+      <input type="month" id="receipt-filter-start" class="inline-month-input">
+      <span>~</span>
+      <input type="month" id="receipt-filter-end" class="inline-month-input">
+    </label>
+    <label class="grid-filter-item">
+      <span>거래처</span>
+      <input type="text" id="receipt-filter-customer" placeholder="거래처명 검색" class="filter-text-sm">
+    </label>
+    <button id="btn-receipt-filter" class="btn btn-secondary btn-compact">조회</button>
+    <button id="btn-receipt-filter-reset" class="btn btn-secondary btn-compact btn-text-muted">초기화</button>
+  </div>
+  <div id="grid-receipt" class="ag-theme-quartz grid-height-receipt"></div>
+  <div class="grid-add-row-bar">
+    <button id="btn-add-receipt-bottom" class="grid-add-row-btn" type="button">+ 입금</button>
+  </div>
+  <div id="receipt-summary-bar" class="grid-summary-bar"></div>
+  <p class="data-note">ℹ 입금 등록 시 FIFO 규칙으로 매출 라인에 자동 배분됩니다. 미수(AR) = 매출확정 - 배분완료.</p>
+</div>
+
+<!-- ── 배분 현황 섹션 ──────────────────────────────────────── -->
+<div class="trade-section" id="section-receipt-match">
+  <div class="section-header">
+    <h2 class="section-title">배분 현황 (Allocation)</h2>
+    <div class="section-actions">
+      <button id="btn-add-receipt-match" class="btn btn-secondary btn-compact">+ 수동 배분</button>
+      <button id="btn-delete-receipt-match" class="btn btn-secondary btn-compact btn-text-danger">삭제</button>
+      <button id="btn-auto-match" class="btn btn-secondary btn-compact">자동 재배분</button>
+    </div>
+  </div>
+  <div id="grid-receipt-match" class="ag-theme-quartz grid-height-receipt-match"></div>
+  <div id="receipt-match-summary-bar" class="grid-summary-bar"></div>
+</div>
+
+<!-- 수동 배분 모달 -->
+<dialog id="modal-add-receipt-match" class="modal modal-sm">
+  <h2>수동 배분 추가</h2>
+  <div class="form-grid">
+    <label>입금 선택
+      <select id="match-receipt-select" class="inline-select-full"></select>
+    </label>
+    <label>매출 라인 선택
+      <select id="match-txn-line-select" class="inline-select-full"></select>
+    </label>
+    <label>배분 금액 (원)
+      <input type="number" id="match-alloc-amount" min="1" placeholder="0">
+    </label>
+  </div>
+  <div class="modal-actions">
+    <button id="btn-match-cancel" class="btn btn-secondary">취소</button>
+    <button id="btn-match-save" class="btn btn-primary">등록</button>
+  </div>
+</dialog>
+
+<!-- 기간 추가 모달 -->
+<dialog id="modal-add-period" class="modal modal-md">
+  <h2>기간 추가</h2>
+
+  <!-- 기본 정보 -->
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">기본 정보</legend>
+    <div class="form-grid">
+      <label><span data-term-key="period_year">귀속연도</span> <input type="number" id="add-period-year" min="2020" max="2099" placeholder="예: 2027"></label>
+      <label>진행단계
+        <select id="add-period-stage">
+          <option value="10%">10%</option>
+          <option value="50%">50%</option>
+          <option value="70%" selected>70%</option>
+          <option value="90%">90%</option>
+          <option value="계약완료">계약완료</option>
+        </select>
+      </label>
+      <label class="full-width">매출처
+        <select id="add-period-customer">
+          <option value="" data-term-key="customer" data-term-prefix="-- " data-term-suffix=" 동일 --">-- 고객 동일 --</option>
+        </select>
+      </label>
+    </div>
+  </fieldset>
+
+  <!-- 사업 기간 -->
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">사업 기간</legend>
+    <div class="form-grid">
+      <label>시작월 <input type="month" id="add-period-start" class="inline-month-input-lg"></label>
+      <label>종료월 <input type="month" id="add-period-end" class="inline-month-input-lg"></label>
+    </div>
+  </fieldset>
+
+  <!-- 예상 실적 -->
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">예상 실적</legend>
+    <div class="form-grid form-grid-perf">
+      <label>예상 매출 <input type="number" id="add-period-sales" placeholder="0"></label>
+      <label class="label-readonly">정규화 <span id="add-period-sales-kr" class="value-korean">-</span></label>
+      <label>GP% <input type="number" id="add-period-gp-pct" step="0.1" min="0" max="100" placeholder="0"></label>
+      <label class="label-readonly">예상 GP(원) <span id="add-period-gp" class="value-computed">-</span><input type="hidden" id="add-period-gp-val"></label>
+    </div>
+    <p id="add-period-hint" class="modal-hint perf-hint"></p>
+  </fieldset>
+
+  <!-- 정산 설정 -->
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">정산 설정</legend>
+    <div class="form-grid">
+      <label id="label-add-period-inspect-day">검수일 (매월)
+        <select id="add-period-inspect-day">
+          <option value="">미설정</option>
+          <option value="0">말일</option>
+          <option value="1">1일</option>
+          <option value="5">5일</option>
+          <option value="10">10일</option>
+          <option value="15">15일</option>
+          <option value="20">20일</option>
+          <option value="25">25일</option>
+        </select>
+      </label>
+      <label id="label-add-period-inspect-date" class="field-inline-hidden is-hidden">검수일
+        <input type="text" id="add-period-inspect-date" placeholder="YYYY-MM-DD" class="date-text-input">
+      </label>
+      <label>세금계산서 발행월
+        <select id="add-period-invoice-month">
+          <option value="">미설정</option>
+          <option value="0">검수 당월</option>
+          <option value="1">검수 익월</option>
+        </select>
+      </label>
+      <label>세금계산서 발행일
+        <select id="add-period-invoice-day-type">
+          <option value="">미설정</option>
+          <option value="1일">1일</option>
+          <option value="말일">말일</option>
+          <option value="특정일">특정일</option>
+        </select>
+      </label>
+      <label id="label-add-period-invoice-day" class="field-inline-hidden is-hidden">발행일(일)
+        <input type="number" id="add-period-invoice-day" min="1" max="31" placeholder="예: 10">
+      </label>
+      <label>휴일 조정
+        <select id="add-period-invoice-holiday">
+          <option value="">미설정</option>
+          <option value="전">전 (앞당김)</option>
+          <option value="후">후 (순연)</option>
+        </select>
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="modal-actions">
+    <button id="btn-add-period-cancel" class="btn btn-secondary">취소</button>
+    <button id="btn-add-period-submit" class="btn btn-primary">추가</button>
+  </div>
+</dialog>
+
+<!-- 반복행 생성 모달 -->
+<dialog id="modal-repeat" class="modal modal-sm">
+  <h2>반복행 생성</h2>
+  <div class="form-grid">
+    <label>시작월 <input type="month" id="repeat-start"></label>
+    <label>종료월 <input type="month" id="repeat-end"></label>
+    <label>구분
+      <select id="repeat-line-type">
+        <option value="매출">매출</option>
+        <option value="매입">매입</option>
+      </select>
+    </label>
+    <label>거래처 <select id="repeat-customer"></select></label>
+    <label>금액(원) <input type="number" id="repeat-amount"></label>
+    <label class="full-width">메모 <input type="text" id="repeat-desc"></label>
+  </div>
+  <div class="modal-actions">
+    <button id="btn-repeat-cancel" class="btn btn-secondary">취소</button>
+    <button id="btn-repeat-submit" class="btn btn-primary">생성</button>
+  </div>
+</dialog>
+
+<!-- Forecast 동기화 모달 -->
+<dialog id="modal-forecast-sync" class="modal modal-sm">
+  <h2>Forecast 동기화</h2>
+  <p class="modal-desc">Forecast 데이터와 실적 원장을 대조한 결과입니다.</p>
+  <div id="forecast-sync-content" class="scroll-panel-sm"></div>
+  <div class="modal-actions">
+    <button id="btn-sync-cancel" class="btn btn-secondary">취소</button>
+    <button id="btn-sync-submit" class="btn btn-primary" disabled>적용</button>
+  </div>
+</dialog>
+
+<!-- 매출 원장에서 입금 가져오기 모달 -->
+<dialog id="modal-receipt-from-ledger" class="modal">
+  <h2>매출 원장에서 입금 가져오기</h2>
+  <p class="modal-desc">미수잔액이 있는 확정 매출 행입니다. 입금일은 계산서 발행일이 기본 적용됩니다.</p>
+  <div class="form-grid">
+    <label class="full-width">입금일 (발행일 없는 행용) <input type="text" id="receipt-from-ledger-date" placeholder="YYYY-MM-DD" class="date-text-input"></label>
+  </div>
+  <div id="receipt-from-ledger-content" class="scroll-panel-sm"></div>
+  <div id="receipt-from-ledger-summary" class="sync-summary"></div>
+  <div class="modal-actions">
+    <button id="btn-receipt-from-ledger-cancel" class="btn btn-secondary">취소</button>
+    <button id="btn-receipt-from-ledger-submit" class="btn btn-primary" disabled>입금 등록</button>
+  </div>
+</dialog>
+
+{% include "{components}/_modal_add_contract.html" %}
+
+<!-- 인라인 거래처 등록 모달 -->
+<dialog id="modal-new-customer" class="modal modal-sm">
+  <h2>거래처 등록</h2>
+  <div class="form-grid">
+    <label class="full-width">거래처명 <input type="text" id="new-cust-name-inline" placeholder="거래처명 입력" required></label>
+  </div>
+  <div class="modal-actions">
+    <button type="button" id="btn-new-cust-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-new-cust-submit" class="btn btn-primary">등록</button>
+  </div>
+</dialog>
+<!-- 예상매출정보 일괄등록 모달 -->
+<dialog id="modal-edit-expected" class="modal modal-sm">
+  <h2>예상매출정보 일괄등록</h2>
+  <p class="modal-desc">총 매출액을 사업기간 월수로 균등 배분합니다. 특정 월 조정은 Forecast 그리드에서 직접 수정하세요.</p>
+  <div class="form-grid">
+    <label>총 매출액 <input type="text" id="expected-sales-total" inputmode="numeric" placeholder="0"></label>
+    <label>예상 GP% <input type="number" id="expected-gp-pct" min="0" max="100" step="0.1" placeholder="0"></label>
+    <label class="full-width">예상 GP <input type="text" id="expected-gp-total" inputmode="numeric" placeholder="자동계산"></label>
+  </div>
+  <div class="modal-actions">
+    <button id="btn-expected-cancel" class="btn btn-secondary">취소</button>
+    <button id="btn-expected-apply-save" class="btn btn-primary">등록</button>
+  </div>
+</dialog>
+
+<datalist id="user-list"></datalist>
+{% endblock %}
+
+{% block scripts %}
+<script>const CONTRACT_PERIOD_ID = {{ contract_period_id }};const INIT_CONTRACT_ID = {{ contract_id }};</script>
+<script src="/static/js/contract_detail.js?v=20260311f"></script>
+{% endblock %}

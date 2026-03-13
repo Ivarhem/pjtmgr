@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - 영업관리 시스템</title>
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <img src="/static/img/logo.svg" alt="Logo" class="login-logo">
+    <div class="login-card">
+      <h1 class="login-title">영업관리 시스템</h1>
+      <form onsubmit="doLogin(event)">
+        <div class="form-group">
+          <label for="login-id">아이디</label>
+          <input type="text" id="login-id" autocomplete="username" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input type="password" id="password" autocomplete="current-password" required>
+        </div>
+        <div id="error-msg" class="error-msg"></div>
+        <button type="submit" class="btn-login" id="btn-login">로그인</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    async function doLogin(event) {
+      event.preventDefault();
+      const login_id = document.getElementById('login-id').value.trim();
+      const password = document.getElementById('password').value;
+      const errorMsg = document.getElementById('error-msg');
+      errorMsg.textContent = '';
+
+      if (!login_id || !password) {
+        errorMsg.textContent = '아이디와 비밀번호를 모두 입력하세요.';
+        return;
+      }
+
+      const btn = document.getElementById('btn-login');
+      btn.disabled = true;
+      btn.textContent = '로그인 중...';
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login_id, password }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          window.location.href = data.must_change_password ? '/change-password' : '/';
+        } else {
+          const err = await res.json().catch(() => ({}));
+          errorMsg.textContent = err.detail || '로그인에 실패했습니다. 다시 시도해주세요.';
+          btn.disabled = false;
+          btn.textContent = '로그인';
+        }
+      } catch (e) {
+        errorMsg.textContent = '네트워크 오류가 발생했습니다.';
+        btn.disabled = false;
+        btn.textContent = '로그인';
+      }
+    }
+  </script>
+</body>
+</html>

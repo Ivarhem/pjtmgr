@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}사업 원장{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>사업 관리</h1>
+  <div class="header-actions">
+    <button id="btn-import" class="btn btn-secondary">↑ Excel Import</button>
+    <div class="col-chooser-wrapper">
+      <button id="btn-col-chooser" class="btn btn-secondary">⚙ 컬럼</button>
+      <div id="col-chooser-menu" class="col-chooser-menu is-hidden"></div>
+    </div>
+    <button id="btn-add" class="btn btn-primary">+ 신규 등록</button>
+    <button id="btn-assign-owner" class="btn btn-secondary">담당자 지정</button>
+    <button id="btn-delete" class="btn btn-danger">삭제</button>
+  </div>
+</div>
+
+<p class="data-note">※ 전체 사업 현황입니다. 귀속연도 = 계약 귀속 연도(Y25 등), 사업기간 = 달력 연도 기준으로 필터링합니다. 사업을 클릭하면 상세 페이지로 이동합니다.</p>
+
+<div class="filter-bar">
+  <label class="view-toggle">
+    <input type="checkbox" id="chk-active-period" checked>
+    <span class="view-toggle-label">수행중</span>
+  </label>
+  <div class="chk-drop" id="drop-period">
+    <button class="chk-drop-btn" data-label="귀속연도" data-term-key="period_year" title="계약 귀속 연도(Y25, Y26 등) 기준으로 조회합니다">귀속연도</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="grid-filter-item filter-item-ml">
+    <span data-term-key="customer">고객</span>
+    <input type="text" id="filter-customer-text" placeholder="고객명 검색" class="filter-input filter-text-sm">
+  </div>
+  <div class="chk-drop" id="drop-type">
+    <button class="chk-drop-btn" data-label="사업유형">사업유형</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="grid-filter-item">
+    <span>사업명</span>
+    <input type="text" id="filter-name-text" placeholder="사업명 검색" class="filter-input filter-text-sm">
+  </div>
+  <div class="chk-drop" id="drop-stage">
+    <button class="chk-drop-btn" data-label="진행단계">진행단계</button>
+    <div class="chk-drop-menu is-hidden">
+      <label><input type="checkbox" value="10%"> 10%</label>
+      <label><input type="checkbox" value="50%"> 50%</label>
+      <label><input type="checkbox" value="70%"> 70%</label>
+      <label><input type="checkbox" value="90%"> 90%</label>
+      <label><input type="checkbox" value="계약완료"> 계약완료</label>
+    </div>
+  </div>
+  <div class="chk-drop" id="drop-dept">
+    <button class="chk-drop-btn" data-label="부서">부서</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="chk-drop" id="drop-owner">
+    <button class="chk-drop-btn" data-label="담당">담당</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <div class="chk-drop" id="drop-calendar-year">
+    <button class="chk-drop-btn" data-label="사업기간" title="사업기간이 해당 달력 연도에 걸치는 사업을 조회합니다">사업기간</button>
+    <div class="chk-drop-menu is-hidden"><!-- JS로 생성 --></div>
+  </div>
+  <button id="btn-filter" class="btn btn-secondary">조회</button>
+  <button id="btn-filter-reset" class="btn btn-secondary btn-text-muted">초기화</button>
+  <label class="view-toggle filter-bar-end">
+    <input type="checkbox" id="chk-my-contracts">
+    <span class="view-toggle-label">내 사업만</span>
+  </label>
+</div>
+
+<div id="grid-contracts" class="ag-theme-quartz grid-container"></div>
+
+{% include "{components}/_modal_add_contract.html" %}
+
+<!-- Import 모달 -->
+<dialog id="modal-import" class="modal modal-lg">
+  <h2>Excel Import</h2>
+  <p class="modal-desc">템플릿을 다운로드하여 작성한 뒤, 각 단계별로 업로드하세요.</p>
+
+  <!-- ① 영업기회 -->
+  <div class="import-section">
+    <div class="import-section-title">
+      <span class="import-step-badge">①</span> 영업기회
+      <a href="/api/v1/excel/template/contracts" class="btn btn-secondary btn-xs" download>↓ 템플릿</a>
+    </div>
+    <div class="import-section-body">
+      <p class="import-guide">중복(동일 연도+사업명) 시 덮어쓰기/건너뛰기를 선택합니다.</p>
+      <div class="import-row">
+        <input type="file" id="import-file-contracts" accept=".xlsx" class="import-file-input">
+        <select id="import-dup-contracts" class="import-dup-select">
+          <option value="overwrite">중복 덮어쓰기</option>
+          <option value="skip">중복 건너뛰기</option>
+        </select>
+        <button id="btn-do-import-contracts" class="btn btn-primary btn-sm">Import</button>
+      </div>
+      <div id="import-status-contracts" class="import-status"></div>
+    </div>
+  </div>
+
+  <!-- ② 월별계획 -->
+  <div class="import-section">
+    <div class="import-section-title">
+      <span class="import-step-badge">②</span> 월별계획
+      <a href="/api/v1/excel/template/forecast" class="btn btn-secondary btn-xs" download>↓ 현황 포함 템플릿</a>
+    </div>
+    <div class="import-section-body">
+      <p class="import-guide">기간ID·연도·사업명(참고) 컬럼이 포함된 템플릿을 내려받아 월별 매출/GP를 입력 후 업로드하세요.</p>
+      <div class="import-row">
+        <input type="file" id="import-file-forecast" accept=".xlsx" class="import-file-input">
+        <button id="btn-do-import-forecast" class="btn btn-primary btn-sm">Import</button>
+      </div>
+      <div id="import-status-forecast" class="import-status"></div>
+    </div>
+  </div>
+
+  <!-- ③ 실적 -->
+  <div class="import-section">
+    <div class="import-section-title">
+      <span class="import-step-badge">③</span> 실적
+      <a href="/api/v1/excel/template/transaction-lines" class="btn btn-secondary btn-xs" download>↓ 현황 포함 템플릿</a>
+    </div>
+    <div class="import-section-body">
+      <p class="import-guide">기간ID·연도·사업명(참고) 컬럼이 포함된 템플릿을 내려받아 거래처·월별 금액을 입력 후 업로드하세요.</p>
+      <div class="import-row">
+        <input type="file" id="import-file-transaction-lines" accept=".xlsx" class="import-file-input">
+        <button id="btn-do-import-txn-lines" class="btn btn-primary btn-sm">Import</button>
+      </div>
+      <div id="import-status-transaction-lines" class="import-status"></div>
+    </div>
+  </div>
+
+  <div class="modal-actions">
+    <button id="btn-import-close" class="btn btn-secondary">닫기</button>
+  </div>
+</dialog>
+<!-- 담당자 지정 모달 -->
+<dialog id="modal-assign-owner" class="modal modal-sm">
+  <h2>담당자 일괄 지정</h2>
+  <p id="assign-owner-info" class="modal-desc"></p>
+  <div class="form-grid">
+    <label class="full-width">담당자
+      <input type="text" id="assign-owner-input" list="user-list" placeholder="이름 검색 (비우면 담당자 해제)">
+    </label>
+  </div>
+  <div class="modal-actions">
+    <button type="button" id="btn-assign-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-assign-submit" class="btn btn-primary">적용</button>
+  </div>
+</dialog>
+<datalist id="user-list"></datalist>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/contracts.js?v=20260310c"></script>
+{% endblock %}

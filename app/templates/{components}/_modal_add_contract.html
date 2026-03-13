@@ -1,0 +1,36 @@
+<!-- 사업 등록/수정 공용 모달 -->
+<dialog id="modal-add" class="modal modal-sm">
+  <form id="form-add" method="dialog">
+    <h2 id="modal-add-title">사업 등록</h2>
+    <div class="form-grid">
+      <label>사업유형
+        <select name="contract_type" id="add-contract-type" required><!-- JS로 생성 --></select>
+      </label>
+      <label class="full-width"><span data-term-key="customer">고객</span>
+        <div class="cust-picker" id="add-end-customer-picker">
+          <input type="text" id="add-end-customer" placeholder="거래처명 검색" autocomplete="off">
+          <input type="hidden" id="add-end-customer-id" value="">
+          <div class="cust-picker-dropdown is-hidden" id="add-end-customer-dropdown"></div>
+        </div>
+      </label>
+      <label class="full-width">사업명 <input type="text" name="contract_name" id="add-contract-name" required></label>
+    </div>
+    <input type="hidden" id="add-contract-id" value="">
+    <div class="modal-actions">
+      <button type="button" id="btn-cancel" class="btn btn-secondary">취소</button>
+      <button type="button" id="btn-submit" class="btn btn-primary">등록</button>
+    </div>
+  </form>
+</dialog>
+<datalist id="customer-list"></datalist>
+<!-- 인라인 거래처 등록 (사업 등록 모달용) -->
+<dialog id="modal-new-customer-from-add" class="modal modal-xs">
+  <h2>신규 거래처 등록</h2>
+  <div class="form-grid">
+    <label class="full-width">거래처명 <input type="text" id="new-cust-name-from-add"></label>
+  </div>
+  <div class="modal-actions">
+    <button type="button" id="btn-new-cust-cancel-add" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-new-cust-submit-add" class="btn btn-primary">등록</button>
+  </div>
+</dialog>
