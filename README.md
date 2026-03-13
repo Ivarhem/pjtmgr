@@ -190,6 +190,7 @@ sales/
 │   │   ├── system.html       # 시스템 설정
 │   │   ├── dashboard.html    # 대시보드
 │   │   ├── reports.html      # 보고서
+│   │   ├── audit_logs.html   # 감사 로그/변경 이력 화면 (현재 placeholder)
 │   │   ├── index.html        # 리다이렉트 (→ /my-contracts)
 │   │   └── {components}/     # 재사용 HTML 컴포넌트
 │   │       └── _modal_add_contract.html
@@ -477,7 +478,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 
 - 커스텀 예외 + 전역 핸들러 (통일된 에러 응답)
 - 런타임 마이그레이션 식별자 검증 (`app/main.py`) — legacy 테이블/컬럼 이관 시 화이트리스트 기반 raw SQL 제한
-- 감사 로그 인프라 (테이블/유틸 준비, 연동 예정) + 로그 조회 메뉴 (placeholder)
+- 감사 로그 인프라 (테이블/유틸 준비, 연동 예정) + 로그 메뉴/placeholder 화면
 - 컬럼 순서·너비 저장/복원 (localStorage) — 사업관리, 내사업, 사업상세, 보고서, 사용자관리
 - 필터 상태 저장/복원 (localStorage) — 사업관리, 내사업, 보고서
 - 사용자별 설정 저장
@@ -489,9 +490,10 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 ## 현재 제한사항
 
 - **감사 로그**: 테이블/유틸 준비 완료, 서비스 연동 미완료
+- **감사 로그 조회**: `/audit-logs` 화면은 준비 중 placeholder이며, 실제 로그 목록/API는 미구현
 - **DB**: 기본값은 SQLite 단일 파일 (`DATABASE_URL`로 변경 가능)
 - **초기 관리자 생성**: bootstrap 환경변수를 설정하지 않으면 첫 관리자 계정을 만들 수 없음
-- **테스트**: 집계/Contract 서비스/Excel 검증 기초 테스트만 작성됨 — API 통합, 권한, ReceiptMatch 회귀 테스트는 추가 필요
+- **테스트**: 집계/Contract 서비스/Excel 검증과 완료기간/FIFO 핵심 회귀는 작성됨 — API 통합, 권한, 보고서 회귀 테스트는 추가 필요
 - **발행일 휴일 조정**: 공휴일 달력 미적용 (invoice_holiday_adjust 필드 존재)
 - **권한**: admin/user 2단계만 구현 (manager/viewer 미구현)
 
@@ -602,7 +604,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 
 ### 네비게이션
 
-내 사업 / 사업 관리 / 거래처 관리 / 대시보드 / 보고서 / 설정
+내 사업 / 사업 관리 / 거래처 관리 / 대시보드 / 보고서 / 로그(준비 중) / 설정
 
 ### 사업 상세 화면
 

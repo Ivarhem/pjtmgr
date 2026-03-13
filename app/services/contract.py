@@ -589,6 +589,20 @@ def _check_period_not_completed(db: Session, contract_id: int, revenue_month: st
         raise BusinessRuleError("완료된 귀속기간의 데이터는 수정할 수 없습니다.")
 
 
+def _check_periods_not_completed(
+    db: Session,
+    contract_id: int,
+    *months: str | None,
+) -> None:
+    """현재 월과 변경 대상 월 모두 완료 기간 여부를 검사한다."""
+    checked: set[str] = set()
+    for month in months:
+        if not month or month in checked:
+            continue
+        checked.add(month)
+        _check_period_not_completed(db, contract_id, month)
+
+
 def create_transaction_line(db: Session, contract_id: int, data: TransactionLineCreate, *, created_by: int | None = None) -> dict:
     contract = db.get(Contract, contract_id)
     if not contract:
@@ -615,8 +629,13 @@ def update_transaction_line(db: Session, transaction_line_id: int, data: Transac
         raise NotFoundError("실적을 찾을 수 없습니다.")
     if current_user:
         check_contract_access(db, row.contract_id, current_user)
-    _check_period_not_completed(db, row.contract_id, row.revenue_month)
     fields = _resolve_customer(db, data.model_dump(exclude_unset=True))
+    _check_periods_not_completed(
+        db,
+        row.contract_id,
+        row.revenue_month,
+        fields.get("revenue_month", row.revenue_month),
+    )
     for field, value in fields.items():
         setattr(row, field, value)
     db.commit()
@@ -697,6 +716,7 @@ def create_receipt(db: Session, contract_id: int, data: ReceiptCreate, *, create
         raise NotFoundError("사업을 찾을 수 없습니다.")
     if contract.status == "cancelled":
         raise BusinessRuleError("삭제된 사업에는 입금을 추가할 수 없습니다.")
+    _check_period_not_completed(db, contract_id, data.revenue_month)
     row = Receipt(contract_id=contract_id, created_by=created_by, **data.model_dump())
     db.add(row)
     db.flush()
@@ -716,10 +736,17 @@ def update_receipt(db: Session, receipt_id: int, data: ReceiptUpdate, *, current
         raise NotFoundError("입금 정보를 찾을 수 없습니다.")
     if current_user:
         check_contract_access(db, row.contract_id, current_user)
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    _check_periods_not_completed(
+        db,
+        row.contract_id,
+        row.revenue_month,
+        updates.get("revenue_month", row.revenue_month),
+    )
+    for field, value in updates.items():
         setattr(row, field, value)
     # 금액 변경 시 자동 배분 재계산
-    if "amount" in data.model_dump(exclude_unset=True):
+    if "amount" in updates:
         auto_match_receipt(db, receipt_id, created_by=current_user.id if current_user else None)
     db.commit()
     db.refresh(row)
@@ -730,6 +757,7 @@ def delete_receipt(db: Session, receipt_id: int) -> None:
     row = db.get(Receipt, receipt_id)
     if not row:
         raise NotFoundError("입금 정보를 찾을 수 없습니다.")
+    _check_period_not_completed(db, row.contract_id, row.revenue_month)
     db.delete(row)
     db.commit()
 

@@ -136,6 +136,7 @@
 
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
 - 기본 회귀 테스트는 `tests/test_metrics.py`, `tests/test_contract_service.py`, `tests/test_importer.py`에서 관리한다.
+- 완료된 귀속기간 보호, FIFO 배분 격리 같은 핵심 비즈니스 규칙 회귀도 위 테스트군에서 유지한다.
 - DB 스키마 변경은 마이그레이션 도구(Alembic)로 관리.
 - 설정값(세율, 날짜 형식 등)은 코드가 아닌 설정 파일에서 관리.
 - API는 `/api/v1/` 버전 prefix를 유지.
