@@ -120,53 +120,55 @@ def auto_match_contract(
     모든 auto 대사를 삭제하고, Receipt를 수금일 순서로 재대사한다.
     각 Receipt는 귀속월이 속하는 ContractPeriod 범위 내 매출만 대상으로 한다.
     """
-    # Contract의 모든 auto 대사 삭제
-    receipt_ids = [
-        rid for (rid,) in
-        db.query(Receipt.id).filter(Receipt.contract_id == contract_id).all()
-    ]
-    if not receipt_ids:
-        return
+    try:
+        receipt_ids = [
+            rid for (rid,) in
+            db.query(Receipt.id).filter(Receipt.contract_id == contract_id).all()
+        ]
+        if not receipt_ids:
+            return
 
-    db.query(ReceiptMatch).filter(
-        ReceiptMatch.receipt_id.in_(receipt_ids),
-        ReceiptMatch.match_type == "auto",
-    ).delete(synchronize_session="fetch")
+        db.query(ReceiptMatch).filter(
+            ReceiptMatch.receipt_id.in_(receipt_ids),
+            ReceiptMatch.match_type == "auto",
+        ).delete(synchronize_session="fetch")
 
-    # Receipt를 수금일 순서로 정렬하여 순차 대사
-    receipts = (
-        db.query(Receipt)
-        .filter(Receipt.contract_id == contract_id)
-        .order_by(Receipt.receipt_date, Receipt.id)
-        .all()
-    )
+        receipts = (
+            db.query(Receipt)
+            .filter(Receipt.contract_id == contract_id)
+            .order_by(Receipt.receipt_date, Receipt.id)
+            .all()
+        )
 
-    for rcpt in receipts:
-        manual_used = _sum_matched_for_receipt(db, rcpt.id)
-        remaining = rcpt.amount - manual_used
-        if remaining <= 0:
-            continue
-
-        db.flush()  # 이전 receipt의 배분을 서브쿼리에 반영
-        month_range = _get_period_month_range(db, contract_id, rcpt.revenue_month)
-        unmatched = _get_unmatched_sales(db, contract_id, month_range=month_range)
-        for transaction_line_id, supply_amount, already_matched in unmatched:
+        for rcpt in receipts:
+            manual_used = _sum_matched_for_receipt(db, rcpt.id)
+            remaining = rcpt.amount - manual_used
             if remaining <= 0:
-                break
-            available = supply_amount - already_matched
-            if available <= 0:
                 continue
-            match_amount = min(remaining, available)
-            db.add(ReceiptMatch(
-                receipt_id=rcpt.id,
-                transaction_line_id=transaction_line_id,
-                matched_amount=match_amount,
-                match_type="auto",
-                created_by=created_by,
-            ))
-            remaining -= match_amount
 
-    db.commit()
+            db.flush()
+            month_range = _get_period_month_range(db, contract_id, rcpt.revenue_month)
+            unmatched = _get_unmatched_sales(db, contract_id, month_range=month_range)
+            for transaction_line_id, supply_amount, already_matched in unmatched:
+                if remaining <= 0:
+                    break
+                available = supply_amount - already_matched
+                if available <= 0:
+                    continue
+                match_amount = min(remaining, available)
+                db.add(ReceiptMatch(
+                    receipt_id=rcpt.id,
+                    transaction_line_id=transaction_line_id,
+                    matched_amount=match_amount,
+                    match_type="auto",
+                    created_by=created_by,
+                ))
+                remaining -= match_amount
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 # ── 수동 대사 CRUD ───────────────────────────────────────────────
@@ -181,28 +183,32 @@ def create_match(
     expected_contract_id: int | None = None,
 ) -> dict:
     """수동 대사 생성."""
-    contract_id = _validate_match(
-        db,
-        data.receipt_id,
-        data.transaction_line_id,
-        data.matched_amount,
-    )
-    if expected_contract_id is not None and contract_id != expected_contract_id:
-        raise BusinessRuleError("요청 경로의 사업과 대사 대상 사업이 일치하지 않습니다.")
-    if current_user is not None:
-        check_contract_access(db, contract_id, current_user)
+    try:
+        contract_id = _validate_match(
+            db,
+            data.receipt_id,
+            data.transaction_line_id,
+            data.matched_amount,
+        )
+        if expected_contract_id is not None and contract_id != expected_contract_id:
+            raise BusinessRuleError("요청 경로의 사업과 대사 대상 사업이 일치하지 않습니다.")
+        if current_user is not None:
+            check_contract_access(db, contract_id, current_user)
 
-    match = ReceiptMatch(
-        receipt_id=data.receipt_id,
-        transaction_line_id=data.transaction_line_id,
-        matched_amount=data.matched_amount,
-        match_type=data.match_type,
-        created_by=created_by,
-    )
-    db.add(match)
-    db.commit()
-    db.refresh(match)
-    return _match_dict(match)
+        match = ReceiptMatch(
+            receipt_id=data.receipt_id,
+            transaction_line_id=data.transaction_line_id,
+            matched_amount=data.matched_amount,
+            match_type=data.match_type,
+            created_by=created_by,
+        )
+        db.add(match)
+        db.commit()
+        db.refresh(match)
+        return _match_dict(match)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def update_match(
@@ -213,38 +219,45 @@ def update_match(
     current_user=None,
 ) -> dict:
     """대사 금액 수정."""
-    match = db.get(ReceiptMatch, match_id)
-    if not match:
-        raise NotFoundError("대사 정보를 찾을 수 없습니다.")
-    contract_id = match.receipt.contract_id if match.receipt else None
-    if contract_id is None:
-        raise NotFoundError("대사에 연결된 수금 정보를 찾을 수 없습니다.")
-    if current_user is not None:
-        check_contract_access(db, contract_id, current_user)
+    try:
+        match = db.get(ReceiptMatch, match_id)
+        if not match:
+            raise NotFoundError("대사 정보를 찾을 수 없습니다.")
+        contract_id = match.receipt.contract_id if match.receipt else None
+        if contract_id is None:
+            raise NotFoundError("대사에 연결된 수금 정보를 찾을 수 없습니다.")
+        if current_user is not None:
+            check_contract_access(db, contract_id, current_user)
 
-    # 기존 금액을 제외하고 검증
-    _validate_match(
-        db, match.receipt_id, match.transaction_line_id,
-        data.matched_amount, exclude_match_id=match_id,
-    )
-    match.matched_amount = data.matched_amount
-    match.match_type = "manual"
-    db.commit()
-    return _match_dict(match)
+        _validate_match(
+            db, match.receipt_id, match.transaction_line_id,
+            data.matched_amount, exclude_match_id=match_id,
+        )
+        match.matched_amount = data.matched_amount
+        match.match_type = "manual"
+        db.commit()
+        return _match_dict(match)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def delete_match(db: Session, match_id: int, *, current_user=None) -> None:
     """대사 삭제."""
-    match = db.get(ReceiptMatch, match_id)
-    if not match:
-        raise NotFoundError("대사 정보를 찾을 수 없습니다.")
-    contract_id = match.receipt.contract_id if match.receipt else None
-    if contract_id is None:
-        raise NotFoundError("대사에 연결된 수금 정보를 찾을 수 없습니다.")
-    if current_user is not None:
-        check_contract_access(db, contract_id, current_user)
-    db.delete(match)
-    db.commit()
+    try:
+        match = db.get(ReceiptMatch, match_id)
+        if not match:
+            raise NotFoundError("대사 정보를 찾을 수 없습니다.")
+        contract_id = match.receipt.contract_id if match.receipt else None
+        if contract_id is None:
+            raise NotFoundError("대사에 연결된 수금 정보를 찾을 수 없습니다.")
+        if current_user is not None:
+            check_contract_access(db, contract_id, current_user)
+        db.delete(match)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 # ── 집계 헬퍼 (metrics 등에서 사용) ──────────────────────────────

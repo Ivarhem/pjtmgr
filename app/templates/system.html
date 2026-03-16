@@ -17,11 +17,15 @@
       조직명
       <input type="text" id="input-org-name" placeholder="예: 홍길동팀">
     </label>
+    <label>
+      비밀번호 최소 길이
+      <input type="number" id="input-password-min-length" min="8" max="64" placeholder="예: 8">
+    </label>
   </div>
   <div class="modal-actions">
     <button id="btn-save-settings" class="btn btn-primary">저장</button>
   </div>
-  <p class="data-note">설정된 조직명은 상단 브랜드명 앞에 표시됩니다. (예: 홍길동팀 영업관리시스템)</p>
+  <p class="data-note">설정된 조직명은 상단 브랜드명 앞에 표시됩니다. 비밀번호 최소 길이는 비밀번호 변경 화면과 서버 검증에 함께 적용됩니다.</p>
 </div>
 
 <!-- 사업유형 관리 -->

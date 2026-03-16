@@ -79,21 +79,24 @@ def create_transaction_line(
     *,
     created_by: int | None = None,
 ) -> dict:
-    contract = db.get(Contract, contract_id)
-    if not contract:
-        raise NotFoundError("사업을 찾을 수 없습니다.")
-    if contract.status == "cancelled":
-        raise BusinessRuleError("삭제된 사업에는 매출/매입을 추가할 수 없습니다.")
-    check_period_not_completed(db, contract_id, data.revenue_month)
-    fields = _resolve_customer(db, data.model_dump())
-    # status: 명시적으로 전달되지 않았으면 자동 판별
-    if not fields.get("status"):
-        fields["status"] = _auto_status(fields)
-    row = TransactionLine(contract_id=contract_id, created_by=created_by, **fields)
-    db.add(row)
-    db.commit()
-    db.refresh(row)
-    return _transaction_line_dict(row)
+    try:
+        contract = db.get(Contract, contract_id)
+        if not contract:
+            raise NotFoundError("사업을 찾을 수 없습니다.")
+        if contract.status == "cancelled":
+            raise BusinessRuleError("삭제된 사업에는 매출/매입을 추가할 수 없습니다.")
+        check_period_not_completed(db, contract_id, data.revenue_month)
+        fields = _resolve_customer(db, data.model_dump())
+        if not fields.get("status"):
+            fields["status"] = _auto_status(fields)
+        row = TransactionLine(contract_id=contract_id, created_by=created_by, **fields)
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return _transaction_line_dict(row)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def update_transaction_line(
@@ -103,66 +106,77 @@ def update_transaction_line(
     *,
     current_user: User | None = None,
 ) -> dict:
-    row = (
-        db.query(TransactionLine)
-        .options(joinedload(TransactionLine.customer))
-        .filter(TransactionLine.id == transaction_line_id)
-        .first()
-    )
-    if not row:
-        raise NotFoundError("실적을 찾을 수 없습니다.")
-    if current_user:
-        check_contract_access(db, row.contract_id, current_user)
-    fields = _resolve_customer(db, data.model_dump(exclude_unset=True))
-    check_periods_not_completed(
-        db,
-        row.contract_id,
-        row.revenue_month,
-        fields.get("revenue_month", row.revenue_month),
-    )
-    for field, value in fields.items():
-        setattr(row, field, value)
-    db.commit()
-    db.refresh(row)
-    return _transaction_line_dict(row)
+    try:
+        row = (
+            db.query(TransactionLine)
+            .options(joinedload(TransactionLine.customer))
+            .filter(TransactionLine.id == transaction_line_id)
+            .first()
+        )
+        if not row:
+            raise NotFoundError("실적을 찾을 수 없습니다.")
+        if current_user:
+            check_contract_access(db, row.contract_id, current_user)
+        fields = _resolve_customer(db, data.model_dump(exclude_unset=True))
+        check_periods_not_completed(
+            db,
+            row.contract_id,
+            row.revenue_month,
+            fields.get("revenue_month", row.revenue_month),
+        )
+        for field, value in fields.items():
+            setattr(row, field, value)
+        db.commit()
+        db.refresh(row)
+        return _transaction_line_dict(row)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def delete_transaction_line(db: Session, transaction_line_id: int) -> None:
-    row = db.get(TransactionLine, transaction_line_id)
-    if not row:
-        raise NotFoundError("실적을 찾을 수 없습니다.")
-    check_period_not_completed(db, row.contract_id, row.revenue_month)
-    # 입금 매칭이 존재하면 삭제 불가
-    from app.models.receipt_match import ReceiptMatch
-    from sqlalchemy import func as sa_func
+    try:
+        row = db.get(TransactionLine, transaction_line_id)
+        if not row:
+            raise NotFoundError("실적을 찾을 수 없습니다.")
+        check_period_not_completed(db, row.contract_id, row.revenue_month)
+        from app.models.receipt_match import ReceiptMatch
+        from sqlalchemy import func as sa_func
 
-    matched = (
-        db.query(sa_func.coalesce(sa_func.sum(ReceiptMatch.matched_amount), 0))
-        .filter(ReceiptMatch.transaction_line_id == transaction_line_id)
-        .scalar()
-    )
-    if matched and matched > 0:
-        raise BusinessRuleError(
-            "입금 매칭이 존재하는 행은 삭제할 수 없습니다. 매칭을 먼저 해제하세요."
+        matched = (
+            db.query(sa_func.coalesce(sa_func.sum(ReceiptMatch.matched_amount), 0))
+            .filter(ReceiptMatch.transaction_line_id == transaction_line_id)
+            .scalar()
         )
-    db.delete(row)
-    db.commit()
+        if matched and matched > 0:
+            raise BusinessRuleError(
+                "입금 매칭이 존재하는 행은 삭제할 수 없습니다. 매칭을 먼저 해제하세요."
+            )
+        db.delete(row)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
 def bulk_confirm_transaction_lines(db: Session, contract_id: int) -> dict:
     """거래처+발행일이 있는 '예정' 매출/매입 행을 일괄 확정 처리."""
-    rows = (
-        db.query(TransactionLine)
-        .filter(
-            TransactionLine.contract_id == contract_id,
-            TransactionLine.status == STATUS_EXPECTED,
-            TransactionLine.customer_id.isnot(None),
-            TransactionLine.invoice_issue_date.isnot(None),
-            TransactionLine.invoice_issue_date != "",
+    try:
+        rows = (
+            db.query(TransactionLine)
+            .filter(
+                TransactionLine.contract_id == contract_id,
+                TransactionLine.status == STATUS_EXPECTED,
+                TransactionLine.customer_id.isnot(None),
+                TransactionLine.invoice_issue_date.isnot(None),
+                TransactionLine.invoice_issue_date != "",
+            )
+            .all()
         )
-        .all()
-    )
-    for row in rows:
-        row.status = STATUS_CONFIRMED
-    db.commit()
-    return {"confirmed": len(rows)}
+        for row in rows:
+            row.status = STATUS_CONFIRMED
+        db.commit()
+        return {"confirmed": len(rows)}
+    except Exception:
+        db.rollback()
+        raise

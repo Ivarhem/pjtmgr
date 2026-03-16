@@ -52,19 +52,23 @@ def create_receipt(
 ) -> dict:
     from app.services.receipt_match import auto_match_receipt
 
-    contract = db.get(Contract, contract_id)
-    if not contract:
-        raise NotFoundError("사업을 찾을 수 없습니다.")
-    if contract.status == "cancelled":
-        raise BusinessRuleError("삭제된 사업에는 입금을 추가할 수 없습니다.")
-    check_period_not_completed(db, contract_id, data.revenue_month)
-    row = Receipt(contract_id=contract_id, created_by=created_by, **data.model_dump())
-    db.add(row)
-    db.flush()
-    auto_match_receipt(db, row.id, created_by=created_by)
-    db.commit()
-    db.refresh(row)
-    return _receipt_dict(row)
+    try:
+        contract = db.get(Contract, contract_id)
+        if not contract:
+            raise NotFoundError("사업을 찾을 수 없습니다.")
+        if contract.status == "cancelled":
+            raise BusinessRuleError("삭제된 사업에는 입금을 추가할 수 없습니다.")
+        check_period_not_completed(db, contract_id, data.revenue_month)
+        row = Receipt(contract_id=contract_id, created_by=created_by, **data.model_dump())
+        db.add(row)
+        db.flush()
+        auto_match_receipt(db, row.id, created_by=created_by)
+        db.commit()
+        db.refresh(row)
+        return _receipt_dict(row)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def update_receipt(
@@ -76,39 +80,46 @@ def update_receipt(
 ) -> dict:
     from app.services.receipt_match import auto_match_receipt
 
-    row = (
-        db.query(Receipt)
-        .options(joinedload(Receipt.customer))
-        .filter(Receipt.id == receipt_id)
-        .first()
-    )
-    if not row:
-        raise NotFoundError("입금 정보를 찾을 수 없습니다.")
-    if current_user:
-        check_contract_access(db, row.contract_id, current_user)
-    updates = data.model_dump(exclude_unset=True)
-    check_periods_not_completed(
-        db,
-        row.contract_id,
-        row.revenue_month,
-        updates.get("revenue_month", row.revenue_month),
-    )
-    for field, value in updates.items():
-        setattr(row, field, value)
-    # 금액 변경 시 자동 배분 재계산
-    if "amount" in updates:
-        auto_match_receipt(
-            db, receipt_id, created_by=current_user.id if current_user else None
+    try:
+        row = (
+            db.query(Receipt)
+            .options(joinedload(Receipt.customer))
+            .filter(Receipt.id == receipt_id)
+            .first()
         )
-    db.commit()
-    db.refresh(row)
-    return _receipt_dict(row)
+        if not row:
+            raise NotFoundError("입금 정보를 찾을 수 없습니다.")
+        if current_user:
+            check_contract_access(db, row.contract_id, current_user)
+        updates = data.model_dump(exclude_unset=True)
+        check_periods_not_completed(
+            db,
+            row.contract_id,
+            row.revenue_month,
+            updates.get("revenue_month", row.revenue_month),
+        )
+        for field, value in updates.items():
+            setattr(row, field, value)
+        if "amount" in updates:
+            auto_match_receipt(
+                db, receipt_id, created_by=current_user.id if current_user else None
+            )
+        db.commit()
+        db.refresh(row)
+        return _receipt_dict(row)
+    except Exception:
+        db.rollback()
+        raise
 
 
 def delete_receipt(db: Session, receipt_id: int) -> None:
-    row = db.get(Receipt, receipt_id)
-    if not row:
-        raise NotFoundError("입금 정보를 찾을 수 없습니다.")
-    check_period_not_completed(db, row.contract_id, row.revenue_month)
-    db.delete(row)
-    db.commit()
+    try:
+        row = db.get(Receipt, receipt_id)
+        if not row:
+            raise NotFoundError("입금 정보를 찾을 수 없습니다.")
+        check_period_not_completed(db, row.contract_id, row.revenue_month)
+        db.delete(row)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

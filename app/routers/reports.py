@@ -95,7 +95,7 @@ def get_forecast_vs_actual(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[dict]:
+) -> dict:
     """Forecast vs Actual 데이터 조회."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     return svc.list_forecast_vs_actual(db, filt, current_user=current_user)
@@ -132,7 +132,7 @@ def get_receivables(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[dict]:
+) -> dict:
     """미수 현황 데이터 조회."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     return svc.list_receivables(db, filt, current_user=current_user)

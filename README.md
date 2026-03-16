@@ -247,8 +247,11 @@ sales/
 │   ├── test_importer.py      # Excel Import 검증 테스트
 │   ├── test_dashboard_service.py # 대시보드 목표 vs 실적/재집계 테스트
 │   ├── test_report_service.py # 보고서 서비스/Export 회귀 테스트
+│   ├── test_auth_service.py  # 로그인 잠금/비밀번호 정책 테스트
 │   ├── test_receipt_match_service.py # ReceiptMatch 권한/FIFO 배분 테스트
-│   └── test_database.py      # DB 연결 설정 테스트
+│   ├── test_database.py      # DB 연결/기본 설정 테스트
+│   ├── test_startup.py       # 앱 startup 분리/초기화 테스트
+│   └── test_transaction_safety.py # 복합 서비스 rollback 테스트
 ├── requirements.txt          # Python 의존성
 ├── CLAUDE.md                 # 개발 지침/규칙
 ├── PILOT_TEST.md             # 파일럿 테스트 계획
@@ -478,13 +481,17 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - 활성 관리자 부재 시 초기 관리자 bootstrap 지원
 - 사용자 CRUD (관리자 전용)
 - 비밀번호 변경/초기화
+- 로그인 실패 누적 잠금
+- 비밀번호 최소 길이 시스템 설정 연동
 - CSV 사용자 일괄 등록
 
 ### Excel Import/Export
 
+- 계약 workbook 사전검사 (`/api/v1/excel/validate`)
 - 3단계 Import: 사업 → Forecast → TransactionLine
 - 값 정규화 (진행단계 소수→%, 사업유형 대소문자)
 - 유효성 검사 및 오류 행 표시
+- 오류 응답은 문자열 목록과 함께 시트/행/컬럼 기반 구조화 상세를 함께 반환할 수 있음
 - 전체 Import는 시트 간 `연도+번호`로 연결하며, 같은 `연도+사업명` 조합이 업로드 파일 내부 또는 기존 DB에 중복되면 validation error로 중단
 - 보고서 Excel Export (요약 현황, Forecast vs Actual, 미수 현황, 매입매출관리)
 
@@ -507,6 +514,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - 컬럼 순서·너비 저장/복원 (localStorage) — 사업관리, 내사업, 사업상세, 보고서, 사용자관리
 - 필터 상태 저장/복원 (localStorage) — 사업관리, 내사업, 보고서
 - 사용자별 설정 저장
+- 시스템 설정: 조직명, 비밀번호 최소 길이
 - 사업유형 관리 (ContractTypeConfig) — 관리자가 사업유형 추가/수정/삭제, 유형별 기본값 설정
 - 용어 설정 (TermConfig) — 관리자가 UI 표시 용어 커스터마이징
 
@@ -519,7 +527,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - **DB**: 기본값은 SQLite 단일 파일 (`DATABASE_URL`로 변경 가능)
 - **Excel 전체 Import 식별 제약**: 같은 연도·같은 사업명이 업로드 파일 내부 또는 기존 데이터에 중복되면 overwrite/skip 대상을 자동 결정하지 않고 validation error로 중단
 - **초기 관리자 생성**: bootstrap 환경변수를 설정하지 않으면 첫 관리자 계정을 만들 수 없음
-- **테스트**: 집계/Contract 서비스/Excel 검증, Contract 스키마 정규화, ReceiptMatch 권한, 대시보드 목표 vs 실적/재집계, 보고서 서비스/Export 회귀는 작성됨 — API 통합 테스트는 추가 필요
+- **테스트**: 집계/Contract 서비스/Excel 검증, Contract 스키마 정규화, ReceiptMatch 권한, 대시보드 목표 vs 실적/재집계, 보고서 서비스/Export, 로그인 잠금/비밀번호 정책, startup/rollback 회귀는 작성됨 — API 통합 테스트는 추가 필요
 - **발행일 휴일 조정**: 공휴일 달력 미적용 (invoice_holiday_adjust 필드 존재)
 - **권한**: admin/user 2단계만 구현 (manager/viewer 미구현)
 

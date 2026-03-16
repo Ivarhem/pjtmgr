@@ -148,39 +148,134 @@ async function initDropdownFilters(me = null) {
 // ── Import 모달 ────────────────────────────────────────────────
 function setupImportModal() {
   const modal = document.getElementById('modal-import');
-  document.getElementById('btn-import').addEventListener('click', () => modal.showModal());
-  document.getElementById('btn-import-close').addEventListener('click', () => modal.close());
+  document.getElementById('btn-import').addEventListener('click', () => {
+    _clearImportStatuses();
+    modal.showModal();
+  });
+  document.getElementById('btn-import-close').addEventListener('click', () => {
+    _clearImportStatuses();
+    modal.close();
+  });
 
+  document.getElementById('btn-validate-contracts').addEventListener('click', () => validateImportContracts());
   document.getElementById('btn-do-import-contracts').addEventListener('click', () => doImportContracts());
   document.getElementById('btn-do-import-forecast').addEventListener('click', () => doImportSheet('forecast'));
   document.getElementById('btn-do-import-txn-lines').addEventListener('click', () => doImportSheet('transaction-lines'));
+
+  ['contracts', 'forecast', 'transaction-lines'].forEach((type) => {
+    const fileEl = document.getElementById(`import-file-${type}`);
+    if (fileEl) {
+      fileEl.addEventListener('change', () => {
+        _setImportStatus(`import-status-${type}`, '');
+      });
+    }
+  });
 }
 
 function _setImportStatus(elId, html) {
   document.getElementById(elId).innerHTML = html;
 }
 
+function _escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function _formatImportErrors(err) {
+  const details = Array.isArray(err?.error_details) ? err.error_details : [];
+  if (details.length > 0) {
+    return details.map((detail) => {
+      const prefix = [];
+      if (detail.sheet) prefix.push(detail.sheet);
+      if (detail.row) prefix.push(`${detail.row}행`);
+      if (detail.column) prefix.push(detail.column);
+      const head = prefix.length ? `[${prefix.join(' / ')}] ` : '';
+      return `${head}${detail.message || ''}`;
+    });
+  }
+  return Array.isArray(err?.detail) ? err.detail : [err?.detail];
+}
+
+function _clearImportStatuses() {
+  ['contracts', 'forecast', 'transaction-lines'].forEach((type) => _setImportStatus(`import-status-${type}`, ''));
+}
+
+function _renderImportMessages(statusEl, msgs, kind = 'err') {
+  const cls = kind === 'ok' ? 'import-ok' : 'import-err';
+  const icon = kind === 'ok' ? '✔' : '✗';
+  _setImportStatus(
+    statusEl,
+    `<span class="${cls}">${icon} ${kind === 'ok' ? '완료' : `오류 ${msgs.length}건`}</span><ul class="import-err-list">${msgs.map(m => `<li>${_escapeHtml(m)}</li>`).join('')}</ul>`,
+  );
+}
+
+async function _runImportAction(buttonId, pendingText, action) {
+  const btn = document.getElementById(buttonId);
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = pendingText;
+  try {
+    return await action();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function validateImportContracts() {
+  const file = document.getElementById('import-file-contracts').files[0];
+  if (!file) { alert('파일을 선택하세요.'); return; }
+
+  await _runImportAction('btn-validate-contracts', '검사 중...', async () => {
+    _setImportStatus('import-status-contracts', '<span class="import-loading">검사 중...</span>');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/v1/excel/validate', { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || data.valid === false) {
+      const msgs = _formatImportErrors({ detail: data.errors, error_details: data.error_details });
+      _renderImportMessages('import-status-contracts', msgs, 'err');
+      return;
+    }
+
+    const counts = data.counts || {};
+    const msgs = [
+      `검사 통과: 사업 ${counts.contracts || 0}건`,
+      `월별계획 ${counts.forecasts || 0}건`,
+      `실적 ${counts.actuals || 0}건`,
+    ];
+    _renderImportMessages('import-status-contracts', msgs, 'ok');
+  });
+}
+
 async function doImportContracts() {
   const file = document.getElementById('import-file-contracts').files[0];
   if (!file) { alert('파일을 선택하세요.'); return; }
   const onDuplicate = document.getElementById('import-dup-contracts').value;
-  _setImportStatus('import-status-contracts', '<span class="import-loading">처리 중...</span>');
 
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('on_duplicate', onDuplicate);
-  const res = await fetch('/api/v1/excel/import', { method: 'POST', body: fd });
-  if (res.ok) {
-    const data = await res.json();
-    _setImportStatus('import-status-contracts',
-      `<span class="import-ok">✔ 완료: 신규 ${data.created}건${data.skipped ? ` / 건너뜀 ${data.skipped}건` : ''}${data.new_users?.length ? ` / 신규 담당자: ${data.new_users.join(', ')}` : ''}</span>`);
-    await loadData();
-  } else {
-    const err = await res.json();
-    const msgs = Array.isArray(err.detail) ? err.detail : [err.detail];
-    _setImportStatus('import-status-contracts',
-      `<span class="import-err">✗ 오류 ${msgs.length}건</span><ul class="import-err-list">${msgs.map(m => `<li>${m}</li>`).join('')}</ul>`);
-  }
+  await _runImportAction('btn-do-import-contracts', 'Import 중...', async () => {
+    _setImportStatus('import-status-contracts', '<span class="import-loading">처리 중...</span>');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('on_duplicate', onDuplicate);
+    const res = await fetch('/api/v1/excel/import', { method: 'POST', body: fd });
+    if (res.ok) {
+      const data = await res.json();
+      _setImportStatus('import-status-contracts',
+        `<span class="import-ok">✔ 완료: 신규 ${data.created}건${data.skipped ? ` / 건너뜀 ${data.skipped}건` : ''}${data.new_users?.length ? ` / 신규 담당자: ${_escapeHtml(data.new_users.join(', '))}` : ''}</span>`);
+      await loadData();
+    } else {
+      const err = await res.json();
+      const msgs = _formatImportErrors(err);
+      _renderImportMessages('import-status-contracts', msgs, 'err');
+    }
+  });
 }
 
 // ── 담당자 일괄 지정 ──────────────────────────────────────────
@@ -228,19 +323,22 @@ async function doImportSheet(type) {
   const statusEl = `import-status-${type}`;
   const file = fileEl.files[0];
   if (!file) { alert('파일을 선택하세요.'); return; }
-  _setImportStatus(statusEl, '<span class="import-loading">처리 중...</span>');
 
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch(`/api/v1/excel/import/${type}`, { method: 'POST', body: fd });
-  if (res.ok) {
-    const data = await res.json();
-    _setImportStatus(statusEl, `<span class="import-ok">✔ 완료: ${data.saved}건 저장</span>`);
-    await loadData();
-  } else {
-    const err = await res.json();
-    const msgs = Array.isArray(err.detail) ? err.detail : [err.detail];
-    _setImportStatus(statusEl,
-      `<span class="import-err">✗ 오류 ${msgs.length}건</span><ul class="import-err-list">${msgs.map(m => `<li>${m}</li>`).join('')}</ul>`);
-  }
+  const buttonId = type === 'forecast' ? 'btn-do-import-forecast' : 'btn-do-import-txn-lines';
+  await _runImportAction(buttonId, 'Import 중...', async () => {
+    _setImportStatus(statusEl, '<span class="import-loading">처리 중...</span>');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`/api/v1/excel/import/${type}`, { method: 'POST', body: fd });
+    if (res.ok) {
+      const data = await res.json();
+      _setImportStatus(statusEl, `<span class="import-ok">✔ 완료: ${data.saved}건 저장</span>`);
+      await loadData();
+    } else {
+      const err = await res.json();
+      const msgs = _formatImportErrors(err);
+      _renderImportMessages(statusEl, msgs, 'err');
+    }
+  });
 }

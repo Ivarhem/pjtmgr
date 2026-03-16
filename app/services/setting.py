@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from app.config import PASSWORD_MIN_LENGTH
 from app.models.setting import Setting
 
 
@@ -14,3 +15,14 @@ def update_setting(db: Session, key: str, value: str | None) -> None:
     else:
         db.add(Setting(key=key, value=value))
     db.commit()
+
+
+def get_password_min_length(db: Session) -> int:
+    value = get_setting(db, "auth.password_min_length")
+    if value is None or value == "":
+        return PASSWORD_MIN_LENGTH
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return PASSWORD_MIN_LENGTH
+    return parsed if 8 <= parsed <= 64 else PASSWORD_MIN_LENGTH

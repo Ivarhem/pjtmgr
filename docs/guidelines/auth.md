@@ -39,10 +39,12 @@
 
 ## 비밀번호 정책
 
-- 최소 길이: `app/schemas/auth.py`의 `MIN_PASSWORD_LENGTH` 상수 (현재 8자)
+- 최소 길이: `settings["auth.password_min_length"]` 우선, 미설정 시 `app/config.py`의 `PASSWORD_MIN_LENGTH` 기본값 사용
+- 정책 검증 위치: `app/auth/service.py`가 현재 설정값을 조회해 검증. Pydantic 스키마에는 동적 길이 정책을 하드코딩하지 않는다.
 - 해싱: PBKDF2-SHA256, 260,000 iterations (`app/auth/password.py`)
 - 초기 비밀번호: 사용자 생성 시 `login_id` 값으로 설정, 첫 로그인 시 변경 강제 (`must_change_password=True`)
 - 관리자 초기화: 비밀번호를 `login_id`로 리셋 + 변경 강제
+- 시스템 관리 화면에서 최소 길이를 바꿀 수 있어도 초기 비밀번호는 기존 `login_id` 정책을 유지하므로, 운영 시 login_id 길이와 정책 길이의 차이를 고려한다.
 
 ## 보안 원칙
 

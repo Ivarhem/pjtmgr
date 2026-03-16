@@ -1,9 +1,12 @@
 """HTML 페이지 라우트 (템플릿 렌더링)."""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 
 from app.config import DEFAULT_HOME
+from app.database import get_db
+from app.services.setting import get_password_min_length
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(tags=["pages"])
@@ -15,8 +18,11 @@ def login_page(request: Request) -> HTMLResponse:
 
 
 @router.get("/change-password", response_class=HTMLResponse)
-def change_password_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("change_password.html", {"request": request})
+def change_password_page(request: Request, db: Session = Depends(get_db)) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "change_password.html",
+        {"request": request, "min_password_length": get_password_min_length(db)},
+    )
 
 
 @router.get("/")

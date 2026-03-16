@@ -10,6 +10,7 @@
 - **다운로드**: 현재 그리드 조회 결과를 그대로 Excel로 내보낸다.
 - 날짜, 금액 셀 형식을 Excel에서도 유지한다 (텍스트로 저장 금지).
 - 업로드 전 유효성 검사를 서버에서 수행하고, 오류 행을 명시하여 반환한다.
+- 업로드 오류 응답은 기존 문자열 목록(`errors` / `detail`)을 유지하되, 가능하면 `sheet`, `row`, `column`, `code`를 담은 구조화 목록(`error_details`)도 함께 반환한다.
 - Excel 처리 라이브러리: `openpyxl` (파일 생성/읽기), `pandas` (데이터 처리).
 - 파일 업로드 시 확장자 및 MIME 타입을 검증한다 (`.xlsx`만 허용).
 
@@ -17,6 +18,7 @@
 
 | 단계 | 시트 | 키 컬럼 | API |
 | ------ | ------ | --------- | ----- |
+| 사전검사 | `영업기회`(+선택 시트 포함) | 업로드 전체 | `POST /api/v1/excel/validate` |
 | ① 사업 | `영업기회` | 연도, 번호, 사업유형, 사업명, 진행단계 | `POST /api/v1/excel/import` |
 | ② Forecast | `월별계획` | 기간ID(ContractPeriod.id) | `POST /api/v1/excel/import/forecast` |
 | ③ Actual | `실적` | 기간ID, 매출/매입, 거래처명 | `POST /api/v1/excel/import/transaction-lines` |

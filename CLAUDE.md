@@ -60,7 +60,7 @@
 - 환경변수는 `.env` 파일로 관리하고, 코드에 하드코딩하지 않는다.
 - `DATABASE_URL` 기반 설정은 특정 DB 전용 `connect_args`를 전역 고정하지 말고 backend별로 분기한다.
 - 보안 관련 환경변수는 insecure fallback을 두지 않는다. 초기 관리자처럼 설치 시점에 필요한 값은 환경변수 bootstrap 절차를 문서화한다.
-- 비밀번호 최소 길이는 `app/schemas/auth.py`의 `MIN_PASSWORD_LENGTH` 상수로 관리한다. 스키마 레벨에서 검증하며, 라우터에 중복 검증을 두지 않는다.
+- 비밀번호 정책은 `settings` + `app/config.py` 기본값으로 관리한다. 동적 정책 검증은 서비스 레이어에서 현재 설정값을 조회해 수행하고, 라우터/템플릿은 그 값을 표시만 한다.
 - 모듈 간 순환 import는 허용하지 않는다. 공통 모듈 추출 또는 `TYPE_CHECKING` 분기로 해결.
 - 코드 변경 시 관련 문서를 함께 업데이트한다 (API 추가 → README API 목록).
 
@@ -144,7 +144,7 @@
 ## 7. 테스트·확장성
 
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
-- 기본 회귀 테스트는 `tests/test_metrics.py`, `tests/test_contract_service.py`, `tests/test_importer.py`, `tests/test_dashboard_service.py`, `tests/test_receipt_match_service.py`, `tests/test_contract_schema.py`, `tests/test_report_service.py`에서 관리한다.
+- 기본 회귀 테스트는 `tests/test_metrics.py`, `tests/test_contract_service.py`, `tests/test_importer.py`, `tests/test_dashboard_service.py`, `tests/test_receipt_match_service.py`, `tests/test_contract_schema.py`, `tests/test_report_service.py`, `tests/test_auth_service.py`, `tests/test_database.py`, `tests/test_startup.py`, `tests/test_transaction_safety.py`에서 관리한다.
 - 완료된 귀속기간 보호, FIFO 배분 격리, ReceiptMatch 권한, 대시보드 집계(`is_planned`, `실주`, 목표 vs 실적, 월/분기/반기/연 재집계), 보고서/Excel Export의 미수금·합계 행 규칙은 위 테스트군으로 회귀를 보호한다.
 - DB 스키마 변경은 현재 `app/migrations_legacy.py`의 경량 마이그레이션으로 처리. 향후 Alembic 정식 도입 예정.
 - 설정값(세율, 날짜 형식 등)은 코드가 아닌 설정 파일에서 관리.

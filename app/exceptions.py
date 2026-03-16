@@ -40,6 +40,7 @@ class PermissionDeniedError(AppError):
 class ValidationError(AppError):
     """입력 검증 오류 (422)."""
 
-    def __init__(self, errors: list[str]):
+    def __init__(self, errors: list[str], *, details: list[dict] | None = None):
         super().__init__("; ".join(errors))
         self.errors = errors
+        self.details = details or []

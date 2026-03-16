@@ -5,16 +5,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const res = await fetch('/api/v1/settings');
   const data = await res.json();
   document.getElementById('input-org-name').value = data.org_name ?? '';
+  document.getElementById('input-password-min-length').value = data.password_min_length ?? 8;
 
   document.getElementById('btn-save-settings').addEventListener('click', async () => {
     const orgName = document.getElementById('input-org-name').value.trim();
+    const passwordMinLength = parseInt(document.getElementById('input-password-min-length').value, 10);
     const res = await fetch('/api/v1/settings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ org_name: orgName || null }),
+      body: JSON.stringify({
+        org_name: orgName || null,
+        password_min_length: Number.isNaN(passwordMinLength) ? null : passwordMinLength,
+      }),
     });
-    if (res.ok) alert('저장되었습니다.');
-    else alert('저장에 실패했습니다.');
+    if (res.ok) {
+      const updated = await res.json();
+      document.getElementById('input-password-min-length').value = updated.password_min_length;
+      alert('저장되었습니다.');
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || '저장에 실패했습니다.');
+    }
   });
 
   // ── 사업유형 관리 ──────────────────────────────────────────────

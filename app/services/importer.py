@@ -139,12 +139,36 @@ def _find_existing_periods(
     return grouped
 
 
+def _append_error(
+    errors: list[str],
+    error_details: list[dict],
+    message: str,
+    *,
+    sheet: str | None = None,
+    row: int | None = None,
+    column: str | None = None,
+    code: str | None = None,
+) -> None:
+    errors.append(message)
+    detail = {"message": message}
+    if sheet is not None:
+        detail["sheet"] = sheet
+    if row is not None:
+        detail["row"] = row
+    if column is not None:
+        detail["column"] = column
+    if code is not None:
+        detail["code"] = code
+    error_details.append(detail)
+
+
 def _validate_contract_identity_map(
     df1: pd.DataFrame,
     *,
     existing_periods: dict[tuple[int, str], list[ContractPeriod]] | None = None,
-) -> list[str]:
+) -> tuple[list[str], list[dict]]:
     errors: list[str] = []
+    error_details: list[dict] = []
     upload_identity_rows: dict[tuple[str, str], list[int]] = defaultdict(list)
 
     for i, row in df1.iterrows():
@@ -152,27 +176,43 @@ def _validate_contract_identity_map(
 
     for (year, contract_name), rows in upload_identity_rows.items():
         if len(rows) > 1:
-            errors.append(
-                f"Sheet1 {rows[0]}행 외: 같은 연도/사업명 조합({year}, {contract_name})이 중복되어 전체 Import 대상을 구분할 수 없습니다."
+            _append_error(
+                errors,
+                error_details,
+                f"Sheet1 {rows[0]}행 외: 같은 연도/사업명 조합({year}, {contract_name})이 중복되어 전체 Import 대상을 구분할 수 없습니다.",
+                sheet="Sheet1",
+                row=rows[0],
+                column="연도/영업기회명",
+                code="duplicate_contract_identity_in_upload",
             )
 
     for (year, contract_name), periods in (existing_periods or {}).items():
         if len(periods) > 1:
-            errors.append(
-                f"기존 데이터에 같은 연도/사업명 조합({year}, {contract_name})이 {len(periods)}건 있어 전체 Import 대상을 구분할 수 없습니다."
+            _append_error(
+                errors,
+                error_details,
+                f"기존 데이터에 같은 연도/사업명 조합({year}, {contract_name})이 {len(periods)}건 있어 전체 Import 대상을 구분할 수 없습니다.",
+                sheet="Sheet1",
+                column="연도/영업기회명",
+                code="ambiguous_existing_contract_identity",
             )
 
-    return errors
+    return errors, error_details
 
 
 def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
     """파싱 + 유효성 검사. errors 리스트 반환."""
     xl = pd.ExcelFile(BytesIO(file_bytes))
-    errors = []
+    errors: list[str] = []
+    error_details: list[dict] = []
 
     # Sheet1: 영업기회
     if "영업기회" not in xl.sheet_names:
-        return {"errors": ["Sheet1 이름이 '영업기회'여야 합니다."], "data": None}
+        return {
+            "errors": ["Sheet1 이름이 '영업기회'여야 합니다."],
+            "error_details": [{"sheet": "Sheet1", "message": "Sheet1 이름이 '영업기회'여야 합니다.", "code": "invalid_sheet_name"}],
+            "data": None,
+        }
     df1 = xl.parse("영업기회", dtype=str).fillna("")
     # 안내 행(연도가 4자리 숫자가 아닌 행) 제거
     df1 = df1[df1["연도"].str.strip().str.match(r"^\d{4}$")].reset_index(drop=True)
@@ -184,7 +224,16 @@ def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
     required1 = ["연도", "번호", "사업유형", "거래처(END)", "영업기회명", "진행단계"]
     missing = [c for c in required1 if c not in df1.columns]
     if missing:
-        return {"errors": [f"Sheet1 필수 컬럼 누락: {missing}"], "data": None}
+        return {
+            "errors": [f"Sheet1 필수 컬럼 누락: {missing}"],
+            "error_details": [{
+                "sheet": "Sheet1",
+                "column": ",".join(missing),
+                "message": f"Sheet1 필수 컬럼 누락: {missing}",
+                "code": "missing_required_columns",
+            }],
+            "data": None,
+        }
 
     # 사업유형·진행단계 정규화 적용
     df1["사업유형"] = df1["사업유형"].apply(lambda v: _norm_contract_type(str(v)))
@@ -195,23 +244,51 @@ def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
     for i, row in df1.iterrows():
         r = i + 2
         if not row["연도"].strip():
-            errors.append(f"Sheet1 {r}행: 연도 필수")
+            _append_error(errors, error_details, f"Sheet1 {r}행: 연도 필수", sheet="Sheet1", row=r, column="연도", code="required_year")
         if not row["번호"].strip():
-            errors.append(f"Sheet1 {r}행: 번호 필수")
+            _append_error(errors, error_details, f"Sheet1 {r}행: 번호 필수", sheet="Sheet1", row=r, column="번호", code="required_number")
         if valid_contract_types and row["사업유형"].strip() not in valid_contract_types:
-            errors.append(f"Sheet1 {r}행: 사업유형 허용값({valid_contract_types}) 오류 - '{row['사업유형']}'")
+            _append_error(
+                errors,
+                error_details,
+                f"Sheet1 {r}행: 사업유형 허용값({valid_contract_types}) 오류 - '{row['사업유형']}'",
+                sheet="Sheet1",
+                row=r,
+                column="사업유형",
+                code="invalid_contract_type",
+            )
         if row["진행단계"].strip() not in VALID_STAGES:
-            errors.append(f"Sheet1 {r}행: 진행단계 허용값({VALID_STAGES}) 오류 - '{row['진행단계']}'")
+            _append_error(
+                errors,
+                error_details,
+                f"Sheet1 {r}행: 진행단계 허용값({VALID_STAGES}) 오류 - '{row['진행단계']}'",
+                sheet="Sheet1",
+                row=r,
+                column="진행단계",
+                code="invalid_stage",
+            )
 
     if db is not None:
         identities = {(int(year), name) for year, name in {_contract_identity(row) for _, row in df1.iterrows()}}
-        errors.extend(_validate_contract_identity_map(df1, existing_periods=_find_existing_periods(db, identities)))
+        identity_errors, identity_details = _validate_contract_identity_map(
+            df1,
+            existing_periods=_find_existing_periods(db, identities),
+        )
+        errors.extend(identity_errors)
+        error_details.extend(identity_details)
 
     # Sheet2: 월별계획 (선택)
     if "월별계획" in xl.sheet_names:
         df2 = xl.parse("월별계획", dtype=str).fillna("")
         if "연도" not in df2.columns:
-            errors.append("Sheet2 필수 컬럼 누락: ['연도']")
+            _append_error(
+                errors,
+                error_details,
+                "Sheet2 필수 컬럼 누락: ['연도']",
+                sheet="Sheet2",
+                column="연도",
+                code="missing_required_columns",
+            )
             df2 = None
         else:
             df2 = df2[df2["연도"].apply(lambda v: str(v).strip().isdigit() and len(str(v).strip()) == 4)].reset_index(drop=True)
@@ -225,7 +302,14 @@ def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
         required3 = ["연도", "번호", "매출/매입", "거래처명"]
         missing3 = [c for c in required3 if c not in df3.columns]
         if missing3:
-            errors.append(f"Sheet3 필수 컬럼 누락: {missing3}")
+            _append_error(
+                errors,
+                error_details,
+                f"Sheet3 필수 컬럼 누락: {missing3}",
+                sheet="Sheet3",
+                column=",".join(missing3),
+                code="missing_required_columns",
+            )
             df3 = None
         else:
             df3 = df3[df3["연도"].apply(lambda v: str(v).strip().isdigit() and len(str(v).strip()) == 4)].reset_index(drop=True)
@@ -234,12 +318,29 @@ def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
                 r = i + 2
                 key = (row["연도"].strip(), row["번호"].strip())
                 if key not in opp_keys:
-                    errors.append(f"Sheet3 {r}행: 연도+번호({key})가 Sheet1에 없음")
+                    _append_error(
+                        errors,
+                        error_details,
+                        f"Sheet3 {r}행: 연도+번호({key})가 Sheet1에 없음",
+                        sheet="Sheet3",
+                        row=r,
+                        column="연도/번호",
+                        code="missing_sheet1_reference",
+                    )
                 if row["매출/매입"].strip() not in VALID_LINE_TYPES:
-                    errors.append(f"Sheet3 {r}행: 매출/매입 허용값 오류 - '{row['매출/매입']}'")
+                    _append_error(
+                        errors,
+                        error_details,
+                        f"Sheet3 {r}행: 매출/매입 허용값 오류 - '{row['매출/매입']}'",
+                        sheet="Sheet3",
+                        row=r,
+                        column="매출/매입",
+                        code="invalid_line_type",
+                    )
 
     return {
         "errors": errors,
+        "error_details": error_details,
         "data": {"df1": df1, "df2": df2, "df3": df3} if not errors else None,
         "counts": {
             "contracts": len(df1),
@@ -404,6 +505,7 @@ def _import_data_inner(
     db.commit()
     return {
         "errors": [],
+        "error_details": [],
         "created": created,
         "skipped": skipped,
         "new_users": new_users,
@@ -424,13 +526,21 @@ def import_forecast_sheet(db: Session, file_bytes: bytes) -> dict:
     """
     xl = pd.ExcelFile(BytesIO(file_bytes))
     if "월별계획" not in xl.sheet_names:
-        return {"errors": ["시트 이름이 '월별계획'이어야 합니다."], "saved": 0}
+        return {
+            "errors": ["시트 이름이 '월별계획'이어야 합니다."],
+            "error_details": [{"sheet": "Sheet2", "message": "시트 이름이 '월별계획'이어야 합니다.", "code": "invalid_sheet_name"}],
+            "saved": 0,
+        }
 
     df = xl.parse("월별계획", dtype=str).fillna("")
     required = ["기간ID"]
     missing = [c for c in required if c not in df.columns]
     if missing:
-        return {"errors": [f"필수 컬럼 누락: {missing}"], "saved": 0}
+        return {
+            "errors": [f"필수 컬럼 누락: {missing}"],
+            "error_details": [{"sheet": "Sheet2", "column": ",".join(missing), "message": f"필수 컬럼 누락: {missing}", "code": "missing_required_columns"}],
+            "saved": 0,
+        }
     df = df[df["기간ID"].apply(lambda v: str(v).strip().isdigit())].reset_index(drop=True)
 
     # batch lookup: 모든 기간ID를 한번에 조회
@@ -439,6 +549,7 @@ def import_forecast_sheet(db: Session, file_bytes: bytes) -> dict:
     period_map = {p.id: p for p in db.query(ContractPeriod).filter(ContractPeriod.id.in_(period_ids)).all()} if period_ids else {}
 
     errors: list[str] = []
+    error_details: list[dict] = []
     saved = 0
 
     for i, row in df.iterrows():
@@ -448,7 +559,15 @@ def import_forecast_sheet(db: Session, file_bytes: bytes) -> dict:
         period_id = int(period_id_str)
         period = period_map.get(period_id)
         if not period:
-            errors.append(f"{i + 2}행: 기간ID {period_id}에 해당하는 영업기회가 없습니다.")
+            _append_error(
+                errors,
+                error_details,
+                f"{i + 2}행: 기간ID {period_id}에 해당하는 영업기회가 없습니다.",
+                sheet="Sheet2",
+                row=i + 2,
+                column="기간ID",
+                code="missing_contract_period",
+            )
             continue
 
         year_val = period.period_year
@@ -475,9 +594,9 @@ def import_forecast_sheet(db: Session, file_bytes: bytes) -> dict:
 
     if errors:
         db.rollback()
-        return {"errors": errors, "saved": 0}
+        return {"errors": errors, "error_details": error_details, "saved": 0}
     db.commit()
-    return {"errors": [], "saved": saved}
+    return {"errors": [], "error_details": [], "saved": saved}
 
 
 def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
@@ -487,13 +606,21 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
     """
     xl = pd.ExcelFile(BytesIO(file_bytes))
     if "실적" not in xl.sheet_names:
-        return {"errors": ["시트 이름이 '실적'이어야 합니다."], "saved": 0}
+        return {
+            "errors": ["시트 이름이 '실적'이어야 합니다."],
+            "error_details": [{"sheet": "Sheet3", "message": "시트 이름이 '실적'이어야 합니다.", "code": "invalid_sheet_name"}],
+            "saved": 0,
+        }
 
     df = xl.parse("실적", dtype=str).fillna("")
     required = ["기간ID", "매출/매입", "거래처명"]
     missing = [c for c in required if c not in df.columns]
     if missing:
-        return {"errors": [f"필수 컬럼 누락: {missing}"], "saved": 0}
+        return {
+            "errors": [f"필수 컬럼 누락: {missing}"],
+            "error_details": [{"sheet": "Sheet3", "column": ",".join(missing), "message": f"필수 컬럼 누락: {missing}", "code": "missing_required_columns"}],
+            "saved": 0,
+        }
     df = df[df["기간ID"].apply(lambda v: str(v).strip().isdigit())].reset_index(drop=True)
 
     # batch lookup: 모든 기간ID를 한번에 조회
@@ -502,6 +629,7 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
     period_map = {p.id: p for p in db.query(ContractPeriod).filter(ContractPeriod.id.in_(period_ids)).all()} if period_ids else {}
 
     errors: list[str] = []
+    error_details: list[dict] = []
     saved = 0
 
     for i, row in df.iterrows():
@@ -511,17 +639,41 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
         period_id = int(period_id_str)
         period = period_map.get(period_id)
         if not period:
-            errors.append(f"{i + 2}행: 기간ID {period_id}에 해당하는 영업기회가 없습니다.")
+            _append_error(
+                errors,
+                error_details,
+                f"{i + 2}행: 기간ID {period_id}에 해당하는 영업기회가 없습니다.",
+                sheet="Sheet3",
+                row=i + 2,
+                column="기간ID",
+                code="missing_contract_period",
+            )
             continue
 
         line_type_raw = str(row.get("매출/매입", "")).strip()
         if line_type_raw not in VALID_LINE_TYPES:
-            errors.append(f"{i + 2}행: 매출/매입 값이 올바르지 않습니다 - '{line_type_raw}'")
+            _append_error(
+                errors,
+                error_details,
+                f"{i + 2}행: 매출/매입 값이 올바르지 않습니다 - '{line_type_raw}'",
+                sheet="Sheet3",
+                row=i + 2,
+                column="매출/매입",
+                code="invalid_line_type",
+            )
             continue
 
         customer_name = str(row.get("거래처명", "")).strip()
         if not customer_name:
-            errors.append(f"{i + 2}행: 거래처명이 비어있습니다.")
+            _append_error(
+                errors,
+                error_details,
+                f"{i + 2}행: 거래처명이 비어있습니다.",
+                sheet="Sheet3",
+                row=i + 2,
+                column="거래처명",
+                code="required_customer_name",
+            )
             continue
 
         customer = _get_or_create_customer(
@@ -550,6 +702,6 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
 
     if errors:
         db.rollback()
-        return {"errors": errors, "saved": 0}
+        return {"errors": errors, "error_details": error_details, "saved": 0}
     db.commit()
-    return {"errors": [], "saved": saved}
+    return {"errors": [], "error_details": [], "saved": saved}

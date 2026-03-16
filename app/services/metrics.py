@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.contract import Contract
@@ -17,6 +17,7 @@ from app.models.receipt import Receipt
 from app.models.receipt_match import ReceiptMatch
 from app.auth.authorization import apply_contract_scope
 from app.schemas.report import ReportFilter
+from app.models.customer import Customer
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -328,15 +329,41 @@ def load_filtered_periods(
     return q.all()
 
 
+def _filtered_period_scope_subquery(db: Session, filt: ReportFilter, current_user: User | None):
+    """집계용 filtered period scope 서브쿼리."""
+    q = (
+        db.query(
+            ContractPeriod.id.label("period_id"),
+            ContractPeriod.contract_id.label("contract_id"),
+            ContractPeriod.is_planned.label("is_planned"),
+        )
+        .join(ContractPeriod.contract)
+        .filter(Contract.status != "cancelled")
+    )
+    q, _ = apply_common_filters(q, filt, current_user)
+    return q.subquery()
+
+
+def _distinct_contract_ids_subquery(period_scope):
+    return (
+        period_scope.select()
+        .with_only_columns(period_scope.c.contract_id)
+        .distinct()
+        .subquery()
+    )
+
+
 def aggregate_totals(
     db: Session,
     filt: ReportFilter,
     current_user: User | None,
 ) -> dict:
     """전체 KPI 합산: forecast_revenue, actual_revenue, cost, gp, gp_pct, receipt, ar, achievement_rate, contract_count."""
-    periods = load_filtered_periods(db, filt, current_user)
+    period_scope = _filtered_period_scope_subquery(db, filt, current_user)
+    contract_scope = _distinct_contract_ids_subquery(period_scope)
 
-    if not periods:
+    contract_count = db.query(func.count()).select_from(contract_scope).scalar() or 0
+    if contract_count == 0:
         return {
             "contract_count": 0,
             "forecast_revenue": 0, "actual_revenue": 0, "cost": 0,
@@ -344,33 +371,61 @@ def aggregate_totals(
             "ar_rate": None, "achievement_rate": None,
         }
 
-    contract_ids = list({p.contract_id for p in periods})
-    period_ids = [p.id for p in periods]
-
-    fc_map = load_forecasts(db, period_ids, filt.date_from, filt.date_to)
-    act_map = load_actuals(db, contract_ids, filt.date_from, filt.date_to)
-    rcpt_map = load_receipts(db, contract_ids, filt.date_from, filt.date_to)
-    match_map = load_matched_totals(db, contract_ids, filt.date_from, filt.date_to)
-
-    total_fc = sum(
-        v["revenue"]
-        for pid_months in fc_map.values()
-        for v in pid_months.values()
+    total_fc = int(
+        db.query(func.coalesce(func.sum(MonthlyForecast.revenue_amount), 0))
+        .join(period_scope, MonthlyForecast.contract_period_id == period_scope.c.period_id)
+        .filter(
+            MonthlyForecast.is_current.is_(True),
+            MonthlyForecast.forecast_month >= filt.date_from,
+            MonthlyForecast.forecast_month <= filt.date_to,
+        )
+        .scalar()
+        or 0
     )
-    total_act_revenue = 0
-    total_cost = 0
-    for did_months in act_map.values():
-        for v in did_months.values():
-            total_act_revenue += v["revenue"]
-            total_cost += v["cost"]
+
+    act_row = (
+        db.query(
+            func.coalesce(func.sum(case((TransactionLine.line_type == "revenue", TransactionLine.supply_amount), else_=0)), 0),
+            func.coalesce(func.sum(case((TransactionLine.line_type == "cost", TransactionLine.supply_amount), else_=0)), 0),
+        )
+        .join(contract_scope, TransactionLine.contract_id == contract_scope.c.contract_id)
+        .filter(
+            TransactionLine.status == STATUS_CONFIRMED,
+            TransactionLine.revenue_month >= filt.date_from,
+            TransactionLine.revenue_month <= filt.date_to,
+        )
+        .one()
+    )
+    total_act_revenue = int(act_row[0] or 0)
+    total_cost = int(act_row[1] or 0)
 
     gp = total_act_revenue - total_cost
-    total_receipt = sum(rcpt_map.values())
-    total_allocated = sum(match_map.values())
+    total_receipt = int(
+        db.query(func.coalesce(func.sum(Receipt.amount), 0))
+        .join(contract_scope, Receipt.contract_id == contract_scope.c.contract_id)
+        .filter(
+            Receipt.revenue_month >= filt.date_from,
+            Receipt.revenue_month <= filt.date_to,
+        )
+        .scalar()
+        or 0
+    )
+    total_allocated = int(
+        db.query(func.coalesce(func.sum(ReceiptMatch.matched_amount), 0))
+        .join(Receipt, Receipt.id == ReceiptMatch.receipt_id)
+        .join(TransactionLine, TransactionLine.id == ReceiptMatch.transaction_line_id)
+        .join(contract_scope, Receipt.contract_id == contract_scope.c.contract_id)
+        .filter(
+            TransactionLine.revenue_month >= filt.date_from,
+            TransactionLine.revenue_month <= filt.date_to,
+        )
+        .scalar()
+        or 0
+    )
     ar = total_act_revenue - total_allocated
 
     return {
-        "contract_count": len(contract_ids),
+        "contract_count": int(contract_count),
         "forecast_revenue": total_fc,
         "actual_revenue": total_act_revenue,
         "cost": total_cost,
@@ -389,10 +444,10 @@ def aggregate_monthly_trend(
     current_user: User | None,
 ) -> list[dict]:
     """월별 추이: [{month, forecast_revenue, actual_revenue, cost, gp, gp_pct, receipt, ar}]."""
-    periods = load_filtered_periods(db, filt, current_user)
+    period_scope = _filtered_period_scope_subquery(db, filt, current_user)
     months = month_range(filt.date_from, filt.date_to)
 
-    if not periods:
+    if (db.query(func.count()).select_from(period_scope).scalar() or 0) == 0:
         return [
             {"month": m[:7], "forecast_revenue": 0, "planned_forecast": 0,
              "unplanned_forecast": 0, "actual_revenue": 0,
@@ -400,50 +455,95 @@ def aggregate_monthly_trend(
             for m in months
         ]
 
-    contract_ids = list({p.contract_id for p in periods})
-    period_ids = [p.id for p in periods]
+    contract_scope = _distinct_contract_ids_subquery(period_scope)
 
-    fc_map = load_forecasts(db, period_ids, filt.date_from, filt.date_to)
-    act_map = load_actuals(db, contract_ids, filt.date_from, filt.date_to)
-    rcpt_monthly_map = load_receipts_monthly(db, contract_ids, filt.date_from, filt.date_to)
-    match_monthly_map = load_matched_totals_monthly(db, contract_ids, filt.date_from, filt.date_to)
+    fc_rows = (
+        db.query(
+            MonthlyForecast.forecast_month,
+            func.coalesce(func.sum(MonthlyForecast.revenue_amount), 0),
+            func.coalesce(
+                func.sum(case((period_scope.c.is_planned.is_(True), MonthlyForecast.revenue_amount), else_=0)),
+                0,
+            ),
+            func.coalesce(
+                func.sum(case((period_scope.c.is_planned.is_(False), MonthlyForecast.revenue_amount), else_=0)),
+                0,
+            ),
+        )
+        .join(period_scope, MonthlyForecast.contract_period_id == period_scope.c.period_id)
+        .filter(
+            MonthlyForecast.is_current.is_(True),
+            MonthlyForecast.forecast_month >= filt.date_from,
+            MonthlyForecast.forecast_month <= filt.date_to,
+        )
+        .group_by(MonthlyForecast.forecast_month)
+        .all()
+    )
+    fc_map = {
+        month: {"forecast_revenue": int(total or 0), "planned_forecast": int(planned or 0), "unplanned_forecast": int(unplanned or 0)}
+        for month, total, planned, unplanned in fc_rows
+    }
 
-    # period → is_planned 매핑
-    period_planned: dict[int, bool] = {p.id: p.is_planned for p in periods}
-    contract_period_ids: dict[int, list[int]] = {}
-    for p in periods:
-        contract_period_ids.setdefault(p.contract_id, []).append(p.id)
+    act_rows = (
+        db.query(
+            TransactionLine.revenue_month,
+            func.coalesce(func.sum(case((TransactionLine.line_type == "revenue", TransactionLine.supply_amount), else_=0)), 0),
+            func.coalesce(func.sum(case((TransactionLine.line_type == "cost", TransactionLine.supply_amount), else_=0)), 0),
+        )
+        .join(contract_scope, TransactionLine.contract_id == contract_scope.c.contract_id)
+        .filter(
+            TransactionLine.status == STATUS_CONFIRMED,
+            TransactionLine.revenue_month >= filt.date_from,
+            TransactionLine.revenue_month <= filt.date_to,
+        )
+        .group_by(TransactionLine.revenue_month)
+        .all()
+    )
+    act_map = {month: {"revenue": int(revenue or 0), "cost": int(cost or 0)} for month, revenue, cost in act_rows}
+
+    receipt_rows = (
+        db.query(
+            Receipt.revenue_month,
+            func.coalesce(func.sum(Receipt.amount), 0),
+        )
+        .join(contract_scope, Receipt.contract_id == contract_scope.c.contract_id)
+        .filter(
+            Receipt.revenue_month >= filt.date_from,
+            Receipt.revenue_month <= filt.date_to,
+        )
+        .group_by(Receipt.revenue_month)
+        .all()
+    )
+    receipt_map = {month: int(total or 0) for month, total in receipt_rows}
+
+    matched_rows = (
+        db.query(
+            TransactionLine.revenue_month,
+            func.coalesce(func.sum(ReceiptMatch.matched_amount), 0),
+        )
+        .join(ReceiptMatch, ReceiptMatch.transaction_line_id == TransactionLine.id)
+        .join(Receipt, Receipt.id == ReceiptMatch.receipt_id)
+        .join(contract_scope, Receipt.contract_id == contract_scope.c.contract_id)
+        .filter(
+            TransactionLine.revenue_month >= filt.date_from,
+            TransactionLine.revenue_month <= filt.date_to,
+        )
+        .group_by(TransactionLine.revenue_month)
+        .all()
+    )
+    match_map = {month: int(total or 0) for month, total in matched_rows}
 
     rows: list[dict] = []
     for m in months:
-        fc_revenue = 0
-        planned_fc = 0
-        unplanned_fc = 0
-        for did, pids in contract_period_ids.items():
-            for pid in pids:
-                fc = fc_map.get(pid, {}).get(m)
-                if fc:
-                    rev = fc["revenue"]
-                    fc_revenue += rev
-                    if period_planned.get(pid, True):
-                        planned_fc += rev
-                    else:
-                        unplanned_fc += rev
-
-        act_revenue = 0
-        act_cost = 0
-        for did in contract_ids:
-            ac = act_map.get(did, {}).get(m)
-            if ac:
-                act_revenue += ac["revenue"]
-                act_cost += ac["cost"]
-
-        receipt = sum(
-            rcpt_monthly_map.get(did, {}).get(m, 0) for did in contract_ids
-        )
-        allocated = sum(
-            match_monthly_map.get(did, {}).get(m, 0) for did in contract_ids
-        )
+        fc = fc_map.get(m, {})
+        ac = act_map.get(m, {})
+        fc_revenue = fc.get("forecast_revenue", 0)
+        planned_fc = fc.get("planned_forecast", 0)
+        unplanned_fc = fc.get("unplanned_forecast", 0)
+        act_revenue = ac.get("revenue", 0)
+        act_cost = ac.get("cost", 0)
+        receipt = receipt_map.get(m, 0)
+        allocated = match_map.get(m, 0)
         ar = act_revenue - allocated
         gp = act_revenue - act_cost
 
@@ -535,32 +635,57 @@ def top_customers(
 
     반환: [{customer_name, actual_revenue, contract_count}]
     """
-    periods = load_filtered_periods(db, filt, current_user, with_end_customer=True)
-    if not periods:
+    period_scope = _filtered_period_scope_subquery(db, filt, current_user)
+    contract_scope = (
+        db.query(
+            period_scope.c.contract_id.label("contract_id"),
+            Contract.end_customer_id.label("end_customer_id"),
+        )
+        .join(Contract, Contract.id == period_scope.c.contract_id)
+        .distinct()
+        .subquery()
+    )
+
+    if (db.query(func.count()).select_from(contract_scope).scalar() or 0) == 0:
         return []
 
-    contract_ids = list({p.contract_id for p in periods})
-    act_map = load_actuals(db, contract_ids, filt.date_from, filt.date_to)
+    actuals_by_contract = (
+        db.query(
+            TransactionLine.contract_id.label("contract_id"),
+            func.coalesce(func.sum(TransactionLine.supply_amount), 0).label("actual_revenue"),
+        )
+        .join(contract_scope, TransactionLine.contract_id == contract_scope.c.contract_id)
+        .filter(
+            TransactionLine.status == STATUS_CONFIRMED,
+            TransactionLine.line_type == "revenue",
+            TransactionLine.revenue_month >= filt.date_from,
+            TransactionLine.revenue_month <= filt.date_to,
+        )
+        .group_by(TransactionLine.contract_id)
+        .subquery()
+    )
 
-    cust_data: dict[str, dict] = {}
-    seen_contracts: dict[str, set[int]] = {}
-
-    for p in periods:
-        contract = p.contract
-        cname = contract.end_customer.name if contract.end_customer else "(미지정)"
-
-        if cname not in cust_data:
-            cust_data[cname] = {"customer_name": cname, "actual_revenue": 0, "contract_count": 0}
-            seen_contracts[cname] = set()
-
-        if contract.id not in seen_contracts[cname]:
-            seen_contracts[cname].add(contract.id)
-            cust_data[cname]["contract_count"] += 1
-            ac_months = act_map.get(contract.id, {})
-            cust_data[cname]["actual_revenue"] += sum(v["revenue"] for v in ac_months.values())
-
-    result = sorted(cust_data.values(), key=lambda r: r["actual_revenue"], reverse=True)
-    return result[:n]
+    rows = (
+        db.query(
+            func.coalesce(Customer.name, "(미지정)").label("customer_name"),
+            func.coalesce(func.sum(func.coalesce(actuals_by_contract.c.actual_revenue, 0)), 0).label("actual_revenue"),
+            func.count(func.distinct(contract_scope.c.contract_id)).label("contract_count"),
+        )
+        .outerjoin(Customer, Customer.id == contract_scope.c.end_customer_id)
+        .outerjoin(actuals_by_contract, actuals_by_contract.c.contract_id == contract_scope.c.contract_id)
+        .group_by(Customer.name)
+        .order_by(func.coalesce(func.sum(func.coalesce(actuals_by_contract.c.actual_revenue, 0)), 0).desc())
+        .limit(n)
+        .all()
+    )
+    return [
+        {
+            "customer_name": customer_name,
+            "actual_revenue": int(actual_revenue or 0),
+            "contract_count": int(contract_count or 0),
+        }
+        for customer_name, actual_revenue, contract_count in rows
+    ]
 
 
 def ar_warnings(

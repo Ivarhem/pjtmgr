@@ -75,7 +75,7 @@ async def import_forecast(
     content = await file.read()
     result = import_forecast_sheet(db, content)
     if result["errors"]:
-        raise ValidationError(result["errors"])
+        raise ValidationError(result["errors"], details=result.get("error_details"))
     return {"saved": result["saved"]}
 
 
@@ -90,7 +90,7 @@ async def import_transaction_lines(
     content = await file.read()
     result = import_actuals_sheet(db, content)
     if result["errors"]:
-        raise ValidationError(result["errors"])
+        raise ValidationError(result["errors"], details=result.get("error_details"))
     return {"saved": result["saved"]}
 
 
@@ -106,6 +106,7 @@ async def validate_upload(
     result = parse_and_validate(content, db=db)
     return {
         "errors": result["errors"],
+        "error_details": result.get("error_details", []),
         "counts": result.get("counts", {}),
         "valid": len(result["errors"]) == 0,
     }
@@ -123,7 +124,7 @@ async def do_import(
     content = await file.read()
     result = import_data(db, content, on_duplicate=on_duplicate)
     if result["errors"]:
-        raise ValidationError(result["errors"])
+        raise ValidationError(result["errors"], details=result.get("error_details"))
     return {
         "created": result["created"],
         "skipped": result["skipped"],

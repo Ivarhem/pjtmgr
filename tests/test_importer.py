@@ -71,6 +71,7 @@ def test_parse_and_validate_rejects_invalid_actual_reference(db_session) -> None
     )
 
     assert any("Sheet3" in error and "Sheet1에 없음" in error for error in result["errors"])
+    assert any(detail.get("code") == "missing_sheet1_reference" for detail in result["error_details"])
 
 
 def test_parse_and_validate_rejects_duplicate_year_and_contract_name_in_upload(db_session) -> None:
@@ -100,6 +101,7 @@ def test_parse_and_validate_rejects_duplicate_year_and_contract_name_in_upload(d
     result = importer.parse_and_validate(_workbook_bytes(contracts=contracts), db=db_session)
 
     assert any("같은 연도/사업명 조합" in error for error in result["errors"])
+    assert any(detail.get("code") == "duplicate_contract_identity_in_upload" for detail in result["error_details"])
 
 
 def test_parse_and_validate_rejects_ambiguous_existing_same_year_and_name(db_session) -> None:
@@ -142,3 +144,4 @@ def test_parse_and_validate_rejects_ambiguous_existing_same_year_and_name(db_ses
     result = importer.parse_and_validate(_workbook_bytes(contracts=contracts), db=db_session)
 
     assert any("기존 데이터에 같은 연도/사업명 조합" in error for error in result["errors"])
+    assert any(detail.get("code") == "ambiguous_existing_contract_identity" for detail in result["error_details"])

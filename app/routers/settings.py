@@ -11,7 +11,10 @@ router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
 @router.get("", response_model=SettingsRead)
 def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> SettingsRead:
-    return SettingsRead(org_name=svc.get_setting(db, "org_name"))
+    return SettingsRead(
+        org_name=svc.get_setting(db, "org_name"),
+        password_min_length=svc.get_password_min_length(db),
+    )
 
 
 @router.patch("", response_model=SettingsRead)
@@ -22,4 +25,9 @@ def update_settings(
 ) -> SettingsRead:
     if data.org_name is not None:
         svc.update_setting(db, "org_name", data.org_name or None)
-    return SettingsRead(org_name=svc.get_setting(db, "org_name"))
+    if data.password_min_length is not None:
+        svc.update_setting(db, "auth.password_min_length", str(data.password_min_length))
+    return SettingsRead(
+        org_name=svc.get_setting(db, "org_name"),
+        password_min_length=svc.get_password_min_length(db),
+    )
