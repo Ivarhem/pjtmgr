@@ -10,6 +10,7 @@ from __future__ import annotations
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.auth.authorization import check_contract_access
 from app.exceptions import BusinessRuleError, NotFoundError
 from app.models.contract_period import ContractPeriod
 from app.models.receipt_match import ReceiptMatch
@@ -172,10 +173,24 @@ def auto_match_contract(
 
 
 def create_match(
-    db: Session, data: ReceiptMatchCreate, *, created_by: int | None = None,
+    db: Session,
+    data: ReceiptMatchCreate,
+    *,
+    created_by: int | None = None,
+    current_user=None,
+    expected_contract_id: int | None = None,
 ) -> dict:
     """수동 대사 생성."""
-    _validate_match(db, data.receipt_id, data.transaction_line_id, data.matched_amount)
+    contract_id = _validate_match(
+        db,
+        data.receipt_id,
+        data.transaction_line_id,
+        data.matched_amount,
+    )
+    if expected_contract_id is not None and contract_id != expected_contract_id:
+        raise BusinessRuleError("요청 경로의 사업과 대사 대상 사업이 일치하지 않습니다.")
+    if current_user is not None:
+        check_contract_access(db, contract_id, current_user)
 
     match = ReceiptMatch(
         receipt_id=data.receipt_id,
@@ -190,11 +205,22 @@ def create_match(
     return _match_dict(match)
 
 
-def update_match(db: Session, match_id: int, data: ReceiptMatchUpdate) -> dict:
+def update_match(
+    db: Session,
+    match_id: int,
+    data: ReceiptMatchUpdate,
+    *,
+    current_user=None,
+) -> dict:
     """대사 금액 수정."""
     match = db.get(ReceiptMatch, match_id)
     if not match:
         raise NotFoundError("대사 정보를 찾을 수 없습니다.")
+    contract_id = match.receipt.contract_id if match.receipt else None
+    if contract_id is None:
+        raise NotFoundError("대사에 연결된 수금 정보를 찾을 수 없습니다.")
+    if current_user is not None:
+        check_contract_access(db, contract_id, current_user)
 
     # 기존 금액을 제외하고 검증
     _validate_match(
@@ -207,11 +233,16 @@ def update_match(db: Session, match_id: int, data: ReceiptMatchUpdate) -> dict:
     return _match_dict(match)
 
 
-def delete_match(db: Session, match_id: int) -> None:
+def delete_match(db: Session, match_id: int, *, current_user=None) -> None:
     """대사 삭제."""
     match = db.get(ReceiptMatch, match_id)
     if not match:
         raise NotFoundError("대사 정보를 찾을 수 없습니다.")
+    contract_id = match.receipt.contract_id if match.receipt else None
+    if contract_id is None:
+        raise NotFoundError("대사에 연결된 수금 정보를 찾을 수 없습니다.")
+    if current_user is not None:
+        check_contract_access(db, contract_id, current_user)
     db.delete(match)
     db.commit()
 
@@ -392,7 +423,7 @@ def _validate_match(
     amount: int,
     *,
     exclude_match_id: int | None = None,
-) -> None:
+) -> int:
     """대사 제약 검증."""
     receipt = db.get(Receipt, receipt_id)
     if not receipt:
@@ -427,3 +458,5 @@ def _validate_match(
             f"매출 금액({transaction_line.supply_amount:,}원)을 초과하여 대사할 수 없습니다. "
             f"현재 대사: {used_transaction_line:,}원, 요청: {amount:,}원"
         )
+
+    return receipt.contract_id

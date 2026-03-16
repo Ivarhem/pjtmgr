@@ -10,7 +10,9 @@ from app.schemas.contract import ContractCreate, ContractPeriodCreate
 from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
 from app.schemas.transaction_line import TransactionLineCreate, TransactionLineUpdate
 from app.services import contract as contract_service
+from app.services import receipt as receipt_service
 from app.services import receipt_match as receipt_match_service
+from app.services import transaction_line as tl_service
 
 
 def _seed_contract_type(db_session) -> None:
@@ -135,7 +137,7 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session) ->
     db_session.commit()
 
     try:
-        contract_service.create_transaction_line(
+        tl_service.create_transaction_line(
             db_session,
             contract.id,
             TransactionLineCreate(
@@ -164,7 +166,7 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session) ->
     db_session.commit()
 
     try:
-        contract_service.update_transaction_line(
+        tl_service.update_transaction_line(
             db_session,
             row.id,
             TransactionLineUpdate(revenue_month="2026-07-01"),
@@ -215,7 +217,7 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session) -> Non
     db_session.commit()
 
     try:
-        contract_service.create_receipt(
+        receipt_service.create_receipt(
             db_session,
             contract.id,
             ReceiptCreate(
@@ -242,7 +244,7 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session) -> Non
     db_session.commit()
 
     try:
-        contract_service.update_receipt(
+        receipt_service.update_receipt(
             db_session,
             receipt.id,
             ReceiptUpdate(revenue_month="2026-02-01"),
@@ -255,7 +257,7 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session) -> Non
     db_session.commit()
 
     try:
-        contract_service.delete_receipt(db_session, receipt.id)
+        receipt_service.delete_receipt(db_session, receipt.id)
         assert False, "완료된 기간의 입금 삭제는 차단되어야 합니다."
     except BusinessRuleError:
         pass

@@ -2,12 +2,11 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.auth.service import authenticate
-from app.auth.password import hash_password, verify_password
+from app.auth.service import authenticate, change_password as svc_change_password
 from app.auth.dependencies import get_current_user
 from app.auth.authorization import get_permissions
 from app.models.user import User
-from app.exceptions import BusinessRuleError, PermissionDeniedError, UnauthorizedError
+from app.exceptions import UnauthorizedError
 from app.schemas.auth import ChangePasswordRequest, LoginRequest
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -34,16 +33,7 @@ def change_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    if not current_user.hashed_password or not verify_password(
-        data.current_password, current_user.hashed_password
-    ):
-        raise BusinessRuleError("현재 비밀번호가 올바르지 않습니다.", status_code=400)
-    MIN_PASSWORD_LENGTH = 4
-    if len(data.new_password) < MIN_PASSWORD_LENGTH:
-        raise BusinessRuleError(f"새 비밀번호는 {MIN_PASSWORD_LENGTH}자 이상이어야 합니다.", status_code=400)
-    current_user.hashed_password = hash_password(data.new_password)
-    current_user.must_change_password = False
-    db.commit()
+    svc_change_password(db, current_user, data.current_password, data.new_password)
     return {"ok": True}
 
 

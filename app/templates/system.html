@@ -7,6 +7,7 @@
 <div class="page-header">
   <h1>시스템 관리</h1>
 </div>
+<p class="data-note">※ 시스템 전반 설정을 관리합니다. 조직명, 사업유형(MA/SI/HW 등)의 기본값, UI에 표시되는 용어를 커스터마이징할 수 있습니다.</p>
 
 <!-- 기본 설정 -->
 <div class="sys-section sys-section-narrow">
@@ -29,7 +30,7 @@
     <h2 class="sys-section-title">사업유형 관리</h2>
     <button id="btn-add-contract-type" class="btn btn-primary btn-sm">+ 추가</button>
   </div>
-  <p class="data-note sys-note">사업유형과 기본값을 관리합니다. 기본값은 사업 등록 시 자동으로 적용됩니다. 비활성화하면 새 사업 등록 시 선택할 수 없습니다.</p>
+  <p class="data-note sys-note">사업유형(예: MA=유지보수, SI=시스템구축, HW=하드웨어)과 기본 GP%, 검수일, 세금계산서 발행 규칙을 관리합니다. 여기서 설정한 기본값은 사업 등록 시 자동 적용됩니다. 비활성화하면 새 사업 등록 시 해당 유형을 선택할 수 없습니다.</p>
   <div class="sys-table-wrap">
     <table class="sys-table" id="contract-type-table">
       <colgroup>
@@ -65,7 +66,7 @@
     <h2 class="sys-section-title">용어 관리</h2>
     <button id="btn-add-term" class="btn btn-primary btn-sm">+ 추가</button>
   </div>
-  <p class="data-note sys-note">시스템에서 사용하는 표준 용어와 UI 표시명을 관리합니다. 커스텀 표시명을 설정하면 UI에서 해당 이름으로 표시됩니다.</p>
+  <p class="data-note sys-note">화면에 표시되는 용어를 커스터마이징합니다. 예를 들어 '고객'이라는 용어를 조직에 맞게 '거래처'로 변경할 수 있습니다. 커스텀 표시명을 비워두면 기본값이 사용됩니다.</p>
   <div class="sys-table-wrap">
     <table class="sys-table" id="term-config-table">
       <colgroup>

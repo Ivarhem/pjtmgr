@@ -13,16 +13,22 @@
 </div>
 
 <!-- ── 사업 정보 ──────────────────────────────────────────── -->
+<p class="data-note">※ 하나의 사업(계약)에 대한 상세 정보입니다. 사업 정보 카드에서 사업유형·고객·담당자 등 기본 정보를 확인하고, 아래에서 예상 매출(Forecast), 실적 원장(매출/매입), 입금, 배분 현황을 관리합니다. 여러 연도에 걸친 사업은 탭으로 귀속기간(Y25, Y26 등)을 전환합니다.</p>
 <div class="info-card" id="contract-info"></div>
 <div id="period-info-container"></div>
 
 <div class="page-divider"><span>실적 요약</span></div>
 
 <!-- ── 실적 요약 ──────────────────────────────────────────── -->
-<div id="period-tabs" class="period-tabs"></div>
+<div class="pill-tabs-wrap">
+  <button id="pill-nav-left" class="pill-tab-nav is-hidden">◀</button>
+  <div id="period-tabs" class="pill-tabs pill-tabs-scroll"></div>
+  <button id="pill-nav-right" class="pill-tab-nav is-hidden">▶</button>
+</div>
 <div class="gp-summary" id="gp-summary"></div>
 
 <div class="trade-section" id="section-forecast">
+  <p class="data-note">※ Forecast는 월별 예상 매출과 GP(매출이익)를 미리 계획하는 표입니다. [일괄등록]으로 총 매출을 월별 균등 배분하거나, 그리드 셀을 직접 수정하세요. 수정 후 반드시 [저장]을 눌러야 반영됩니다.</p>
   <div class="section-header">
     <h2 class="section-title forecast-title">Forecast (예상 매출/GP)</h2>
     <div class="section-actions">
@@ -38,6 +44,7 @@
 
 <!-- ── Ledger 섹션 (매출/매입 + 입금 통합) ──────────────────── -->
 <div class="trade-section" id="section-ledger">
+  <p class="data-note">※ 매출(고객에게 청구할 금액)과 매입(공급사에 지불할 비용)을 월별로 기록하는 원장입니다. '예정'은 아직 확정되지 않은 항목, '확정'은 세금계산서 발행 등으로 확정된 항목입니다. GP(매출이익) = 매출 - 매입. [+ 추가]로 행을 추가하고, [Forecast에서 가져오기]로 예상 매출을 실적 행으로 변환할 수 있습니다.</p>
   <div class="section-header">
     <h2 class="section-title ledger-title">매출/매입 원장</h2>
     <div class="section-actions">
@@ -136,11 +143,12 @@
     <button id="btn-add-receipt-bottom" class="grid-add-row-btn" type="button">+ 입금</button>
   </div>
   <div id="receipt-summary-bar" class="grid-summary-bar"></div>
-  <p class="data-note">ℹ 입금 등록 시 FIFO 규칙으로 매출 라인에 자동 배분됩니다. 미수(AR) = 매출확정 - 배분완료.</p>
+  <p class="data-note">ℹ 고객으로부터 받은 입금 내역을 등록합니다. 입금 등록 시 FIFO(선입선출) 규칙으로 오래된 매출 라인부터 자동 배분됩니다. 미수금(AR) = 확정 매출 - 배분 완료 금액. [매출 원장에서 가져오기]로 확정 매출을 기반으로 입금을 빠르게 등록할 수 있습니다.</p>
 </div>
 
 <!-- ── 배분 현황 섹션 ──────────────────────────────────────── -->
 <div class="trade-section" id="section-receipt-match">
+  <p class="data-note">※ 입금이 어떤 매출 건에 배분되었는지 보여줍니다. 입금 등록 시 자동 배분되지만, [수동 배분]으로 직접 지정하거나 [자동 재배분]으로 FIFO 기준으로 다시 배분할 수 있습니다. 배분되지 않은 입금 잔액은 선수금으로 처리됩니다.</p>
   <div class="section-header">
     <h2 class="section-title">배분 현황 (Allocation)</h2>
     <div class="section-actions">
@@ -190,6 +198,10 @@
           <option value="90%">90%</option>
           <option value="계약완료">계약완료</option>
         </select>
+      </label>
+      <label class="chk-inline full-width">
+        <input type="checkbox" id="add-period-is-planned" checked>
+        계획사업 (미체크 시 수시사업)
       </label>
       <label class="full-width">매출처
         <select id="add-period-customer">

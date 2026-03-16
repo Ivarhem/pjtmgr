@@ -18,6 +18,7 @@ from app.models.contract_period import ContractPeriod
 from app.models.monthly_forecast import MonthlyForecast
 from app.models.transaction_line import TransactionLine, STATUS_CONFIRMED
 from app.models.receipt import Receipt
+from app.models.receipt_match import ReceiptMatch
 from app.exceptions import NotFoundError
 from app.schemas.report import ReportFilter
 from app.services.metrics import (
@@ -455,31 +456,55 @@ def get_contract_pnl(
     revenue_totals: dict[str, int] = {}
     cost_totals: dict[str, int] = {}
     receipt_totals: dict[str, int] = {}
+    matched_totals: dict[str, int] = {}
 
     for m in sorted_months:
         revenue_totals[m] = sum(r["months"].get(m, 0) for r in revenue_rows)
         cost_totals[m] = sum(r["months"].get(m, 0) for r in cost_rows)
         receipt_totals[m] = sum(r["months"].get(m, 0) for r in receipt_rows)
 
+    matched_rows = (
+        db.query(
+            TransactionLine.revenue_month,
+            func.sum(ReceiptMatch.matched_amount),
+        )
+        .join(ReceiptMatch, ReceiptMatch.transaction_line_id == TransactionLine.id)
+        .join(Receipt, Receipt.id == ReceiptMatch.receipt_id)
+        .filter(
+            TransactionLine.contract_id == contract_id,
+            Receipt.contract_id == contract_id,
+            TransactionLine.status == STATUS_CONFIRMED,
+        )
+    )
+    if year_filter:
+        matched_rows = matched_rows.filter(TransactionLine.revenue_month.like(year_filter))
+    for month, total in matched_rows.group_by(TransactionLine.revenue_month).all():
+        matched_totals[month] = int(total or 0)
+        if month not in revenue_totals and month not in cost_totals and month not in receipt_totals:
+            sorted_months.append(month)
+
+    sorted_months = sorted(set(sorted_months))
+
     gp_monthly: dict[str, int] = {}
     gp_pct_monthly: dict[str, float | None] = {}
     ar_monthly: dict[str, int] = {}
     cumulative_revenue = 0
-    cumulative_payment = 0
+    cumulative_matched = 0
 
     for m in sorted_months:
         s = revenue_totals.get(m, 0)
         c = cost_totals.get(m, 0)
-        p = receipt_totals.get(m, 0)
+        matched = matched_totals.get(m, 0)
         gp_monthly[m] = s - c
         gp_pct_monthly[m] = round((s - c) / s * 100, 1) if s > 0 else None
         cumulative_revenue += s
-        cumulative_payment += p
-        ar_monthly[m] = cumulative_revenue - cumulative_payment
+        cumulative_matched += matched
+        ar_monthly[m] = cumulative_revenue - cumulative_matched
 
     grand_revenue = sum(revenue_totals.values())
     grand_cost = sum(cost_totals.values())
     grand_receipt = sum(receipt_totals.values())
+    grand_matched = sum(matched_totals.values())
 
     return {
         "contract_id": contract.id,
@@ -503,7 +528,7 @@ def get_contract_pnl(
         "grand_gp": grand_revenue - grand_cost,
         "grand_gp_pct": round((grand_revenue - grand_cost) / grand_revenue * 100, 1) if grand_revenue > 0 else None,
         "grand_receipt": grand_receipt,
-        "grand_ar": grand_revenue - grand_receipt,
+        "grand_ar": grand_revenue - grand_matched,
     }
 
 

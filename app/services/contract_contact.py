@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
-from app.auth.authorization import list_accessible_contract_ids, check_period_access
-from app.auth.constants import ROLE_ADMIN
+from app.auth.authorization import check_period_access, has_full_contract_scope, list_accessible_contract_ids
 from app.models.contract_contact import ContractContact
 from app.models.contract_period import ContractPeriod
 from app.models.contract import Contract
@@ -40,7 +39,7 @@ def list_by_contract(db: Session, contract_id: int) -> list[dict]:
     return [_to_dict(r) for r in rows]
 
 
-def list_by_customer(db: Session, customer_id: int, current_user=None) -> list[dict]:
+def list_by_customer(db: Session, customer_id: int, current_user: User | None = None) -> list[dict]:
     """거래처와 관련된 모든 사업별 담당자 목록 (사업명 포함)."""
     q = (
         db.query(ContractContact)
@@ -50,7 +49,7 @@ def list_by_customer(db: Session, customer_id: int, current_user=None) -> list[d
         )
         .filter(ContractContact.customer_id == customer_id)
     )
-    if current_user and current_user.role != ROLE_ADMIN:
+    if current_user and not has_full_contract_scope(current_user):
         contract_ids = list_accessible_contract_ids(db, current_user)
         if not contract_ids:
             return []
@@ -68,70 +67,77 @@ def list_by_customer(db: Session, customer_id: int, current_user=None) -> list[d
     return result
 
 
-def list_by_customer_pivoted(db: Session, customer_id: int, current_user=None) -> list[dict]:
-    """거래처의 사업별 담당자를 사업 단위로 피벗하여 반환.
+def list_by_customer_pivoted(db: Session, customer_id: int, current_user: User | None = None) -> list[dict]:
+    """거래처의 사업별 담당자를 period 단위로 피벗하여 반환.
 
+    관련 사업의 **모든 period**를 행으로 포함 (담당자 미배정 period 포함).
     한 행에 영업(정) + 세금계산서(정) + 업무(정) 담당자 정보를 함께 포함.
-    부 담당자가 있으면 has_secondary_* 플래그로 표시.
     """
-    q = (
-        db.query(ContractContact)
-        .options(
-            joinedload(ContractContact.contract_period).joinedload(ContractPeriod.contract),
-            joinedload(ContractContact.customer_contact),
+    from app.services.customer import _related_contract_ids
+
+    contract_ids = _related_contract_ids(db, customer_id)
+    if current_user and not has_full_contract_scope(current_user):
+        visible = set(list_accessible_contract_ids(db, current_user))
+        contract_ids &= visible
+    if not contract_ids:
+        return []
+
+    # 모든 period 조회 (cancelled 제외)
+    all_periods = (
+        db.query(ContractPeriod)
+        .join(Contract, Contract.id == ContractPeriod.contract_id)
+        .options(joinedload(ContractPeriod.contract))
+        .filter(
+            ContractPeriod.contract_id.in_(contract_ids),
+            Contract.status != "cancelled",
         )
-        .filter(ContractContact.customer_id == customer_id)
+        .order_by(ContractPeriod.contract_id.desc(), ContractPeriod.period_year.desc())
+        .all()
     )
-    if current_user and current_user.role != ROLE_ADMIN:
-        contract_ids = list_accessible_contract_ids(db, current_user)
-        if not contract_ids:
-            return []
-        q = q.join(ContractContact.contract_period).filter(ContractPeriod.contract_id.in_(contract_ids))
-    rows = q.order_by(ContractContact.contract_period_id.desc(), ContractContact.contact_type).all()
 
-    # contract_period_id 기준으로 그룹핑
+    # period 기본 행 생성
     periods: dict[int, dict] = {}
-    for r in rows:
-        pid = r.contract_period_id
-        if pid not in periods:
-            contract = r.contract_period.contract if r.contract_period else None
-            periods[pid] = {
-                "contract_period_id": pid,
-                "contract_id": contract.id if contract else None,
-                "contract_name": contract.contract_name if contract else None,
-                "contract_code": contract.contract_code if contract else None,
-                "period_label": r.contract_period.period_label if r.contract_period else None,
-                "sales_id": None, "sales_cc_id": None, "sales_name": None, "sales_phone": None, "sales_email": None,
-                "tax_id": None, "tax_cc_id": None, "tax_name": None, "tax_phone": None, "tax_email": None,
-                "ops_id": None, "ops_cc_id": None, "ops_name": None, "ops_phone": None, "ops_email": None,
-                "has_secondary_sales": False,
-                "has_secondary_tax": False,
-                "has_secondary_ops": False,
-                "notes": None,
-            }
-        d = periods[pid]
-        cc = r.customer_contact
-        name = cc.name if cc else None
-        phone = cc.phone if cc else None
-        email = cc.email if cc else None
+    for p in all_periods:
+        c = p.contract
+        periods[p.id] = {
+            "contract_period_id": p.id,
+            "contract_id": c.id if c else None,
+            "contract_name": c.contract_name if c else None,
+            "contract_code": c.contract_code if c else None,
+            "period_label": p.period_label or f"Y{str(p.period_year)[-2:]}",
+            "is_completed": p.is_completed,
+            "sales_id": None, "sales_cc_id": None, "sales_name": None, "sales_phone": None, "sales_email": None,
+            "tax_id": None, "tax_cc_id": None, "tax_name": None, "tax_phone": None, "tax_email": None,
+            "ops_id": None, "ops_cc_id": None, "ops_name": None, "ops_phone": None, "ops_email": None,
+        }
 
+    # 담당자 데이터 채우기
+    period_ids = list(periods.keys())
+    if period_ids:
+        rows = (
+            db.query(ContractContact)
+            .options(joinedload(ContractContact.customer_contact))
+            .filter(
+                ContractContact.contract_period_id.in_(period_ids),
+                ContractContact.customer_id == customer_id,
+            )
+            .all()
+        )
         prefix_map = {"영업": "sales", "세금계산서": "tax", "업무": "ops"}
-        prefix = prefix_map.get(r.contact_type)
-        if not prefix:
-            continue
-
-        if r.rank == "정":
-            # 정 담당자만 피벗 컬럼에 표시
-            if d[prefix + "_id"] is None:
+        for r in rows:
+            d = periods.get(r.contract_period_id)
+            if not d:
+                continue
+            prefix = prefix_map.get(r.contact_type)
+            if not prefix:
+                continue
+            if r.rank == "정" and d[prefix + "_id"] is None:
+                cc = r.customer_contact
                 d[prefix + "_id"] = r.id
                 d[prefix + "_cc_id"] = r.customer_contact_id
-                d[prefix + "_name"] = name
-                d[prefix + "_phone"] = phone
-                d[prefix + "_email"] = email
-                if r.notes and d["notes"] is None:
-                    d["notes"] = r.notes
-        else:
-            d["has_secondary_" + prefix] = True
+                d[prefix + "_name"] = cc.name if cc else None
+                d[prefix + "_phone"] = cc.phone if cc else None
+                d[prefix + "_email"] = cc.email if cc else None
 
     return list(periods.values())
 

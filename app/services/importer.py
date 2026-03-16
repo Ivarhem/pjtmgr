@@ -1,6 +1,8 @@
 """Excel Import 서비스 (3시트 템플릿 파싱 및 DB 저장)"""
 from __future__ import annotations
 
+import os
+from collections import defaultdict
 from io import BytesIO
 from typing import TYPE_CHECKING
 
@@ -13,11 +15,36 @@ from app.models.monthly_forecast import MonthlyForecast
 from app.models.transaction_line import TransactionLine
 from app.auth.constants import ROLE_USER
 from app.services.customer import get_or_create_by_name as _get_or_create_customer_svc
+from app.exceptions import BusinessRuleError
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
 from app.schemas.contract import VALID_STAGES
 from app.services.contract_type_config import get_valid_codes as _get_valid_contract_types
+
+# ── 파일 유효성 검증 ──
+
+_XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+_ALLOWED_CSV_EXTENSIONS = {".csv"}
+_ALLOWED_CSV_MIMES = {"text/csv", "application/vnd.ms-excel", "application/octet-stream"}
+
+
+def validate_xlsx(filename: str | None, content_type: str | None) -> None:
+    """Excel 파일 확장자 및 MIME 타입 검증."""
+    if not filename or not filename.lower().endswith(".xlsx"):
+        raise BusinessRuleError("xlsx 파일만 업로드할 수 있습니다.", status_code=422)
+    if not content_type or content_type != _XLSX_MIME:
+        raise BusinessRuleError("xlsx 파일만 업로드할 수 있습니다.", status_code=422)
+
+
+def validate_csv(filename: str | None, content_type: str | None) -> None:
+    """CSV 파일 확장자 및 MIME 타입 검증."""
+    ext = os.path.splitext(filename or "")[1].lower()
+    if ext not in _ALLOWED_CSV_EXTENSIONS:
+        raise BusinessRuleError("CSV 파일만 업로드할 수 있습니다. (.csv)", status_code=422)
+    if content_type and content_type not in _ALLOWED_CSV_MIMES:
+        raise BusinessRuleError("CSV 파일만 업로드할 수 있습니다. (.csv)", status_code=422)
+
 VALID_LINE_TYPES = {"매출", "매입"}
 LINE_TYPE_MAP = {"매출": "revenue", "매입": "cost"}
 
@@ -81,6 +108,63 @@ def _to_int(val) -> int:
         return 0
 
 
+def _import_key(row: pd.Series) -> tuple[str, str]:
+    return (str(row["연도"]).strip(), str(row["번호"]).strip())
+
+
+def _contract_identity(row: pd.Series) -> tuple[str, str]:
+    return (str(row["연도"]).strip(), str(row["영업기회명"]).strip())
+
+
+def _find_existing_periods(
+    db: Session, identities: set[tuple[int, str]]
+) -> dict[tuple[int, str], list[ContractPeriod]]:
+    if not identities:
+        return {}
+
+    years = sorted({year for year, _name in identities})
+    names = sorted({name for _year, name in identities})
+    rows = (
+        db.query(ContractPeriod)
+        .join(ContractPeriod.contract)
+        .filter(ContractPeriod.period_year.in_(years), Contract.contract_name.in_(names))
+        .all()
+    )
+
+    grouped: dict[tuple[int, str], list[ContractPeriod]] = defaultdict(list)
+    for period in rows:
+        key = (period.period_year, period.contract.contract_name)
+        if key in identities:
+            grouped[key].append(period)
+    return grouped
+
+
+def _validate_contract_identity_map(
+    df1: pd.DataFrame,
+    *,
+    existing_periods: dict[tuple[int, str], list[ContractPeriod]] | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    upload_identity_rows: dict[tuple[str, str], list[int]] = defaultdict(list)
+
+    for i, row in df1.iterrows():
+        upload_identity_rows[_contract_identity(row)].append(i + 2)
+
+    for (year, contract_name), rows in upload_identity_rows.items():
+        if len(rows) > 1:
+            errors.append(
+                f"Sheet1 {rows[0]}행 외: 같은 연도/사업명 조합({year}, {contract_name})이 중복되어 전체 Import 대상을 구분할 수 없습니다."
+            )
+
+    for (year, contract_name), periods in (existing_periods or {}).items():
+        if len(periods) > 1:
+            errors.append(
+                f"기존 데이터에 같은 연도/사업명 조합({year}, {contract_name})이 {len(periods)}건 있어 전체 Import 대상을 구분할 수 없습니다."
+            )
+
+    return errors
+
+
 def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
     """파싱 + 유효성 검사. errors 리스트 반환."""
     xl = pd.ExcelFile(BytesIO(file_bytes))
@@ -118,6 +202,10 @@ def parse_and_validate(file_bytes: bytes, db: Session | None = None) -> dict:
             errors.append(f"Sheet1 {r}행: 사업유형 허용값({valid_contract_types}) 오류 - '{row['사업유형']}'")
         if row["진행단계"].strip() not in VALID_STAGES:
             errors.append(f"Sheet1 {r}행: 진행단계 허용값({VALID_STAGES}) 오류 - '{row['진행단계']}'")
+
+    if db is not None:
+        identities = {(int(year), name) for year, name in {_contract_identity(row) for _, row in df1.iterrows()}}
+        errors.extend(_validate_contract_identity_map(df1, existing_periods=_find_existing_periods(db, identities)))
 
     # Sheet2: 월별계획 (선택)
     if "월별계획" in xl.sheet_names:
@@ -167,30 +255,39 @@ def import_data(db: Session, file_bytes: bytes, on_duplicate: str = "overwrite")
     if result["errors"]:
         return result
 
-    df1, df2, df3 = result["data"]["df1"], result["data"]["df2"], result["data"]["df3"]
+    try:
+        return _import_data_inner(db, result["data"], on_duplicate)
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _import_data_inner(
+    db: Session, data: dict, on_duplicate: str,
+) -> dict:
+    df1, df2, df3 = data["df1"], data["df2"], data["df3"]
     created = skipped = 0
     new_users: list[str] = []
 
     # (연도, 번호) → ContractPeriod 매핑 (Sheet2/Sheet3 연결용)
     period_map: dict[tuple, ContractPeriod] = {}
+    existing_periods = _find_existing_periods(
+        db,
+        {(int(year), name) for year, name in {_contract_identity(row) for _, row in df1.iterrows()}},
+    )
 
     for _, row in df1.iterrows():
         year = int(row["연도"].strip())
-        seq_no_str = row["번호"].strip()
         contract_name = row["영업기회명"].strip()
         contract_type = row["사업유형"].strip()
+        identity = (year, contract_name)
 
-        # 중복 탐지: period_year + contract_name 기준
-        existing_period = (
-            db.query(ContractPeriod)
-            .join(ContractPeriod.contract)
-            .filter(ContractPeriod.period_year == year, Contract.contract_name == contract_name)
-            .first()
-        )
+        matches = existing_periods.get(identity, [])
+        existing_period = matches[0] if matches else None
 
         if existing_period and on_duplicate == "skip":
             skipped += 1
-            period_map[(row["연도"].strip(), seq_no_str)] = existing_period
+            period_map[_import_key(row)] = existing_period
             continue
 
         owner_name = row.get("담당", "").strip()
@@ -214,7 +311,7 @@ def import_data(db: Session, file_bytes: bytes, on_duplicate: str = "overwrite")
             existing_period.stage = row["진행단계"].strip()
             existing_period.expected_revenue_total = _to_int(row.get("예상매출(원)", ""))
             existing_period.expected_gp_total = _to_int(row.get("예상GP(원)", ""))
-            period_map[(row["연도"].strip(), seq_no_str)] = existing_period
+            period_map[_import_key(row)] = existing_period
         else:
             contract = Contract(
                 contract_name=contract_name,
@@ -239,13 +336,14 @@ def import_data(db: Session, file_bytes: bytes, on_duplicate: str = "overwrite")
             )
             db.add(period)
             db.flush()
-            period_map[(row["연도"].strip(), seq_no_str)] = period
+            period_map[_import_key(row)] = period
+            existing_periods.setdefault(identity, []).append(period)
             created += 1
 
     # Sheet2: 월별계획 → MonthlyForecast
     if df2 is not None:
         for _, row in df2.iterrows():
-            key = (row["연도"].strip(), row["번호"].strip())
+            key = _import_key(row)
             period = period_map.get(key)
             if not period:
                 continue
@@ -273,7 +371,7 @@ def import_data(db: Session, file_bytes: bytes, on_duplicate: str = "overwrite")
     # Sheet3: 실적 → TransactionLine (월 컬럼을 개별 행으로 변환)
     if df3 is not None:
         for _, row in df3.iterrows():
-            key = (row["연도"].strip(), row["번호"].strip())
+            key = _import_key(row)
             period = period_map.get(key)
             if not period:
                 continue
@@ -376,6 +474,7 @@ def import_forecast_sheet(db: Session, file_bytes: bytes) -> dict:
             saved += 1
 
     if errors:
+        db.rollback()
         return {"errors": errors, "saved": 0}
     db.commit()
     return {"errors": [], "saved": saved}
@@ -450,6 +549,7 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
             saved += 1
 
     if errors:
+        db.rollback()
         return {"errors": errors, "saved": 0}
     db.commit()
     return {"errors": [], "saved": saved}

@@ -15,6 +15,8 @@
 - 기능(Action) 권한: `app/auth/authorization.py`의 `can_*()` 함수 사용
   - 예: `can_delete_contract(user)`, `can_manage_users(user)`, `can_import(user)`
 - 데이터 가시 범위: `apply_contract_scope(query, user)` — admin은 전체, user는 본인 담당만
+- 서비스 레이어에서도 `current_user.role` 직접 비교 대신 `authorization.py`의 helper(`can_*`, `has_full_contract_scope`, `apply_contract_scope`, `list_accessible_contract_ids`)를 우선 사용한다.
+- `PATCH /.../{id}`, `DELETE /.../{id}`처럼 상위 계약 ID가 path에 없는 단건 엔드포인트는 서비스에서 대상 리소스가 속한 계약을 역추적한 뒤 scope helper 또는 `check_contract_access()`로 권한을 확인한다.
 - 라우터 수준 보호: `dependencies=[Depends(require_admin)]` (users 라우터 등)
 - 엔드포인트 수준 보호: `_admin: User = Depends(require_admin)` (개별 엔드포인트)
 
@@ -35,10 +37,18 @@
 - 템플릿에서 `me.permissions.can_*` 기반으로 UI 요소 표시/숨김
 - `me.role === 'admin'` 직접 비교 금지 → `me.permissions.can_manage_users` 등 사용
 
+## 비밀번호 정책
+
+- 최소 길이: `app/schemas/auth.py`의 `MIN_PASSWORD_LENGTH` 상수 (현재 8자)
+- 해싱: PBKDF2-SHA256, 260,000 iterations (`app/auth/password.py`)
+- 초기 비밀번호: 사용자 생성 시 `login_id` 값으로 설정, 첫 로그인 시 변경 강제 (`must_change_password=True`)
+- 관리자 초기화: 비밀번호를 `login_id`로 리셋 + 변경 강제
+
 ## 보안 원칙
 
 - 사내 네트워크에서만 접근 가능하도록 네트워크 레벨에서 차단한다.
 - 인증 없이 접근 가능한 엔드포인트를 두지 않는다.
 - Excel Import는 관리자 전용 (`require_admin` 의존성 적용)
+- Receipt, TransactionLine, ReceiptMatch처럼 계약 하위 리소스를 조합하는 작업은 입력된 ID들이 같은 계약 범위에 속하는지도 함께 검증한다.
 - 금액, 거래처 정보 등 민감 데이터를 로그에 출력하지 않는다.
 - SQL 인젝션 방지: ORM을 통한 쿼리만 허용, raw SQL 사용 시 파라미터 바인딩 필수.

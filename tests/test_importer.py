@@ -2,6 +2,8 @@ from io import BytesIO
 
 import pandas as pd
 
+from app.models.contract import Contract
+from app.models.contract_period import ContractPeriod
 from app.models.contract_type_config import ContractTypeConfig
 from app.services import importer
 
@@ -69,3 +71,74 @@ def test_parse_and_validate_rejects_invalid_actual_reference(db_session) -> None
     )
 
     assert any("Sheet3" in error and "Sheet1에 없음" in error for error in result["errors"])
+
+
+def test_parse_and_validate_rejects_duplicate_year_and_contract_name_in_upload(db_session) -> None:
+    db_session.add(ContractTypeConfig(code="MA", label="MA", sort_order=1, is_active=True))
+    db_session.commit()
+    contracts = pd.DataFrame(
+        [
+            {
+                "연도": "2025",
+                "번호": "1",
+                "사업유형": "MA",
+                "거래처(END)": "고객사 A",
+                "영업기회명": "중복 사업",
+                "진행단계": "70%",
+            },
+            {
+                "연도": "2025",
+                "번호": "2",
+                "사업유형": "MA",
+                "거래처(END)": "고객사 B",
+                "영업기회명": "중복 사업",
+                "진행단계": "50%",
+            },
+        ]
+    )
+
+    result = importer.parse_and_validate(_workbook_bytes(contracts=contracts), db=db_session)
+
+    assert any("같은 연도/사업명 조합" in error for error in result["errors"])
+
+
+def test_parse_and_validate_rejects_ambiguous_existing_same_year_and_name(db_session) -> None:
+    db_session.add(ContractTypeConfig(code="MA", label="MA", sort_order=1, is_active=True))
+    contract1 = Contract(contract_name="기존 중복 사업", contract_type="MA", contract_code="MA-2025-0001", status="active")
+    contract2 = Contract(contract_name="기존 중복 사업", contract_type="MA", contract_code="MA-2025-0002", status="active")
+    db_session.add_all([contract1, contract2])
+    db_session.flush()
+    db_session.add_all(
+        [
+            ContractPeriod(
+                contract_id=contract1.id,
+                period_year=2025,
+                period_label="Y25",
+                stage="70%",
+            ),
+            ContractPeriod(
+                contract_id=contract2.id,
+                period_year=2025,
+                period_label="Y25B",
+                stage="50%",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    contracts = pd.DataFrame(
+        [
+            {
+                "연도": "2025",
+                "번호": "1",
+                "사업유형": "MA",
+                "거래처(END)": "고객사",
+                "영업기회명": "기존 중복 사업",
+                "진행단계": "70%",
+            }
+        ]
+    )
+
+    result = importer.parse_and_validate(_workbook_bytes(contracts=contracts), db=db_session)
+
+    assert any("기존 데이터에 같은 연도/사업명 조합" in error for error in result["errors"])

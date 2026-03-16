@@ -8,6 +8,7 @@
 }
 .contract-status-badge.active { background: var(--success-soft-bg); color: var(--success-soft-text); }
 .contract-status-badge.closed { background: var(--bg-color-secondary); color: var(--text-color-tertiary); }
+.contract-status-badge.planned-new { background: var(--info-soft-bg); color: var(--info-soft-text); }
 
 /* GP 요약 — .summary-grid/.summary-item은 components.css에 정의 */
 .gp-summary { margin-bottom: 16px; }
@@ -115,35 +116,21 @@
 .btn-settle-cell:hover { background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color)); color: var(--primary-color); border-color: var(--primary-color); }
 
 /* Period 탭 */
-.period-tabs {
+/* pill-tabs-wrap: ◀ [tabs] ▶ 레이아웃 */
+.pill-tabs-wrap {
   display: flex;
   gap: 4px;
+  align-items: center;
   margin-bottom: 12px;
 }
-.period-tab {
-  padding: 5px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  background: var(--surface-color);
-  cursor: pointer;
-  font-size: 13px;
-  font-family: inherit;
-  color: var(--text-color);
+.pill-tabs-wrap .pill-tabs-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.period-tab.active {
-  background: var(--primary-color);
-  color: var(--primary-text-color);
-  border-color: var(--primary-color);
-}
-.period-tab.selected:not(.active) {
-  background: color-mix(in srgb, var(--primary-color) 20%, var(--surface-color));
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-.period-tab:hover:not(.active):not(.selected) { background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color)); }
-.period-tab[data-view="all"] { margin-left: 8px; font-weight: 600; }
-.period-tab-multi-toggle { margin-right: 8px; font-size: 12px; border-style: dashed; }
-.period-tab-multi-toggle.selected { border-style: solid; }
+.pill-tabs-wrap .pill-tabs-scroll::-webkit-scrollbar { display: none; }
+
+/* period 전용 확장 (components.css pill-tab 기반) */
+.pill-tab[data-view="all"] { margin-left: 8px; font-weight: 600; }
 
 /* 그리드 하단 요약 바 */
 .grid-summary-bar {
@@ -247,7 +234,7 @@
   border-top: none;
   border-radius: 0 0 4px 4px;
   z-index: 9999;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  box-shadow: var(--dropdown-shadow);
 }
 
 /* .inline-help-text → base.css .modal-desc로 통합 */
@@ -576,8 +563,8 @@
 .ledger-row-receipt .ag-cell-inline-editing {
   background-color: var(--surface-color);
 }
-.summary-value-income { color: var(--info-soft-text); }
-.summary-value-expense { color: var(--warning-soft-text); }
+.summary-value-income { color: var(--cell-revenue-color); }
+.summary-value-expense { color: var(--cell-cost-blue-color); }
 .summary-value-receipt { color: var(--success-soft-text); }
 
 /* ── 기간 추가 모달 (그룹형) ─────────────────────────── */

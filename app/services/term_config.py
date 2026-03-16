@@ -1,7 +1,25 @@
 """용어 설정 서비스 (TermConfig) - CRUD + 시드 데이터"""
 from sqlalchemy.orm import Session
 from app.models.term_config import TermConfig
+from app.schemas.term_config import TermConfigRead
 from app.exceptions import NotFoundError, DuplicateError
+
+
+def to_read(t: TermConfig) -> TermConfigRead:
+    """ORM 모델 → 응답 스키마 변환."""
+    return TermConfigRead(
+        term_key=t.term_key,
+        category=t.category,
+        standard_label_en=t.standard_label_en,
+        standard_label_ko=t.standard_label_ko,
+        definition=t.definition,
+        default_ui_label=t.default_ui_label,
+        custom_ui_label=t.custom_ui_label,
+        ui_label=t.ui_label,
+        is_customized=t.is_customized,
+        is_active=t.is_active,
+        sort_order=t.sort_order,
+    )
 
 # 초기 시드 데이터 (테이블이 비어있을 때 자동 삽입)
 _SEED = [

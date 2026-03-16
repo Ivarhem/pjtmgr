@@ -646,6 +646,9 @@ function buildContractPeriodColumns(opts = {}) {
     cols.push({ field: 'owner_department', headerName: '부서', width: 90 });
   }
   cols.push(
+    { field: 'is_planned', headerName: '사업구분', width: 80,
+      valueFormatter: p => p.value === true ? '계획사업' : p.value === false ? '수시사업' : '',
+      cellClass: 'cell-center' },
     { field: 'expected_revenue_total', headerName: '예상 매출(원)', width: 130,
       valueFormatter: fmtNumber, cellClass: 'cell-number', type: 'numericColumn' },
     { field: 'expected_gp_total', headerName: '예상 GP(원)', width: 120,

@@ -42,14 +42,11 @@ body.dark-mode .page-header .filter-select {
 }
 .dash-date-range { display: flex; gap: 4px; align-items: center; }
 .dash-date-input { width: 140px; }
-.dash-year-btns {
+.dash-top-bar {
   display: flex;
-  gap: 4px;
-}
-.dash-year-btn.active {
-  background-color: var(--primary-color);
-  color: var(--primary-text-color);
-  border-color: var(--primary-color);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 /* ── 레이아웃 ────────────────────────────────────────── */
@@ -149,6 +146,9 @@ body.dark-mode .page-header .filter-select {
 .dash-section.top-cust {
   grid-column: 3 / span 2;
 }
+.dash-section.target-vs-actual {
+  grid-column: 1 / -1;
+}
 .dash-section.ar-warn {
   grid-column: 1 / -1;
 }
@@ -226,6 +226,30 @@ body.dark-mode .page-header .filter-select {
 }
 
 
+/* ── 섹션 헤더 (제목 + 버튼) ─────────────────────────────── */
+.dash-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dash-section-header .dash-section-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* ── 토글 버튼 ───────────────────────────────────────────── */
+.chart-type-btns {
+  display: flex;
+  gap: 4px;
+}
+.chart-type-btn.active {
+  background-color: var(--primary-color);
+  color: var(--primary-text-color);
+  border-color: var(--primary-color);
+}
+
 /* ── 유틸리티 ────────────────────────────────────────────── */
 .dash-full-row { grid-column: 1 / -1; }
 
@@ -235,6 +259,7 @@ body.dark-mode .page-header .filter-select {
   .dash-section.by-type { grid-column: 1 / -1; }
   .dash-section.by-dept { grid-column: 1 / -1; }
   .dash-section.top-cust { grid-column: 1 / -1; }
+  .dash-section.target-vs-actual { grid-column: 1 / -1; }
 }
 @media (max-width: 768px) {
   .dashboard-grid {

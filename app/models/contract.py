@@ -12,10 +12,10 @@ class Contract(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_code: Mapped[str | None] = mapped_column(String(50), unique=True)   # 내부 사업코드 (자동생성)
     contract_name: Mapped[str] = mapped_column(String(300), nullable=False)       # 사업명
-    contract_type: Mapped[str] = mapped_column(String(30), nullable=False)        # MA / SI / HW / ETC
+    contract_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)  # MA / SI / HW / ETC
     end_customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))  # END 고객
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))  # 영업 담당
-    status: Mapped[str] = mapped_column(String(30), default="active")         # active / closed / cancelled
+    status: Mapped[str] = mapped_column(String(30), default="active", index=True)  # active / closed / cancelled
     notes: Mapped[str | None] = mapped_column(String(500))                     # 비고
 
     # 검수/세금계산서 발행 규칙

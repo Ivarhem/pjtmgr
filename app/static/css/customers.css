@@ -97,6 +97,10 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .cust-tabs {
   display: flex;
   gap: 4px;
+  align-items: center;
+}
+.cust-tabs-filter {
+  margin-left: auto;
 }
 .cust-tab {
   padding: 5px 16px;
@@ -254,15 +258,18 @@ body.col-resizing { cursor: col-resize; user-select: none; }
   margin: 0;
 }
 
-/* 마스터 담당자 역할 뱃지 */
+/* 마스터 담당자 역할 뱃지 — .role-badge 와 동일한 pill 스타일 */
 .contact-role-badge {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 10px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 500;
-  margin-right: 3px;
-  border: 1px solid;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 1px 2px;
+  border: 1px solid transparent;
 }
 .contact-role-badge.sales { background: var(--info-soft-bg); color: var(--info-soft-text); border-color: var(--info-soft-border); }
 .contact-role-badge.tax { background: var(--warning-soft-bg); color: var(--warning-soft-text); border-color: var(--warning-soft-border); }
@@ -274,3 +281,14 @@ body.col-resizing { cursor: col-resize; user-select: none; }
 .info-edit-actions { justify-content: flex-end; }
 .btn-group { display: flex; gap: 6px; }
 .btn-cell { padding: 1px 4px; font-size: 10px; margin: 1px; }
+.cell-wrap { white-space: normal !important; line-height: 1.6; }
+.cell-editable { cursor: pointer; }
+.cell-placeholder { color: var(--text-color-tertiary); font-style: italic; font-size: 11px; }
+
+/* 그룹 행 스타일 */
+.group-row { background: var(--bg-color-secondary) !important; font-weight: 600; }
+.group-row:hover { background: var(--hover-color) !important; }
+.detail-row { font-size: 12px; }
+.group-toggle { cursor: pointer; user-select: none; }
+.period-label { color: var(--text-color-secondary); padding-left: 16px; }
+

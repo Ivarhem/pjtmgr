@@ -13,11 +13,11 @@ class MonthlyForecast(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_period_id: Mapped[int] = mapped_column(ForeignKey("contract_periods.id"), nullable=False, index=True)
-    forecast_month: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-01
+    forecast_month: Mapped[str] = mapped_column(String(10), nullable=False, index=True)  # YYYY-MM-01
     revenue_amount: Mapped[int] = mapped_column(Integer, default=0)           # 예상 수익 (원)
     gp_amount: Mapped[int] = mapped_column(Integer, default=0)               # 예상 GP (원)
     version_no: Mapped[int] = mapped_column(Integer, default=1)              # 버전 (스냅샷용)
-    is_current: Mapped[bool] = mapped_column(Boolean, default=True)          # 최신 버전 여부
+    is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)  # 최신 버전 여부
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
     contract_period: Mapped["ContractPeriod"] = relationship(back_populates="forecasts")

@@ -47,6 +47,11 @@ def can_import(user: User) -> bool:
     return user.role == ROLE_ADMIN
 
 
+def has_full_contract_scope(user: User) -> bool:
+    """전체 사업 범위를 조회할 수 있는지 반환."""
+    return user.role == ROLE_ADMIN
+
+
 def can_admin_create_contract(user: User) -> bool:
     """사업관리 화면에서 신규 등록 — 개발/정비용, 실 서비스 배포 시 비활성화."""
     from app.config import ENABLE_ADMIN_CONTRACT_CREATE
@@ -67,7 +72,7 @@ def can_view_reports(user: User) -> bool:
 
 def check_contract_access(db: "Session", contract_id: int, user: "User") -> None:
     """단건 사업 접근 권한 확인. admin은 전체, user는 본인 담당만."""
-    if user.role == ROLE_ADMIN:
+    if has_full_contract_scope(user):
         return
     from app.models.contract import Contract
     contract = (
@@ -83,7 +88,7 @@ def check_contract_access(db: "Session", contract_id: int, user: "User") -> None
 
 def check_period_access(db: "Session", period_id: int, user: "User") -> None:
     """기간(period_id) 기반 사업 접근 권한 확인."""
-    if user.role == ROLE_ADMIN:
+    if has_full_contract_scope(user):
         return
     from app.models.contract_period import ContractPeriod
     period = db.get(ContractPeriod, period_id)
@@ -118,14 +123,14 @@ def apply_contract_scope(query: Query, user: User) -> Query:
     - manager: 같은 부서 데이터
     - viewer: 읽기 전용 (scope는 admin과 동일, 수정 권한만 차이)
     """
-    if user.role == ROLE_ADMIN:
+    if has_full_contract_scope(user):
         return query
     return query.filter(_contract_visibility_clause(user))
 
 
 def get_owner_filter(user: User) -> int | None:
     """owner_id 필터값 반환. None이면 전체 조회 (admin)."""
-    if user.role == ROLE_ADMIN:
+    if has_full_contract_scope(user):
         return None
     return user.id
 

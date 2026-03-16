@@ -127,6 +127,12 @@ body.dark-mode .chk-drop-btn {
   color: var(--cell-cost-color);
   font-weight: 500;
 }
+.cell-revenue {
+  color: var(--cell-revenue-color);
+}
+.cell-cost-blue {
+  color: var(--cell-cost-blue-color);
+}
 .cell-receipt {
   color: var(--success-strong-color);
   font-weight: 500;
@@ -396,3 +402,52 @@ body.dark-mode .toast { box-shadow: var(--modal-shadow); }
 .summary-label { font-size: 12px; color: var(--text-color-secondary); margin-bottom: 4px; }
 .summary-value { font-size: 18px; font-weight: bold; color: var(--text-color); }
 .summary-value .unit { font-size: 12px; font-weight: normal; color: var(--text-color-tertiary); margin-left: 2px; }
+
+/* ── Pill Tab (연도/기간 빠른 선택 공통) ──────────────────── */
+.pill-tabs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.pill-tabs-scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.pill-tab {
+  padding: 5px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--surface-color);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-color);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pill-tab.active {
+  background: var(--primary-color);
+  color: var(--primary-text-color);
+  border-color: var(--primary-color);
+}
+.pill-tab.selected:not(.active) {
+  background: color-mix(in srgb, var(--primary-color) 20%, var(--surface-color));
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.pill-tab:hover:not(.active):not(.selected) {
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color));
+}
+.pill-tab-nav {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--surface-color);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+}
+.pill-tab-nav:hover { background: var(--secondary-color); }
+.pill-tab-multi-toggle { margin-right: 8px; font-size: 12px; border-style: dashed; }
+.pill-tab-multi-toggle.selected { border-style: solid; }

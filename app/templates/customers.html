@@ -10,7 +10,7 @@
   </div>
 </div>
 
-<p class="data-note">※ 매출처(고객사)와 매입처(공급사)를 통합 관리합니다. 좌측에서 거래처 선택 시 사업별 담당자와 관련 사업을 확인할 수 있습니다.</p>
+<p class="data-note">※ 거래처(매출처=고객사 / 매입처=공급사)를 통합 관리합니다. 좌측 목록에서 거래처를 클릭하면 우측에 요약 정보가 표시됩니다. 상세 실적 분석은 대시보드의 거래처 필터를 활용하세요.</p>
 
 <div class="customers-layout">
   <!-- 좌측: 거래처 목록 -->
@@ -36,7 +36,7 @@
     <div class="cust-detail-empty" id="detail-empty">
       <p>좌측에서 거래처를 선택하세요.</p>
     </div>
-    <div class="cust-detail-content hidden" id="detail-content">
+    <div class="cust-detail-content is-hidden" id="detail-content">
       <!-- 기본정보 (항상 노출) -->
       <h2 class="cust-detail-name" id="detail-name"></h2>
       <div class="info-card" id="cust-info-card"></div>
@@ -47,26 +47,28 @@
         <button class="cust-tab" data-tab="contacts">담당자</button>
         <button class="cust-tab" data-tab="financials">매출·매입</button>
         <button class="cust-tab" data-tab="receipts">입금</button>
+        <label class="view-toggle cust-tabs-filter">
+          <input type="checkbox" id="chk-active-only" checked>
+          <span class="view-toggle-label">진행중만</span>
+        </label>
       </div>
 
       <!-- 사업현황 탭 -->
       <div class="cust-tab-panel active" id="tab-contracts">
+        <p class="data-note">※ 이 거래처와 관련된 사업 목록입니다. '진행중만' 체크 해제 시 완료된 사업도 표시됩니다.</p>
         <div id="contracts-summary"></div>
         <div class="cust-section">
           <div class="cust-section-header">
             <h3 class="cust-section-title contracts-title">관련 사업</h3>
-            <label class="view-toggle">
-              <input type="checkbox" id="chk-active-only" checked>
-              <span class="view-toggle-label">진행중만</span>
-            </label>
           </div>
           <div id="grid-related-contracts" class="ag-theme-quartz cust-contracts-grid"></div>
-          <div id="contracts-filter-empty" class="filter-empty-msg hidden">진행중인 사업이 없습니다. 체크박스를 해제하면 전체 사업을 볼 수 있습니다.</div>
+          <div id="contracts-filter-empty" class="filter-empty-msg is-hidden">진행중인 사업이 없습니다. 체크박스를 해제하면 전체 사업을 볼 수 있습니다.</div>
         </div>
       </div>
 
       <!-- 담당자 탭 -->
       <div class="cust-tab-panel" id="tab-contacts">
+        <p class="data-note">※ '기본 담당자'는 거래처의 고정 연락처(영업·세금계산서·업무 담당)이고, '사업별 담당자'는 특정 사업에 한정된 담당자입니다. 사업별 담당자는 셀을 클릭하여 직접 선택할 수 있습니다.</p>
         <div class="cust-section">
           <div class="cust-section-header">
             <h3 class="cust-section-title contact-title">거래처 기본 담당자</h3>
@@ -80,7 +82,7 @@
           <div class="cust-section-header">
             <h3 class="cust-section-title contact-title">사업별 담당자</h3>
             <div class="cust-section-actions">
-              <button id="btn-add-contract-contact" class="btn btn-primary btn-sm">+ 추가</button>
+              <button id="btn-save-contract-contacts" class="btn btn-primary btn-sm" onclick="saveAllContractContacts()">저장</button>
             </div>
           </div>
           <div id="grid-contract-contacts" class="ag-theme-quartz cust-contact-grid"></div>
@@ -89,6 +91,7 @@
 
       <!-- 매출·매입 탭 -->
       <div class="cust-tab-panel" id="tab-financials">
+        <p class="data-note">※ 이 거래처에 대한 월별 매출(청구 금액)과 매입(지불 비용) 내역입니다.</p>
         <div id="financials-summary"></div>
         <div class="cust-section">
           <div class="cust-section-header">
@@ -100,6 +103,7 @@
 
       <!-- 입금 탭 -->
       <div class="cust-tab-panel" id="tab-receipts">
+        <p class="data-note">※ 이 거래처로부터 받은 입금 내역입니다.</p>
         <div id="receipts-summary"></div>
         <div class="cust-section">
           <div class="cust-section-header">
@@ -148,33 +152,31 @@
   </div>
 </dialog>
 
-<!-- 사업별 담당자 등록 모달 -->
-<dialog id="modal-add-contract-contact" class="modal modal-sm">
-  <h2>사업별 담당자 등록</h2>
+<!-- 거래처 기본 담당자 수정 모달 -->
+<dialog id="modal-edit-master-contact" class="modal modal-sm">
+  <h2>기본 담당자 수정</h2>
+  <input type="hidden" id="edit-mc-id">
   <div class="form-grid">
-    <label>사업 <select id="new-dc-contract-id"></select></label>
-    <label>구분
-      <select id="new-dc-type">
-        <option value="영업">영업</option>
-        <option value="세금계산서">세금계산서</option>
-        <option value="업무">업무</option>
-      </select>
+    <label>이름 <input type="text" id="edit-mc-name" required></label>
+    <label>연락처 <input type="text" id="edit-mc-phone"></label>
+    <label class="full-width">이메일 <input type="email" id="edit-mc-email"></label>
+    <label class="full-width">역할
+      <div class="role-checkbox-group" id="edit-mc-roles">
+        <label class="role-check"><input type="checkbox" value="영업"> 영업</label>
+        <label class="role-check"><input type="checkbox" value="세금계산서"> 세금계산서</label>
+        <label class="role-check"><input type="checkbox" value="업무"> 업무</label>
+      </div>
     </label>
-    <label>담당자
-      <select id="new-dc-contact-id"></select>
-    </label>
-    <label>정/부
-      <select id="new-dc-rank">
-        <option value="정">정</option>
-        <option value="부">부</option>
-      </select>
+    <label class="full-width">
+      <input type="checkbox" id="edit-mc-default"> 선택한 역할의 기본 담당자로 설정
     </label>
   </div>
   <div class="modal-actions">
-    <button type="button" id="btn-dc-cancel" class="btn btn-secondary">취소</button>
-    <button type="button" id="btn-dc-submit" class="btn btn-primary">등록</button>
+    <button type="button" id="btn-edit-mc-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-edit-mc-submit" class="btn btn-primary">저장</button>
   </div>
 </dialog>
+
 {% endblock %}
 
 {% block scripts %}

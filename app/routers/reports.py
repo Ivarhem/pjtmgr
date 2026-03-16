@@ -58,7 +58,7 @@ def get_summary(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """요약 현황 데이터 조회."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     return svc.get_summary(db, filt, current_user=current_user)
@@ -74,7 +74,7 @@ def export_summary(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> Response:
     """요약 현황 Excel 다운로드."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     content = svc.export_summary(db, filt, current_user=current_user)
@@ -95,7 +95,7 @@ def get_forecast_vs_actual(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list[dict]:
     """Forecast vs Actual 데이터 조회."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     return svc.list_forecast_vs_actual(db, filt, current_user=current_user)
@@ -111,7 +111,7 @@ def export_forecast_vs_actual(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> Response:
     """Forecast vs Actual Excel 다운로드."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     content = svc.export_forecast_vs_actual(db, filt, current_user=current_user)
@@ -132,7 +132,7 @@ def get_receivables(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> list[dict]:
     """미수 현황 데이터 조회."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     return svc.list_receivables(db, filt, current_user=current_user)
@@ -148,7 +148,7 @@ def export_receivables(
     stage: Annotated[list[str] | None, Query()] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> Response:
     """미수 현황 Excel 다운로드."""
     filt = _make_filter(date_from, date_to, owner_id, department, contract_type, stage)
     content = svc.export_receivables(db, filt, current_user=current_user)
@@ -165,7 +165,7 @@ def get_contract_pnl(
     period_year: int | None = Query(None, description="조회 연도 (미지정 시 전체)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """매입매출관리 보고서 데이터 조회."""
     check_contract_access(db, contract_id, current_user)
     return svc.get_contract_pnl(db, contract_id, period_year)
@@ -177,7 +177,7 @@ def export_contract_pnl(
     period_year: int | None = Query(None, description="조회 연도 (미지정 시 전체)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> Response:
     """매입매출관리 보고서 Excel 다운로드."""
     check_contract_access(db, contract_id, current_user)
     content = svc.export_contract_pnl(db, contract_id, period_year)

@@ -17,11 +17,12 @@ class ContractPeriod(TimestampMixin, Base):
     stage: Mapped[str] = mapped_column(String(50), nullable=False)           # 10%/50%/70%/90%/계약완료
     expected_revenue_total: Mapped[int] = mapped_column(Integer, default=0)  # 예상 수익 (원)
     expected_gp_total: Mapped[int] = mapped_column(Integer, default=0)      # 예상 GP (원)
-    start_month: Mapped[str | None] = mapped_column(String(10))            # 시작월 (YYYY-MM-01)
-    end_month: Mapped[str | None] = mapped_column(String(10))              # 종료월 (YYYY-MM-01)
+    start_month: Mapped[str | None] = mapped_column(String(10), index=True)  # 시작월 (YYYY-MM-01)
+    end_month: Mapped[str | None] = mapped_column(String(10), index=True)    # 종료월 (YYYY-MM-01)
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))  # Period별 담당 영업
     customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id", ondelete="SET NULL"))  # 매출처 (미지정 시 Contract.end_customer)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)      # 계약기간 완료 여부
+    is_planned: Mapped[bool] = mapped_column(Boolean, default=True)        # 연초 보고 사업 여부 (False=신규 사업)
     notes: Mapped[str | None] = mapped_column(String(500))
 
     # 검수/세금계산서 발행 규칙 (Period별 독립 — 갱신 계약 시 조건 변경 가능)

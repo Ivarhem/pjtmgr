@@ -33,6 +33,7 @@ def build_filter(
     department: list[str] | None = None,
     contract_type: list[str] | None = None,
     stage: list[str] | None = None,
+    customer_id: list[int] | None = None,
 ) -> ReportFilter:
     """라우터 파라미터 → ReportFilter 변환."""
     df = date_from if len(date_from) > 7 else f"{date_from}-01"
@@ -44,6 +45,7 @@ def build_filter(
         department=department,
         contract_type=contract_type,
         stage=stage,
+        customer_id=customer_id,
     )
 
 
@@ -125,6 +127,13 @@ def apply_common_filters(
         q = q.filter(Contract.contract_type.in_(filt.contract_type))
     if filt.stage:
         q = q.filter(ContractPeriod.stage.in_(filt.stage))
+    if filt.customer_id:
+        q = q.filter(
+            or_(
+                ContractPeriod.customer_id.in_(filt.customer_id),
+                Contract.end_customer_id.in_(filt.customer_id),
+            )
+        )
 
     return q, years
 
@@ -385,7 +394,8 @@ def aggregate_monthly_trend(
 
     if not periods:
         return [
-            {"month": m[:7], "forecast_revenue": 0, "actual_revenue": 0,
+            {"month": m[:7], "forecast_revenue": 0, "planned_forecast": 0,
+             "unplanned_forecast": 0, "actual_revenue": 0,
              "cost": 0, "gp": 0, "gp_pct": None, "receipt": 0, "ar": 0}
             for m in months
         ]
@@ -398,6 +408,8 @@ def aggregate_monthly_trend(
     rcpt_monthly_map = load_receipts_monthly(db, contract_ids, filt.date_from, filt.date_to)
     match_monthly_map = load_matched_totals_monthly(db, contract_ids, filt.date_from, filt.date_to)
 
+    # period → is_planned 매핑
+    period_planned: dict[int, bool] = {p.id: p.is_planned for p in periods}
     contract_period_ids: dict[int, list[int]] = {}
     for p in periods:
         contract_period_ids.setdefault(p.contract_id, []).append(p.id)
@@ -405,11 +417,18 @@ def aggregate_monthly_trend(
     rows: list[dict] = []
     for m in months:
         fc_revenue = 0
+        planned_fc = 0
+        unplanned_fc = 0
         for did, pids in contract_period_ids.items():
             for pid in pids:
                 fc = fc_map.get(pid, {}).get(m)
                 if fc:
-                    fc_revenue += fc["revenue"]
+                    rev = fc["revenue"]
+                    fc_revenue += rev
+                    if period_planned.get(pid, True):
+                        planned_fc += rev
+                    else:
+                        unplanned_fc += rev
 
         act_revenue = 0
         act_cost = 0
@@ -431,6 +450,8 @@ def aggregate_monthly_trend(
         rows.append({
             "month": m[:7],
             "forecast_revenue": fc_revenue,
+            "planned_forecast": planned_fc,
+            "unplanned_forecast": unplanned_fc,
             "actual_revenue": act_revenue,
             "cost": act_cost,
             "gp": gp,

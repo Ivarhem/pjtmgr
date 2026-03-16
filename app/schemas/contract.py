@@ -1,10 +1,13 @@
 from typing import Literal
-from pydantic import BaseModel
 
-Stage = Literal["10%", "50%", "70%", "90%", "계약완료"]
+from pydantic import BaseModel, field_validator
+
+from app.schemas._normalize import normalize_date, normalize_month
+
+Stage = Literal["10%", "50%", "70%", "90%", "계약완료", "실주"]
 ContractStatus = Literal["active", "closed", "cancelled"]
 
-VALID_STAGES = {"10%", "50%", "70%", "90%", "계약완료"}
+VALID_STAGES = {"10%", "50%", "70%", "90%", "계약완료", "실주"}
 VALID_STATUSES = {"active", "closed", "cancelled"}
 
 
@@ -36,6 +39,13 @@ class ContractUpdate(BaseModel):
     invoice_day: int | None = None
     invoice_holiday_adjust: str | None = None
     notes: str | None = None
+
+    @field_validator("inspection_date")
+    @classmethod
+    def validate_inspection_date(cls, v: str | None) -> str | None:
+        if v is not None:
+            return normalize_date(v)
+        return v
 
 
 class ContractRead(BaseModel):
@@ -77,6 +87,7 @@ class ContractPeriodCreate(BaseModel):
     owner_user_id: int | None = None  # 미지정 시 Contract의 값을 복사
     customer_id: int | None = None    # 매출처 (미지정 시 Contract의 end_customer_id를 복사)
     # 검수/세금계산서 발행 규칙 (미지정 시 Contract의 값을 복사)
+    is_planned: bool = True               # 연초 보고 사업 여부
     inspection_day: int | None = None
     inspection_date: str | None = None
     invoice_month_offset: int | None = None
@@ -85,10 +96,25 @@ class ContractPeriodCreate(BaseModel):
     invoice_holiday_adjust: str | None = None
     notes: str | None = None
 
+    @field_validator("start_month", "end_month")
+    @classmethod
+    def validate_month_fields(cls, v: str | None) -> str | None:
+        if v is not None:
+            return normalize_month(v)
+        return v
+
+    @field_validator("inspection_date")
+    @classmethod
+    def validate_inspection_date(cls, v: str | None) -> str | None:
+        if v is not None:
+            return normalize_date(v)
+        return v
+
 
 class ContractPeriodUpdate(BaseModel):
     period_label: str | None = None
     stage: Stage | None = None
+    is_planned: bool | None = None
     expected_revenue_total: int | None = None
     expected_gp_total: int | None = None
     start_month: str | None = None
@@ -103,6 +129,20 @@ class ContractPeriodUpdate(BaseModel):
     invoice_day: int | None = None
     invoice_holiday_adjust: str | None = None
     notes: str | None = None
+
+    @field_validator("start_month", "end_month")
+    @classmethod
+    def validate_month_fields(cls, v: str | None) -> str | None:
+        if v is not None:
+            return normalize_month(v)
+        return v
+
+    @field_validator("inspection_date")
+    @classmethod
+    def validate_inspection_date(cls, v: str | None) -> str | None:
+        if v is not None:
+            return normalize_date(v)
+        return v
 
 
 class ContractPeriodRead(BaseModel):
@@ -120,6 +160,7 @@ class ContractPeriodRead(BaseModel):
     customer_id: int | None = None
     customer_name: str | None = None
     is_completed: bool = False
+    is_planned: bool = True
     inspection_day: int | None = None
     inspection_date: str | None = None
     invoice_month_offset: int | None = None
@@ -148,5 +189,6 @@ class ContractPeriodListRead(BaseModel):
     stage: str
     expected_revenue_total: int
     expected_gp_total: int
+    is_planned: bool = True
 
     model_config = {"from_attributes": True}

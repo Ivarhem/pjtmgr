@@ -1,6 +1,20 @@
 from sqlalchemy.orm import Session
 from app.models.contract_type_config import ContractTypeConfig
+from app.schemas.contract_type_config import ContractTypeRead
 from app.exceptions import NotFoundError, DuplicateError
+
+
+def to_read(dt: ContractTypeConfig) -> ContractTypeRead:
+    """ORM 모델 → 응답 스키마 변환."""
+    return ContractTypeRead(
+        code=dt.code, label=dt.label, sort_order=dt.sort_order, is_active=dt.is_active,
+        default_gp_pct=dt.default_gp_pct,
+        default_inspection_day=dt.default_inspection_day,
+        default_invoice_month_offset=dt.default_invoice_month_offset,
+        default_invoice_day_type=dt.default_invoice_day_type,
+        default_invoice_day=dt.default_invoice_day,
+        default_invoice_holiday_adjust=dt.default_invoice_holiday_adjust,
+    )
 
 # 초기 시드 데이터 (테이블이 비어있을 때 자동 삽입)
 _SEED = [

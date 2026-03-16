@@ -55,6 +55,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTagInput('customer-tag-input', 'customer-tag-list', customerFilterTags, () => gridApi.onFilterChanged());
   _initSplitter();
 
+  // 저장된 필터 상태 복원
+  const savedActiveOnly = localStorage.getItem(LS_ACTIVE_ONLY);
+  if (savedActiveOnly !== null) {
+    activeOnlyFilter = savedActiveOnly === 'true';
+    document.getElementById('chk-active-only').checked = activeOnlyFilter;
+  }
+
+  // 저장된 탭 복원
+  const savedTab = localStorage.getItem(LS_ACTIVE_TAB);
+  if (savedTab && savedTab !== 'contracts') {
+    switchTab(savedTab);
+  }
+
   // "내 거래처만" 토글
   document.getElementById('chk-my-customers').addEventListener('change', () => loadData());
 
@@ -69,15 +82,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 거래처 삭제
   document.getElementById('btn-delete-customer').addEventListener('click', deleteCustomer);
 
-  // 사업별 담당자 추가
-  document.getElementById('btn-add-contract-contact').addEventListener('click', openAddContractContact);
-  document.getElementById('btn-dc-cancel').addEventListener('click', () => document.getElementById('modal-add-contract-contact').close());
-  document.getElementById('btn-dc-submit').addEventListener('click', submitNewContractContact);
-
   // 마스터 담당자 등록
   document.getElementById('btn-add-master-contact').addEventListener('click', openAddMasterContact);
   document.getElementById('btn-mc-cancel').addEventListener('click', () => document.getElementById('modal-add-master-contact').close());
   document.getElementById('btn-mc-submit').addEventListener('click', submitNewMasterContact);
+
+  // 마스터 담당자 수정 모달
+  document.getElementById('btn-edit-mc-cancel').addEventListener('click', () => document.getElementById('modal-edit-master-contact').close());
+  document.getElementById('btn-edit-mc-submit').addEventListener('click', submitEditMasterContact);
 
   // 탭 전환
   document.getElementById('cust-tabs').addEventListener('click', (e) => {
@@ -86,15 +98,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     switchTab(btn.dataset.tab);
   });
 
-  // 진행중만 필터 토글
+  // 진행중만 필터 토글 (글로벌 — 모든 탭에 적용)
   document.getElementById('chk-active-only').addEventListener('change', (e) => {
     activeOnlyFilter = e.target.checked;
+    localStorage.setItem(LS_ACTIVE_ONLY, String(activeOnlyFilter));
     if (contractsGridApi) contractsGridApi.onFilterChanged();
+    if (contractContactGridApi) contractContactGridApi.onFilterChanged();
+    if (financialsGridApi) financialsGridApi.onFilterChanged();
+    if (receiptsGridApi) receiptsGridApi.onFilterChanged();
   });
 
-  // 사업별 담당자 - 구분 변경 시 담당자 목록 필터링
-  document.getElementById('new-dc-type').addEventListener('change', updateContactDropdown);
+  // Ctrl+S: 사업별 담당자 저장 (담당자 탭 활성 시)
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      const activeTab = document.querySelector('.cust-tab.active')?.dataset.tab;
+      if (activeTab === 'contacts') {
+        e.preventDefault();
+        saveAllContractContacts();
+      }
+    }
+  });
 });
+
+// ── 상태 저장/복원 키 ─────────────────────────────────────────
+const LS_ACTIVE_TAB = 'cust_active_tab';
+const LS_ACTIVE_ONLY = 'cust_active_only';
+const LS_COL_STATE_PREFIX = 'cust_col_';
+
+function _saveColState(key, api) {
+  if (!api) return;
+  try { localStorage.setItem(LS_COL_STATE_PREFIX + key, JSON.stringify(api.getColumnState())); } catch {}
+}
+function _restoreColState(key, api) {
+  if (!api) return;
+  try {
+    const saved = localStorage.getItem(LS_COL_STATE_PREFIX + key);
+    if (saved) api.applyColumnState({ state: JSON.parse(saved), applyOrder: true });
+  } catch {}
+}
 
 // ── 탭 전환 ───────────────────────────────────────────────────
 function switchTab(tabName) {
@@ -102,6 +143,7 @@ function switchTab(tabName) {
   document.querySelector(`.cust-tab[data-tab="${tabName}"]`)?.classList.add('active');
   document.querySelectorAll('.cust-tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tabName)?.classList.add('active');
+  localStorage.setItem(LS_ACTIVE_TAB, tabName);
 
   if (!loadedTabs[tabName] && selectedCustomerId) {
     loadedTabs[tabName] = true;
@@ -170,8 +212,8 @@ async function loadDetail(customerId) {
   const cust = allCustomers.find(d => d.id === customerId);
   if (!cust) return;
 
-  document.getElementById('detail-empty').classList.add('hidden');
-  document.getElementById('detail-content').classList.remove('hidden');
+  document.getElementById('detail-empty').classList.add('is-hidden');
+  document.getElementById('detail-content').classList.remove('is-hidden');
 
   // 기본정보
   document.getElementById('detail-name').textContent = cust.name;
@@ -216,8 +258,8 @@ function renderCustomerInfo(cust) {
 }
 
 function openEditCustomerInfo() {
-  document.getElementById('cust-info-view').classList.add('hidden');
-  document.getElementById('cust-info-edit').classList.remove('hidden');
+  document.getElementById('cust-info-view').classList.add('is-hidden');
+  document.getElementById('cust-info-edit').classList.remove('is-hidden');
 }
 
 function cancelEditCustomerInfo() {
@@ -227,8 +269,8 @@ function cancelEditCustomerInfo() {
 
 function hideDetail() {
   selectedCustomerId = null;
-  document.getElementById('detail-empty').classList.remove('hidden');
-  document.getElementById('detail-content').classList.add('hidden');
+  document.getElementById('detail-empty').classList.remove('is-hidden');
+  document.getElementById('detail-content').classList.add('is-hidden');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -237,11 +279,26 @@ function hideDetail() {
 async function loadContractsTab() {
   if (!selectedCustomerId) return;
   const res = await fetch(`/api/v1/customers/${selectedCustomerId}/contracts`);
+  if (!res.ok) { console.error('contracts API error', res.status); return; }
   contractsData = await res.json();
   relatedContracts = contractsData.contracts || [];
 
   renderContractsSummary(contractsData.summary);
   renderContractsGrid(relatedContracts);
+}
+
+function _recalcContractsSummary() {
+  if (!contractsGridApi) return;
+  let active = 0, completed = 0, revenue = 0;
+  // 건수는 전체 데이터 기준
+  contractsGridApi.forEachNode(node => {
+    if (node.data.is_completed) completed++; else active++;
+  });
+  // 매출은 필터 반영
+  contractsGridApi.forEachNodeAfterFilter(node => {
+    revenue += node.data.revenue_amount || 0;
+  });
+  renderContractsSummary({ active_count: active, completed_count: completed, total_revenue: revenue });
 }
 
 function renderContractsSummary(summary) {
@@ -270,22 +327,23 @@ function renderContractsGrid(contracts) {
   const colDefs = [
     { field: 'contract_name', headerName: '사업명', minWidth: 140,
       cellClass: 'cell-link' },
+    { field: 'period_label', headerName: '기간', width: 60 },
     { field: 'end_customer_name', headerName: 'END고객', width: 110 },
     { field: 'contract_type', headerName: '유형', width: 70 },
     { field: 'stage', headerName: '단계', width: 90,
       cellRenderer: (p) => {
         const v = p.value;
         if (!v) return '';
-        const done = p.data.is_all_completed;
+        const done = p.data.is_completed;
         const cls = done ? 'stage-badge completed' : 'stage-badge active';
         return `<span class="${cls}">${v}</span>`;
       },
     },
-    { field: 'period_range', headerName: '기간', width: 140 },
+    { field: 'period_range', headerName: '사업기간', width: 140 },
     { field: 'revenue_amount', headerName: '매출액', width: 110, type: 'numericColumn',
-      valueFormatter: p => p.value ? fmt(p.value) : '-' },
+      valueFormatter: p => p.value ? fmt(p.value) : '-', cellClass: 'cell-revenue' },
     { field: 'cost_amount', headerName: '매입액', width: 110, type: 'numericColumn',
-      valueFormatter: p => p.value ? fmt(p.value) : '-' },
+      valueFormatter: p => p.value ? fmt(p.value) : '-', cellClass: 'cell-cost-blue' },
     { field: 'gp_pct', headerName: 'GP%', width: 70, type: 'numericColumn',
       valueFormatter: p => p.value != null ? p.value + '%' : '-' },
     { field: 'owner_name', headerName: '담당', width: 70 },
@@ -316,23 +374,25 @@ function renderContractsGrid(contracts) {
     domLayout: 'autoHeight',
     isExternalFilterPresent: () => activeOnlyFilter,
     doesExternalFilterPass: (node) => {
-      return !node.data.is_all_completed;
+      return !node.data.is_completed;
     },
     onCellClicked: (e) => {
-      if (e.column.getColId() === 'contract_name' && e.data?.id) {
-        const url = e.data.latest_period_id
-          ? `/contracts/${e.data.latest_period_id}`
-          : `/contracts/new/${e.data.id}`;
-        window.location.href = url;
+      if (e.column.getColId() === 'contract_name' && e.data?.period_id) {
+        window.location.href = `/contracts/${e.data.period_id}`;
       }
     },
     onModelUpdated: () => {
       const el = document.getElementById('contracts-filter-empty');
       if (!el) return;
       const displayed = contractsGridApi?.getDisplayedRowCount?.() ?? 0;
-      el.classList.toggle('hidden', displayed > 0);
+      el.classList.toggle('is-hidden', displayed > 0);
+      _recalcContractsSummary();
     },
+    onSortChanged: () => _saveColState('contracts', contractsGridApi),
+    onColumnResized: (e) => { if (e.finished) _saveColState('contracts', contractsGridApi); },
+    onColumnMoved: () => _saveColState('contracts', contractsGridApi),
   });
+  _restoreColState('contracts', contractsGridApi);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -372,9 +432,12 @@ function renderMasterContactGrid(contacts) {
     { field: 'name', headerName: '이름', width: 90 },
     { field: 'phone', headerName: '연락처', width: 130 },
     { field: 'email', headerName: '이메일', flex: 1, minWidth: 160 },
-    { headerName: '', width: 50, sortable: false, resizable: false,
+    { headerName: '', width: 120, sortable: false, resizable: false,
       cellRenderer: (p) => {
-        return `<button class="btn btn-danger btn-xs" onclick="deleteMasterContact(${p.data.id}, '${(p.data.name || '').replace(/'/g, "\\'")}')">삭제</button>`;
+        const id = p.data.id;
+        const name = (p.data.name || '').replace(/'/g, "\\'");
+        return `<button class="btn btn-secondary btn-xs btn-cell" onclick="openEditMasterContact(${id})">수정</button> `
+             + `<button class="btn btn-danger btn-xs btn-cell" onclick="deleteMasterContact(${id}, '${name}')">삭제</button>`;
       },
     },
   ];
@@ -388,9 +451,9 @@ function renderMasterContactGrid(contacts) {
   });
 }
 
-// ── 사업별 담당자 그리드 (피벗) ──────────────────────────────
+// ── 사업별 담당자 그리드 (인라인 편집) ──────────────────────
 function renderContractContactGrid(contacts) {
-  // 폴백 적용: 사업별 담당자가 비어있으면 마스터 기본 담당자를 참조
+  // 폴백: 마스터 기본 담당자
   const defaults = {};
   for (const mc of masterContacts) {
     for (const role of (mc.roles || [])) {
@@ -399,8 +462,6 @@ function renderContractContactGrid(contacts) {
       }
     }
   }
-
-  // 폴백 정보를 _fallback 필드에 저장
   for (const row of contacts) {
     row._fallback = {};
     for (const [prefix, type] of [['sales', '영업'], ['tax', '세금계산서'], ['ops', '업무']]) {
@@ -413,63 +474,78 @@ function renderContractContactGrid(contacts) {
   const el = document.getElementById('grid-contract-contacts');
   el.innerHTML = '';
 
-  // 폴백 cellRenderer 팩토리
-  const fallbackRenderer = (prefix, field) => (p) => {
+  // 역할별 마스터 담당자 필터
+  const contactsByRole = (roleType) =>
+    masterContacts.filter(mc => (mc.roles || []).some(r => r.role_type === roleType));
+
+  // 담당자 드롭다운 셀 에디터 클래스
+  class ContactSelectEditor {
+    init(params) {
+      this.params = params;
+      this.roleType = params.colDef._roleType;
+      this.prefix = params.colDef._prefix;
+      this.value = params.value || '';
+      this.container = document.createElement('select');
+      this.container.className = 'ag-cell-input-editor';
+      // 빈 옵션 (삭제용)
+      const emptyOpt = document.createElement('option');
+      emptyOpt.value = '';
+      emptyOpt.textContent = '-- 선택 해제 --';
+      this.container.appendChild(emptyOpt);
+      // 역할별 마스터 담당자
+      for (const mc of contactsByRole(this.roleType)) {
+        const opt = document.createElement('option');
+        opt.value = String(mc.id);
+        opt.textContent = mc.name + (mc.phone ? ` (${mc.phone})` : '');
+        if (String(mc.id) === String(params.data[this.prefix + '_cc_id'])) {
+          opt.selected = true;
+        }
+        this.container.appendChild(opt);
+      }
+    }
+    getGui() { return this.container; }
+    afterGuiAttached() { this.container.focus(); }
+    getValue() {
+      const selVal = this.container.value;
+      // 선택한 cc_id를 row 데이터에 임시 저장 (에디터 파괴 전)
+      this.params.data['_pending_' + this.prefix + '_cc_id'] = selVal ? parseInt(selVal, 10) : null;
+      if (!selVal) return '';
+      const mc = masterContacts.find(c => String(c.id) === selVal);
+      return mc ? mc.name : '';
+    }
+    isPopup() { return false; }
+  }
+
+  // 담당자 셀 렌더러 (폴백 포함)
+  const contactRenderer = (prefix) => (p) => {
     const val = p.value;
     if (val) return val;
     const fb = p.data._fallback?.[prefix];
-    if (fb) return `<span class="cell-fallback">${fb[field] || ''}</span>`;
-    return '';
+    if (fb) return `<span class="cell-fallback">${fb.name || ''}</span>`;
+    return `<span class="cell-placeholder">클릭하여 선택</span>`;
   };
 
-  const DC_AUTO_COLS = ['contract_name','sales_name','sales_phone','sales_email','tax_name','tax_phone','tax_email','ops_name','ops_phone','ops_email'];
+  // 편집 가능 여부 (완료된 period는 편집 불가)
+  const isEditable = (p) => !p.data.is_completed;
+
+  const contactColDef = (prefix, roleType, headerName) => ({
+    field: prefix + '_name',
+    headerName: headerName,
+    width: 110,
+    editable: isEditable,
+    cellEditor: ContactSelectEditor,
+    cellRenderer: contactRenderer(prefix),
+    cellClass: (p) => isEditable(p) ? 'cell-editable' : '',
+    _roleType: roleType,
+    _prefix: prefix,
+  });
 
   const colDefs = [
-    { field: 'contract_name', headerName: '사업명', minWidth: 120,
-      cellClass: 'cell-link' },
-    { headerName: '영업',
-      headerClass: 'col-group-sales',
-      children: [
-        { field: 'sales_name', headerName: '담당자', width: 80,
-          cellRenderer: fallbackRenderer('sales', 'name') },
-        { field: 'sales_phone', headerName: '연락처', width: 120,
-          cellRenderer: fallbackRenderer('sales', 'phone') },
-        { field: 'sales_email', headerName: '이메일', width: 160,
-          cellRenderer: fallbackRenderer('sales', 'email') },
-      ],
-    },
-    { headerName: '세금계산서',
-      headerClass: 'col-group-tax',
-      children: [
-        { field: 'tax_name', headerName: '담당자', width: 80,
-          cellRenderer: fallbackRenderer('tax', 'name') },
-        { field: 'tax_phone', headerName: '연락처', width: 120,
-          cellRenderer: fallbackRenderer('tax', 'phone') },
-        { field: 'tax_email', headerName: '이메일', width: 160,
-          cellRenderer: fallbackRenderer('tax', 'email') },
-      ],
-    },
-    { headerName: '업무',
-      headerClass: 'col-group-ops',
-      children: [
-        { field: 'ops_name', headerName: '담당자', width: 80,
-          cellRenderer: fallbackRenderer('ops', 'name') },
-        { field: 'ops_phone', headerName: '연락처', width: 120,
-          cellRenderer: fallbackRenderer('ops', 'phone') },
-        { field: 'ops_email', headerName: '이메일', width: 160,
-          cellRenderer: fallbackRenderer('ops', 'email') },
-      ],
-    },
-    { field: 'notes', headerName: '비고', flex: 1, minWidth: 60 },
-    { headerName: '', width: 80, sortable: false, resizable: false,
-      cellRenderer: (p) => {
-        const ids = [p.data.sales_id, p.data.tax_id, p.data.ops_id].filter(Boolean);
-        if (!ids.length) return '';
-        return ids.map(id =>
-          `<button class="btn btn-danger btn-xs btn-cell" onclick="deleteContractContact(${id})">X</button>`
-        ).join('');
-      },
-    },
+    { field: 'contract_name', headerName: '사업명', minWidth: 120, cellClass: 'cell-link' },
+    { field: 'period_label', headerName: '기간', width: 60 },
+    contactColDef('sales', '영업', '영업 담당자'),
+    contactColDef('tax', '세금계산서', '세금계산서 담당자'),
+    contactColDef('ops', '업무', '업무 담당자'),
   ];
 
   contractContactGridApi = agGrid.createGrid(el, {
@@ -483,15 +559,89 @@ function renderContractContactGrid(contacts) {
     enableCellTextSelection: true,
     ensureDomOrder: true,
     domLayout: 'autoHeight',
+    singleClickEdit: true,
+    stopEditingWhenCellsLoseFocus: true,
+    isExternalFilterPresent: () => activeOnlyFilter,
+    doesExternalFilterPass: (node) => !node.data.is_completed,
     onCellClicked: (e) => {
-      if (e.column.getColId() === 'contract_name' && e.data?.contract_id) {
-        window.location.href = `/contracts/${e.data.contract_id}`;
+      if (e.column.getColId() === 'contract_name' && e.data?.contract_period_id) {
+        window.location.href = `/contracts/${e.data.contract_period_id}`;
       }
     },
+    onCellValueChanged: (e) => {
+      const prefix = e.colDef._prefix;
+      if (!prefix) return;
+      e.data._dirty = true;
+    },
+    onSortChanged: () => _saveColState('contacts', contractContactGridApi),
+    onColumnResized: (e) => { if (e.finished) _saveColState('contacts', contractContactGridApi); },
+    onColumnMoved: () => _saveColState('contacts', contractContactGridApi),
   });
-  if (contacts.length > 0) {
-    contractContactGridApi.autoSizeColumns(DC_AUTO_COLS);
+  _restoreColState('contacts', contractContactGridApi);
+}
+
+/** 사업별 담당자 변경 사항 일괄 저장 */
+async function saveAllContractContacts() {
+  if (!contractContactGridApi) return;
+
+  const dirtyRows = [];
+  contractContactGridApi.forEachNode(node => {
+    if (node.data._dirty) dirtyRows.push(node.data);
+  });
+  if (dirtyRows.length === 0) return;
+
+  const roleTypeMap = { sales: '영업', tax: '세금계산서', ops: '업무' };
+  const errors = [];
+
+  for (const row of dirtyRows) {
+    for (const prefix of ['sales', 'tax', 'ops']) {
+      const pendingCcId = row['_pending_' + prefix + '_cc_id'];
+      if (pendingCcId === undefined) continue;  // 이 역할은 변경되지 않음
+
+      const existingId = row[prefix + '_id'];
+      const roleType = roleTypeMap[prefix];
+
+      try {
+        if (!pendingCcId && existingId) {
+          // 삭제
+          const res = await fetch(`/api/v1/contract-contacts/${existingId}`, { method: 'DELETE' });
+          if (!res.ok) errors.push(`${row.contract_name} ${roleType} 삭제 실패`);
+        } else if (pendingCcId && existingId) {
+          // 수정
+          const res = await fetch(`/api/v1/contract-contacts/${existingId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_contact_id: pendingCcId, contact_type: roleType }),
+          });
+          if (!res.ok) errors.push(`${row.contract_name} ${roleType} 수정 실패`);
+        } else if (pendingCcId && !existingId) {
+          // 신규 생성
+          const res = await fetch(`/api/v1/contract-periods/${row.contract_period_id}/contacts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              customer_id: selectedCustomerId,
+              customer_contact_id: pendingCcId,
+              contact_type: roleType,
+              rank: '정',
+            }),
+          });
+          if (!res.ok) errors.push(`${row.contract_name} ${roleType} 등록 실패`);
+        }
+      } catch (err) {
+        errors.push(`${row.contract_name} ${roleType}: ${err.message}`);
+      }
+    }
   }
+
+  if (errors.length > 0) {
+    alert('일부 저장 실패:\n' + errors.join('\n'));
+  }
+
+  // 새로고침
+  loadedTabs['contacts'] = false;
+  loadedTabs['contacts'] = true;
+  loadContactsTab();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -500,10 +650,51 @@ function renderContractContactGrid(contacts) {
 async function loadFinancialsTab() {
   if (!selectedCustomerId) return;
   const res = await fetch(`/api/v1/customers/${selectedCustomerId}/financials`);
+  if (!res.ok) { console.error('financials API error', res.status); return; }
   const data = await res.json();
 
   renderFinancialsSummary(data.summary);
-  renderFinancialsGrid(data.months);
+  renderFinancialsGrid(data.lines);
+}
+
+function _recalcFinancialsGroupTotals() {
+  if (!financialsGridApi) return;
+  // 필터 후 보이는 디테일 행 기준으로 그룹 행 금액 재계산
+  const byGroup = {};
+  financialsGridApi.forEachNodeAfterFilter(node => {
+    const d = node.data;
+    if (!d._is_group) {
+      const key = d._group_key;
+      if (!byGroup[key]) byGroup[key] = { revenue: 0, cost: 0 };
+      byGroup[key].revenue += d.revenue || 0;
+      byGroup[key].cost += d.cost || 0;
+    }
+  });
+  financialsGridApi.forEachNode(node => {
+    const d = node.data;
+    if (d._is_group) {
+      const g = byGroup[d._group_key] || { revenue: 0, cost: 0 };
+      d.revenue = g.revenue;
+      d.cost = g.cost;
+      d.gp = g.revenue - g.cost;
+      d.gp_pct = g.revenue > 0 ? Math.round((g.revenue - g.cost) / g.revenue * 1000) / 10 : null;
+    }
+  });
+  financialsGridApi.refreshCells({ force: true });
+}
+
+function _recalcFinancialsSummary() {
+  if (!financialsGridApi) return;
+  let totalRev = 0, totalCost = 0;
+  financialsGridApi.forEachNodeAfterFilter(node => {
+    const d = node.data;
+    // 디테일 행(period 단위)만 합산하여 정확한 필터 반영
+    if (!d._is_group) {
+      totalRev += d.revenue || 0;
+      totalCost += d.cost || 0;
+    }
+  });
+  renderFinancialsSummary({ total_revenue: totalRev, total_cost: totalCost, ar: null });
 }
 
 function renderFinancialsSummary(summary) {
@@ -526,15 +717,57 @@ function renderFinancialsSummary(summary) {
     </div>`;
 }
 
-function renderFinancialsGrid(months) {
+// ── 그룹 expand/collapse 공통 ──────────────────────────────
+const _expandedGroups = {};  // { gridKey: Set<groupKey> }
+
+function _toggleGroup(gridKey, groupKey, api) {
+  if (!_expandedGroups[gridKey]) _expandedGroups[gridKey] = new Set();
+  const set = _expandedGroups[gridKey];
+  if (set.has(groupKey)) set.delete(groupKey); else set.add(groupKey);
+  api.onFilterChanged();
+}
+
+function _isGroupExpanded(gridKey, groupKey) {
+  return _expandedGroups[gridKey]?.has(groupKey) || false;
+}
+
+function _groupFilterPass(gridKey, node) {
+  const d = node.data;
+  if (d._is_group) return true;  // 그룹 행은 항상 표시
+  return _isGroupExpanded(gridKey, d._group_key);
+}
+
+function _groupCellRenderer(gridKey, api) {
+  return (p) => {
+    const d = p.data;
+    if (!d._is_group) return p.value || '';
+    const expanded = _isGroupExpanded(gridKey, d._group_key);
+    const icon = expanded ? '▼' : '▶';
+    const name = d.contract_name || d.period_label || '';
+    return `<span class="group-toggle">${icon} <b>${name}</b></span>`;
+  };
+}
+
+function renderFinancialsGrid(lines) {
   const el = document.getElementById('grid-financials');
   el.innerHTML = '';
+  const GK = 'financials';
+  // 기본 전부 펼침
+  if (!_expandedGroups[GK]) {
+    _expandedGroups[GK] = new Set(lines.filter(l => l._is_group).map(l => l._group_key));
+  }
+  const fmtAmt = (p) => p.value ? fmt(p.value) : '-';
   const colDefs = [
-    { field: 'month', headerName: '월', width: 90 },
-    { field: 'revenue', headerName: '매출', width: 120, type: 'numericColumn',
-      valueFormatter: p => p.value ? fmt(p.value) : '-' },
-    { field: 'cost', headerName: '매입', width: 120, type: 'numericColumn',
-      valueFormatter: p => p.value ? fmt(p.value) : '-' },
+    { field: 'contract_name', headerName: '사업명', minWidth: 160,
+      cellRenderer: (p) => {
+        const d = p.data;
+        if (d._is_group) return _groupCellRenderer(GK)(p);
+        return '';
+      },
+    },
+    { field: 'period_label', headerName: '기간', width: 60 },
+    { field: 'revenue', headerName: '매출', width: 120, type: 'numericColumn', valueFormatter: fmtAmt, cellClass: 'cell-revenue' },
+    { field: 'cost', headerName: '매입', width: 120, type: 'numericColumn', valueFormatter: fmtAmt, cellClass: 'cell-cost-blue' },
     { field: 'gp', headerName: 'GP', width: 120, type: 'numericColumn',
       valueFormatter: p => p.value != null ? fmt(p.value) : '-' },
     { field: 'gp_pct', headerName: 'GP%', flex: 1, type: 'numericColumn',
@@ -542,12 +775,30 @@ function renderFinancialsGrid(months) {
   ];
   financialsGridApi = agGrid.createGrid(el, {
     columnDefs: colDefs,
-    rowData: months || [],
-    defaultColDef: { resizable: true, sortable: true },
+    rowData: lines || [],
+    defaultColDef: { resizable: true, sortable: false },
     enableCellTextSelection: true,
     ensureDomOrder: true,
     domLayout: 'autoHeight',
+    isExternalFilterPresent: () => true,
+    doesExternalFilterPass: (node) => {
+      if (activeOnlyFilter && node.data.is_completed) return false;
+      return _groupFilterPass(GK, node);
+    },
+    getRowClass: (p) => p.data?._is_group ? 'group-row' : 'detail-row',
+    onCellClicked: (e) => {
+      if (e.data?._is_group && e.column.getColId() === 'contract_name') {
+        _toggleGroup(GK, e.data._group_key, financialsGridApi);
+      }
+    },
+    onColumnResized: (e) => { if (e.finished) _saveColState(GK, financialsGridApi); },
+    onColumnMoved: () => _saveColState(GK, financialsGridApi),
+    onModelUpdated: () => {
+      _recalcFinancialsGroupTotals();
+      _recalcFinancialsSummary();
+    },
   });
+  _restoreColState(GK, financialsGridApi);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -556,53 +807,125 @@ function renderFinancialsGrid(months) {
 async function loadReceiptsTab() {
   if (!selectedCustomerId) return;
   const res = await fetch(`/api/v1/customers/${selectedCustomerId}/receipts`);
+  if (!res.ok) { console.error('receipts API error', res.status); return; }
   const data = await res.json();
 
   renderReceiptsSummary(data.summary);
   renderReceiptsGrid(data.receipts);
 }
 
+function _recalcReceiptsGroupTotals() {
+  if (!receiptsGridApi) return;
+  // 필터 후 보이는 개별 입금 행 기준으로 그룹/소계 행 금액 재계산
+  const byContract = {};
+  const byPeriod = {};
+  receiptsGridApi.forEachNodeAfterFilter(node => {
+    const d = node.data;
+    if (!d._is_group) {
+      const cid = d._group_key;
+      byContract[cid] = (byContract[cid] || 0) + (d.amount || 0);
+    }
+  });
+  // period 소계는 하위 개별 행 합산
+  receiptsGridApi.forEachNodeAfterFilter(node => {
+    const d = node.data;
+    if (d._is_group && d._period_group) {
+      // period 소계는 바로 다음에 오는 개별 행들의 합
+      // → 필터 후 보이는 개별 행을 이미 contract 단위로 합산했으므로, period 소계는 그대로 둠
+    }
+  });
+  // 사업 그룹 행의 amount 갱신
+  receiptsGridApi.forEachNode(node => {
+    const d = node.data;
+    if (d._is_group && d.contract_name) {
+      d.amount = byContract[d._group_key] || 0;
+    }
+  });
+  receiptsGridApi.refreshCells({ force: true });
+}
+
+function _recalcReceiptsSummary() {
+  if (!receiptsGridApi) return;
+  let total = 0;
+  receiptsGridApi.forEachNodeAfterFilter(node => {
+    const d = node.data;
+    // 개별 입금 행만 합산 (그룹/소계 행 제외)
+    if (!d._is_group) {
+      total += d.amount || 0;
+    }
+  });
+  renderReceiptsSummary({ total_receipt: total, ar_balance: null });
+}
+
 function renderReceiptsSummary(summary) {
   const el = document.getElementById('receipts-summary');
   if (!summary) { el.innerHTML = ''; return; }
+  const arHtml = summary.ar_balance != null
+    ? `<div class="summary-item ${summary.ar_balance > 0 ? 'warn' : ''}">
+        <div class="summary-label">미수금 잔액</div>
+        <div class="summary-value">${fmt(summary.ar_balance)}<span class="unit">원</span></div>
+      </div>` : '';
   el.innerHTML = `
     <div class="summary-grid">
       <div class="summary-item">
         <div class="summary-label">총 입금</div>
         <div class="summary-value">${fmt(summary.total_receipt)}<span class="unit">원</span></div>
       </div>
-      <div class="summary-item ${summary.ar_balance > 0 ? 'warn' : ''}">
-        <div class="summary-label">미수금 잔액</div>
-        <div class="summary-value">${fmt(summary.ar_balance)}<span class="unit">원</span></div>
-      </div>
+      ${arHtml}
     </div>`;
 }
 
 function renderReceiptsGrid(receipts) {
   const el = document.getElementById('grid-receipts');
   el.innerHTML = '';
+  const GK = 'receipts';
+  // 기본 축소 (사업 그룹만 표시)
+  if (!_expandedGroups[GK]) _expandedGroups[GK] = new Set();
+
   const colDefs = [
+    { field: 'contract_name', headerName: '사업명', minWidth: 160,
+      cellRenderer: (p) => {
+        const d = p.data;
+        if (d._is_group && d.contract_name) return _groupCellRenderer(GK)(p);
+        if (d._is_group && d._period_group) return `<span class="period-label">${d.period_label}</span>`;
+        return '';
+      },
+    },
+    { field: 'period_label', headerName: '기간', width: 60,
+      cellRenderer: (p) => p.data._is_group ? '' : '',
+    },
     { field: 'receipt_date', headerName: '입금일', width: 100 },
     { field: 'amount', headerName: '금액', width: 120, type: 'numericColumn',
       valueFormatter: p => p.value ? fmt(p.value) : '-' },
-    { field: 'contract_name', headerName: '사업명', minWidth: 140,
-      cellClass: 'cell-link' },
     { field: 'description', headerName: '적요', flex: 1, minWidth: 100 },
     { field: 'revenue_month', headerName: '귀속월', width: 90 },
   ];
   receiptsGridApi = agGrid.createGrid(el, {
     columnDefs: colDefs,
     rowData: receipts || [],
-    defaultColDef: { resizable: true, sortable: true },
+    defaultColDef: { resizable: true, sortable: false },
     enableCellTextSelection: true,
     ensureDomOrder: true,
     domLayout: 'autoHeight',
+    isExternalFilterPresent: () => true,
+    doesExternalFilterPass: (node) => {
+      if (activeOnlyFilter && node.data.is_completed) return false;
+      return _groupFilterPass(GK, node);
+    },
+    getRowClass: (p) => p.data?._is_group ? 'group-row' : 'detail-row',
     onCellClicked: (e) => {
-      if (e.column.getColId() === 'contract_name' && e.data?.contract_id) {
-        window.location.href = `/contracts/${e.data.contract_id}`;
+      if (e.data?._is_group && e.data.contract_name && e.column.getColId() === 'contract_name') {
+        _toggleGroup(GK, e.data._group_key, receiptsGridApi);
       }
     },
+    onColumnResized: (e) => { if (e.finished) _saveColState(GK, receiptsGridApi); },
+    onColumnMoved: () => _saveColState(GK, receiptsGridApi),
+    onModelUpdated: () => {
+      _recalcReceiptsGroupTotals();
+      _recalcReceiptsSummary();
+    },
   });
+  _restoreColState(GK, receiptsGridApi);
 }
 
 // ── API 호출: 거래처 ──────────────────────────────────────────
@@ -717,79 +1040,54 @@ async function deleteMasterContact(contactId, contactName) {
   }
 }
 
-// ── API 호출: 사업별 담당자 ──────────────────────────────────
-
-/** 구분(contact_type) 변경 시 해당 역할의 마스터 담당자만 드롭다운에 표시 */
-function updateContactDropdown() {
-  const contactType = document.getElementById('new-dc-type').value;
-  const sel = document.getElementById('new-dc-contact-id');
-  // 선택한 역할을 가진 마스터 담당자만 필터링
-  const filtered = masterContacts.filter(mc =>
-    (mc.roles || []).some(r => r.role_type === contactType)
-  );
-  sel.innerHTML = filtered.length === 0
-    ? '<option value="">해당 역할의 담당자가 없습니다</option>'
-    : filtered.map(mc =>
-        `<option value="${mc.id}">${mc.name}${mc.phone ? ' (' + mc.phone + ')' : ''}</option>`
-      ).join('');
+// ── 마스터 담당자 수정 ──────────────────────────────────────
+function openEditMasterContact(contactId) {
+  const mc = masterContacts.find(c => c.id === contactId);
+  if (!mc) return;
+  document.getElementById('edit-mc-id').value = mc.id;
+  document.getElementById('edit-mc-name').value = mc.name || '';
+  document.getElementById('edit-mc-phone').value = mc.phone || '';
+  document.getElementById('edit-mc-email').value = mc.email || '';
+  const roles = (mc.roles || []).map(r => r.role_type);
+  const hasDefault = (mc.roles || []).some(r => r.is_default);
+  document.querySelectorAll('#edit-mc-roles input[type="checkbox"]').forEach(cb => {
+    cb.checked = roles.includes(cb.value);
+  });
+  document.getElementById('edit-mc-default').checked = hasDefault;
+  document.getElementById('modal-edit-master-contact').showModal();
 }
 
-function openAddContractContact() {
-  if (!selectedCustomerId) return;
-  const contracts = relatedContracts.length > 0 ? relatedContracts : (contractsData?.contracts || []);
-  if (contracts.length === 0) {
-    alert('관련 사업이 없습니다. 사업을 먼저 등록해 주세요.');
-    return;
-  }
-  if (masterContacts.length === 0) {
-    alert('기본 담당자가 없습니다. 기본 담당자를 먼저 등록해 주세요.');
-    return;
-  }
-  const sel = document.getElementById('new-dc-contract-id');
-  sel.innerHTML = contracts.map(d =>
-    `<option value="${d.id}">${d.contract_code ? d.contract_code + ' ' : ''}${d.contract_name}</option>`
-  ).join('');
-  document.getElementById('new-dc-type').value = '영업';
-  document.getElementById('new-dc-rank').value = '정';
-  updateContactDropdown();
-  document.getElementById('modal-add-contract-contact').showModal();
-}
+async function submitEditMasterContact() {
+  const contactId = document.getElementById('edit-mc-id').value;
+  const name = document.getElementById('edit-mc-name').value.trim();
+  if (!name) { alert('이름을 입력하세요.'); return; }
 
-async function submitNewContractContact() {
-  const contactId = document.getElementById('new-dc-contact-id').value;
-  if (!contactId) { alert('담당자를 선택하세요.'); return; }
-  const contractId = document.getElementById('new-dc-contract-id').value;
+  const checkedRoles = [];
+  const isDefault = document.getElementById('edit-mc-default').checked;
+  document.querySelectorAll('#edit-mc-roles input[type="checkbox"]:checked').forEach(cb => {
+    checkedRoles.push({ role_type: cb.value, is_default: isDefault });
+  });
+  if (checkedRoles.length === 0) { alert('최소 1개 이상의 역할을 선택하세요.'); return; }
+
   const payload = {
-    customer_id: selectedCustomerId,
-    customer_contact_id: parseInt(contactId, 10),
-    contact_type: document.getElementById('new-dc-type').value,
-    rank: document.getElementById('new-dc-rank').value,
+    name,
+    phone: document.getElementById('edit-mc-phone').value.trim() || null,
+    email: document.getElementById('edit-mc-email').value.trim() || null,
+    roles: checkedRoles,
   };
-  const res = await fetch(`/api/v1/contracts/${contractId}/contacts`, {
-    method: 'POST',
+  const res = await fetch(`/api/v1/customers/contacts/${contactId}`, {
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
   if (res.ok) {
-    document.getElementById('modal-add-contract-contact').close();
+    document.getElementById('modal-edit-master-contact').close();
     loadedTabs['contacts'] = false;
     loadedTabs['contacts'] = true;
     loadContactsTab();
   } else {
     const body = await res.json().catch(() => null);
-    alert(body?.detail || '담당자 등록에 실패했습니다.');
-  }
-}
-
-async function deleteContractContact(contactId) {
-  if (!confirm('이 담당자를 삭제하시겠습니까?')) return;
-  const res = await fetch(`/api/v1/contract-contacts/${contactId}`, { method: 'DELETE' });
-  if (res.ok) {
-    loadedTabs['contacts'] = false;
-    loadedTabs['contacts'] = true;
-    loadContactsTab();
-  } else {
-    alert('삭제에 실패했습니다.');
+    alert(body?.detail || '담당자 수정에 실패했습니다.');
   }
 }
 

@@ -10,7 +10,7 @@ router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
 
 @router.get("", response_model=SettingsRead)
-def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_settings(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> SettingsRead:
     return SettingsRead(org_name=svc.get_setting(db, "org_name"))
 
 
@@ -19,7 +19,7 @@ def update_settings(
     data: SettingsUpdate,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
-):
+) -> SettingsRead:
     if data.org_name is not None:
         svc.update_setting(db, "org_name", data.org_name or None)
     return SettingsRead(org_name=svc.get_setting(db, "org_name"))

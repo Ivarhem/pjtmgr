@@ -130,7 +130,7 @@ def _decode_csv(file_bytes: bytes) -> str:
             return file_bytes.decode(enc)
         except (UnicodeDecodeError, LookupError):
             continue
-    raise ValueError(f"지원되지 않는 인코딩입니다. 지원 형식: {', '.join(_CSV_ENCODINGS)}")
+    raise BusinessRuleError(f"지원되지 않는 인코딩입니다. 지원 형식: {', '.join(_CSV_ENCODINGS)}", status_code=422)
 
 
 def import_contacts_csv(db: Session, file_bytes: bytes) -> dict:

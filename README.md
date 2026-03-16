@@ -52,7 +52,7 @@
 
 ```bash
 # 1. 의존성 설치
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # 2. 환경변수 설정 (.env 파일 생성)
 # SESSION_SECRET_KEY=<운영 환경 필수, 충분히 긴 랜덤 세션 비밀키>
@@ -69,6 +69,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 - 비개발 환경에서는 `SESSION_SECRET_KEY`가 없으면 앱이 시작되지 않는다.
+- `DATABASE_URL`을 PostgreSQL 등으로 변경할 경우 해당 드라이버 설치와 backend별 연결 설정이 추가로 필요하다.
 
 ### 초기 설정
 
@@ -104,6 +105,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 sales/
 ├── app/
 │   ├── main.py               # FastAPI 앱 진입점
+│   ├── migrations_legacy.py  # 경량 마이그레이션 (Alembic 도입 전 레거시)
 │   ├── config.py             # 환경 설정
 │   ├── database.py           # DB 연결
 │   ├── exceptions.py         # 커스텀 예외 (NotFoundError 등)
@@ -151,11 +153,17 @@ sales/
 │   │   ├── term_config.py    # TermConfig 스키마
 │   │   └── setting.py        # Settings 스키마
 │   ├── services/             # 비즈니스 로직
-│   │   ├── contract.py       # 사업/기간/Forecast/TransactionLine/Receipt 서비스
+│   │   ├── _contract_helpers.py # 완료 기간 검사 등 공유 헬퍼
+│   │   ├── contract.py       # 사업/기간 CRUD 서비스
+│   │   ├── transaction_line.py # 매출/매입 실적 서비스
+│   │   ├── receipt.py        # 입금 서비스
+│   │   ├── monthly_forecast.py # 월별 Forecast 서비스
+│   │   ├── forecast_sync.py  # Forecast → TransactionLine 동기화
+│   │   ├── ledger.py         # 매출/매입 원장 뷰 서비스
 │   │   ├── customer.py       # 거래처 서비스
 │   │   ├── user.py           # 사용자 서비스
 │   │   ├── contract_contact.py # 사업별 담당자 서비스
-│   │   ├── dashboard.py      # 대시보드 데이터 집계
+│   │   ├── dashboard.py      # 대시보드 데이터 집계 + 내 사업 요약
 │   │   ├── report.py         # 보고서 데이터 및 Excel Export
 │   │   ├── metrics.py        # 공통 집계 함수 (dashboard/report 공용)
 │   │   ├── importer.py       # Excel Import 서비스
@@ -167,7 +175,11 @@ sales/
 │   │   ├── contract_type_config.py # 사업유형 설정 서비스
 │   │   └── term_config.py    # 용어 설정 서비스
 │   ├── routers/              # API 라우터
-│   │   ├── contracts.py      # 사업/기간/Forecast/TransactionLine/Receipt/Ledger
+│   │   ├── contracts.py      # 사업/기간/Ledger/내사업요약
+│   │   ├── transaction_lines.py # 매출/매입 실적
+│   │   ├── receipts.py       # 입금
+│   │   ├── receipt_matches.py # 입금 배분
+│   │   ├── forecasts.py      # Forecast/Forecast Sync
 │   │   ├── customers.py      # 거래처/거래처 담당자
 │   │   ├── users.py          # 사용자 관리
 │   │   ├── contract_contacts.py # 사업별 담당자
@@ -177,7 +189,8 @@ sales/
 │   │   ├── settings.py       # 앱 설정
 │   │   ├── user_preferences.py # 사용자 설정
 │   │   ├── contract_types.py # 사업유형 관리
-│   │   └── term_configs.py   # 용어 설정
+│   │   ├── term_configs.py   # 용어 설정
+│   │   └── pages.py          # HTML 페이지 라우트 (템플릿 렌더링)
 │   ├── templates/            # Jinja2 HTML 템플릿
 │   │   ├── base.html         # 공통 레이아웃 (topbar, subnav)
 │   │   ├── login.html        # 로그인
@@ -230,7 +243,12 @@ sales/
 │   ├── conftest.py           # 인메모리 SQLite 픽스처
 │   ├── test_metrics.py       # 공통 집계 함수 테스트
 │   ├── test_contract_service.py # Contract/Period 서비스 테스트
-│   └── test_importer.py      # Excel Import 검증 테스트
+│   ├── test_contract_schema.py # Contract 스키마 정규화 테스트
+│   ├── test_importer.py      # Excel Import 검증 테스트
+│   ├── test_dashboard_service.py # 대시보드 목표 vs 실적/재집계 테스트
+│   ├── test_report_service.py # 보고서 서비스/Export 회귀 테스트
+│   ├── test_receipt_match_service.py # ReceiptMatch 권한/FIFO 배분 테스트
+│   └── test_database.py      # DB 연결 설정 테스트
 ├── requirements.txt          # Python 의존성
 ├── CLAUDE.md                 # 개발 지침/규칙
 ├── PILOT_TEST.md             # 파일럿 테스트 계획
@@ -284,8 +302,9 @@ contracts (사업)
 contract_periods (사업 기간 - 연도 단위 버전)
   id, contract_id → contracts
   period_year, period_label (Y25, Y26)
-  stage (10%/50%/70%/90%/계약완료)
+  stage (10%/50%/70%/90%/계약완료/실주)
   expected_revenue_total, expected_gp_total
+  is_planned (계획사업/수시사업 구분, default True=계획사업)
   start_month, end_month (YYYY-MM-01)
   owner_user_id → users (Period별 담당 영업)
   customer_id → customers (매출처, 미지정 시 Contract.end_customer)
@@ -393,8 +412,9 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - 사업 CRUD (목록/등록/수정/삭제) — 삭제 시 소프트 삭제(status→cancelled), 관리자 복구 가능
 - 사업 등록 시 END 고객 입력 지원
 - 내 사업 (로그인 사용자 기준 자동 필터) + **요약 바** (진행 사업/매출/GP/미수금)
-- 사업 기간(ContractPeriod) 관리 — Period 탭 버튼 UI
+- 사업 기간(ContractPeriod) 관리 — Period 탭 버튼 UI, 계획사업/수시사업 구분(`is_planned`)
 - ContractPeriod별 매출처 관리 (미지정 시 Contract의 END 고객 사용)
+- 진행단계에 "실주" 추가 — Period 수정 시에만 선택 가능
 - 사업별 담당자 매핑 (ContractContact) — **사업 상세에서 담당자 정보 표시**
 - 검수일/발행일 규칙 설정 (Contract 기본정보, Period 상속)
 
@@ -431,6 +451,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 
 - FIFO 자동 배분 (귀속기간 내 매출만 대상, 귀속월 오름차순)
 - 수동 배분 생성/수정/삭제
+- 수동 배분 생성 시 요청 경로의 사업과 실제 입금/매출 라인의 소속 사업이 일치해야 하며, 수정/삭제도 해당 사업 접근 권한을 다시 검증
 - 배분 현황 그리드 (사업 상세 화면, 귀속기간 필터 적용)
 - 자동 재배분 기능
 - 미수금 = 매출확정 - 배분완료 (단일 공식)
@@ -443,7 +464,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - 역할별 기본 담당자 지정 (is_default)
 - 사업별 담당자: 기본 담당자에서 선택하여 배정 (정/부 구분)
 - 탭 기반 대시보드 (사업현황/담당자/매출·매입/입금)
-- 거래처별 사업 현황 조회 (역할 배지, 요약 카드, 진행중 필터)
+- 거래처별 사업 현황 조회 (Period 단위 매출/매입 집계, 역할 배지, 요약 카드, 진행중 필터)
 - 거래처별 매출·매입 월별 집계 및 미수금 조회
 - 거래처별 입금 내역 조회
 - 사업별 담당자 매트릭스 (피벗 뷰, 폴백 표시, 정 담당자 기준)
@@ -464,20 +485,24 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - 3단계 Import: 사업 → Forecast → TransactionLine
 - 값 정규화 (진행단계 소수→%, 사업유형 대소문자)
 - 유효성 검사 및 오류 행 표시
+- 전체 Import는 시트 간 `연도+번호`로 연결하며, 같은 `연도+사업명` 조합이 업로드 파일 내부 또는 기존 DB에 중복되면 validation error로 중단
 - 보고서 Excel Export (요약 현황, Forecast vs Actual, 미수 현황, 매입매출관리)
 
 ### 보고서/대시보드
 
-- 대시보드: KPI 요약, 사업유형별 매출, 월별 매출 추이, 미수금 현황
+- 대시보드: KPI 요약(매출 목표/실적/GP/입금/미수금 통합), 사업유형별 매출, 추이 차트(막대/선형/영역 전환), 미수금 현황
+- 추이 차트: 막대 차트에서 계획사업/수시사업 Forecast stacked 표시, 선형·영역은 계획사업 Forecast + 수시사업 Forecast + Actual 구분
+- 매출 목표 vs 실적: 계획사업(`is_planned`) Forecast 기준 목표 vs 전체 확정매출 비교
+- 집계 단위 전환: 월/분기/반기/연 글로벌 토글 — 추이 차트 + 목표 vs 실적 테이블 연동
 - 요약 현황: 월별 Forecast/Actual 매출·매입·GP·입금·미수금 집계
 - Forecast vs Actual: 사업별 비교
 - 미수 현황: 사업별 미수금 조회
-- 매입매출관리: 개별 사업 월별 상세
+- 매입매출관리: 개별 사업 월별 상세, 미수금은 배분완료 기준 누적으로 계산
 
 ### 시스템
 
 - 커스텀 예외 + 전역 핸들러 (통일된 에러 응답)
-- 런타임 마이그레이션 식별자 검증 (`app/main.py`) — legacy 테이블/컬럼 이관 시 화이트리스트 기반 raw SQL 제한
+- 런타임 마이그레이션 식별자 검증 (`app/migrations_legacy.py`) — legacy 테이블/컬럼 이관 시 화이트리스트 기반 raw SQL 제한
 - 감사 로그 인프라 (테이블/유틸 준비, 연동 예정) + 로그 메뉴/placeholder 화면
 - 컬럼 순서·너비 저장/복원 (localStorage) — 사업관리, 내사업, 사업상세, 보고서, 사용자관리
 - 필터 상태 저장/복원 (localStorage) — 사업관리, 내사업, 보고서
@@ -492,8 +517,9 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 - **감사 로그**: 테이블/유틸 준비 완료, 서비스 연동 미완료
 - **감사 로그 조회**: `/audit-logs` 화면은 준비 중 placeholder이며, 실제 로그 목록/API는 미구현
 - **DB**: 기본값은 SQLite 단일 파일 (`DATABASE_URL`로 변경 가능)
+- **Excel 전체 Import 식별 제약**: 같은 연도·같은 사업명이 업로드 파일 내부 또는 기존 데이터에 중복되면 overwrite/skip 대상을 자동 결정하지 않고 validation error로 중단
 - **초기 관리자 생성**: bootstrap 환경변수를 설정하지 않으면 첫 관리자 계정을 만들 수 없음
-- **테스트**: 집계/Contract 서비스/Excel 검증과 완료기간/FIFO 핵심 회귀는 작성됨 — API 통합, 권한, 보고서 회귀 테스트는 추가 필요
+- **테스트**: 집계/Contract 서비스/Excel 검증, Contract 스키마 정규화, ReceiptMatch 권한, 대시보드 목표 vs 실적/재집계, 보고서 서비스/Export 회귀는 작성됨 — API 통합 테스트는 추가 필요
 - **발행일 휴일 조정**: 공휴일 달력 미적용 (invoice_holiday_adjust 필드 존재)
 - **권한**: admin/user 2단계만 구현 (manager/viewer 미구현)
 
@@ -511,7 +537,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 | 낮음 | 낙관적 잠금 | 동시 편집 충돌 방지 (version 필드 기반) |
 | 낮음 | DB 마이그레이션 | Alembic 도입, SQLite → PostgreSQL |
 | 낮음 | 발행일 휴일 조정 | 공휴일 달력 연동 (전/후 영업일 계산) |
-| 낮음 | 테스트 확장 | API 통합, 권한, ReceiptMatch, 보고서 회귀 테스트 추가 |
+| 낮음 | 테스트 확장 | API 통합 테스트 확대 |
 | 낮음 | 국세청 API 연동 | 세금계산서 발행·조회 자동화 |
 | 낮음 | Undo/History | 변경 이력 추적 및 되돌리기 |
 
@@ -526,7 +552,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 | GET | `/api/v1/auth/me` | 현재 사용자 + permissions | 인증 |
 | POST | `/api/v1/auth/change-password` | 비밀번호 변경 | 인증 |
 | GET | `/api/v1/contract-periods` | 원장 목록 (필터 + scope) | 인증 |
-| GET/POST | `/api/v1/contracts` | 사업 목록/생성 | 인증 |
+| POST | `/api/v1/contracts` | 사업 생성 | 인증 |
 | GET/PATCH | `/api/v1/contracts/{id}` | 사업 조회/수정 | 인증 |
 | DELETE | `/api/v1/contracts/{id}` | 사업 삭제 (소프트 삭제) | admin |
 | POST | `/api/v1/contracts/{id}/restore` | 삭제된 사업 복구 | admin |
@@ -577,6 +603,7 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 | GET | `/api/v1/customers/{id}/financials` | 거래처 매출·매입 월별 집계 | 인증 |
 | GET | `/api/v1/customers/{id}/receipts` | 거래처 입금 내역 | 인증 |
 | GET | `/api/v1/dashboard/summary` | 대시보드 전체 데이터 | 인증 |
+| GET | `/api/v1/dashboard/target-vs-actual` | 매출 목표 vs 실적 비교 | 인증 |
 | GET | `/api/v1/reports/summary` | 요약 현황 | 인증 |
 | GET | `/api/v1/reports/summary/export` | 요약 현황 Excel | 인증 |
 | GET | `/api/v1/reports/forecast-vs-actual` | Forecast vs Actual | 인증 |

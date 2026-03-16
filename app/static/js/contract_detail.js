@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadCustomers(), loadUsers()]);
   await loadAll();
   setupModals();
+  _initPillNav();
   // 날짜 텍스트 입력 blur 시 자동 정규화
   document.querySelectorAll('.date-text-input').forEach(el => {
     el.addEventListener('blur', () => { if (el.value) el.value = _normalizeDate(el.value); });
@@ -167,10 +168,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btn-repeat-txn-line').addEventListener('click', () => {
     _closeDropdowns();
-    const year = periodData?.period_year;
-    if (year) {
-      if (!document.getElementById('repeat-start').value) document.getElementById('repeat-start').value = `${year}-01`;
-      if (!document.getElementById('repeat-end').value) document.getElementById('repeat-end').value = `${year}-12`;
+    const pd = periodData;
+    if (pd?.start_month && pd?.end_month) {
+      if (!document.getElementById('repeat-start').value) document.getElementById('repeat-start').value = pd.start_month.slice(0, 7);
+      if (!document.getElementById('repeat-end').value) document.getElementById('repeat-end').value = pd.end_month.slice(0, 7);
+    } else if (pd?.period_year) {
+      if (!document.getElementById('repeat-start').value) document.getElementById('repeat-start').value = `${pd.period_year}-01`;
+      if (!document.getElementById('repeat-end').value) document.getElementById('repeat-end').value = `${pd.period_year}-12`;
     }
     // 거래처 select 채우기
     const sel = document.getElementById('repeat-customer');
@@ -454,6 +458,7 @@ function renderPeriodInfoSections() {
           <span class="info-item"><b>사업기간</b> ${range}</span>
           <span class="info-item"><b>진행단계</b> <span class="badge badge-${p.stage === '계약완료' ? 'done' : 'progress'}">${p.stage}</span></span>
           <span class="info-item">${p.is_completed ? '<span class="contract-status-badge closed">완료</span>' : '<span class="contract-status-badge active">진행중</span>'}</span>
+          <span class="info-item">${p.is_planned ? '<span class="contract-status-badge active">계획사업</span>' : '<span class="contract-status-badge planned-new">수시사업</span>'}</span>
           <span class="period-header-actions">
             <button class="btn btn-xs" onclick="event.stopPropagation(); togglePeriodCompleted(${p.id}, ${!p.is_completed})" title="${p.is_completed ? '진행중으로 변경' : '사업완료 처리'}">${p.is_completed ? '진행중으로 변경' : '사업완료'}</button>
             <button class="btn btn-xs btn-text-danger period-delete-btn" onclick="event.stopPropagation(); deletePeriodById(${p.id}, '${p.period_label}')" title="Period 삭제">삭제</button>
@@ -567,8 +572,12 @@ function openEditPeriodInfo() {
           <label class="info-edit-field">
             <span>진행단계</span>
             <select id="edit-stage">
-              ${['10%','50%','70%','90%','계약완료'].map(v => `<option value="${v}"${period.stage===v?' selected':''}>${v}</option>`).join('')}
+              ${['10%','50%','70%','90%','계약완료','실주'].map(v => `<option value="${v}"${period.stage===v?' selected':''}>${v}</option>`).join('')}
             </select>
+          </label>
+          <label class="info-edit-field chk-inline">
+            <input type="checkbox" id="edit-is-planned" ${period.is_planned ? 'checked' : ''}>
+            연초 보고 사업
           </label>
         </div>
       </fieldset>
@@ -675,6 +684,8 @@ async function savePeriodInfo() {
     invoice_day: invDayEl?.value ? parseInt(invDayEl.value) : null,
     invoice_holiday_adjust: invHolidayEl?.value || null,
   };
+  const isPlannedEl = document.getElementById('edit-is-planned');
+  if (isPlannedEl) periodBody.is_planned = isPlannedEl.checked;
 
   const res = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -695,22 +706,41 @@ async function savePeriodInfo() {
   showToast('Period 정보가 저장되었습니다.');
 }
 
+function _updatePillNavVisibility() {
+  const container = document.getElementById('period-tabs');
+  const leftNav = document.getElementById('pill-nav-left');
+  const rightNav = document.getElementById('pill-nav-right');
+  if (!container || !leftNav || !rightNav) return;
+  const hasOverflow = container.scrollWidth > container.clientWidth;
+  setElementHidden(leftNav, !hasOverflow);
+  setElementHidden(rightNav, !hasOverflow);
+}
+
+function _initPillNav() {
+  const container = document.getElementById('period-tabs');
+  const leftNav = document.getElementById('pill-nav-left');
+  const rightNav = document.getElementById('pill-nav-right');
+  if (!leftNav || !rightNav || !container) return;
+  leftNav.addEventListener('click', () => { container.scrollBy({ left: -120, behavior: 'smooth' }); });
+  rightNav.addEventListener('click', () => { container.scrollBy({ left: 120, behavior: 'smooth' }); });
+}
+
 function renderPeriodTabs(periods) {
   const container = document.getElementById('period-tabs');
   const isAllSelected = selectedPeriodIds.size === allPeriods.length;
 
   // 다중선택 토글 버튼
-  const multiToggle = `<button class="period-tab period-tab-multi-toggle${multiSelectMode ? ' selected' : ''}" data-action="multi-toggle">다중선택</button>`;
+  const multiToggle = `<button class="pill-tab pill-tab-multi-toggle${multiSelectMode ? ' selected' : ''}" data-action="multi-toggle">다중선택</button>`;
 
   // ALL 버튼은 다중선택 모드에서만 표시
   const allBtn = multiSelectMode
-    ? `<button class="period-tab${isAllSelected ? ' selected' : ''}" data-view="all">ALL</button>`
+    ? `<button class="pill-tab${isAllSelected ? ' selected' : ''}" data-view="all">ALL</button>`
     : '';
 
   const periodBtns = periods.map(p => {
     const isCurrent = p.id === CONTRACT_PERIOD_ID;
     const isSelected = selectedPeriodIds.has(p.id);
-    const classes = ['period-tab'];
+    const classes = ['pill-tab'];
     if (!multiSelectMode && isCurrent && viewMode === 'period') classes.push('active');
     if (multiSelectMode && isSelected) classes.push('selected');
     if (!multiSelectMode && isSelected && selectedPeriodIds.size === 1) classes.push('active');
@@ -718,6 +748,9 @@ function renderPeriodTabs(periods) {
   }).join('');
 
   container.innerHTML = multiToggle + periodBtns + allBtn;
+
+  // ◀▶ 네비게이션 표시 (탭이 많을 때)
+  _updatePillNavVisibility();
 
   // 다중선택 토글 이벤트
   container.querySelector('[data-action="multi-toggle"]').addEventListener('click', () => {
@@ -958,11 +991,15 @@ function renderGpSummary() {
   const gpPct = totalSales > 0 ? gp / totalSales : null;
   const fc = lastForecastTotals;
 
-  // 미수금 = 매출확정 - 배분완료 (Allocation 기반, 현재 필터 기준)
+  // 미수금 = 도래한 매출확정 - 배분완료 (미래 귀속월 제외)
   const receiptTotal = lastReceiptTotal;
   const allocMap = window._allocationMap || {};
-  const allocatedTotal = rows.filter(r => r.type === '매출' && confirmed(r)).reduce((s, r) => s + (allocMap[r.transaction_line_id] || 0), 0);
-  const ar = totalSales - allocatedTotal;
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const arRevenueRows = rows.filter(r => r.type === '매출' && confirmed(r) && r.revenue_month <= currentMonth);
+  const arRevenue = arRevenueRows.reduce((s, r) => s + (r.amount || 0), 0);
+  const allocatedTotal = arRevenueRows.reduce((s, r) => s + (allocMap[r.transaction_line_id] || 0), 0);
+  const ar = arRevenue - allocatedTotal;
 
   document.getElementById('gp-summary').innerHTML = `
     <div class="summary-grid">
@@ -975,7 +1012,7 @@ function renderGpSummary() {
       <div class="summary-item"><div class="summary-label">입금 합계</div><div class="summary-value">${fmt(receiptTotal)}<span class="unit">원</span></div></div>
       <div class="summary-item ${ar > 0 ? 'warn' : ''}"><div class="summary-label">${ar < 0 ? '선수금' : '미수(AR)'}</div><div class="summary-value">${fmt(Math.abs(ar))}<span class="unit">원</span></div></div>
     </div>
-    <p class="data-note">※ 확정 기준. 예정 상태는 제외. 미수 = 매출확정 - 배분완료. VAT 별도.</p>`;
+    <p class="data-note">※ 확정 기준. 예정 상태는 제외. 미수 = 이번 달까지 도래한 매출확정 - 배분완료. 미래 귀속월은 미수 집계에서 제외됩니다. VAT 별도.</p>`;
 }
 
 // ── Forecast Grid ──────────────────────────────────────────────
@@ -1382,7 +1419,8 @@ function initLedgerGrid(ledgerRows) {
     { field: 'amount', headerName: '금액(원)', editable: true, type: 'numericColumn', width: 130,
       valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
       valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '',
-      tooltipValueGetter: p => p.value >= 10000 ? fmtKoreanCurrency(p.value) : null },
+      tooltipValueGetter: p => p.value >= 10000 ? fmtKoreanCurrency(p.value) : null,
+      cellClass: p => p.data?.type === '매출' ? 'cell-revenue' : p.data?.type === '매입' ? 'cell-cost-blue' : '' },
     { field: 'date', headerName: '계산서 발행일', editable: p => p.data.type !== '입금', width: 130,
       cellEditor: DateCellEditor,
       cellClass: 'cell-muted',
@@ -1918,6 +1956,7 @@ async function _openAddPeriodModal() {
   const invHoliday = prev?.invoice_holiday_adjust ?? dtConf.default_invoice_holiday_adjust ?? '';
   document.getElementById('add-period-invoice-holiday').value = invHoliday;
 
+  document.getElementById('add-period-is-planned').checked = true;
   _addPeriodMonthManuallyEdited = false;
   document.getElementById('modal-add-period').showModal();
 }
@@ -2007,6 +2046,7 @@ async function submitAddPeriod() {
     end_month: endMonth ? endMonth + '-01' : null,
   };
   if (custId) body.customer_id = parseInt(custId);
+  body.is_planned = document.getElementById('add-period-is-planned').checked;
 
   // 검수/세금계산서 정보
   const inspDay = document.getElementById('add-period-inspect-day').value;
@@ -2093,21 +2133,42 @@ function generateRepeatRows() {
 
   const costMap = useForecast ? _getForecastCostMap() : {};
 
+  // 동일 구분+거래처+귀속월 조합이 이미 존재하는지 확인
+  const existingKeys = new Set();
+  if (ledgerApi) {
+    ledgerApi.forEachNode(n => {
+      if (!n.rowPinned && n.data.type === type) {
+        existingKeys.add(`${n.data.revenue_month}|${n.data.customer_name || ''}`);
+      }
+    });
+  }
+
   const rows = [];
+  let skipped = 0;
   let cur = new Date(start + '-01');
   const endDate = new Date(end + '-01');
   while (cur <= endDate) {
     const ym = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-01`;
     const rowAmount = useForecast ? (costMap[ym] || 0) : amount;
     if (rowAmount > 0) {
-      const row = { revenue_month: ym, type, customer_name, amount: rowAmount, description: desc };
-      const invoiceDate = _calcInvoiceDate(ym, periodData);
-      if (invoiceDate) row.date = invoiceDate;
-      rows.push(row);
+      if (existingKeys.has(`${ym}|${customer_name}`)) {
+        skipped++;
+      } else {
+        const row = { revenue_month: ym, type, customer_name, amount: rowAmount, status: '예정', description: desc };
+        const invoiceDate = _calcInvoiceDate(ym, periodData);
+        if (invoiceDate) row.date = invoiceDate;
+        rows.push(row);
+      }
     }
     cur.setMonth(cur.getMonth() + 1);
   }
-  if (rows.length === 0) { alert('생성할 행이 없습니다. Forecast 데이터를 확인하세요.'); return; }
+  if (rows.length === 0) {
+    alert(skipped > 0
+      ? `동일 구분·거래처·귀속월의 행이 이미 ${skipped}건 존재하여 추가할 항목이 없습니다.`
+      : '생성할 행이 없습니다. Forecast 데이터를 확인하세요.');
+    return;
+  }
+  if (skipped > 0) showToast(`기존 행과 중복되는 ${skipped}건은 건너뛰었습니다.`, 'info');
   ledgerApi.applyTransaction({ add: rows });
   dirtyLedger = true; _updateDirtyIndicators();
   refreshLedgerSummary();

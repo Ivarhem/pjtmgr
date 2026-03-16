@@ -243,7 +243,7 @@ function initFaGrid() {
       { field: 'actual_revenue', headerName: 'Actual', width: 120, valueFormatter: fmtNumber,
         cellClass: 'cell-number', type: 'numericColumn' },
       { field: 'gap_revenue', headerName: 'Gap', width: 110, valueFormatter: fmtNumber,
-        cellClass: 'cell-number', type: 'numericColumn',
+        type: 'numericColumn',
         cellClass: p => {
           if (!p.value) return 'cell-number';
           return p.value > 0 ? 'cell-number cell-negative' : 'cell-number cell-positive';
@@ -300,7 +300,7 @@ function initArGrid() {
       { field: 'receipt', headerName: '입금', width: 120, valueFormatter: fmtNumber,
         cellClass: 'cell-number', type: 'numericColumn' },
       { field: 'ar', headerName: '미수금', width: 120, valueFormatter: fmtNumber,
-        cellClass: 'cell-number', type: 'numericColumn',
+        type: 'numericColumn',
         cellClass: p => p.value > 0 ? 'cell-number cell-negative' : 'cell-number' },
       { field: 'ar_rate', headerName: '미수율(%)', width: 100,
         valueFormatter: p => p.value != null ? `${p.value}%` : '-',

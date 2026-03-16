@@ -106,6 +106,35 @@
 </fieldset>
 ```
 
+### 체크박스 인라인 배치
+
+`.form-grid`나 `.info-edit-field` 안에서 체크박스+텍스트를 가로 배치할 때 `chk-inline` 클래스를 사용한다.
+
+```html
+<label class="chk-inline full-width">
+  <input type="checkbox" id="some-flag" checked>
+  체크박스 라벨 텍스트
+</label>
+```
+
+- `base.css`에 정의: `flex-direction: row`, `align-items: center`, `gap: 8px`
+- 체크박스 크기 15px로 고정 (`min-width: unset`으로 상위 input 스타일 오버라이드)
+
+### Pill Tab (빠른 선택 버튼)
+
+연도/기간 등 빠른 선택 버튼에 `pill-tab` 클래스를 사용한다. `components.css`에 정의.
+
+```html
+<div class="pill-tabs">
+  <button class="pill-tab active" data-value="2026">2026년</button>
+  <button class="pill-tab" data-value="2027">2027년</button>
+</div>
+```
+
+- 상태: `.active` (선택됨), `.selected` (다중선택), hover 효과 포함
+- 탭이 많아 overflow 시 `pill-tabs-scroll` + `pill-tab-nav`(◀▶) 사용
+- 대시보드 연도 선택, 사업상세 Period 탭에서 공통 사용
+
 ### 텍스트 클래스
 
 | 클래스 | 용도 | 위치 |

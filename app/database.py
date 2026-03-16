@@ -5,9 +5,14 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sales.db")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+
+def _engine_kwargs(database_url: str) -> dict:
+    if database_url.startswith("sqlite"):
+        return {"connect_args": {"check_same_thread": False}}
+    return {}
+
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **_engine_kwargs(SQLALCHEMY_DATABASE_URL))
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

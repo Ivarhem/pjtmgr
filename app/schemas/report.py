@@ -14,6 +14,7 @@ class ReportFilter(BaseModel):
     department: list[str] | None = None
     contract_type: list[str] | None = None
     stage: list[str] | None = None
+    customer_id: list[int] | None = None
     basis: str = "revenue_month"   # 향후 확장: invoice_month 등
 
 
@@ -71,6 +72,36 @@ class ForecastActualResponse(BaseModel):
 
 
 # ── 미수 현황 ────────────────────────────────────────────────────
+
+# ── 매출 목표 vs 실적 ─────────────────────────────────────────
+
+class TargetVsActualRow(BaseModel):
+    """group_by 단위별 매출 목표 대비 실적 행."""
+    label: str                              # 월(YYYY-MM) / 분기(Q1) / 반기(H1) / 연도
+    target_revenue: int = 0                 # 계획사업(is_planned=True)의 expected_revenue 합계
+    actual_revenue: int = 0                 # 전체 기간의 확정 매출 합계
+    planned_actual_revenue: int = 0         # 계획사업(is_planned=True)의 확정 매출
+    unplanned_actual_revenue: int = 0       # 수시사업(is_planned=False)의 확정 매출
+    lost_revenue: int = 0                   # 실주 기간의 expected_revenue 합계
+    gap: int = 0                            # target - actual
+    achievement_rate: float | None = None   # actual / target * 100
+
+
+class TargetVsActualTotals(BaseModel):
+    target_revenue: int = 0
+    actual_revenue: int = 0
+    planned_actual_revenue: int = 0
+    unplanned_actual_revenue: int = 0
+    lost_revenue: int = 0
+    gap: int = 0
+    achievement_rate: float | None = None
+
+
+class TargetVsActualResponse(BaseModel):
+    group_by: str                           # month / quarter / half / year
+    rows: list[TargetVsActualRow]
+    totals: TargetVsActualTotals
+
 
 class ReceivableRow(BaseModel):
     contract_id: int
