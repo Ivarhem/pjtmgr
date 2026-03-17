@@ -8,7 +8,9 @@
 
 - 현재: `admin` / `user` (2단계)
 - 향후 확장 예정: `manager` / `viewer` 추가
-- 역할 상수는 `app/auth/constants.py`에 정의 — 코드에서 `"admin"` 문자열 직접 사용 금지
+- 역할 상수는 `app/auth/constants.py`에 정의한다.
+- 백엔드 권한 판단 로직에서는 `"admin"` 같은 role 문자열 직접 비교보다 `ROLE_ADMIN`, `can_*()`, `require_admin` 같은 공용 경로를 우선 사용한다.
+- UI 선택값, API payload literal, 테스트 fixture처럼 role 값을 그대로 주고받는 경계에서는 문자열 literal 사용을 허용한다.
 
 ## 권한 체크 패턴
 
@@ -49,7 +51,9 @@
 ## 보안 원칙
 
 - 사내 네트워크에서만 접근 가능하도록 네트워크 레벨에서 차단한다.
-- 인증 없이 접근 가능한 엔드포인트를 두지 않는다.
+- 공개 엔드포인트는 기본 금지한다.
+- 예외적으로 인증 부트스트랩에 필요한 엔드포인트와 페이지(`POST /api/v1/auth/login`, `/login`)는 공개를 허용한다.
+- 새 공개 엔드포인트를 추가하면 이유, 보호 범위, 관련 UI 흐름을 이 문서에 함께 기록한다.
 - Excel Import는 관리자 전용 (`require_admin` 의존성 적용)
 - Receipt, TransactionLine, ReceiptMatch처럼 계약 하위 리소스를 조합하는 작업은 입력된 ID들이 같은 계약 범위에 속하는지도 함께 검증한다.
 - 금액, 거래처 정보 등 민감 데이터를 로그에 출력하지 않는다.

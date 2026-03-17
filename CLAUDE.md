@@ -1,6 +1,6 @@
 # 프로젝트 개발 지침
 
-> 프로젝트 구조·아키텍처·데이터 모델·기능 현황·향후 계획은 `README.md` 참조.
+> 항상 읽는 상위 지침. 실행 방법/프로젝트 개요는 `README.md`, 작업별 세부 규칙은 `docs/guidelines/`, 아키텍처 결정은 `docs/DECISIONS.md`, 알려진 제약은 `docs/KNOWN_ISSUES.md`, 프로젝트 배경은 `docs/PROJECT_CONTEXT.md` 참조.
 
 ---
 
@@ -11,6 +11,17 @@
 - Excel Import/Export 작업 → `docs/guidelines/excel.md`
 
 ---
+
+## 문서 계층 / Source of Truth
+
+- `README.md`: 프로젝트 소개, 실행 방법, 현재 상태, 문서 안내
+- `CLAUDE.md`: 항상 유지해야 하는 핵심 규칙, 문서 갱신 매핑, 완료 조건
+- `docs/guidelines/*.md`: 작업 영역별 상세 규칙과 패턴
+- `docs/DECISIONS.md`: 왜 그런 구조/정책을 택했는지에 대한 결정 기록
+- `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 임시 제약, 우회, 운영상 주의점
+- `docs/PROJECT_CONTEXT.md`: 도메인 배경, 사용자, 문제 정의
+- 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델의 1차 기준은 코드다 (`app/main.py`, `app/app_factory.py`, `app/startup/`, `app/routers/`, `app/models/`).
+- README나 guideline은 코드의 세부 inventory를 중복 소유하지 않는다. 코드 경로를 안내하거나, 변경 판단 기준만 제공한다.
 
 ## 1. 도메인 용어 정의
 
@@ -62,20 +73,23 @@
 - 보안 관련 환경변수는 insecure fallback을 두지 않는다. 초기 관리자처럼 설치 시점에 필요한 값은 환경변수 bootstrap 절차를 문서화한다.
 - 비밀번호 정책은 `settings` + `app/config.py` 기본값으로 관리한다. 동적 정책 검증은 서비스 레이어에서 현재 설정값을 조회해 수행하고, 라우터/템플릿은 그 값을 표시만 한다.
 - 모듈 간 순환 import는 허용하지 않는다. 공통 모듈 추출 또는 `TYPE_CHECKING` 분기로 해결.
-- **코드 변경 시 문서 갱신 규칙**: 아래 매핑 표에 따라 해당하는 문서만 갱신한다. 매핑에 없는 변경은 문서 갱신 불필요 (코드가 source of truth).
+- **코드 변경 시 문서 갱신 규칙**: 아래 매핑 표에 따라 변경 의미에 맞는 문서만 갱신한다. 세부 모델/API/파일 목록 자체는 코드가 1차 기준이지만, 실행 절차/권한 정책/운영 제약/핵심 규칙이 바뀌면 해당 문서를 함께 갱신한다.
 
   | 변경 유형 | 갱신 대상 |
   | --------- | --------- |
   | 비즈니스 규칙 변경 | CLAUDE.md §6 데이터 원칙 |
   | 코딩 패턴/규칙 변경 | CLAUDE.md 해당 섹션 |
-  | 테스트 파일 추가 | CLAUDE.md §7 테스트 파일 목록 |
+  | 테스트 전략/회귀 범위 변경 | CLAUDE.md §7 테스트·확장성 |
   | 권한 변경 | `docs/guidelines/auth.md` |
   | 프론트엔드 패턴 변경 | `docs/guidelines/frontend.md` |
   | Excel Import/Export 변경 | `docs/guidelines/excel.md` |
+  | startup/bootstrap/migration/배포 초기화 흐름 변경 | `docs/DECISIONS.md`, 필요 시 `README.md` 실행/초기 설정 |
+  | 공개 엔드포인트/인증 흐름 변경 | `docs/guidelines/auth.md`, 필요 시 `README.md` |
   | 아키텍처 결정 | `docs/DECISIONS.md` (추가 전용) |
   | 임시 우회/제약 추가 | `docs/KNOWN_ISSUES.md` |
   | 임시 우회 해소 | `docs/KNOWN_ISSUES.md` (항목 삭제) |
-  | 모델/API/파일 구조 변경 | 문서 갱신 불필요 (코드가 source of truth) |
+  | 외부 사용자가 알아야 하는 실행/운영 방법 변경 | `README.md` |
+  | 모델/API/파일 구조 세부 변경 | 문서 갱신 기본 불필요 (코드가 source of truth) |
 
 ---
 
@@ -157,7 +171,7 @@
 ## 7. 테스트·확장성
 
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
-- 기본 회귀 테스트는 `tests/test_metrics.py`, `tests/test_contract_service.py`, `tests/test_importer.py`, `tests/test_dashboard_service.py`, `tests/test_receipt_match_service.py`, `tests/test_contract_schema.py`, `tests/test_report_service.py`, `tests/test_auth_service.py`, `tests/test_database.py`, `tests/test_startup.py`, `tests/test_transaction_safety.py`에서 관리한다.
+- 기본 회귀 테스트는 metrics/contract/importer/dashboard/receipt_match/report/auth/database/startup/transaction safety 범위를 포함한다. 세부 파일 목록은 `tests/`가 1차 기준이다.
 - 완료된 귀속기간 보호, FIFO 배분 격리, ReceiptMatch 권한, 대시보드 집계(`is_planned`, `실주`, 목표 vs 실적, 월/분기/반기/연 재집계), 보고서/Excel Export의 미수금·합계 행 규칙은 위 테스트군으로 회귀를 보호한다.
 - DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다. 기존 `app/migrations_legacy.py`는 레거시 호환용으로 유지.
   - 새 테이블/컬럼 추가 시: `alembic revision --autogenerate -m "설명"` → `upgrade()`에 `inspector` 존재 여부 체크 권장
@@ -173,8 +187,9 @@
 
 1. 코드 변경 완료
 2. 관련 테스트 통과 (새 기능은 테스트 추가)
-3. §2 매핑 표에 해당하는 문서가 있으면 갱신 완료
+3. 변경 유형을 식별하고 §2 매핑 표의 필수 문서를 갱신 완료
 4. 해결된 KNOWN_ISSUES 항목이 있으면 삭제 완료
+5. 문서에 적은 경로/엔드포인트/권한/초기화 절차가 코드와 일치함을 확인
 
 ### 문서 정합성 체크리스트
 
@@ -183,5 +198,9 @@
 - [ ] KNOWN_ISSUES.md에 이번 변경으로 해소된 항목이 있는가? → 삭제
 - [ ] 비즈니스 규칙을 변경했는가? → CLAUDE.md §6 확인
 - [ ] 권한 로직을 변경했는가? → `docs/guidelines/auth.md` 확인
+- [ ] 공개 엔드포인트/로그인 흐름을 변경했는가? → `docs/guidelines/auth.md`, 필요 시 `README.md` 확인
 - [ ] 프론트엔드 패턴을 변경/추가했는가? → `docs/guidelines/frontend.md` 확인
-- [ ] 새 테스트 파일을 추가했는가? → CLAUDE.md §7 목록에 추가
+- [ ] Excel Import/Export 계약을 변경했는가? → `docs/guidelines/excel.md` 확인
+- [ ] startup/bootstrap/migration/초기 설정 흐름을 변경했는가? → `docs/DECISIONS.md`, 필요 시 `README.md` 확인
+- [ ] 외부 사용자가 알아야 하는 실행/운영 방법을 바꿨는가? → `README.md` 확인
+- [ ] 문서에 적은 경로/엔드포인트/권한명이 실제 코드와 일치하는가?
