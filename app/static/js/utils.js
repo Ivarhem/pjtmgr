@@ -67,7 +67,11 @@ function showToast(message, type = 'success', duration = 3000) {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
-  container.appendChild(toast);
+  if (type === 'error') {
+    container.prepend(toast);
+  } else {
+    container.appendChild(toast);
+  }
   setTimeout(() => {
     toast.classList.add('toast-out');
     toast.addEventListener('animationend', () => toast.remove());
@@ -524,10 +528,12 @@ async function submitContractModal(loadDataFn, onUpdated) {
 
   if (!contractName) { showToast('사업명을 입력하세요.', 'error'); return; }
 
-  // hidden ID가 있으면 사용, 없으면 이름으로 resolve (기존 fallback)
+  // 거래처는 반드시 목록에서 선택해야 함
   let endCustomerId = endCustomerIdRaw ? parseInt(endCustomerIdRaw, 10) : null;
-  if (!endCustomerId && endCustomerName) {
-    endCustomerId = await _resolveEndCustomerId(endCustomerName);
+  if (endCustomerName && !endCustomerId) {
+    showToast('고객사를 목록에서 선택하세요.', 'error');
+    document.getElementById('add-end-customer').focus();
+    return;
   }
 
   if (contractId) {

@@ -228,33 +228,86 @@ async function loadDetail(customerId) {
 }
 
 function renderCustomerInfo(cust) {
-  document.getElementById('cust-info-card').innerHTML = `
-    <div class="info-row" id="cust-info-view">
-      <span class="info-item"><b>사업자번호</b> ${cust.business_no || '-'}</span>
-      <span class="info-item"><b>비고</b> ${cust.notes || '-'}</span>
-      <span class="info-item">
-        <button class="btn btn-secondary btn-sm" onclick="openEditCustomerInfo()">수정</button>
-      </span>
-    </div>
-    <div class="info-edit-form hidden" id="cust-info-edit">
-      <div class="info-edit-row">
-        <div class="info-edit-field">
-          <label>사업자번호</label>
-          <input type="text" id="info-business-no" value="${cust.business_no || ''}">
-        </div>
-        <div class="info-edit-field">
-          <label>비고</label>
-          <input type="text" id="info-notes" value="${cust.notes || ''}" class="input-wide">
-        </div>
-        <div class="info-edit-field info-edit-actions">
-          <label>&nbsp;</label>
-          <div class="btn-group">
-            <button class="btn btn-secondary btn-sm" onclick="cancelEditCustomerInfo()">취소</button>
-            <button id="btn-save-info" class="btn btn-primary btn-sm" onclick="saveInfo()">저장</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
+  const card = document.getElementById('cust-info-card');
+  card.textContent = '';
+
+  // -- 읽기 전용 뷰 --
+  const viewRow = document.createElement('div');
+  viewRow.className = 'info-row';
+  viewRow.id = 'cust-info-view';
+
+  const bizItem = document.createElement('span');
+  bizItem.className = 'info-item';
+  bizItem.innerHTML = '<b>사업자번호</b> ';
+  bizItem.appendChild(document.createTextNode(cust.business_no || '-'));
+
+  const noteItem = document.createElement('span');
+  noteItem.className = 'info-item';
+  noteItem.innerHTML = '<b>비고</b> ';
+  noteItem.appendChild(document.createTextNode(cust.notes || '-'));
+
+  const btnItem = document.createElement('span');
+  btnItem.className = 'info-item';
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn btn-secondary btn-sm';
+  editBtn.textContent = '수정';
+  editBtn.onclick = openEditCustomerInfo;
+  btnItem.appendChild(editBtn);
+
+  viewRow.append(bizItem, noteItem, btnItem);
+
+  // -- 편집 폼 --
+  const editDiv = document.createElement('div');
+  editDiv.className = 'info-edit-form is-hidden';
+  editDiv.id = 'cust-info-edit';
+
+  const editRow = document.createElement('div');
+  editRow.className = 'info-edit-row';
+
+  // 거래처명
+  const nameField = _createEditField('거래처명', 'info-name', cust.name || '');
+  // 사업자번호
+  const bizField = _createEditField('사업자번호', 'info-business-no', cust.business_no || '');
+  // 비고
+  const notesField = _createEditField('비고', 'info-notes', cust.notes || '', 'input-wide');
+
+  // 버튼
+  const actField = document.createElement('div');
+  actField.className = 'info-edit-field info-edit-actions';
+  const actLabel = document.createElement('label');
+  actLabel.innerHTML = '&nbsp;';
+  const btnGroup = document.createElement('div');
+  btnGroup.className = 'btn-group';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-secondary btn-sm';
+  cancelBtn.textContent = '취소';
+  cancelBtn.onclick = cancelEditCustomerInfo;
+  const saveBtn = document.createElement('button');
+  saveBtn.id = 'btn-save-info';
+  saveBtn.className = 'btn btn-primary btn-sm';
+  saveBtn.textContent = '저장';
+  saveBtn.onclick = saveInfo;
+  btnGroup.append(cancelBtn, saveBtn);
+  actField.append(actLabel, btnGroup);
+
+  editRow.append(nameField, bizField, notesField, actField);
+  editDiv.appendChild(editRow);
+
+  card.append(viewRow, editDiv);
+}
+
+function _createEditField(label, inputId, value, extraClass) {
+  const wrap = document.createElement('div');
+  wrap.className = 'info-edit-field';
+  const lbl = document.createElement('label');
+  lbl.textContent = label;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = inputId;
+  input.value = value;
+  if (extraClass) input.className = extraClass;
+  wrap.append(lbl, input);
+  return wrap;
 }
 
 function openEditCustomerInfo() {
@@ -948,10 +1001,13 @@ async function submitNew() {
 
 async function saveInfo() {
   if (!selectedCustomerId) return;
+  const name = document.getElementById('info-name').value.trim();
+  if (!name) { showToast('거래처명을 입력하세요.', 'error'); return; }
   const res = await fetch(`/api/v1/customers/${selectedCustomerId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      name,
       business_no: document.getElementById('info-business-no').value.trim() || null,
       notes: document.getElementById('info-notes').value.trim() || null,
     }),
@@ -959,9 +1015,14 @@ async function saveInfo() {
   if (res.ok) {
     await loadData();
     const cust = allCustomers.find(d => d.id === selectedCustomerId);
-    if (cust) renderCustomerInfo(cust);
+    if (cust) {
+      renderCustomerInfo(cust);
+      document.getElementById('detail-name').textContent = cust.name;
+    }
+    showToast('거래처 정보가 수정되었습니다.');
   } else {
-    alert('저장에 실패했습니다.');
+    const body = await res.json().catch(() => null);
+    showToast(body?.detail || '저장에 실패했습니다.', 'error');
   }
 }
 

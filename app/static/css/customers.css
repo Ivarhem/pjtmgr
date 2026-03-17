@@ -82,8 +82,8 @@ body.col-resizing { cursor: col-resize; user-select: none; }
   flex-direction: column;
   gap: 16px;
 }
-.cust-detail-content.hidden,
-.cust-detail-empty.hidden { display: none; }
+.cust-detail-content.is-hidden,
+.cust-detail-empty.is-hidden { display: none; }
 
 /* 거래처 상세 제목 */
 .cust-detail-name {
