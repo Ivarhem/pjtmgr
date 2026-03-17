@@ -75,9 +75,28 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - 비개발 환경에서는 `SESSION_SECRET_KEY`가 없으면 앱이 시작되지 않는다.
 - `DATABASE_URL`을 PostgreSQL 등으로 변경할 경우 해당 드라이버 설치와 backend별 연결 설정이 추가로 필요하다.
 
+### Docker 배포
+
+```bash
+# 1. .env 파일 작성 (.env.example 참고)
+cp .env.example .env
+# SESSION_SECRET_KEY, BOOTSTRAP_ADMIN_PASSWORD 등 필수값 설정
+
+# 2. 빌드 및 실행
+docker compose up -d
+
+# 3. 상태 확인
+curl http://localhost:8000/api/v1/health
+```
+
+- `docker-compose.yml`이 persistent volume(`app-data`)을 설정하므로 컨테이너 재시작 시 DB 유지
+- Gunicorn + UvicornWorker 구성으로 워커 크래시 시 자동 재생성
+- `/api/v1/health`는 공개 헬스체크용 엔드포인트이며, 외부에는 단순 상태만 반환
+- 환경변수 상세는 `.env.example` 참조
+
 ### 초기 설정
 
-- 최초 실행 시 DB 테이블이 자동 생성됨
+- startup 시 Alembic migration이 자동 적용되어 신규 DB도 스키마가 준비됨
 - 활성 관리자 계정이 없으면 bootstrap 환경변수(`BOOTSTRAP_ADMIN_LOGIN_ID`, `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_NAME`)로 첫 관리자 계정을 생성
 - Excel Import를 통해 기존 데이터 일괄 등록 가능 (관리자 전용)
 
@@ -173,7 +192,7 @@ sales/
 - 동시 편집 충돌 방지(낙관적 잠금) 미구현
 - 발행일 휴일 조정 미적용
 - 대량 데이터(1000행 이상) Excel Import 성능 미검증
-- SQLite 단일 파일 — 동시 쓰기 제한
+- SQLite 단일 파일 — WAL 모드 적용, 동시 쓰기는 단일 워커로 제한
 
 ---
 

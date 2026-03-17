@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import apply_contract_scope
+from app.auth.authorization import apply_contract_scope, check_contract_access, check_period_access
 from app.exceptions import BusinessRuleError, NotFoundError
 from app.models.contract import Contract
 from app.models.contract_period import ContractPeriod
@@ -118,8 +118,15 @@ def list_periods_for_template(db: Session) -> list[dict]:
     ]
 
 
-def get_contract_periods(db: Session, contract_id: int) -> list[dict]:
+def get_contract_periods(
+    db: Session,
+    contract_id: int,
+    *,
+    current_user: User | None = None,
+) -> list[dict]:
     """특정 사업의 모든 period 목록 (연도 탭용)"""
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
     periods = (
         db.query(ContractPeriod)
         .options(joinedload(ContractPeriod.owner), joinedload(ContractPeriod.customer))
@@ -232,7 +239,9 @@ def list_periods_flat(
     return [_period_list_dict(p) for p in periods]
 
 
-def get_contract(db: Session, contract_id: int) -> dict:
+def get_contract(db: Session, contract_id: int, *, current_user: User | None = None) -> dict:
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
     contract = db.query(Contract).options(
         joinedload(Contract.end_customer),
         joinedload(Contract.owner),
@@ -243,7 +252,9 @@ def get_contract(db: Session, contract_id: int) -> dict:
     return _contract_read_dict(contract)
 
 
-def get_period(db: Session, period_id: int) -> dict:
+def get_period(db: Session, period_id: int, *, current_user: User | None = None) -> dict:
+    if current_user:
+        check_period_access(db, period_id, current_user)
     period = db.query(ContractPeriod).options(
         joinedload(ContractPeriod.contract).joinedload(Contract.end_customer),
         joinedload(ContractPeriod.contract).joinedload(Contract.owner),
@@ -300,7 +311,15 @@ def create_contract(db: Session, data: ContractCreate, *, created_by: int | None
     return _contract_read_dict(contract)
 
 
-def update_contract(db: Session, contract_id: int, data: ContractUpdate) -> dict:
+def update_contract(
+    db: Session,
+    contract_id: int,
+    data: ContractUpdate,
+    *,
+    current_user: User | None = None,
+) -> dict:
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
     contract = db.query(Contract).options(
         joinedload(Contract.end_customer), joinedload(Contract.owner)
     ).filter(Contract.id == contract_id).first()
@@ -333,7 +352,15 @@ def bulk_assign_owner(db: Session, contract_ids: list[int], owner_user_id: int |
 
 # ── ContractPeriod CRUD ───────────────────────────────────────────
 
-def create_period(db: Session, contract_id: int, data: ContractPeriodCreate) -> ContractPeriod:
+def create_period(
+    db: Session,
+    contract_id: int,
+    data: ContractPeriodCreate,
+    *,
+    current_user: User | None = None,
+) -> ContractPeriod:
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
     contract = db.get(Contract, contract_id)
     if not contract:
         raise NotFoundError("사업을 찾을 수 없습니다.")
@@ -385,7 +412,15 @@ def create_period(db: Session, contract_id: int, data: ContractPeriodCreate) -> 
     return _period_read_dict(period)
 
 
-def update_period(db: Session, period_id: int, data: ContractPeriodUpdate) -> dict:
+def update_period(
+    db: Session,
+    period_id: int,
+    data: ContractPeriodUpdate,
+    *,
+    current_user: User | None = None,
+) -> dict:
+    if current_user:
+        check_period_access(db, period_id, current_user)
     period = db.query(ContractPeriod).options(
         joinedload(ContractPeriod.owner),
         joinedload(ContractPeriod.customer),
@@ -409,7 +444,9 @@ def update_period(db: Session, period_id: int, data: ContractPeriodUpdate) -> di
     return _period_read_dict(period)
 
 
-def delete_period(db: Session, period_id: int) -> None:
+def delete_period(db: Session, period_id: int, *, current_user: User | None = None) -> None:
+    if current_user:
+        check_period_access(db, period_id, current_user)
     period = db.get(ContractPeriod, period_id)
     if not period:
         raise NotFoundError("사업 기간을 찾을 수 없습니다.")

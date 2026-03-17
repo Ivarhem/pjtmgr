@@ -67,6 +67,7 @@
   - 라우터는 요청 파라미터 전달과 응답 선언에 집중하고, 조회·권한·업로드 검증·ORM→Schema 변환은 서비스에 위임한다.
   - 라우터에서 `if not obj: raise HTTPException(...)`, `db.get()`, `db.query()`, `_to_read()` 같은 패턴을 직접 두지 않는다.
   - 서비스에서 커스텀 예외를 발생시키고, 전역 핸들러(`app/app_factory.py`)가 HTTP 응답으로 자동 변환한다.
+  - 계약/기간 단위 조회·생성·수정·삭제의 접근 권한 검사는 서비스가 최종 책임진다. 라우터는 `current_user`와 입력값만 전달한다.
   - 단건 수정/삭제처럼 path에 상위 계약 ID가 없는 엔드포인트도 서비스에서 대상 리소스의 계약/소유 범위를 역추적해 권한을 확인한다.
 - SQL 작성 시 f-string으로 테이블명/컬럼명을 삽입하지 않는다. SQLAlchemy ORM 또는 Core 표현식(`tbl.select()`, `tbl.insert()`)을 사용한다.
 - 환경변수는 `.env` 파일로 관리하고, 코드에 하드코딩하지 않는다.
@@ -142,6 +143,8 @@
 - DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다.
   - 새 테이블/컬럼 추가 시: `alembic revision --autogenerate -m "설명"` → `upgrade()`에 `inspector` 존재 여부 체크 권장
   - startup 시 `app/startup/database_init.py`가 자동으로 `alembic upgrade head` 실행
+  - 빈 DB도 `stamp`가 아니라 `upgrade` 대상으로 처리한다.
+  - fresh production startup 경로는 회귀 테스트로 보호한다.
 - 설정값(세율, 날짜 형식 등)은 코드가 아닌 설정 파일에서 관리.
 - API는 `/api/v1/` 버전 prefix를 유지.
 

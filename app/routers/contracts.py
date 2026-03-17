@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access, check_period_access
 from app.auth.dependencies import get_current_user, require_admin
 from app.database import get_db
 from app.models.user import User
@@ -56,8 +55,7 @@ def get_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ContractRead:
-    check_contract_access(db, contract_id, current_user)
-    return svc.get_contract(db, contract_id)
+    return svc.get_contract(db, contract_id, current_user=current_user)
 
 
 @router.post("/contracts", response_model=ContractRead, status_code=201)
@@ -76,8 +74,7 @@ def update_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ContractRead:
-    check_contract_access(db, contract_id, current_user)
-    return svc.update_contract(db, contract_id, data)
+    return svc.update_contract(db, contract_id, data, current_user=current_user)
 
 
 @router.post("/contracts/bulk-assign-owner")
@@ -118,8 +115,7 @@ def list_contract_periods_for_contract(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    check_contract_access(db, contract_id, current_user)
-    return svc.get_contract_periods(db, contract_id)
+    return svc.get_contract_periods(db, contract_id, current_user=current_user)
 
 
 @router.get("/contract-periods/{period_id}")
@@ -128,8 +124,7 @@ def get_period(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    check_period_access(db, period_id, current_user)
-    return svc.get_period(db, period_id)
+    return svc.get_period(db, period_id, current_user=current_user)
 
 
 @router.post("/contracts/{contract_id}/periods", status_code=201)
@@ -139,8 +134,7 @@ def create_period(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    check_contract_access(db, contract_id, current_user)
-    return svc.create_period(db, contract_id, data)
+    return svc.create_period(db, contract_id, data, current_user=current_user)
 
 
 @router.patch("/contract-periods/{period_id}")
@@ -150,8 +144,7 @@ def update_period(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    check_period_access(db, period_id, current_user)
-    return svc.update_period(db, period_id, data)
+    return svc.update_period(db, period_id, data, current_user=current_user)
 
 
 @router.delete("/contract-periods/{period_id}", status_code=204)
@@ -160,8 +153,7 @@ def delete_period(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> None:
-    check_period_access(db, period_id, current_user)
-    svc.delete_period(db, period_id)
+    svc.delete_period(db, period_id, current_user=current_user)
 
 
 # ── Ledger (TransactionLine + Receipt 병합 뷰) ─────────────────────────
@@ -171,8 +163,7 @@ def get_ledger(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    check_contract_access(db, contract_id, current_user)
-    return ledger_svc.get_ledger(db, contract_id)
+    return ledger_svc.get_ledger(db, contract_id, current_user=current_user)
 
 
 # ── 내 사업 요약 ─────────────────────────────────────────────

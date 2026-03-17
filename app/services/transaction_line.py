@@ -62,6 +62,10 @@ def _resolve_customer(db: Session, data_dict: dict) -> dict:
 # ── CRUD ──────────────────────────────────────────────────
 
 def get_transaction_lines(db: Session, contract_id: int) -> list[dict]:
+    return _get_transaction_lines(db, contract_id)
+
+
+def _get_transaction_lines(db: Session, contract_id: int) -> list[dict]:
     rows = (
         db.query(TransactionLine)
         .options(joinedload(TransactionLine.customer))
@@ -78,8 +82,11 @@ def create_transaction_line(
     data: TransactionLineCreate,
     *,
     created_by: int | None = None,
+    current_user: User | None = None,
 ) -> dict:
     try:
+        if current_user:
+            check_contract_access(db, contract_id, current_user)
         contract = db.get(Contract, contract_id)
         if not contract:
             raise NotFoundError("사업을 찾을 수 없습니다.")
@@ -97,6 +104,17 @@ def create_transaction_line(
     except Exception:
         db.rollback()
         raise
+
+
+def list_transaction_lines_for_contract(
+    db: Session,
+    contract_id: int,
+    *,
+    current_user: User | None = None,
+) -> list[dict]:
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
+    return _get_transaction_lines(db, contract_id)
 
 
 def update_transaction_line(
@@ -159,9 +177,16 @@ def delete_transaction_line(db: Session, transaction_line_id: int) -> None:
         raise
 
 
-def bulk_confirm_transaction_lines(db: Session, contract_id: int) -> dict:
+def bulk_confirm_transaction_lines(
+    db: Session,
+    contract_id: int,
+    *,
+    current_user: User | None = None,
+) -> dict:
     """거래처+발행일이 있는 '예정' 매출/매입 행을 일괄 확정 처리."""
     try:
+        if current_user:
+            check_contract_access(db, contract_id, current_user)
         rows = (
             db.query(TransactionLine)
             .filter(

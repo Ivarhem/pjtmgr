@@ -26,6 +26,7 @@
 
 - 인증/권한 의존성(`get_current_user`, `require_admin`)도 `HTTPException` 직접 사용 대신 프로젝트 커스텀 예외(`UnauthorizedError`, `PermissionDeniedError`)를 사용한다.
 - 인증/권한 실패 응답은 전역 예외 핸들러로 일관되게 반환한다.
+- `AuthMiddleware`를 포함한 인증 경로도 직접 `Response`를 만들기보다 커스텀 예외를 통해 전역 핸들러 경로를 우선 사용한다.
 
 ## 초기 관리자
 
@@ -53,6 +54,8 @@
 - 사내 네트워크에서만 접근 가능하도록 네트워크 레벨에서 차단한다.
 - 공개 엔드포인트는 기본 금지한다.
 - 예외적으로 인증 부트스트랩에 필요한 엔드포인트와 페이지(`POST /api/v1/auth/login`, `/login`)는 공개를 허용한다.
+- `GET /api/v1/health`는 컨테이너 헬스체크용으로 공개 허용 (인증 불요, DB 연결 상태만 반환).
+- `GET /api/v1/health` 응답에는 내부 예외 문자열이나 민감한 진단 정보를 포함하지 않고, `ok` / `degraded` 수준의 상태만 외부에 노출한다.
 - 새 공개 엔드포인트를 추가하면 이유, 보호 범위, 관련 UI 흐름을 이 문서에 함께 기록한다.
 - Excel Import는 관리자 전용 (`require_admin` 의존성 적용)
 - Receipt, TransactionLine, ReceiptMatch처럼 계약 하위 리소스를 조합하는 작업은 입력된 ID들이 같은 계약 범위에 속하는지도 함께 검증한다.

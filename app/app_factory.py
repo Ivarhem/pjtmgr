@@ -50,6 +50,7 @@ from app.routers import (
     dashboard,
     excel,
     forecasts,
+    health,
     pages,
     receipt_matches,
     receipts,
@@ -112,6 +113,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
 
 def register_routers(app: FastAPI) -> None:
+    app.include_router(health.router)
     app.include_router(auth_router)
     app.include_router(dashboard.router)
     app.include_router(customers.router)

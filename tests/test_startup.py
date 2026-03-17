@@ -1,4 +1,15 @@
+import pytest
+
 from app.app_factory import create_app
+from app.auth.middleware import AuthMiddleware
+from app.exceptions import NotFoundError
+from app.exceptions import UnauthorizedError
+from app.models.contract import Contract
+from app.models.user import User
+from app.routers import health as health_router
+from app.schemas.receipt import ReceiptCreate
+from app.services import contract as contract_service
+from app.services import receipt as receipt_service
 
 
 def test_create_app_registers_core_routes() -> None:
@@ -26,3 +37,91 @@ def test_lifespan_uses_split_startup_steps(monkeypatch) -> None:
 
     asyncio.run(_run())
     assert calls == ["db", "bootstrap"]
+
+
+def test_prepare_database_runs_upgrade_for_fresh_db(monkeypatch) -> None:
+    calls: list[tuple[str, str]] = []
+
+    class _Inspector:
+        @staticmethod
+        def get_table_names() -> list[str]:
+            return []
+
+    monkeypatch.setattr("app.startup.database_init.inspect", lambda _engine: _Inspector())
+    monkeypatch.setattr("app.startup.database_init.ENV", "production")
+    monkeypatch.setattr(
+        "app.startup.database_init.Base.metadata.create_all",
+        lambda **_kwargs: calls.append(("create_all", "")),
+    )
+    monkeypatch.setattr("alembic.command.upgrade", lambda _cfg, rev: calls.append(("upgrade", rev)))
+    monkeypatch.setattr("alembic.command.stamp", lambda _cfg, rev: calls.append(("stamp", rev)))
+
+    from app.startup.database_init import prepare_database
+
+    prepare_database()
+
+    assert ("create_all", "") not in calls
+    assert ("upgrade", "head") in calls
+    assert all(name != "stamp" for name, _ in calls)
+
+
+def test_auth_middleware_raises_standard_unauthorized_for_api() -> None:
+    class _Request:
+        class _Url:
+            path = "/api/v1/contracts/1"
+
+        url = _Url()
+        session: dict[str, int] = {}
+
+    async def _call() -> None:
+        middleware = AuthMiddleware(app=lambda scope, receive, send: None)
+        await middleware.dispatch(_Request(), lambda _request: None)
+
+    import asyncio
+
+    with pytest.raises(UnauthorizedError, match="로그인이 필요합니다."):
+        asyncio.run(_call())
+
+
+def test_health_check_hides_internal_error_details(monkeypatch) -> None:
+    class _BrokenSession:
+        @staticmethod
+        def execute(_query):
+            raise RuntimeError("db exploded")
+
+    response = health_router.health_check(_BrokenSession())
+
+    assert response == {"status": "degraded", "db": "unavailable"}
+
+
+def test_contract_service_checks_access_in_service_layer(db_session) -> None:
+    owner = User(name="담당자", login_id="owner", role="user")
+    outsider = User(name="외부자", login_id="outsider", role="user")
+    contract = Contract(contract_name="테스트 사업", contract_type="MA", owner=owner, status="active")
+    db_session.add_all([owner, outsider, contract])
+    db_session.commit()
+
+    with pytest.raises(NotFoundError):
+        contract_service.get_contract(db_session, contract.id, current_user=outsider)
+
+
+def test_receipt_service_checks_access_in_service_layer(db_session) -> None:
+    owner = User(name="담당자", login_id="owner", role="user")
+    outsider = User(name="외부자", login_id="outsider", role="user")
+    contract = Contract(contract_name="테스트 사업", contract_type="MA", owner=owner, status="active")
+    db_session.add_all([owner, outsider, contract])
+    db_session.commit()
+
+    with pytest.raises(NotFoundError):
+        receipt_service.create_receipt(
+            db_session,
+            contract.id,
+            ReceiptCreate(
+                customer_id=None,
+                receipt_date="2026-03-01",
+                revenue_month="2026-03-01",
+                amount=1000,
+                description="입금",
+            ),
+            current_user=outsider,
+        )

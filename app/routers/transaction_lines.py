@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access
 from app.auth.dependencies import get_current_user, require_admin
 from app.database import get_db
 from app.models.user import User
@@ -21,8 +20,7 @@ def get_transaction_lines(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    check_contract_access(db, contract_id, current_user)
-    return svc.get_transaction_lines(db, contract_id)
+    return svc.list_transaction_lines_for_contract(db, contract_id, current_user=current_user)
 
 
 @router.post("/contracts/{contract_id}/transaction-lines", status_code=201)
@@ -32,8 +30,13 @@ def create_transaction_line(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    check_contract_access(db, contract_id, current_user)
-    return svc.create_transaction_line(db, contract_id, data, created_by=current_user.id)
+    return svc.create_transaction_line(
+        db,
+        contract_id,
+        data,
+        created_by=current_user.id,
+        current_user=current_user,
+    )
 
 
 @router.patch("/transaction-lines/{transaction_line_id}")
@@ -62,5 +65,4 @@ def bulk_confirm_transaction_lines(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """거래처+발행일이 있는 '예정' 행을 일괄 확정 처리."""
-    check_contract_access(db, contract_id, current_user)
-    return svc.bulk_confirm_transaction_lines(db, contract_id)
+    return svc.bulk_confirm_transaction_lines(db, contract_id, current_user=current_user)

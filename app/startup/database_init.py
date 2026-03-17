@@ -24,14 +24,14 @@ def _get_alembic_config():
 
 
 def _apply_alembic() -> None:
-    """Alembic 버전 테이블 존재 여부에 따라 stamp 또는 upgrade 수행."""
+    """Alembic 버전 테이블 존재 여부와 무관하게 upgrade를 적용한다."""
     from alembic import command
 
     cfg = _get_alembic_config()
     inspector = inspect(engine)
     if "alembic_version" not in inspector.get_table_names():
-        logger.info("Alembic 초기 stamp 실행 (head)")
-        command.stamp(cfg, "head")
+        logger.info("Alembic 초기 upgrade 실행 (head)")
+        command.upgrade(cfg, "head")
     else:
         logger.info("Alembic upgrade 실행 (head)")
         command.upgrade(cfg, "head")

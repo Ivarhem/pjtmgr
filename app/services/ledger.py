@@ -1,14 +1,23 @@
 """Ledger(매출/매입 실적 원장) 서비스."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy.orm import Session
 
-from app.services.transaction_line import get_transaction_lines
+from app.services.transaction_line import list_transaction_lines_for_contract
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
-def get_ledger(db: Session, contract_id: int) -> list[dict]:
+def get_ledger(db: Session, contract_id: int, *, current_user: User | None = None) -> list[dict]:
     """매출/매입 실적 원장"""
-    transaction_lines = get_transaction_lines(db, contract_id)
+    transaction_lines = list_transaction_lines_for_contract(
+        db,
+        contract_id,
+        current_user=current_user,
+    )
 
     rows: list[dict] = []
     for a in transaction_lines:

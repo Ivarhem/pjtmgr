@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access
 from app.auth.dependencies import get_current_user, require_admin
 from app.database import get_db
 from app.models.user import User
@@ -18,8 +17,7 @@ def get_receipts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    check_contract_access(db, contract_id, current_user)
-    return svc.get_receipts(db, contract_id)
+    return svc.list_receipts_for_contract(db, contract_id, current_user=current_user)
 
 
 @router.post("/contracts/{contract_id}/receipts", status_code=201)
@@ -29,8 +27,13 @@ def create_receipt(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    check_contract_access(db, contract_id, current_user)
-    return svc.create_receipt(db, contract_id, data, created_by=current_user.id)
+    return svc.create_receipt(
+        db,
+        contract_id,
+        data,
+        created_by=current_user.id,
+        current_user=current_user,
+    )
 
 
 @router.patch("/receipts/{receipt_id}")

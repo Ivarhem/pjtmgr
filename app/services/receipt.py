@@ -33,6 +33,10 @@ def _receipt_dict(p: Receipt) -> dict:
 
 
 def get_receipts(db: Session, contract_id: int) -> list[dict]:
+    return _get_receipts(db, contract_id)
+
+
+def _get_receipts(db: Session, contract_id: int) -> list[dict]:
     rows = (
         db.query(Receipt)
         .options(joinedload(Receipt.customer))
@@ -49,10 +53,13 @@ def create_receipt(
     data: ReceiptCreate,
     *,
     created_by: int | None = None,
+    current_user: User | None = None,
 ) -> dict:
     from app.services.receipt_match import auto_match_receipt
 
     try:
+        if current_user:
+            check_contract_access(db, contract_id, current_user)
         contract = db.get(Contract, contract_id)
         if not contract:
             raise NotFoundError("사업을 찾을 수 없습니다.")
@@ -69,6 +76,17 @@ def create_receipt(
     except Exception:
         db.rollback()
         raise
+
+
+def list_receipts_for_contract(
+    db: Session,
+    contract_id: int,
+    *,
+    current_user: User | None = None,
+) -> list[dict]:
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
+    return _get_receipts(db, contract_id)
 
 
 def update_receipt(
