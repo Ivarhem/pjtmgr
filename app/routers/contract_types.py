@@ -15,7 +15,7 @@ def list_contract_types(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[ContractTypeRead]:
-    return [svc.to_read(dt) for dt in svc.list_contract_types(db, active_only=active_only)]
+    return svc.list_contract_types(db, active_only=active_only)
 
 
 @router.post("", response_model=ContractTypeRead, status_code=201)
@@ -24,8 +24,7 @@ def create_contract_type(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ) -> ContractTypeRead:
-    dt = svc.create_contract_type(db, data.code, data.label, data.sort_order, defaults=data.model_dump(exclude={"code", "label", "sort_order"}))
-    return svc.to_read(dt)
+    return svc.create_contract_type(db, data.code, data.label, data.sort_order, defaults=data.model_dump(exclude={"code", "label", "sort_order"}))
 
 
 @router.patch("/{code}", response_model=ContractTypeRead)
@@ -35,8 +34,7 @@ def update_contract_type(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ) -> ContractTypeRead:
-    dt = svc.update_contract_type(db, code, updates=data.model_dump(exclude_unset=True))
-    return svc.to_read(dt)
+    return svc.update_contract_type(db, code, updates=data.model_dump(exclude_unset=True))
 
 
 @router.delete("/{code}", status_code=204)

@@ -1062,7 +1062,7 @@ function initForecastGrid(forecasts) {
   const useFlex = months.length <= 12;
   const monthColBase = { editable: () => !_isPeriodCompleted(), type: 'numericColumn',
     valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
-    valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+    valueFormatter: p => p.value > 0 ? fmt(p.value) : '-',
   };
   const monthColSize = useFlex ? { flex: 1, minWidth: 80 } : { width: 90 };
   const monthColDefs = years.length > 1
@@ -1086,7 +1086,7 @@ function initForecastGrid(forecasts) {
       cellClass: 'cell-label-strong' },
     ...monthColDefs,
     { field: '_total', headerName: '합계', editable: false, type: 'numericColumn', width: 130, pinned: 'right',
-      valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+      valueFormatter: p => p.value > 0 ? fmt(p.value) : '-',
       cellClass: 'cell-total' },
   ];
 
@@ -1133,7 +1133,7 @@ function _parseAmount(el) {
 }
 function _formatAmountInput(el) {
   const v = _parseAmount(el);
-  if (v > 0) el.value = v.toLocaleString('ko-KR');
+  if (v > 0) el.value = fmt(v);
   else el.value = '';
 }
 
@@ -1152,7 +1152,7 @@ function _initExpectedGpCalc() {
     const sales = _parseAmount(salesEl);
     const pct = parseFloat(pctEl.value) || 0;
     const gpVal = Math.round(sales * pct / 100);
-    gpEl.value = gpVal > 0 ? gpVal.toLocaleString('ko-KR') : '';
+    gpEl.value = gpVal > 0 ? fmt(gpVal) : '';
     updating = false;
   }
   function recalcPct() {
@@ -1227,8 +1227,8 @@ async function openEditExpected() {
   const pctEl = document.getElementById('expected-gp-pct');
   const gpEl = document.getElementById('expected-gp-total');
 
-  salesEl.value = totalSales > 0 ? totalSales.toLocaleString('ko-KR') : '';
-  gpEl.value = totalGp > 0 ? totalGp.toLocaleString('ko-KR') : '';
+  salesEl.value = totalSales > 0 ? fmt(totalSales) : '';
+  gpEl.value = totalGp > 0 ? fmt(totalGp) : '';
   if (totalSales > 0) {
     pctEl.value = (totalGp / totalSales * 100).toFixed(1);
   } else {
@@ -1348,7 +1348,7 @@ function initAllForecastGrid(allForecasts) {
           editable: false,
           type: 'numericColumn',
           ...colSize,
-          valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+          valueFormatter: p => p.value > 0 ? fmt(p.value) : '-',
           cellClass: 'cell-readonly-soft',
         };
       }),
@@ -1360,7 +1360,7 @@ function initAllForecastGrid(allForecasts) {
       cellClass: 'cell-label-strong' },
     ...yearGroups,
     { field: '_total', headerName: '합계', editable: false, type: 'numericColumn', width: 130, pinned: 'right',
-      valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '-',
+      valueFormatter: p => p.value > 0 ? fmt(p.value) : '-',
       cellClass: 'cell-total' },
   ];
 
@@ -1418,7 +1418,7 @@ function initLedgerGrid(ledgerRows) {
       cellClassRules: { 'cell-missing': p => p.data._missingFields?.includes('customer_name') } },
     { field: 'amount', headerName: '금액(원)', editable: true, type: 'numericColumn', width: 130,
       valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
-      valueFormatter: p => p.value > 0 ? Number(p.value).toLocaleString('ko-KR') : '',
+      valueFormatter: p => p.value > 0 ? fmt(p.value) : '',
       tooltipValueGetter: p => p.value >= 10000 ? fmtKoreanCurrency(p.value) : null,
       cellClass: p => p.data?.type === '매출' ? 'cell-revenue' : p.data?.type === '매입' ? 'cell-cost-blue' : '' },
     { field: 'date', headerName: '계산서 발행일', editable: p => p.data.type !== '입금', width: 130,
@@ -2575,7 +2575,7 @@ async function importFromForecast() {
     html += preview.to_create.map(r =>
       `<div class="sync-row">
         <span>${r.revenue_month.slice(0,7)}</span>
-        <span class="sync-row-amount">${Number(r.amount).toLocaleString('ko-KR')}원</span>
+        <span class="sync-row-amount">${fmt(r.amount)}원</span>
       </div>`
     ).join('');
   }
@@ -2587,7 +2587,7 @@ async function importFromForecast() {
           <input type="checkbox" class="sync-delete-chk" value="${r.id}" checked>
           ${r.revenue_month.slice(0,7)}
         </span>
-        <span class="sync-row-amount">${Number(r.amount).toLocaleString('ko-KR')}원</span>
+        <span class="sync-row-amount">${fmt(r.amount)}원</span>
       </label>`
     ).join('');
   }
@@ -2673,7 +2673,7 @@ function initReceiptGrid(receipts) {
       cellEditor: CustomerCellEditor },
     { field: 'amount', headerName: '금액(원)', editable: true, type: 'numericColumn', width: 130,
       valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
-      valueFormatter: p => p.value ? Number(p.value).toLocaleString('ko-KR') : '',
+      valueFormatter: p => p.value ? fmt(p.value) : '',
       tooltipValueGetter: p => p.value >= 10000 ? fmtKoreanCurrency(p.value) : null },
     { field: 'description', headerName: '메모', editable: true, flex: 1 },
   ];
@@ -2889,7 +2889,7 @@ function openReceiptFromLedger() {
       </span>
       <span class="sync-row-detail">${r.customer_name || '-'}</span>
       <span class="sync-row-detail">${r.date || '-'}</span>
-      <span class="sync-row-amount">${Number(r._remaining).toLocaleString('ko-KR')}원</span>
+      <span class="sync-row-amount">${fmt(r._remaining)}원</span>
     </label>`
   ).join('');
   container.innerHTML = html;
@@ -2900,7 +2900,7 @@ function openReceiptFromLedger() {
     const count = chks.length;
     const total = Array.from(chks).reduce((s, c) => s + arRows[parseInt(c.dataset.idx)]._remaining, 0);
     summaryEl.innerHTML = count
-      ? `<span>${count}건 선택 · 합계 <b>${Number(total).toLocaleString('ko-KR')}원</b></span>`
+      ? `<span>${count}건 선택 · 합계 <b>${fmt(total)}원</b></span>`
       : '';
     btnSubmit.disabled = count === 0;
   };
@@ -3042,10 +3042,10 @@ function initReceiptMatchGrid(allocations) {
       valueFormatter: p => p.value ? p.value.slice(0, 7) : '' },
     { field: 'customer_name', headerName: '거래처', width: 140 },
     { field: 'supply_amount', headerName: '매출액', type: 'numericColumn', width: 120,
-      valueFormatter: p => p.value ? Number(p.value).toLocaleString('ko-KR') : '' },
+      valueFormatter: p => p.value ? fmt(p.value) : '' },
     { field: 'matched_amount', headerName: '배분액', type: 'numericColumn', width: 120,
       editable: p => p.data.match_type === 'manual',
-      valueFormatter: p => p.value ? Number(p.value).toLocaleString('ko-KR') : '',
+      valueFormatter: p => p.value ? fmt(p.value) : '',
       valueParser: p => Number(String(p.newValue).replace(/,/g, '')) || 0,
       cellClassRules: { 'cell-editable-manual': p => p.data.match_type === 'manual' },
     },
@@ -3127,7 +3127,7 @@ function openReceiptMatchModal() {
   const paySelect = document.getElementById('match-receipt-select');
   paySelect.innerHTML = '<option value="">-- 입금을 선택하세요 --</option>';
   (fullReceipts || []).forEach(p => {
-    const label = `${p.receipt_date} / ${p.customer_name || '미지정'} / ${Number(p.amount).toLocaleString('ko-KR')}원`;
+    const label = `${p.receipt_date} / ${p.customer_name || '미지정'} / ${fmt(p.amount)}원`;
     paySelect.innerHTML += `<option value="${p.id}">${label}</option>`;
   });
 
@@ -3136,7 +3136,7 @@ function openReceiptMatchModal() {
   txnLineSelect.innerHTML = '<option value="">-- 매출 라인을 선택하세요 --</option>';
   (fullLedger || []).filter(r => r.line_type === 'revenue' && r.status === '확정').forEach(r => {
     const month = (r.revenue_month || '').slice(0, 7);
-    const label = `${month} / ${r.customer_name || '미지정'} / ${Number(r.supply_amount).toLocaleString('ko-KR')}원`;
+    const label = `${month} / ${r.customer_name || '미지정'} / ${fmt(r.supply_amount)}원`;
     txnLineSelect.innerHTML += `<option value="${r.transaction_line_id || r.id}">${label}</option>`;
   });
 

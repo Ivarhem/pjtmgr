@@ -16,7 +16,7 @@ def list_terms(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[TermConfigRead]:
-    return [svc.to_read(t) for t in svc.list_terms(db, active_only=active_only, category=category)]
+    return svc.list_terms(db, active_only=active_only, category=category)
 
 
 @router.get("/labels", response_model=dict[str, str])
@@ -34,7 +34,7 @@ def get_term(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> TermConfigRead:
-    return svc.to_read(svc.get_term(db, term_key))
+    return svc.get_term(db, term_key)
 
 
 @router.post("", response_model=TermConfigRead, status_code=201)
@@ -43,8 +43,7 @@ def create_term(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ) -> TermConfigRead:
-    term = svc.create_term(db, data=data.model_dump())
-    return svc.to_read(term)
+    return svc.create_term(db, data=data.model_dump())
 
 
 @router.patch("/{term_key}", response_model=TermConfigRead)
@@ -54,8 +53,7 @@ def update_term(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ) -> TermConfigRead:
-    term = svc.update_term(db, term_key, updates=data.model_dump(exclude_unset=True))
-    return svc.to_read(term)
+    return svc.update_term(db, term_key, updates=data.model_dump(exclude_unset=True))
 
 
 @router.post("/{term_key}/reset", response_model=TermConfigRead)
@@ -65,8 +63,7 @@ def reset_term(
     _admin: User = Depends(require_admin),
 ) -> TermConfigRead:
     """커스텀 라벨을 기본값으로 초기화."""
-    term = svc.reset_term(db, term_key)
-    return svc.to_read(term)
+    return svc.reset_term(db, term_key)
 
 
 @router.delete("/{term_key}", status_code=204)

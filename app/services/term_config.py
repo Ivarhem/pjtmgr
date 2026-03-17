@@ -142,22 +142,22 @@ def _upsert_missing_seeds(db: Session) -> None:
         db.commit()
 
 
-def list_terms(db: Session, *, active_only: bool = True, category: str | None = None) -> list[TermConfig]:
+def list_terms(db: Session, *, active_only: bool = True, category: str | None = None) -> list[TermConfigRead]:
     """용어 목록 조회."""
     q = db.query(TermConfig).order_by(TermConfig.category, TermConfig.sort_order, TermConfig.term_key)
     if active_only:
         q = q.filter(TermConfig.is_active.is_(True))
     if category:
         q = q.filter(TermConfig.category == category)
-    return q.all()
+    return [to_read(t) for t in q.all()]
 
 
-def get_term(db: Session, term_key: str) -> TermConfig:
+def get_term(db: Session, term_key: str) -> TermConfigRead:
     """단일 용어 조회."""
     term = db.get(TermConfig, term_key)
     if not term:
         raise NotFoundError(f"용어 '{term_key}'을(를) 찾을 수 없습니다.")
-    return term
+    return to_read(term)
 
 
 def get_ui_label(db: Session, term_key: str) -> str:
@@ -174,7 +174,7 @@ def list_ui_labels(db: Session) -> dict[str, str]:
     return {t.term_key: t.ui_label for t in terms}
 
 
-def create_term(db: Session, *, data: dict) -> TermConfig:
+def create_term(db: Session, *, data: dict) -> TermConfigRead:
     """용어 추가."""
     existing = db.get(TermConfig, data["term_key"])
     if existing:
@@ -182,10 +182,10 @@ def create_term(db: Session, *, data: dict) -> TermConfig:
     term = TermConfig(**data)
     db.add(term)
     db.commit()
-    return term
+    return to_read(term)
 
 
-def update_term(db: Session, term_key: str, *, updates: dict) -> TermConfig:
+def update_term(db: Session, term_key: str, *, updates: dict) -> TermConfigRead:
     """용어 수정. custom_ui_label 설정 시 is_customized 자동 처리."""
     term = db.get(TermConfig, term_key)
     if not term:
@@ -197,10 +197,10 @@ def update_term(db: Session, term_key: str, *, updates: dict) -> TermConfig:
     if "custom_ui_label" in updates:
         term.is_customized = bool(updates["custom_ui_label"])
     db.commit()
-    return term
+    return to_read(term)
 
 
-def reset_term(db: Session, term_key: str) -> TermConfig:
+def reset_term(db: Session, term_key: str) -> TermConfigRead:
     """커스텀 라벨 초기화 → 기본값으로 복원."""
     term = db.get(TermConfig, term_key)
     if not term:
@@ -208,7 +208,7 @@ def reset_term(db: Session, term_key: str) -> TermConfig:
     term.custom_ui_label = None
     term.is_customized = False
     db.commit()
-    return term
+    return to_read(term)
 
 
 def delete_term(db: Session, term_key: str) -> None:

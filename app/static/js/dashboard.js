@@ -355,7 +355,7 @@
           legend: { position: 'top', align: 'end', labels: { color: textColor } },
           tooltip: {
             callbacks: {
-              label: ctx => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()} 백만`,
+              label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)} 백만`,
             },
           },
         },

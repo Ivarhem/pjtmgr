@@ -188,7 +188,7 @@ function renderKpis(kpis) {
   container.innerHTML = cards.map(c => {
     const val = c.type === 'pct'
       ? (c.value != null ? `${c.value}%` : '-')
-      : (c.value != null ? Number(c.value).toLocaleString('ko-KR') : '-');
+      : fmt(c.value);
     const warnClass = c.warn ? ' kpi-warn' : '';
     const sub = c.sub ? `<div class="kpi-sub">${c.sub}</div>` : '';
     return `<div class="kpi-card${warnClass}">
@@ -397,7 +397,7 @@ function renderPnl(data) {
   }
 
   const monthHeaders = months.map(m => `<th>${m.slice(0, 7)}</th>`).join('');
-  const fmtCell = (v) => v ? Number(v).toLocaleString('ko-KR') : '';
+  const fmtCell = (v) => v ? fmt(v) : '';
   const fmtPctCell = (v) => v != null ? (v).toFixed(1) + '%' : '';
 
   function buildRows(rows) {

@@ -72,12 +72,12 @@ def seed_defaults(db: Session) -> None:
         conn.commit()
 
 
-def list_contract_types(db: Session, *, active_only: bool = True) -> list[ContractTypeConfig]:
+def list_contract_types(db: Session, *, active_only: bool = True) -> list[ContractTypeRead]:
     """사업유형 목록 조회. active_only=True이면 활성 항목만."""
     q = db.query(ContractTypeConfig).order_by(ContractTypeConfig.sort_order, ContractTypeConfig.code)
     if active_only:
         q = q.filter(ContractTypeConfig.is_active.is_(True))
-    return q.all()
+    return [to_read(dt) for dt in q.all()]
 
 
 def get_valid_codes(db: Session) -> set[str]:
@@ -88,7 +88,7 @@ def get_valid_codes(db: Session) -> set[str]:
 
 def create_contract_type(
     db: Session, code: str, label: str, sort_order: int = 0, *, defaults: dict | None = None
-) -> ContractTypeConfig:
+) -> ContractTypeRead:
     existing = db.get(ContractTypeConfig, code)
     if existing:
         raise DuplicateError(f"사업유형 '{code}'이(가) 이미 존재합니다.")
@@ -99,10 +99,10 @@ def create_contract_type(
                 setattr(dt, k, v)
     db.add(dt)
     db.commit()
-    return dt
+    return to_read(dt)
 
 
-def update_contract_type(db: Session, code: str, *, updates: dict) -> ContractTypeConfig:
+def update_contract_type(db: Session, code: str, *, updates: dict) -> ContractTypeRead:
     dt = db.get(ContractTypeConfig, code)
     if not dt:
         raise NotFoundError(f"사업유형 '{code}'을(를) 찾을 수 없습니다.")
@@ -110,7 +110,7 @@ def update_contract_type(db: Session, code: str, *, updates: dict) -> ContractTy
         if hasattr(dt, k):
             setattr(dt, k, v)
     db.commit()
-    return dt
+    return to_read(dt)
 
 
 def delete_contract_type(db: Session, code: str) -> None:

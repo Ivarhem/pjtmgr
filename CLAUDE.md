@@ -6,6 +6,7 @@
 
 ## 작업별 상세 지침 (필요 시 참조)
 
+- 백엔드(Python/FastAPI/SQLAlchemy) 작업 → `docs/guidelines/backend.md`
 - 프론트엔드(JS/CSS/HTML) 작업 → `docs/guidelines/frontend.md`
 - 인증/권한/보안 작업 → `docs/guidelines/auth.md`
 - Excel Import/Export 작업 → `docs/guidelines/excel.md`
@@ -20,6 +21,7 @@
 - `docs/DECISIONS.md`: 왜 그런 구조/정책을 택했는지에 대한 결정 기록
 - `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 임시 제약, 우회, 운영상 주의점
 - `docs/PROJECT_CONTEXT.md`: 도메인 배경, 사용자, 문제 정의
+- `docs/PROJECT_STRUCTURE.md`: 파일 단위 프로젝트 구조와 모듈별 역할
 - 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델의 1차 기준은 코드다 (`app/main.py`, `app/app_factory.py`, `app/startup/`, `app/routers/`, `app/models/`).
 - README나 guideline은 코드의 세부 inventory를 중복 소유하지 않는다. 코드 경로를 안내하거나, 변경 판단 기준만 제공한다.
 
@@ -67,7 +69,6 @@
   - 서비스에서 커스텀 예외를 발생시키고, 전역 핸들러(`app/app_factory.py`)가 HTTP 응답으로 자동 변환한다.
   - 단건 수정/삭제처럼 path에 상위 계약 ID가 없는 엔드포인트도 서비스에서 대상 리소스의 계약/소유 범위를 역추적해 권한을 확인한다.
 - SQL 작성 시 f-string으로 테이블명/컬럼명을 삽입하지 않는다. SQLAlchemy ORM 또는 Core 표현식(`tbl.select()`, `tbl.insert()`)을 사용한다.
-  - 예외적으로 `app/migrations_legacy.py`의 경량 마이그레이션은 불가피한 raw SQL을 허용하되, 식별자는 화이트리스트/정규식 검증으로 제한한다.
 - 환경변수는 `.env` 파일로 관리하고, 코드에 하드코딩하지 않는다.
 - `DATABASE_URL` 기반 설정은 특정 DB 전용 `connect_args`를 전역 고정하지 말고 backend별로 분기한다.
 - 보안 관련 환경변수는 insecure fallback을 두지 않는다. 초기 관리자처럼 설치 시점에 필요한 값은 환경변수 bootstrap 절차를 문서화한다.
@@ -78,7 +79,7 @@
   | 변경 유형 | 갱신 대상 |
   | --------- | --------- |
   | 비즈니스 규칙 변경 | CLAUDE.md §6 데이터 원칙 |
-  | 코딩 패턴/규칙 변경 | CLAUDE.md 해당 섹션 |
+  | 코딩 패턴/규칙 변경 | CLAUDE.md 해당 섹션, `docs/guidelines/backend.md` |
   | 테스트 전략/회귀 범위 변경 | CLAUDE.md §7 테스트·확장성 |
   | 권한 변경 | `docs/guidelines/auth.md` |
   | 프론트엔드 패턴 변경 | `docs/guidelines/frontend.md` |
@@ -89,51 +90,16 @@
   | 임시 우회/제약 추가 | `docs/KNOWN_ISSUES.md` |
   | 임시 우회 해소 | `docs/KNOWN_ISSUES.md` (항목 삭제) |
   | 외부 사용자가 알아야 하는 실행/운영 방법 변경 | `README.md` |
+  | 파일/디렉토리 추가·삭제 | `docs/PROJECT_STRUCTURE.md` |
   | 모델/API/파일 구조 세부 변경 | 문서 갱신 기본 불필요 (코드가 source of truth) |
 
 ---
 
-## 3. 명명 규칙
+## 3. 명명 / 인터페이스 규칙
 
-### 파일명
-
-| 레이어 | 패턴 | 예시 |
-| ------ | ---- | --- |
-| 모델/스키마/서비스 | 단수 snake_case | `contract.py`, `transaction_line.py` |
-| 서비스 내부 헬퍼 | `_` 접두사 + snake_case | `_contract_helpers.py` (패키지 내부 전용) |
-| 라우터 | 복수 snake_case | `contracts.py`, `customers.py`, `term_configs.py` |
-| 템플릿/JS/CSS | 화면 단위 snake_case | `contract_detail.html`, `contract_detail.js` |
-
-### Python (백엔드)
-
-- **모델 클래스**: `PascalCase` 단수 — **테이블명**: 복수 snake_case
-- **스키마 클래스**: `{Model}{Operation}` (Operation: `Create`, `Update`, `Read`)
-- **서비스 함수 (CRUD)**: `create_*`, `list_*`, `get_*`, `update_*`, `delete_*`
-  - `get_all` / `add` / `set` 사용 금지
-- **서비스 함수 (비-CRUD)**: 동사_목적어 형태 (예: `move_period()`)
-- **Private 함수**: `_` 접두사
-- **SQLAlchemy Boolean 필터**: `.is_(True)` / `.is_(False)` 사용 (`== True` 금지)
-
-### API 라우트
-
-- `prefix="/api/v1/{리소스}"` 사용 (경로 하드코딩 금지)
-  - 여러 리소스를 하나의 라우터에서 처리 시 `prefix="/api/v1"` 사용
-- 리소스 URL: 복수 kebab-case (예: `/contract-periods`)
-- 중첩 리소스: `/{부모}/{id}/{자식}` (예: `/contracts/{contract_id}/periods`)
-- CRUD: GET/POST/PATCH/DELETE — **PUT 사용 금지**
-- 비-CRUD 동작: `POST /{리소스}/{id}/{동작}`
-
-### 도메인 용어 통일
-
-| 개념 | 표준 용어 (DB/API) | 비고 |
-| ---- | ----------------- | ---- |
-| 거래처 | `customer` | `counterparty`, `company` 사용 금지 |
-| END 고객사 | `end_customer` | Contract에 직접 연결된 최종 고객 |
-| 금액 필드 접미사 | `_amount` | `_total` 사용 금지. 매출: `revenue_amount`, 매입: `cost_amount`. ※ `expected_revenue_total`, `expected_gp_total`은 레거시 — DB 마이그레이션 시 `_amount`로 변경 예정 |
-| 월 | `_month` (YYYY-MM-01) | `forecast_month`, `revenue_month` |
-| 구분 (매출/매입) | `line_type` (revenue/cost) | DB 영문, UI 한글 |
-
-> 프론트엔드(JS/HTML/CSS) 명명 규칙은 `docs/guidelines/frontend.md` 참조.
+- 백엔드 파일명, Python 명명, API 라우트, 도메인 용어 통일 규칙은 `docs/guidelines/backend.md`를 따른다.
+- 프론트엔드(JS/HTML/CSS) 명명 및 스타일링 규칙은 `docs/guidelines/frontend.md`를 따른다.
+- 상위 지침에는 “어떤 세부 규칙을 어디서 찾는지”만 남기고, 작업 중 반복 확인이 필요한 상세 naming inventory는 하위 guideline이 소유한다.
 
 ---
 
@@ -173,7 +139,7 @@
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
 - 기본 회귀 테스트는 metrics/contract/importer/dashboard/receipt_match/report/auth/database/startup/transaction safety 범위를 포함한다. 세부 파일 목록은 `tests/`가 1차 기준이다.
 - 완료된 귀속기간 보호, FIFO 배분 격리, ReceiptMatch 권한, 대시보드 집계(`is_planned`, `실주`, 목표 vs 실적, 월/분기/반기/연 재집계), 보고서/Excel Export의 미수금·합계 행 규칙은 위 테스트군으로 회귀를 보호한다.
-- DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다. 기존 `app/migrations_legacy.py`는 레거시 호환용으로 유지.
+- DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다.
   - 새 테이블/컬럼 추가 시: `alembic revision --autogenerate -m "설명"` → `upgrade()`에 `inspector` 존재 여부 체크 권장
   - startup 시 `app/startup/database_init.py`가 자동으로 `alembic upgrade head` 실행
 - 설정값(세율, 날짜 형식 등)은 코드가 아닌 설정 파일에서 관리.

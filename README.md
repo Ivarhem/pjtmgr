@@ -103,14 +103,35 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ---
 
+## 프로젝트 구조
+
+```text
+sales/
+├── app/
+│   ├── auth/           # 인증·인가 (세션, 권한 체크, 비밀번호)
+│   ├── models/         # SQLAlchemy ORM 모델
+│   ├── schemas/        # Pydantic 입출력 스키마
+│   ├── routers/        # FastAPI 라우터 (API 엔드포인트)
+│   ├── services/       # 비즈니스 로직 (도메인별 분리, _ 접두사 헬퍼)
+│   ├── startup/        # 앱 초기화 (DB, bootstrap, lifespan)
+│   ├── static/         # JS, CSS, 이미지
+│   └── templates/      # Jinja2 HTML 템플릿
+├── tests/              # pytest 테스트
+├── alembic/            # DB 마이그레이션
+└── docs/               # 지침, 결정 기록, 이슈
+```
+
+> 파일 단위 상세 구조와 모듈별 역할은 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) 참조.
+
 ## 문서 구조
 
 - `README.md`: 프로젝트 소개, 실행 방법, 현재 상태
 - `CLAUDE.md`: 상위 개발 지침, 문서 갱신 규칙, 완료 조건
-- `docs/guidelines/`: 인증/권한, 프론트엔드, Excel 작업별 상세 규칙
+- `docs/guidelines/`: 백엔드, 인증/권한, 프론트엔드, Excel 작업별 상세 규칙
 - `docs/DECISIONS.md`: 구조/정책 결정 기록
 - `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 제약과 우회
 - `docs/PROJECT_CONTEXT.md`: 프로젝트 배경, 사용자, 문제 정의
+- `docs/PROJECT_STRUCTURE.md`: 파일 단위 프로젝트 구조와 모듈별 역할
 - `app/startup/`: startup/bootstrap/migration 초기화 흐름
 - `app/routers/`: API 엔드포인트의 1차 기준
 - `app/models/`: 데이터 모델의 1차 기준
@@ -135,17 +156,11 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 | 영역 | 주요 기능 |
 | ---- | -------- |
-| **사업 관리** | CRUD (소프트 삭제·복구), 내 사업 필터 + 요약 바, Period 관리 (계획/수시·실주), 담당자 매핑, 검수일/발행일 규칙 |
-| **Forecast** | 월별 예상 매출/GP, Forecast→실적 동기화 (발행일·매출처 자동 계산) |
-| **매출/매입 원장** | 실적 CRUD, 반복행·행복제, 일괄 삭제·확정, Ledger 뷰, 완료 기간 읽기전용 보호, 입금 배분 매출 삭제 방지 |
-| **입금** | 입금 CRUD, 미수 매출 기반 기본값 자동설정 |
-| **입금 배분** | FIFO 자동 배분 (귀속기간 격리), 수동 배분, 자동 재배분, 미수금/선수금 계산 |
-| **거래처** | CRUD, 담당자 N명 (다역할), 탭 대시보드 (사업현황/담당자/매출·매입/입금), 담당자 피벗 뷰 |
-| **인증/사용자** | 세션 기반 인증, admin/user 권한, 데이터 가시 범위, bootstrap 관리자, 로그인 잠금, CSV 일괄 등록 |
-| **Excel** | 3단계 Import (검증→사업→Forecast→실적), 값 정규화, 4종 보고서 Excel Export |
-| **대시보드** | KPI 요약, 사업유형별 매출, 추이 차트 (막대/선형/영역), 목표 vs 실적, 집계 단위 전환 |
-| **보고서** | 요약 현황, Forecast vs Actual, 미수 현황, 매입매출관리 + Excel Export |
-| **시스템** | 전역 예외 핸들러, 감사 로그 인프라, 컬럼/필터 상태 localStorage 저장, 사업유형·용어 설정 관리 |
+| **사업 관리** | 사업/기간 CRUD, 담당자 매핑, 검수일/발행일 규칙 |
+| **Forecast / 실적 / 입금** | 월별 Forecast, 실적 원장, 입금과 배분, 미수금/선수금 계산 |
+| **거래처 / 사용자** | 거래처와 담당자 관리, 사용자 관리, 권한 범위, CSV 일괄 등록 |
+| **Excel / 보고** | 3단계 Import, 대시보드/보고서 조회, Excel Export |
+| **시스템** | 전역 예외 처리, 설정 관리, 감사 로그 인프라 |
 
 ---
 
@@ -157,6 +172,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - admin/user 2단계 권한만 구현 (manager/viewer 미구현)
 - 동시 편집 충돌 방지(낙관적 잠금) 미구현
 - 발행일 휴일 조정 미적용
+- 대량 데이터(1000행 이상) Excel Import 성능 미검증
+- SQLite 단일 파일 — 동시 쓰기 제한
 
 ---
 
@@ -169,22 +186,3 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - 대시보드/보고서: KPI, 목표 대비 실적, 미수 현황, Excel Export
 - 시스템 관리: 사용자, 설정, 사업유형, 용어 설정
 - 세부 엔드포인트와 권한의 1차 기준은 `app/routers/`와 `docs/guidelines/auth.md`다.
-
-## 화면 구조
-
-### 네비게이션
-
-내 사업 / 사업 관리 / 거래처 관리 / 대시보드 / 보고서 / 로그(준비 중) / 설정
-
-### 사업 상세 화면
-
-```text
-사업 기본정보 (수정 가능)
-├── 검수일/발행일 규칙 설정
-└── Period 탭 버튼 [ Y25 ] [ Y26 ] [ Y27 ]
-    ├── Forecast 그리드 (월별 예상 매출/GP)
-    ├── 매출/매입 원장 그리드 (TransactionLine, 필터, 행추가/삭제/복제/확정/저장)
-    ├── 입금 내역 그리드 (Receipt, 행추가/삭제/저장)
-    ├── 배분 현황 그리드 (ReceiptMatch, 자동/수동 배분 조회)
-    └── GP 요약 (매출/매입/GP/GP%/입금/미수)
-```

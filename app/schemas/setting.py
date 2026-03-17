@@ -11,12 +11,12 @@ def _validate_password_min_length(v: int | None) -> int | None:
     return v
 
 
-class SettingsRead(BaseModel):
+class SettingRead(BaseModel):
     org_name: str | None = None
     password_min_length: int = PASSWORD_MIN_LENGTH
 
 
-class SettingsUpdate(BaseModel):
+class SettingUpdate(BaseModel):
     org_name: str | None = None
     password_min_length: int | None = None
 

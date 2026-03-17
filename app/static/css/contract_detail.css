@@ -137,7 +137,7 @@
   display: flex;
   gap: 16px;
   padding: 8px 12px;
-  background: var(--surface-subtle);
+  background: var(--surface-muted);
   border: 1px solid var(--border-color);
   border-top: none;
   border-radius: 0 0 4px 4px;
