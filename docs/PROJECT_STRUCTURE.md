@@ -123,6 +123,7 @@ app/services/
 ├── user.py                  # 사용자 CRUD, CSV 일괄 등록
 ├── user_preference.py       # 사용자 환경설정
 ├── setting.py               # 시스템 설정 CRUD
+├── health.py                # 헬스체크 (DB 연결 확인)
 ├── term_config.py           # 용어 설정 CRUD, 시드 데이터
 └── audit.py                 # 감사 로그 유틸
 ```
