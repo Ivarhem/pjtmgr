@@ -24,6 +24,7 @@ from app.exceptions import (
     ValidationError,
 )
 from app.models import (  # noqa: F401 - 테이블 생성을 위해 모두 import
+    AuditLog,
     Contract,
     ContractContact,
     ContractPeriod,
@@ -31,8 +32,10 @@ from app.models import (  # noqa: F401 - 테이블 생성을 위해 모두 impor
     Customer,
     CustomerContact,
     CustomerContactRole,
+    LoginFailure,
     MonthlyForecast,
     Receipt,
+    ReceiptMatch,
     Setting,
     TermConfig,
     TransactionLine,

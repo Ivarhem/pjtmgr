@@ -53,7 +53,7 @@
 - 서비스 레이어에 비즈니스 로직을 집중시키고, 라우터는 얇게 유지한다.
   - 라우터는 요청 파라미터 전달과 응답 선언에 집중하고, 조회·권한·업로드 검증·ORM→Schema 변환은 서비스에 위임한다.
   - 라우터에서 `if not obj: raise HTTPException(...)`, `db.get()`, `db.query()`, `_to_read()` 같은 패턴을 직접 두지 않는다.
-  - 서비스에서 커스텀 예외를 발생시키고, 전역 핸들러(`app/main.py`)가 HTTP 응답으로 자동 변환한다.
+  - 서비스에서 커스텀 예외를 발생시키고, 전역 핸들러(`app/app_factory.py`)가 HTTP 응답으로 자동 변환한다.
   - 단건 수정/삭제처럼 path에 상위 계약 ID가 없는 엔드포인트도 서비스에서 대상 리소스의 계약/소유 범위를 역추적해 권한을 확인한다.
 - SQL 작성 시 f-string으로 테이블명/컬럼명을 삽입하지 않는다. SQLAlchemy ORM 또는 Core 표현식(`tbl.select()`, `tbl.insert()`)을 사용한다.
   - 예외적으로 `app/migrations_legacy.py`의 경량 마이그레이션은 불가피한 raw SQL을 허용하되, 식별자는 화이트리스트/정규식 검증으로 제한한다.
@@ -62,7 +62,20 @@
 - 보안 관련 환경변수는 insecure fallback을 두지 않는다. 초기 관리자처럼 설치 시점에 필요한 값은 환경변수 bootstrap 절차를 문서화한다.
 - 비밀번호 정책은 `settings` + `app/config.py` 기본값으로 관리한다. 동적 정책 검증은 서비스 레이어에서 현재 설정값을 조회해 수행하고, 라우터/템플릿은 그 값을 표시만 한다.
 - 모듈 간 순환 import는 허용하지 않는다. 공통 모듈 추출 또는 `TYPE_CHECKING` 분기로 해결.
-- 코드 변경 시 관련 문서를 함께 업데이트한다 (API 추가 → README API 목록).
+- **코드 변경 시 문서 갱신 규칙**: 아래 매핑 표에 따라 해당하는 문서만 갱신한다. 매핑에 없는 변경은 문서 갱신 불필요 (코드가 source of truth).
+
+  | 변경 유형 | 갱신 대상 |
+  | --------- | --------- |
+  | 비즈니스 규칙 변경 | CLAUDE.md §6 데이터 원칙 |
+  | 코딩 패턴/규칙 변경 | CLAUDE.md 해당 섹션 |
+  | 테스트 파일 추가 | CLAUDE.md §7 테스트 파일 목록 |
+  | 권한 변경 | `docs/guidelines/auth.md` |
+  | 프론트엔드 패턴 변경 | `docs/guidelines/frontend.md` |
+  | Excel Import/Export 변경 | `docs/guidelines/excel.md` |
+  | 아키텍처 결정 | `docs/DECISIONS.md` (추가 전용) |
+  | 임시 우회/제약 추가 | `docs/KNOWN_ISSUES.md` |
+  | 임시 우회 해소 | `docs/KNOWN_ISSUES.md` (항목 삭제) |
+  | 모델/API/파일 구조 변경 | 문서 갱신 불필요 (코드가 source of truth) |
 
 ---
 
@@ -146,6 +159,29 @@
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
 - 기본 회귀 테스트는 `tests/test_metrics.py`, `tests/test_contract_service.py`, `tests/test_importer.py`, `tests/test_dashboard_service.py`, `tests/test_receipt_match_service.py`, `tests/test_contract_schema.py`, `tests/test_report_service.py`, `tests/test_auth_service.py`, `tests/test_database.py`, `tests/test_startup.py`, `tests/test_transaction_safety.py`에서 관리한다.
 - 완료된 귀속기간 보호, FIFO 배분 격리, ReceiptMatch 권한, 대시보드 집계(`is_planned`, `실주`, 목표 vs 실적, 월/분기/반기/연 재집계), 보고서/Excel Export의 미수금·합계 행 규칙은 위 테스트군으로 회귀를 보호한다.
-- DB 스키마 변경은 현재 `app/migrations_legacy.py`의 경량 마이그레이션으로 처리. 향후 Alembic 정식 도입 예정.
+- DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다. 기존 `app/migrations_legacy.py`는 레거시 호환용으로 유지.
+  - 새 테이블/컬럼 추가 시: `alembic revision --autogenerate -m "설명"` → `upgrade()`에 `inspector` 존재 여부 체크 권장
+  - startup 시 `app/startup/database_init.py`가 자동으로 `alembic upgrade head` 실행
 - 설정값(세율, 날짜 형식 등)은 코드가 아닌 설정 파일에서 관리.
 - API는 `/api/v1/` 버전 prefix를 유지.
+
+---
+
+## 8. 완료 조건 (Definition of Done)
+
+코드 변경이 "완료"되려면 다음을 모두 충족해야 한다:
+
+1. 코드 변경 완료
+2. 관련 테스트 통과 (새 기능은 테스트 추가)
+3. §2 매핑 표에 해당하는 문서가 있으면 갱신 완료
+4. 해결된 KNOWN_ISSUES 항목이 있으면 삭제 완료
+
+### 문서 정합성 체크리스트
+
+변경 커밋 전 아래를 확인한다:
+
+- [ ] KNOWN_ISSUES.md에 이번 변경으로 해소된 항목이 있는가? → 삭제
+- [ ] 비즈니스 규칙을 변경했는가? → CLAUDE.md §6 확인
+- [ ] 권한 로직을 변경했는가? → `docs/guidelines/auth.md` 확인
+- [ ] 프론트엔드 패턴을 변경/추가했는가? → `docs/guidelines/frontend.md` 확인
+- [ ] 새 테스트 파일을 추가했는가? → CLAUDE.md §7 목록에 추가

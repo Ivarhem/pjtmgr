@@ -5,27 +5,28 @@
 
 ---
 
-## Excel Import
-
-- 컬럼 순서에 의존적 — 템플릿 컬럼 순서가 달라지면 Import 실패
-- 대량 데이터(1000행 이상) Import 시 성능 미검증
-
 ## 동시 편집
 
 - 같은 사업을 두 사용자가 동시 편집하면 마지막 저장이 이전 저장을 덮어씀
 - Optimistic Locking 미구현 (향후 version 컬럼 기반 충돌 방지 예정)
 
-## AG Grid 복사/붙여넣기
+## Excel Import
 
-- Excel에서 복사한 데이터를 그리드에 붙여넣기 시 TSV 파싱 핸들러 미구현
-- 그리드 → Excel 복사는 AG Grid 기본 기능으로 동작
+- 대량 데이터(1000행 이상) Import 시 성능 미검증
 
-## 보고서
+## 감사 로그
 
-- 네비게이션에 메뉴 존재하나 데이터 조회 미구현
-- 화면 UI만 존재하는 상태
+- 테이블/유틸(`app/services/audit.py`) 준비 완료, 서비스 연동 미완료
+- `/audit-logs` 화면은 placeholder이며 실제 로그 목록/API 미구현
+
+## 권한
+
+- admin/user 2단계만 구현 (manager/viewer 미구현)
+
+## 발행일 휴일 조정
+
+- 공휴일 달력 미적용 (`invoice_holiday_adjust` 필드만 존재)
 
 ## DB
 
 - SQLite 단일 파일 — 동시 쓰기 제한
-- Alembic 미도입 — 스키마 변경 시 수동 마이그레이션

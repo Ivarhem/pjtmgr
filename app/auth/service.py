@@ -6,56 +6,68 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.config import LOGIN_LOCKOUT_SECONDS, LOGIN_MAX_FAILURES
+from app.models.login_failure import LoginFailure
 from app.models.user import User
 from app.auth.password import hash_password, verify_password
 from app.exceptions import BusinessRuleError
 from app.services.setting import get_password_min_length
 
 
-_LOGIN_FAILURES: dict[str, dict[str, datetime | int | None]] = {}
-
-
 def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def reset_login_failures() -> None:
+def reset_login_failures(db: Session) -> None:
     """테스트/운영 정비용 로그인 실패 상태 초기화."""
-    _LOGIN_FAILURES.clear()
+    db.query(LoginFailure).delete()
+    db.commit()
 
 
-def _get_lock_state(login_id: str) -> dict[str, datetime | int | None]:
-    return _LOGIN_FAILURES.setdefault(login_id, {"count": 0, "locked_until": None})
+def _get_or_create_failure(db: Session, login_id: str) -> LoginFailure:
+    row = db.query(LoginFailure).filter(LoginFailure.login_id == login_id).first()
+    if not row:
+        row = LoginFailure(login_id=login_id, failure_count=0, locked_until=None)
+        db.add(row)
+        db.flush()
+    return row
 
 
-def _is_locked(login_id: str) -> bool:
-    state = _LOGIN_FAILURES.get(login_id)
-    if not state:
+def _is_locked(db: Session, login_id: str) -> bool:
+    row = db.query(LoginFailure).filter(LoginFailure.login_id == login_id).first()
+    if not row or not row.locked_until:
         return False
-    locked_until = state.get("locked_until")
-    if not isinstance(locked_until, datetime):
-        return False
-    if _now() >= locked_until:
-        _LOGIN_FAILURES.pop(login_id, None)
+    locked = row.locked_until
+    now = _now()
+    # SQLite는 timezone-naive datetime을 반환하므로 통일
+    if locked.tzinfo is None and now.tzinfo is not None:
+        locked = locked.replace(tzinfo=now.tzinfo)
+    elif locked.tzinfo is not None and now.tzinfo is None:
+        now = now.replace(tzinfo=locked.tzinfo)
+    if now >= locked:
+        row.failure_count = 0
+        row.locked_until = None
+        db.flush()
         return False
     return True
 
 
-def _record_failure(login_id: str) -> None:
-    state = _get_lock_state(login_id)
-    count = int(state["count"] or 0) + 1
-    state["count"] = count
-    if count >= LOGIN_MAX_FAILURES:
-        state["locked_until"] = _now() + timedelta(seconds=LOGIN_LOCKOUT_SECONDS)
+def _record_failure(db: Session, login_id: str) -> None:
+    row = _get_or_create_failure(db, login_id)
+    row.failure_count += 1
+    if row.failure_count >= LOGIN_MAX_FAILURES:
+        row.locked_until = _now() + timedelta(seconds=LOGIN_LOCKOUT_SECONDS)
+    db.flush()
 
 
-def _clear_failures(login_id: str) -> None:
-    _LOGIN_FAILURES.pop(login_id, None)
+def _clear_failures(db: Session, login_id: str) -> None:
+    db.query(LoginFailure).filter(LoginFailure.login_id == login_id).delete()
+    db.flush()
 
 
 def authenticate(db: Session, login_id: str, password: str) -> User | None:
     """login_id + password 검증. 성공 시 활성 User 반환, 실패 시 None."""
-    if _is_locked(login_id):
+    if _is_locked(db, login_id):
+        db.commit()
         return None
     user = (
         db.query(User)
@@ -63,12 +75,15 @@ def authenticate(db: Session, login_id: str, password: str) -> User | None:
         .first()
     )
     if not user or not user.hashed_password:
-        _record_failure(login_id)
+        _record_failure(db, login_id)
+        db.commit()
         return None
     if not verify_password(password, user.hashed_password):
-        _record_failure(login_id)
+        _record_failure(db, login_id)
+        db.commit()
         return None
-    _clear_failures(login_id)
+    _clear_failures(db, login_id)
+    db.commit()
     return user
 
 

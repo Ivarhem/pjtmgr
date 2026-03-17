@@ -4,6 +4,10 @@
 필요한 형태의 Excel 파일로 Export하는 사내 전용 웹 애플리케이션.
 
 > **현재 상태**: 파일럿 테스트 진행 (v0.3)
+>
+> **정보 소재 (Source of Truth)** — 모델 필드·API 상세는 소스 코드(`app/models/`, `app/routers/`) 참조.
+> 코딩 규칙은 `CLAUDE.md`, 작업 지침은 `docs/guidelines/`, 아키텍처 결정은 `docs/DECISIONS.md`,
+> 알려진 제약은 `docs/KNOWN_ISSUES.md`, 프로젝트 배경은 `docs/PROJECT_CONTEXT.md` 참조.
 
 ---
 
@@ -105,10 +109,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 sales/
 ├── app/
 │   ├── main.py               # FastAPI 앱 진입점
+│   ├── app_factory.py        # FastAPI 앱 팩토리 (미들웨어·라우터·예외 핸들러 등록)
 │   ├── migrations_legacy.py  # 경량 마이그레이션 (Alembic 도입 전 레거시)
 │   ├── config.py             # 환경 설정
 │   ├── database.py           # DB 연결
 │   ├── exceptions.py         # 커스텀 예외 (NotFoundError 등)
+│   ├── startup/              # 앱 초기화
+│   │   ├── database_init.py  # DB 스키마 준비 + Alembic 연동
+│   │   ├── bootstrap.py      # 초기 데이터 시드 (사업유형, 용어, 관리자)
+│   │   └── lifespan.py       # FastAPI lifespan 컨텍스트 관리
 │   ├── auth/                 # 인증/권한
 │   │   ├── constants.py      # Role 타입, 역할 상수
 │   │   ├── authorization.py  # 권한 판단 헬퍼 (can_*, apply_contract_scope)
@@ -134,7 +143,8 @@ sales/
 │   │   ├── setting.py        # Setting (앱 설정 key-value)
 │   │   ├── audit_log.py      # AuditLog (감사 로그)
 │   │   ├── contract_type_config.py # ContractTypeConfig (사업유형 설정)
-│   │   └── term_config.py    # TermConfig (용어 설정)
+│   │   ├── term_config.py    # TermConfig (용어 설정)
+│   │   └── login_failure.py  # LoginFailure (로그인 실패 추적)
 │   ├── schemas/              # Pydantic 스키마
 │   │   ├── _normalize.py     # 날짜/월 정규화 유틸
 │   │   ├── auth.py           # Login/ChangePassword 스키마
@@ -252,6 +262,11 @@ sales/
 │   ├── test_database.py      # DB 연결/기본 설정 테스트
 │   ├── test_startup.py       # 앱 startup 분리/초기화 테스트
 │   └── test_transaction_safety.py # 복합 서비스 rollback 테스트
+├── alembic/                   # Alembic 마이그레이션
+│   ├── env.py                # 마이그레이션 환경 설정
+│   ├── script.py.mako        # 리비전 템플릿
+│   └── versions/             # 마이그레이션 리비전 파일
+├── alembic.ini                # Alembic 설정
 ├── requirements.txt          # Python 의존성
 ├── CLAUDE.md                 # 개발 지침/규칙
 ├── PILOT_TEST.md             # 파일럿 테스트 계획
@@ -262,120 +277,29 @@ sales/
 
 ## 데이터 모델
 
-### 테이블 구조
+> 각 테이블의 상세 필드는 `app/models/` 참조. 아래는 핵심 테이블과 관계만 표시한다.
 
-```text
-users (사용자/담당자)
-  id, login_id, name, department
-  role (user/admin), is_active, hashed_password, must_change_password
-  created_at, updated_at
+### 핵심 테이블
 
-customers (거래처 - 매출처/매입처 공용)
-  id, name, business_no, notes
-  created_at, updated_at
-
-customer_contacts (거래처 담당자 - N명, 인물 중심)
-  id, customer_id → customers
-  name, phone, email
-  created_at, updated_at
-
-customer_contact_roles (담당자 역할 - 1인 다역할 가능)
-  id, customer_contact_id → customer_contacts (CASCADE)
-  role_type (영업/세금계산서/업무), is_default
-  UNIQUE(customer_contact_id, role_type)
-  created_at, updated_at
-
-contract_type_configs (사업유형 설정)
-  code (PK), label, sort_order, is_active
-  default_gp_pct, default_inspection_day
-  default_invoice_month_offset, default_invoice_day_type
-  default_invoice_day, default_invoice_holiday_adjust
-
-contracts (사업)
-  id, contract_code, contract_name, contract_type → contract_type_configs.code
-  end_customer_id → customers (END 고객)
-  owner_user_id → users (영업 담당)
-  status (active/closed/cancelled)
-  inspection_day, inspection_date          # 검수일 규칙
-  invoice_month_offset, invoice_day_type   # 발행일 규칙
-  invoice_day, invoice_holiday_adjust      # 발행일 세부
-  notes
-  created_at, updated_at
-
-contract_periods (사업 기간 - 연도 단위 버전)
-  id, contract_id → contracts
-  period_year, period_label (Y25, Y26)
-  stage (10%/50%/70%/90%/계약완료/실주)
-  expected_revenue_total, expected_gp_total
-  is_planned (계획사업/수시사업 구분, default True=계획사업)
-  start_month, end_month (YYYY-MM-01)
-  owner_user_id → users (Period별 담당 영업)
-  customer_id → customers (매출처, 미지정 시 Contract.end_customer)
-  inspection_day, inspection_date              # 검수일 규칙
-  invoice_month_offset, invoice_day_type       # 발행일 규칙
-  invoice_day, invoice_holiday_adjust          # 발행일 세부
-  notes
-  UNIQUE(contract_id, period_year)
-  created_at, updated_at
-
-contract_contacts (사업별 담당자 - ContractPeriod·거래처 단위)
-  id, contract_period_id → contract_periods
-  customer_id → customers
-  customer_contact_id → customer_contacts (기본 담당자 참조)
-  contact_type (영업/세금계산서/업무)
-  rank (정/부), notes
-  created_at, updated_at
-
-monthly_forecasts (월별 Forecast - contract_period 단위)
-  id, contract_period_id → contract_periods
-  forecast_month (YYYY-MM-01)
-  revenue_amount, gp_amount
-  version_no, is_current, created_by → users
-  UNIQUE(contract_period_id, forecast_month, version_no)
-  created_at, updated_at
-
-transaction_lines (월별 실적 - contract 단위)
-  id, contract_id → contracts
-  revenue_month (YYYY-MM-01), line_type (revenue/cost)
-  customer_id → customers (매출처/매입처)
-  supply_amount, invoice_issue_date, status (예정/확정)
-  description, created_by → users
-  created_at, updated_at
-
-receipts (입금 - contract 단위)
-  id, contract_id → contracts
-  customer_id → customers
-  receipt_date (YYYY-MM-DD), revenue_month (YYYY-MM-01)
-  amount, description, created_by → users
-  created_at, updated_at
-
-receipt_matches (입금 배분 - Receipt↔매출 라인 매핑)
-  id, receipt_id → receipts, transaction_line_id → transaction_lines
-  matched_amount (원)
-  match_type (auto/manual)
-  created_by → users
-  UNIQUE(receipt_id, transaction_line_id)
-  created_at, updated_at
-
-term_configs (용어 설정)
-  term_key (PK), default_label, custom_label
-  category, sort_order
-  created_at, updated_at
-
-user_preferences (사용자별 설정)
-  id, user_id → users, pref_key, pref_value
-  UNIQUE(user_id, pref_key)
-
-settings (앱 설정 - key-value)
-  key (PK), value
-
-audit_logs (감사 로그)
-  id, user_id → users
-  action (create/update/delete)
-  entity_type (contract/transaction_line/receipt/...), entity_id
-  summary, detail (JSON)
-  created_at
-```
+| 테이블 | 설명 | 모델 파일 |
+| ------ | ---- | --------- |
+| users | 사용자/담당자 | `app/models/user.py` |
+| customers | 거래처 (매출처/매입처 공용) | `app/models/customer.py` |
+| customer_contacts | 거래처 담당자 (인물 중심) | `app/models/customer_contact.py` |
+| customer_contact_roles | 담당자 역할 (1인 다역할) | `app/models/customer_contact_role.py` |
+| contract_type_configs | 사업유형 설정 (동적 관리) | `app/models/contract_type_config.py` |
+| contracts | 사업 (원장의 1행) | `app/models/contract.py` |
+| contract_periods | 사업 기간 (연도 단위 버전) | `app/models/contract_period.py` |
+| contract_contacts | 사업별 담당자 (Period·거래처 단위) | `app/models/contract_contact.py` |
+| monthly_forecasts | 월별 Forecast (예상 매출/GP) | `app/models/monthly_forecast.py` |
+| transaction_lines | 매출/매입 실적 (귀속월 기준) | `app/models/transaction_line.py` |
+| receipts | 입금 내역 | `app/models/receipt.py` |
+| receipt_matches | 입금 배분 (Receipt↔매출 매핑) | `app/models/receipt_match.py` |
+| term_configs | UI 용어 설정 | `app/models/term_config.py` |
+| user_preferences | 사용자별 설정 (KV) | `app/models/user_preference.py` |
+| settings | 앱 설정 (KV) | `app/models/setting.py` |
+| audit_logs | 감사 로그 | `app/models/audit_log.py` |
+| login_failures | 로그인 실패 추적 | `app/models/login_failure.py` |
 
 ### 계산값 (조회 시 계산, DB 저장 안 함)
 
@@ -410,228 +334,54 @@ Receipt ──1:N──→ ReceiptMatch ──N:1──→ TransactionLine(reven
 
 ## 구현 완료 기능
 
-### 사업 관리
-
-- 사업 CRUD (목록/등록/수정/삭제) — 삭제 시 소프트 삭제(status→cancelled), 관리자 복구 가능
-- 사업 등록 시 END 고객 입력 지원
-- 내 사업 (로그인 사용자 기준 자동 필터) + **요약 바** (진행 사업/매출/GP/미수금)
-- 사업 기간(ContractPeriod) 관리 — Period 탭 버튼 UI, 계획사업/수시사업 구분(`is_planned`)
-- ContractPeriod별 매출처 관리 (미지정 시 Contract의 END 고객 사용)
-- 진행단계에 "실주" 추가 — Period 수정 시에만 선택 가능
-- 사업별 담당자 매핑 (ContractContact) — **사업 상세에서 담당자 정보 표시**
-- 검수일/발행일 규칙 설정 (Contract 기본정보, Period 상속)
-
-### Forecast
-
-- 월별 예상 매출/GP 입력/조회
-- Forecast → TransactionLine 동기화 (Forecast 가져오기)
-- 동기화 시 발행일 자동 계산 (Period 발행일 규칙 기반) + Period 매출처 자동 입력 (미지정 시 END 고객)
-
-### 매출/매입 원장 (Actual)
-
-- 매출/매입 실적 입력/조회
-- 반복행 생성
-- 행 복제 (월 단위)
-- 체크박스 선택 후 일괄 삭제 (관리자 전용)
-- 체크박스 선택 후 일괄 확정 (체크박스 우선, 미선택 시 발행일 기준 자동 탐색)
-- 구분(매출/매입)/거래처/귀속월/발행상태 필터 + 미래 숨김 필터
-- 저장 시 필수 필드 검증 (구분/거래처/금액) + 매출 거래처 미입력 시 END 고객 자동 입력 제안
-- TransactionLine+Receipt 단일 원장 그리드 (Ledger 뷰)
-- 입금 상태 컬럼 (완료/미수 배지 표시)
-- 매입 행 추가 시 기본값 자동설정 (구분=매입, 귀속월=빈 월, 금액=Forecast 매출-GP)
-- 반복행 생성 시 Forecast 매입 기준 옵션 (매출-GP 자동 계산)
-- 완료된 귀속기간 읽기 전용 보호 (프론트+백엔드)
-- 입금 배분된 매출 행 삭제 방지
-
-### 입금 (Receipt)
-
-- 입금 내역 입력/조회 (등록 시 END 고객 거래처 기본값 자동 입력)
-- 입금 추가 시 가장 오래된 미수 매출 기반 기본값 (미저장 행 반영)
-- 체크박스 선택 후 일괄 삭제 (관리자 전용)
-- 거래처/귀속월 필터
-
-### 입금 배분 (ReceiptMatch)
-
-- FIFO 자동 배분 (귀속기간 내 매출만 대상, 귀속월 오름차순)
-- 수동 배분 생성/수정/삭제
-- 수동 배분 생성 시 요청 경로의 사업과 실제 입금/매출 라인의 소속 사업이 일치해야 하며, 수정/삭제도 해당 사업 접근 권한을 다시 검증
-- 배분 현황 그리드 (사업 상세 화면, 귀속기간 필터 적용)
-- 자동 재배분 기능
-- 미수금 = 매출확정 - 배분완료 (단일 공식)
-- 선수금 표시 (입금 > 매출확정 시 AR 음수 → "선수금" 라벨)
-
-### 거래처
-
-- 거래처 CRUD
-- 거래처 기본 담당자 N명 관리 (1인 다역할: 영업/세금계산서/업무 체크박스)
-- 역할별 기본 담당자 지정 (is_default)
-- 사업별 담당자: 기본 담당자에서 선택하여 배정 (정/부 구분)
-- 탭 기반 대시보드 (사업현황/담당자/매출·매입/입금)
-- 거래처별 사업 현황 조회 (Period 단위 매출/매입 집계, 역할 배지, 요약 카드, 진행중 필터)
-- 거래처별 매출·매입 월별 집계 및 미수금 조회
-- 거래처별 입금 내역 조회
-- 사업별 담당자 매트릭스 (피벗 뷰, 폴백 표시, 정 담당자 기준)
-- 거래처 목록 서브텍스트 (진행중 건수, 매출 금액)
-
-### 사용자/인증
-
-- 세션 기반 인증 (쿠키)
-- 역할 기반 권한 관리 (admin/user)
-- 데이터 가시 범위 (admin: 전체, user: 본인 담당)
-- 활성 관리자 부재 시 초기 관리자 bootstrap 지원
-- 사용자 CRUD (관리자 전용)
-- 비밀번호 변경/초기화
-- 로그인 실패 누적 잠금
-- 비밀번호 최소 길이 시스템 설정 연동
-- CSV 사용자 일괄 등록
-
-### Excel Import/Export
-
-- 계약 workbook 사전검사 (`/api/v1/excel/validate`)
-- 3단계 Import: 사업 → Forecast → TransactionLine
-- 값 정규화 (진행단계 소수→%, 사업유형 대소문자)
-- 유효성 검사 및 오류 행 표시
-- 오류 응답은 문자열 목록과 함께 시트/행/컬럼 기반 구조화 상세를 함께 반환할 수 있음
-- 전체 Import는 시트 간 `연도+번호`로 연결하며, 같은 `연도+사업명` 조합이 업로드 파일 내부 또는 기존 DB에 중복되면 validation error로 중단
-- 보고서 Excel Export (요약 현황, Forecast vs Actual, 미수 현황, 매입매출관리)
-
-### 보고서/대시보드
-
-- 대시보드: KPI 요약(매출 목표/실적/GP/입금/미수금 통합), 사업유형별 매출, 추이 차트(막대/선형/영역 전환), 미수금 현황
-- 추이 차트: 막대 차트에서 계획사업/수시사업 Forecast stacked 표시, 선형·영역은 계획사업 Forecast + 수시사업 Forecast + Actual 구분
-- 매출 목표 vs 실적: 계획사업(`is_planned`) Forecast 기준 목표 vs 전체 확정매출 비교
-- 집계 단위 전환: 월/분기/반기/연 글로벌 토글 — 추이 차트 + 목표 vs 실적 테이블 연동
-- 요약 현황: 월별 Forecast/Actual 매출·매입·GP·입금·미수금 집계
-- Forecast vs Actual: 사업별 비교
-- 미수 현황: 사업별 미수금 조회
-- 매입매출관리: 개별 사업 월별 상세, 미수금은 배분완료 기준 누적으로 계산
-
-### 시스템
-
-- 커스텀 예외 + 전역 핸들러 (통일된 에러 응답)
-- 런타임 마이그레이션 식별자 검증 (`app/migrations_legacy.py`) — legacy 테이블/컬럼 이관 시 화이트리스트 기반 raw SQL 제한
-- 감사 로그 인프라 (테이블/유틸 준비, 연동 예정) + 로그 메뉴/placeholder 화면
-- 컬럼 순서·너비 저장/복원 (localStorage) — 사업관리, 내사업, 사업상세, 보고서, 사용자관리
-- 필터 상태 저장/복원 (localStorage) — 사업관리, 내사업, 보고서
-- 사용자별 설정 저장
-- 시스템 설정: 조직명, 비밀번호 최소 길이
-- 사업유형 관리 (ContractTypeConfig) — 관리자가 사업유형 추가/수정/삭제, 유형별 기본값 설정
-- 용어 설정 (TermConfig) — 관리자가 UI 표시 용어 커스터마이징
+| 영역 | 주요 기능 |
+| ---- | -------- |
+| **사업 관리** | CRUD (소프트 삭제·복구), 내 사업 필터 + 요약 바, Period 관리 (계획/수시·실주), 담당자 매핑, 검수일/발행일 규칙 |
+| **Forecast** | 월별 예상 매출/GP, Forecast→실적 동기화 (발행일·매출처 자동 계산) |
+| **매출/매입 원장** | 실적 CRUD, 반복행·행복제, 일괄 삭제·확정, Ledger 뷰, 완료 기간 읽기전용 보호, 입금 배분 매출 삭제 방지 |
+| **입금** | 입금 CRUD, 미수 매출 기반 기본값 자동설정 |
+| **입금 배분** | FIFO 자동 배분 (귀속기간 격리), 수동 배분, 자동 재배분, 미수금/선수금 계산 |
+| **거래처** | CRUD, 담당자 N명 (다역할), 탭 대시보드 (사업현황/담당자/매출·매입/입금), 담당자 피벗 뷰 |
+| **인증/사용자** | 세션 기반 인증, admin/user 권한, 데이터 가시 범위, bootstrap 관리자, 로그인 잠금, CSV 일괄 등록 |
+| **Excel** | 3단계 Import (검증→사업→Forecast→실적), 값 정규화, 4종 보고서 Excel Export |
+| **대시보드** | KPI 요약, 사업유형별 매출, 추이 차트 (막대/선형/영역), 목표 vs 실적, 집계 단위 전환 |
+| **보고서** | 요약 현황, Forecast vs Actual, 미수 현황, 매입매출관리 + Excel Export |
+| **시스템** | 전역 예외 핸들러, 감사 로그 인프라, 컬럼/필터 상태 localStorage 저장, 사업유형·용어 설정 관리 |
 
 ---
 
-## 현재 제한사항
+## 현재 제한사항 / 알려진 이슈
 
-- **감사 로그**: 테이블/유틸 준비 완료, 서비스 연동 미완료
-- **감사 로그 조회**: `/audit-logs` 화면은 준비 중 placeholder이며, 실제 로그 목록/API는 미구현
-- **DB**: 기본값은 SQLite 단일 파일 (`DATABASE_URL`로 변경 가능)
-- **Excel 전체 Import 식별 제약**: 같은 연도·같은 사업명이 업로드 파일 내부 또는 기존 데이터에 중복되면 overwrite/skip 대상을 자동 결정하지 않고 validation error로 중단
-- **초기 관리자 생성**: bootstrap 환경변수를 설정하지 않으면 첫 관리자 계정을 만들 수 없음
-- **테스트**: 집계/Contract 서비스/Excel 검증, Contract 스키마 정규화, ReceiptMatch 권한, 대시보드 목표 vs 실적/재집계, 보고서 서비스/Export, 로그인 잠금/비밀번호 정책, startup/rollback 회귀는 작성됨 — API 통합 테스트는 추가 필요
-- **발행일 휴일 조정**: 공휴일 달력 미적용 (invoice_holiday_adjust 필드 존재)
-- **권한**: admin/user 2단계만 구현 (manager/viewer 미구현)
+> 상세 내용은 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) 참조.
 
----
-
-## 향후 개발 예정
-
-| 우선순위 | 기능 | 설명 |
-| --- | --- | --- |
-| 높음 | 복사/붙여넣기 개선 | AG Grid 행 복사·붙여넣기, 다중 행 선택 복사 |
-| 중간 | 알림 기능 | 세금계산서 발행 임박, 미수금 지연, Forecast vs Actual 괴리, 계약 갱신 필요 |
-| 중간 | 감사 로그 연동 | 주요 CRUD에 audit.log() 호출 + 조회 UI |
-| 중간 | 권한 확장 | manager/viewer 역할, 부서 단위 접근 범위 |
-| 중간 | 전역 검색 | 사업명·거래처명·코드 통합 검색 |
-| 낮음 | 낙관적 잠금 | 동시 편집 충돌 방지 (version 필드 기반) |
-| 낮음 | DB 마이그레이션 | Alembic 도입, SQLite → PostgreSQL |
-| 낮음 | 발행일 휴일 조정 | 공휴일 달력 연동 (전/후 영업일 계산) |
-| 낮음 | 테스트 확장 | API 통합 테스트 확대 |
-| 낮음 | 국세청 API 연동 | 세금계산서 발행·조회 자동화 |
-| 낮음 | Undo/History | 변경 이력 추적 및 되돌리기 |
+- 감사 로그 서비스 연동 미완료, 조회 UI placeholder
+- admin/user 2단계 권한만 구현 (manager/viewer 미구현)
+- 동시 편집 충돌 방지(낙관적 잠금) 미구현
+- 발행일 휴일 조정 미적용
 
 ---
 
 ## API 엔드포인트 요약
 
-| 메서드 | 경로 | 설명 | 권한 |
-| --- | --- | --- | --- |
-| POST | `/api/v1/auth/login` | 로그인 | 공개 |
-| POST | `/api/v1/auth/logout` | 로그아웃 | 인증 |
-| GET | `/api/v1/auth/me` | 현재 사용자 + permissions | 인증 |
-| POST | `/api/v1/auth/change-password` | 비밀번호 변경 | 인증 |
-| GET | `/api/v1/contract-periods` | 원장 목록 (필터 + scope) | 인증 |
-| POST | `/api/v1/contracts` | 사업 생성 | 인증 |
-| GET/PATCH | `/api/v1/contracts/{id}` | 사업 조회/수정 | 인증 |
-| DELETE | `/api/v1/contracts/{id}` | 사업 삭제 (소프트 삭제) | admin |
-| POST | `/api/v1/contracts/{id}/restore` | 삭제된 사업 복구 | admin |
-| GET/POST | `/api/v1/contracts/{id}/periods` | 기간 목록/생성 | 인증 |
-| GET/PATCH/DELETE | `/api/v1/contract-periods/{id}` | 기간 단건 CRUD | 인증 |
-| GET/PATCH | `/api/v1/contract-periods/{id}/forecasts` | Forecast 조회/upsert | 인증 |
-| GET | `/api/v1/contracts/{id}/all-forecasts` | 전체 기간 Forecast | 인증 |
-| GET/POST | `/api/v1/contracts/{id}/transaction-lines` | 실적 조회/생성 | 인증 |
-| PATCH | `/api/v1/transaction-lines/{id}` | 실적 수정 | 인증 |
-| DELETE | `/api/v1/transaction-lines/{id}` | 실적 삭제 | admin |
-| GET/POST | `/api/v1/contracts/{id}/receipts` | 입금 조회/생성 | 인증 |
-| PATCH | `/api/v1/receipts/{id}` | 입금 수정 | 인증 |
-| DELETE | `/api/v1/receipts/{id}` | 입금 삭제 | admin |
-| GET/POST | `/api/v1/contracts/{id}/receipt-matches` | 배분 목록/수동 생성 | 인증 |
-| PATCH | `/api/v1/receipt-matches/{id}` | 배분 수정 | 인증 |
-| DELETE | `/api/v1/receipt-matches/{id}` | 배분 삭제 | 인증 |
-| POST | `/api/v1/contracts/{id}/receipt-matches/auto` | FIFO 자동 재배분 | 인증 |
-| GET | `/api/v1/contracts/{id}/forecast-sync-preview` | Forecast→TransactionLine 미리보기 | 인증 |
-| POST | `/api/v1/contracts/{id}/forecast-sync` | Forecast→TransactionLine 동기화 | 인증 |
-| GET | `/api/v1/contracts/{id}/ledger` | TransactionLine+Receipt 병합 뷰 | 인증 |
-| GET/POST | `/api/v1/customers` | 거래처 목록/생성 | 인증 |
-| PATCH/DELETE | `/api/v1/customers/{id}` | 거래처 수정/삭제 | 인증/admin(삭제) |
-| GET/POST | `/api/v1/customers/{id}/contacts` | 거래처 담당자 목록/생성 | 인증 |
-| PATCH/DELETE | `/api/v1/customers/contacts/{id}` | 거래처 담당자 수정/삭제 | 인증 |
-| GET/POST | `/api/v1/contracts/{id}/contacts` | 사업별 담당자 목록/생성 | 인증 |
-| GET/POST | `/api/v1/contract-periods/{id}/contacts` | Period별 담당자 목록/생성 | 인증 |
-| PATCH | `/api/v1/contract-contacts/{id}` | 사업별 담당자 수정 | 인증 |
-| DELETE | `/api/v1/contract-contacts/{id}` | 사업별 담당자 삭제 | 인증 |
-| GET | `/api/v1/customers/{id}/contract-contacts` | 거래처별 사업 담당자 목록 | 인증 |
-| GET | `/api/v1/customers/{id}/contract-contacts-pivoted` | 거래처별 사업 담당자 (피벗) | 인증 |
-| GET/POST | `/api/v1/users` | 사용자 목록/생성 | admin |
-| PATCH/DELETE | `/api/v1/users/{id}` | 사용자 수정/삭제 | admin |
-| POST | `/api/v1/users/{id}/reset-password` | 비밀번호 초기화 | admin |
-| POST | `/api/v1/users/import-csv` | 아웃룩 연락처 CSV 임포트 | admin |
-| GET/PATCH | `/api/v1/settings` | 앱 설정 조회/수정 | 인증 |
-| GET/PATCH | `/api/v1/preferences/{key}` | 사용자 설정 조회/수정 | 인증 |
-| GET | `/api/v1/excel/template` | 통합 Import 템플릿 다운로드 | admin |
-| GET | `/api/v1/excel/template/contracts` | 영업기회 템플릿 다운로드 | admin |
-| GET | `/api/v1/excel/template/forecast` | 월별계획 템플릿 다운로드 | admin |
-| GET | `/api/v1/excel/template/transaction-lines` | 실적 템플릿 다운로드 | admin |
-| POST | `/api/v1/excel/validate` | 파일 유효성 검사 (미리보기) | admin |
-| POST | `/api/v1/excel/import` | Excel Import (사업) | admin |
-| POST | `/api/v1/excel/import/forecast` | Excel Import (Forecast) | admin |
-| POST | `/api/v1/excel/import/transaction-lines` | Excel Import (TransactionLine) | admin |
-| POST | `/api/v1/contracts/bulk-assign-owner` | 담당자 일괄 변경 | 인증 |
-| POST | `/api/v1/contracts/{id}/transaction-lines/bulk-confirm` | 실적 일괄 확정 | 인증 |
-| GET | `/api/v1/customers/{id}/contracts` | 거래처 관련 사업 조회 | 인증 |
-| GET | `/api/v1/customers/{id}/financials` | 거래처 매출·매입 월별 집계 | 인증 |
-| GET | `/api/v1/customers/{id}/receipts` | 거래처 입금 내역 | 인증 |
-| GET | `/api/v1/dashboard/summary` | 대시보드 전체 데이터 | 인증 |
-| GET | `/api/v1/dashboard/target-vs-actual` | 매출 목표 vs 실적 비교 | 인증 |
-| GET | `/api/v1/reports/summary` | 요약 현황 | 인증 |
-| GET | `/api/v1/reports/summary/export` | 요약 현황 Excel | 인증 |
-| GET | `/api/v1/reports/forecast-vs-actual` | Forecast vs Actual | 인증 |
-| GET | `/api/v1/reports/forecast-vs-actual/export` | Forecast vs Actual Excel | 인증 |
-| GET | `/api/v1/reports/receivables` | 미수 현황 | 인증 |
-| GET | `/api/v1/reports/receivables/export` | 미수 현황 Excel | 인증 |
-| GET | `/api/v1/reports/contract-pnl/{contract_id}` | 매입매출관리 | 인증 |
-| GET | `/api/v1/reports/contract-pnl/{contract_id}/export` | 매입매출관리 Excel | 인증 |
-| GET | `/api/v1/contract-types` | 사업유형 목록 | 인증 |
-| POST | `/api/v1/contract-types` | 사업유형 생성 | admin |
-| PATCH | `/api/v1/contract-types/{code}` | 사업유형 수정 | admin |
-| DELETE | `/api/v1/contract-types/{code}` | 사업유형 삭제 | admin |
-| GET | `/api/v1/my-contracts/summary` | 내 사업 요약 통계 | 인증 |
-| GET | `/api/v1/term-configs` | 용어 설정 목록 | 인증 |
-| POST | `/api/v1/term-configs` | 용어 설정 생성 | admin |
-| GET | `/api/v1/term-configs/labels` | 용어 라벨 조회 | 인증 |
-| GET | `/api/v1/term-configs/{term_key}` | 용어 설정 단건 조회 | 인증 |
-| PATCH | `/api/v1/term-configs/{term_key}` | 용어 설정 수정 | admin |
-| DELETE | `/api/v1/term-configs/{term_key}` | 용어 설정 삭제 | admin |
-| POST | `/api/v1/term-configs/{term_key}/reset` | 용어 설정 초기화 | admin |
+> 전체 엔드포인트 상세는 `app/routers/` 소스 코드 참조. 아래는 리소스별 요약.
+
+| 라우터 | 프리픽스 | 주요 기능 | 권한 |
+| ------ | ------- | -------- | ---- |
+| auth | `/api/v1/auth` | 로그인, 로그아웃, 비밀번호 변경, 현재 사용자 | 공개/인증 |
+| contracts | `/api/v1/contracts`, `/api/v1/contract-periods` | 사업/기간 CRUD, 원장 뷰, 내사업 요약, 담당자 일괄 변경 | 인증/admin(삭제·복구·일괄변경) |
+| transaction_lines | `/api/v1/.../transaction-lines` | 매출/매입 실적 CRUD, 일괄 확정 | 인증/admin(삭제) |
+| receipts | `/api/v1/.../receipts` | 입금 CRUD | 인증/admin(삭제) |
+| receipt_matches | `/api/v1/.../receipt-matches` | 입금 배분 CRUD, FIFO 자동 재배분 | 인증 |
+| forecasts | `/api/v1/.../forecasts` | Forecast 조회/upsert, Forecast→실적 동기화 | 인증 |
+| customers | `/api/v1/customers` | 거래처 CRUD, 담당자, 사업현황, 매출·매입·입금 조회 | 인증/admin(삭제) |
+| contract_contacts | `/api/v1/.../contacts` | 사업별/Period별 담당자, 거래처별 담당자 피벗 | 인증 |
+| users | `/api/v1/users` | 사용자 CRUD, 비밀번호 초기화, CSV 임포트 | admin |
+| excel | `/api/v1/excel` | 템플릿 다운로드, 검증, 3단계 Import | admin |
+| dashboard | `/api/v1/dashboard` | 대시보드 요약, 목표 vs 실적 | 인증 |
+| reports | `/api/v1/reports` | 요약/Forecast vs Actual/미수/매입매출관리 + Excel Export | 인증 |
+| settings | `/api/v1/settings`, `/api/v1/preferences` | 시스템 설정, 사용자 설정 | 인증 |
+| contract_types | `/api/v1/contract-types` | 사업유형 CRUD | 인증/admin(CUD) |
+| term_configs | `/api/v1/term-configs` | 용어 설정 CRUD, 라벨 조회, 초기화 | 인증/admin(CUD) |
 
 ---
 

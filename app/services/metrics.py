@@ -569,57 +569,130 @@ def aggregate_by_field(
     current_user: User | None,
     field: str,
 ) -> list[dict]:
-    """contract_type 또는 department별 집계.
+    """contract_type 또는 department별 집계 (SQL aggregate).
 
     field: "contract_type" | "department"
     반환: [{label, contract_count, forecast_revenue, actual_revenue, gp, gp_pct}]
     """
-    periods = load_filtered_periods(db, filt, current_user, with_owner=True)
-    if not periods:
+    from app.models.user import User as UserModel
+    from sqlalchemy.orm import aliased
+
+    # ── group_col 결정 및 scope 서브쿼리 생성 ──
+    PeriodOwner = aliased(UserModel)
+    ContractOwner = aliased(UserModel)
+
+    if field == "contract_type":
+        group_col = func.coalesce(Contract.contract_type, "(미지정)").label("group_label")
+    elif field == "department":
+        group_col = func.coalesce(
+            PeriodOwner.department, ContractOwner.department, "(미지정)"
+        ).label("group_label")
+    else:
+        group_col = func.coalesce(Contract.contract_type, "(미지정)").label("group_label")
+
+    q = (
+        db.query(
+            ContractPeriod.id.label("period_id"),
+            ContractPeriod.contract_id.label("contract_id"),
+            group_col,
+        )
+        .join(ContractPeriod.contract)
+        .outerjoin(PeriodOwner, PeriodOwner.id == ContractPeriod.owner_user_id)
+        .outerjoin(ContractOwner, ContractOwner.id == Contract.owner_user_id)
+        .filter(Contract.status != "cancelled")
+    )
+    q, _ = apply_common_filters(q, filt, current_user)
+    scope = q.subquery()
+
+    # ── contract count per group ──
+    contract_scope = (
+        db.query(
+            scope.c.contract_id,
+            scope.c.group_label,
+        )
+        .distinct()
+        .subquery()
+    )
+
+    count_rows = (
+        db.query(
+            contract_scope.c.group_label,
+            func.count(contract_scope.c.contract_id),
+        )
+        .group_by(contract_scope.c.group_label)
+        .all()
+    )
+    if not count_rows:
         return []
 
-    contract_ids = list({p.contract_id for p in periods})
-    period_ids = [p.id for p in periods]
-
-    fc_map = load_forecasts(db, period_ids, filt.date_from, filt.date_to)
-    act_map = load_actuals(db, contract_ids, filt.date_from, filt.date_to)
-
-    # group periods by field
     groups: dict[str, dict] = {}
-    seen_contracts: dict[str, set[int]] = {}
+    for label, cnt in count_rows:
+        groups[label] = {
+            "label": label,
+            "contract_count": int(cnt or 0),
+            "forecast_revenue": 0,
+            "actual_revenue": 0,
+            "cost": 0,
+        }
 
-    for p in periods:
-        contract = p.contract
-        if field == "contract_type":
-            key = contract.contract_type or "(미지정)"
-        elif field == "department":
-            owner = p.owner or contract.owner
-            key = (owner.department if owner else None) or "(미지정)"
-        else:
-            key = "(미지정)"
+    # ── forecast aggregate by group ──
+    fc_rows = (
+        db.query(
+            scope.c.group_label,
+            func.coalesce(func.sum(MonthlyForecast.revenue_amount), 0),
+        )
+        .join(scope, MonthlyForecast.contract_period_id == scope.c.period_id)
+        .filter(
+            MonthlyForecast.is_current.is_(True),
+            MonthlyForecast.forecast_month >= filt.date_from,
+            MonthlyForecast.forecast_month <= filt.date_to,
+        )
+        .group_by(scope.c.group_label)
+        .all()
+    )
+    for label, fc_rev in fc_rows:
+        if label in groups:
+            groups[label]["forecast_revenue"] = int(fc_rev or 0)
 
-        if key not in groups:
-            groups[key] = {"label": key, "contract_count": 0, "forecast_revenue": 0, "actual_revenue": 0, "cost": 0, "gp": 0}
-            seen_contracts[key] = set()
+    # ── actuals aggregate by group ──
+    act_rows = (
+        db.query(
+            contract_scope.c.group_label,
+            func.coalesce(func.sum(case(
+                (TransactionLine.line_type == "revenue", TransactionLine.supply_amount),
+                else_=0,
+            )), 0),
+            func.coalesce(func.sum(case(
+                (TransactionLine.line_type == "cost", TransactionLine.supply_amount),
+                else_=0,
+            )), 0),
+        )
+        .join(TransactionLine, TransactionLine.contract_id == contract_scope.c.contract_id)
+        .filter(
+            TransactionLine.status == STATUS_CONFIRMED,
+            TransactionLine.revenue_month >= filt.date_from,
+            TransactionLine.revenue_month <= filt.date_to,
+        )
+        .group_by(contract_scope.c.group_label)
+        .all()
+    )
+    for label, act_rev, cost in act_rows:
+        if label in groups:
+            groups[label]["actual_revenue"] = int(act_rev or 0)
+            groups[label]["cost"] = int(cost or 0)
 
-        # forecast (period 단위)
-        fc_months = fc_map.get(p.id, {})
-        groups[key]["forecast_revenue"] += sum(v["revenue"] for v in fc_months.values())
-
-        # actual/cost (contract 단위, 중복 방지)
-        if contract.id not in seen_contracts[key]:
-            seen_contracts[key].add(contract.id)
-            groups[key]["contract_count"] += 1
-            ac_months = act_map.get(contract.id, {})
-            groups[key]["actual_revenue"] += sum(v["revenue"] for v in ac_months.values())
-            groups[key]["cost"] += sum(v["cost"] for v in ac_months.values())
-
+    # ── 결과 조립 ──
     result = []
     for g in groups.values():
-        g["gp"] = g["actual_revenue"] - g["cost"]
-        g["gp_pct"] = safe_pct(g["gp"], g["actual_revenue"])
-        del g["cost"]
-        result.append(g)
+        gp = g["actual_revenue"] - g["cost"]
+        result.append({
+            "label": g["label"],
+            "contract_count": g["contract_count"],
+            "forecast_revenue": g["forecast_revenue"],
+            "actual_revenue": g["actual_revenue"],
+            "gp": gp,
+            "gp_pct": safe_pct(gp, g["actual_revenue"]),
+        })
 
     result.sort(key=lambda r: r["actual_revenue"], reverse=True)
     return result

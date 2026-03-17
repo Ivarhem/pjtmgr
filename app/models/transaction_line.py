@@ -15,7 +15,7 @@ class TransactionLine(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), nullable=False, index=True)
     revenue_month: Mapped[str] = mapped_column(String(10), nullable=False, index=True)   # YYYY-MM-01 (귀속월)
-    line_type: Mapped[str] = mapped_column(String(20), nullable=False)       # sales / cost
+    line_type: Mapped[str] = mapped_column(String(20), nullable=False)       # revenue / cost
     customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))  # 매출처/매입처
     supply_amount: Mapped[int] = mapped_column(Integer, nullable=False)      # 공급가액 (원, VAT별도)
     invoice_issue_date: Mapped[str | None] = mapped_column(String(10))      # 세금계산서 발행일 YYYY-MM-DD

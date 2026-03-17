@@ -1,11 +1,27 @@
 import csv
 import io
+import logging
+
 from sqlalchemy.orm import Session
+
+from app.config import PASSWORD_MIN_LENGTH
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.auth.constants import ROLE_ADMIN, ROLE_USER
 from app.auth.password import hash_password
 from app.exceptions import NotFoundError, BusinessRuleError
+
+logger = logging.getLogger(__name__)
+
+
+def _warn_short_initial_password(login_id: str) -> None:
+    """초기 비밀번호(login_id)가 최소 길이 미만이면 경고 로그 기록."""
+    if login_id and len(login_id) < PASSWORD_MIN_LENGTH:
+        logger.warning(
+            "사용자 '%s'의 초기 비밀번호(login_id)가 최소 길이(%d)보다 짧습니다.",
+            login_id,
+            PASSWORD_MIN_LENGTH,
+        )
 
 
 def list_users(db: Session) -> list[User]:
@@ -22,6 +38,7 @@ def create_user(db: Session, data: UserCreate) -> User:
     if obj.login_id:
         obj.hashed_password = hash_password(obj.login_id)
         obj.must_change_password = True
+        _warn_short_initial_password(obj.login_id)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -44,6 +61,11 @@ def ensure_bootstrap_admin(
         return None
     if not login_id or not password:
         return None
+
+    if len(password) < PASSWORD_MIN_LENGTH:
+        raise BusinessRuleError(
+            f"BOOTSTRAP_ADMIN_PASSWORD는 {PASSWORD_MIN_LENGTH}자 이상이어야 합니다."
+        )
 
     existing = db.query(User).filter(User.login_id == login_id).first()
     if existing:
@@ -116,6 +138,7 @@ def reset_password(db: Session, user_id: int) -> None:
         raise NotFoundError("사용자를 찾을 수 없습니다.")
     if not obj.login_id:
         raise BusinessRuleError("로그인 ID가 설정되지 않은 사용자는 비밀번호를 초기화할 수 없습니다.")
+    _warn_short_initial_password(obj.login_id)
     obj.hashed_password = hash_password(obj.login_id)
     obj.must_change_password = True
     db.commit()
@@ -186,6 +209,7 @@ def import_contacts_csv(db: Session, file_bytes: bytes) -> dict:
         if login_id:
             user.hashed_password = hash_password(login_id)
             user.must_change_password = True
+            _warn_short_initial_password(login_id)
         db.add(user)
         if login_id:
             existing_users[login_id] = user

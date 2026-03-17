@@ -15,6 +15,7 @@ from app.models.user_preference import UserPreference
 from app.models.audit_log import AuditLog
 from app.models.contract_type_config import ContractTypeConfig
 from app.models.term_config import TermConfig
+from app.models.login_failure import LoginFailure
 
 __all__ = [
     "TimestampMixin",
@@ -34,4 +35,5 @@ __all__ = [
     "AuditLog",
     "ContractTypeConfig",
     "TermConfig",
+    "LoginFailure",
 ]
