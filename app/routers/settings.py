@@ -23,10 +23,7 @@ def update_settings(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_admin),
 ) -> SettingRead:
-    if data.org_name is not None:
-        svc.update_setting(db, "org_name", data.org_name or None)
-    if data.password_min_length is not None:
-        svc.update_setting(db, "auth.password_min_length", str(data.password_min_length))
+    svc.update_settings(db, data)
     return SettingRead(
         org_name=svc.get_setting(db, "org_name"),
         password_min_length=svc.get_password_min_length(db),

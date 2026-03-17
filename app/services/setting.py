@@ -9,11 +9,27 @@ def get_setting(db: Session, key: str) -> str | None:
 
 
 def update_setting(db: Session, key: str, value: str | None) -> None:
+    _set_setting_value(db, key, value)
+    db.commit()
+
+
+def _set_setting_value(db: Session, key: str, value: str | None) -> None:
     row = db.get(Setting, key)
     if row:
         row.value = value
     else:
         db.add(Setting(key=key, value=value))
+
+
+def update_settings(db: Session, data: "SettingUpdate") -> None:
+    """SettingUpdate 스키마 기반 일괄 설정 업데이트."""
+    from app.schemas.setting import SettingUpdate  # noqa: F811
+
+    updates = data.model_dump(exclude_unset=True)
+    if "org_name" in updates:
+        _set_setting_value(db, "org_name", updates["org_name"] or None)
+    if "password_min_length" in updates:
+        _set_setting_value(db, "auth.password_min_length", str(updates["password_min_length"]))
     db.commit()
 
 

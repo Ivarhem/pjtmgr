@@ -7,11 +7,14 @@ from app.models.contract_type_config import ContractTypeConfig
 from app.models.customer import Customer
 from app.models.receipt import Receipt
 from app.models.receipt_match import ReceiptMatch
+from app.models.setting import Setting
 from app.models.transaction_line import TransactionLine
 from app.models.user import User
 from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
+from app.schemas.setting import SettingUpdate
 from app.services import receipt as receipt_service
 from app.services import receipt_match as match_service
+from app.services import setting as setting_service
 from app.services import transaction_line as tl_service
 
 
@@ -224,3 +227,36 @@ def test_delete_transaction_line_blocked_by_existing_match(db_session) -> None:
 
     # 삭제되지 않았는지 확인
     assert db_session.query(TransactionLine).filter(TransactionLine.id == line.id).count() == 1
+
+
+def test_update_settings_rolls_back_batch_on_failure(db_session, monkeypatch) -> None:
+    db_session.add_all(
+        [
+            Setting(key="org_name", value="기존 조직"),
+            Setting(key="auth.password_min_length", value="10"),
+        ]
+    )
+    db_session.commit()
+
+    original_set_setting_value = setting_service._set_setting_value
+    call_count = 0
+
+    def _fail_on_second_set(db, key, value):
+        nonlocal call_count
+        call_count += 1
+        if call_count >= 2:
+            raise RuntimeError("두 번째 설정 저장 실패")
+        return original_set_setting_value(db, key, value)
+
+    monkeypatch.setattr(setting_service, "_set_setting_value", _fail_on_second_set)
+
+    with pytest.raises(RuntimeError):
+        setting_service.update_settings(
+            db_session,
+            SettingUpdate(org_name="새 조직", password_min_length=12),
+        )
+
+    db_session.rollback()
+    db_session.expire_all()
+    assert db_session.get(Setting, "org_name").value == "기존 조직"
+    assert db_session.get(Setting, "auth.password_min_length").value == "10"
