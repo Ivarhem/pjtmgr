@@ -139,6 +139,7 @@
 
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
 - 기본 회귀 테스트는 metrics/contract/importer/dashboard/receipt_match/report/auth/database/startup/transaction safety 범위를 포함한다. 세부 파일 목록은 `tests/`가 1차 기준이다.
+- CRUD/설정 변경 회귀에는 삭제 경로, 다중 필드 업데이트, 부분 실패 시 롤백 같은 원자성 시나리오를 포함한다.
 - 완료된 귀속기간 보호, FIFO 배분 격리, ReceiptMatch 권한, 대시보드 집계(`is_planned`, `실주`, 목표 vs 실적, 월/분기/반기/연 재집계), 보고서/Excel Export의 미수금·합계 행 규칙은 위 테스트군으로 회귀를 보호한다.
 - DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다.
   - 새 테이블/컬럼 추가 시: `alembic revision --autogenerate -m "설명"` → `upgrade()`에 `inspector` 존재 여부 체크 권장

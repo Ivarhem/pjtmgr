@@ -122,26 +122,6 @@ curl http://localhost:8000/api/v1/health
 
 ---
 
-## 프로젝트 구조
-
-```text
-sales/
-├── app/
-│   ├── auth/           # 인증·인가 (세션, 권한 체크, 비밀번호)
-│   ├── models/         # SQLAlchemy ORM 모델
-│   ├── schemas/        # Pydantic 입출력 스키마
-│   ├── routers/        # FastAPI 라우터 (API 엔드포인트)
-│   ├── services/       # 비즈니스 로직 (도메인별 분리, _ 접두사 헬퍼)
-│   ├── startup/        # 앱 초기화 (DB, bootstrap, lifespan)
-│   ├── static/         # JS, CSS, 이미지
-│   └── templates/      # Jinja2 HTML 템플릿
-├── tests/              # pytest 테스트
-├── alembic/            # DB 마이그레이션
-└── docs/               # 지침, 결정 기록, 이슈
-```
-
-> 파일 단위 상세 구조와 모듈별 역할은 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) 참조.
-
 ## 문서 구조
 
 - `README.md`: 프로젝트 소개, 실행 방법, 현재 상태
@@ -151,23 +131,8 @@ sales/
 - `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 제약과 우회
 - `docs/PROJECT_CONTEXT.md`: 프로젝트 배경, 사용자, 문제 정의
 - `docs/PROJECT_STRUCTURE.md`: 파일 단위 프로젝트 구조와 모듈별 역할
-- `app/startup/`: startup/bootstrap/migration 초기화 흐름
-- `app/routers/`: API 엔드포인트의 1차 기준
-- `app/models/`: 데이터 모델의 1차 기준
-- `tests/`: 회귀 범위와 검증 기준의 1차 기준
-
----
-
-## 핵심 데이터 개요
-
-- `Contract`: 사업 원장 단위
-- `ContractPeriod`: 사업의 연도별 기간 버전
-- `MonthlyForecast`: 기간별 월 예상 매출/GP
-- `TransactionLine`: 월별 매출/매입 실적
-- `Receipt`: 입금 내역
-- `ReceiptMatch`: 입금과 매출 실적의 배분 관계
-- `Customer`, `CustomerContact`, `ContractContact`: 거래처와 담당자 구조
-- 상세 필드와 관계의 1차 기준은 `app/models/` 소스 코드다.
+- 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델, 테스트 범위의 1차 기준은 소스 코드다 (`app/startup/`, `app/routers/`, `app/models/`, `tests/`)
+- 파일 단위 상세 구조와 모듈별 역할은 [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) 참조
 
 ---
 
@@ -193,15 +158,3 @@ sales/
 - 발행일 휴일 조정 미적용
 - 대량 데이터(1000행 이상) Excel Import 성능 미검증
 - SQLite 단일 파일 — WAL 모드 적용, 동시 쓰기는 단일 워커로 제한
-
----
-
-## 인터페이스 개요
-
-- 인증: 로그인, 로그아웃, 현재 사용자, 비밀번호 변경
-- 사업 관리: 사업/기간 CRUD, 원장 조회, 내 사업 요약
-- 거래처 관리: 거래처/담당자 CRUD 및 관련 조회
-- Forecast/실적/입금/배분: 월별 입력과 집계
-- 대시보드/보고서: KPI, 목표 대비 실적, 미수 현황, Excel Export
-- 시스템 관리: 사용자, 설정, 사업유형, 용어 설정
-- 세부 엔드포인트와 권한의 1차 기준은 `app/routers/`와 `docs/guidelines/auth.md`다.

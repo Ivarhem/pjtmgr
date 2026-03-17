@@ -17,6 +17,7 @@
 - 기능(Action) 권한: `app/auth/authorization.py`의 `can_*()` 함수 사용
   - 예: `can_delete_contract(user)`, `can_manage_users(user)`, `can_import(user)`
 - 데이터 가시 범위: `apply_contract_scope(query, user)` — admin은 전체, user는 본인 담당만
+- 인증/권한 dependency(`require_admin` 등)도 가능하면 `authorization.py` helper 또는 역할 helper를 통해 판단하고, dependency 내부에 직접 role 비교 로직을 중복하지 않는다.
 - 서비스 레이어에서도 `current_user.role` 직접 비교 대신 `authorization.py`의 helper(`can_*`, `has_full_contract_scope`, `apply_contract_scope`, `list_accessible_contract_ids`)를 우선 사용한다.
 - `PATCH /.../{id}`, `DELETE /.../{id}`처럼 상위 계약 ID가 path에 없는 단건 엔드포인트는 서비스에서 대상 리소스가 속한 계약을 역추적한 뒤 scope helper 또는 `check_contract_access()`로 권한을 확인한다.
 - 라우터 수준 보호: `dependencies=[Depends(require_admin)]` (users 라우터 등)
