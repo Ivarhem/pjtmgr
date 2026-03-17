@@ -1,17 +1,21 @@
 import pytest
 
-from app.exceptions import BusinessRuleError
+from app.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
 from app.models.contract import Contract
 from app.models.contract_period import ContractPeriod
 from app.models.contract_type_config import ContractTypeConfig
 from app.models.customer import Customer
+from app.models.monthly_forecast import MonthlyForecast
 from app.models.receipt import Receipt
 from app.models.receipt_match import ReceiptMatch
 from app.models.setting import Setting
 from app.models.transaction_line import TransactionLine
 from app.models.user import User
+from app.schemas.monthly_forecast import MonthlyForecastCreate
 from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
 from app.schemas.setting import SettingUpdate
+from app.services import forecast_sync as forecast_sync_service
+from app.services import monthly_forecast as forecast_service
 from app.services import receipt as receipt_service
 from app.services import receipt_match as match_service
 from app.services import setting as setting_service
@@ -53,6 +57,58 @@ def _seed_contract_for_receipt(db_session) -> tuple[User, Customer, Contract]:
     )
     db_session.commit()
     return owner, customer, contract
+
+
+def _seed_forecast_contract_for_access(
+    db_session,
+) -> tuple[User, User, Contract, ContractPeriod]:
+    owner = User(name="예측소유자", login_id="forecast-owner", role="user")
+    outsider = User(name="외부사용자", login_id="forecast-outsider", role="user")
+    customer = Customer(name="예측거래처")
+    db_session.add_all(
+        [
+            owner,
+            outsider,
+            customer,
+            ContractTypeConfig(code="MA", label="MA", sort_order=1, is_active=True),
+        ]
+    )
+    db_session.flush()
+
+    contract = Contract(
+        contract_name="Forecast 접근 테스트",
+        contract_type="MA",
+        contract_code="MA-2026-0099",
+        owner_user_id=owner.id,
+        end_customer_id=customer.id,
+        status="active",
+    )
+    db_session.add(contract)
+    db_session.flush()
+
+    period = ContractPeriod(
+        contract_id=contract.id,
+        period_year=2026,
+        period_label="Y26",
+        stage="70%",
+        start_month="2026-01-01",
+        end_month="2026-12-01",
+        is_completed=False,
+    )
+    db_session.add(period)
+    db_session.flush()
+
+    db_session.add(
+        MonthlyForecast(
+            contract_period_id=period.id,
+            forecast_month="2026-01-01",
+            revenue_amount=1000,
+            gp_amount=200,
+            is_current=True,
+        )
+    )
+    db_session.commit()
+    return owner, outsider, contract, period
 
 
 def _seed_receipt_and_line(
@@ -260,3 +316,69 @@ def test_update_settings_rolls_back_batch_on_failure(db_session, monkeypatch) ->
     db_session.expire_all()
     assert db_session.get(Setting, "org_name").value == "기존 조직"
     assert db_session.get(Setting, "auth.password_min_length").value == "10"
+
+
+def test_delete_receipt_requires_delete_permission_in_service(db_session) -> None:
+    owner, customer, contract = _seed_contract_for_receipt(db_session)
+    receipt = Receipt(
+        contract_id=contract.id,
+        customer_id=customer.id,
+        receipt_date="2026-01-15",
+        revenue_month="2026-01-01",
+        amount=100,
+        created_by=owner.id,
+    )
+    db_session.add(receipt)
+    db_session.commit()
+
+    with pytest.raises(PermissionDeniedError):
+        receipt_service.delete_receipt(db_session, receipt.id, current_user=owner)
+
+
+def test_delete_transaction_line_requires_delete_permission_in_service(db_session) -> None:
+    owner, customer, contract = _seed_contract_for_receipt(db_session)
+    line = TransactionLine(
+        contract_id=contract.id,
+        revenue_month="2026-01-01",
+        line_type="revenue",
+        customer_id=customer.id,
+        supply_amount=100,
+        status="확정",
+        created_by=owner.id,
+    )
+    db_session.add(line)
+    db_session.commit()
+
+    with pytest.raises(PermissionDeniedError):
+        tl_service.delete_transaction_line(db_session, line.id, current_user=owner)
+
+
+def test_forecast_services_enforce_access_in_service_layer(db_session) -> None:
+    _owner, outsider, contract, period = _seed_forecast_contract_for_access(db_session)
+
+    with pytest.raises(NotFoundError):
+        forecast_service.get_forecasts(db_session, period.id, current_user=outsider)
+
+    with pytest.raises(NotFoundError):
+        forecast_service.list_all_forecasts(
+            db_session, contract.id, current_user=outsider
+        )
+
+    with pytest.raises(NotFoundError):
+        forecast_service.upsert_forecasts(
+            db_session,
+            period.id,
+            [MonthlyForecastCreate(forecast_month="2026-01-01", revenue_amount=1500, gp_amount=300)],
+            created_by=outsider.id,
+            current_user=outsider,
+        )
+
+    with pytest.raises(NotFoundError):
+        forecast_sync_service.preview_forecast_sync(
+            db_session, contract.id, current_user=outsider
+        )
+
+    with pytest.raises(NotFoundError):
+        forecast_sync_service.sync_transaction_lines_from_forecast(
+            db_session, contract.id, [], current_user=outsider
+        )

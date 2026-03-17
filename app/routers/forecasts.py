@@ -2,7 +2,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access, check_period_access
 from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.models.user import User
@@ -24,8 +23,7 @@ def get_forecasts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[MonthlyForecastRead]:
-    check_period_access(db, period_id, current_user)
-    return svc.get_forecasts(db, period_id)
+    return svc.get_forecasts(db, period_id, current_user=current_user)
 
 
 @router.get("/contracts/{contract_id}/all-forecasts")
@@ -34,8 +32,7 @@ def list_all_forecasts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    check_contract_access(db, contract_id, current_user)
-    return svc.list_all_forecasts(db, contract_id)
+    return svc.list_all_forecasts(db, contract_id, current_user=current_user)
 
 
 @router.patch(
@@ -48,8 +45,13 @@ def upsert_forecasts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[MonthlyForecastRead]:
-    check_period_access(db, period_id, current_user)
-    return svc.upsert_forecasts(db, period_id, items, created_by=current_user.id)
+    return svc.upsert_forecasts(
+        db,
+        period_id,
+        items,
+        created_by=current_user.id,
+        current_user=current_user,
+    )
 
 
 # ── Forecast → TransactionLine 동기화 ──────────────────────────
@@ -59,10 +61,9 @@ def preview_forecast_sync(
     contract_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[dict]:
+) -> dict:
     """Forecast ↔ TransactionLine 대조 미리보기 (전체 period)."""
-    check_contract_access(db, contract_id, current_user)
-    return sync_svc.preview_forecast_sync(db, contract_id)
+    return sync_svc.preview_forecast_sync(db, contract_id, current_user=current_user)
 
 
 @router.post("/contracts/{contract_id}/forecast-sync", status_code=200)
@@ -73,6 +74,10 @@ def sync_transaction_lines_from_forecast(
     current_user: User = Depends(get_current_user),
 ) -> dict:
     """Forecast 기반 TransactionLine 동기화 (전체 period): 생성 + 선택 삭제."""
-    check_contract_access(db, contract_id, current_user)
     delete_ids = (body or {}).get("delete_ids", [])
-    return sync_svc.sync_transaction_lines_from_forecast(db, contract_id, delete_ids)
+    return sync_svc.sync_transaction_lines_from_forecast(
+        db,
+        contract_id,
+        delete_ids,
+        current_user=current_user,
+    )

@@ -31,6 +31,7 @@
 - 중첩 리소스는 `/{부모}/{id}/{자식}` 패턴 사용
 - CRUD는 GET/POST/PATCH/DELETE를 사용하고 PUT은 사용하지 않는다
 - 비-CRUD 동작은 `POST /{리소스}/{id}/{동작}` 패턴을 사용한다
+- 라우터는 `current_user`와 입력값을 service에 전달하고, access helper 호출과 권한 최종 판단은 service가 소유한다.
 
 ## 도메인 용어 통일
 

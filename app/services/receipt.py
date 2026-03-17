@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import check_contract_access
-from app.exceptions import BusinessRuleError, NotFoundError
+from app.auth.authorization import can_delete_receipt, check_contract_access
+from app.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
 from app.models.contract import Contract
 from app.models.receipt import Receipt
 from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
@@ -130,11 +130,17 @@ def update_receipt(
         raise
 
 
-def delete_receipt(db: Session, receipt_id: int) -> None:
+def delete_receipt(
+    db: Session, receipt_id: int, *, current_user: User | None = None
+) -> None:
     try:
         row = db.get(Receipt, receipt_id)
         if not row:
             raise NotFoundError("입금 정보를 찾을 수 없습니다.")
+        if current_user:
+            if not can_delete_receipt(current_user):
+                raise PermissionDeniedError("입금 삭제 권한이 없습니다.")
+            check_contract_access(db, row.contract_id, current_user)
         check_period_not_completed(db, row.contract_id, row.revenue_month)
         db.delete(row)
         db.commit()

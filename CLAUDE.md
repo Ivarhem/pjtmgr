@@ -68,6 +68,7 @@
   - 라우터에서 `if not obj: raise HTTPException(...)`, `db.get()`, `db.query()`, `_to_read()` 같은 패턴을 직접 두지 않는다.
   - 서비스에서 커스텀 예외를 발생시키고, 전역 핸들러(`app/app_factory.py`)가 HTTP 응답으로 자동 변환한다.
   - 계약/기간 단위 조회·생성·수정·삭제의 접근 권한 검사는 서비스가 최종 책임진다. 라우터는 `current_user`와 입력값만 전달한다.
+  - 서비스는 데이터 scope 권한과 기능 action 권한(예: 삭제 가능 여부)을 모두 최종 검증한다.
   - 단건 수정/삭제처럼 path에 상위 계약 ID가 없는 엔드포인트도 서비스에서 대상 리소스의 계약/소유 범위를 역추적해 권한을 확인한다.
 - SQL 작성 시 f-string으로 테이블명/컬럼명을 삽입하지 않는다. SQLAlchemy ORM 또는 Core 표현식(`tbl.select()`, `tbl.insert()`)을 사용한다.
 - 환경변수는 `.env` 파일로 관리하고, 코드에 하드코딩하지 않는다.
@@ -140,6 +141,7 @@
 - GP/GP%/미수금 계산, CRUD 플로우, Excel Import: 단위/통합 테스트 필수. 프레임워크: `pytest`.
 - 기본 회귀 테스트는 metrics/contract/importer/dashboard/receipt_match/report/auth/database/startup/transaction safety 범위를 포함한다. 세부 파일 목록은 `tests/`가 1차 기준이다.
 - CRUD/설정 변경 회귀에는 삭제 경로, 다중 필드 업데이트, 부분 실패 시 롤백 같은 원자성 시나리오를 포함한다.
+- 권한 회귀 테스트는 router 응답뿐 아니라 service 직접 호출 경로의 action 권한과 scope 차단도 포함한다.
 - 완료된 귀속기간 보호, FIFO 배분 격리, ReceiptMatch 권한, 대시보드 집계(`is_planned`, `실주`, 목표 vs 실적, 월/분기/반기/연 재집계), 보고서/Excel Export의 미수금·합계 행 규칙은 위 테스트군으로 회귀를 보호한다.
 - DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다.
   - 새 테이블/컬럼 추가 시: `alembic revision --autogenerate -m "설명"` → `upgrade()`에 `inspector` 존재 여부 체크 권장

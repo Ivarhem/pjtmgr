@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import check_contract_access
-from app.exceptions import BusinessRuleError, NotFoundError
+from app.auth.authorization import can_delete_transaction_line, check_contract_access
+from app.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
 from app.models.contract import Contract
 from app.models.transaction_line import (
     STATUS_CONFIRMED,
@@ -152,11 +152,17 @@ def update_transaction_line(
         raise
 
 
-def delete_transaction_line(db: Session, transaction_line_id: int) -> None:
+def delete_transaction_line(
+    db: Session, transaction_line_id: int, *, current_user: User | None = None
+) -> None:
     try:
         row = db.get(TransactionLine, transaction_line_id)
         if not row:
             raise NotFoundError("실적을 찾을 수 없습니다.")
+        if current_user:
+            if not can_delete_transaction_line(current_user):
+                raise PermissionDeniedError("실적 삭제 권한이 없습니다.")
+            check_contract_access(db, row.contract_id, current_user)
         check_period_not_completed(db, row.contract_id, row.revenue_month)
         from app.models.receipt_match import ReceiptMatch
         from sqlalchemy import func as sa_func

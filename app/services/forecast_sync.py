@@ -6,10 +6,12 @@ import datetime
 
 from sqlalchemy.orm import Session
 
+from app.auth.authorization import check_contract_access
 from app.models.contract import Contract
 from app.models.contract_period import ContractPeriod
 from app.models.monthly_forecast import MonthlyForecast
 from app.models.transaction_line import STATUS_EXPECTED, TransactionLine
+from app.models.user import User
 from app.services.transaction_line import _transaction_line_dict
 
 
@@ -80,8 +82,15 @@ def _all_forecast_months(db: Session, contract_id: int) -> dict[str, dict]:
     return result
 
 
-def preview_forecast_sync(db: Session, contract_id: int) -> dict:
+def preview_forecast_sync(
+    db: Session,
+    contract_id: int,
+    *,
+    current_user: User | None = None,
+) -> dict:
     """Forecast ↔ TransactionLine 대조 미리보기 (전체 period 기준, DB 변경 없음)."""
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
     forecast_months = _all_forecast_months(db, contract_id)
 
     transaction_lines = (
@@ -118,9 +127,15 @@ def preview_forecast_sync(db: Session, contract_id: int) -> dict:
 
 
 def sync_transaction_lines_from_forecast(
-    db: Session, contract_id: int, delete_ids: list[int]
+    db: Session,
+    contract_id: int,
+    delete_ids: list[int],
+    *,
+    current_user: User | None = None,
 ) -> dict:
     """Forecast 기반 TransactionLine 동기화 (전체 period): 생성 + 선택된 행 삭제."""
+    if current_user:
+        check_contract_access(db, contract_id, current_user)
     contract = db.get(Contract, contract_id)
     if not contract:
         return {"created": 0, "deleted": 0}
