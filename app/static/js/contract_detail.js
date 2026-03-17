@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.addEventListener('blur', () => { if (el.value) el.value = _normalizeDate(el.value); });
   });
   initEndCustomerPicker();
+  await populateContractTypeSelect('add-contract-type');
   // 공용 Contract 모달 (사업정보 수정)
   const btnCancel = document.getElementById('btn-cancel');
   const btnSubmit = document.getElementById('btn-submit');
@@ -1288,7 +1289,12 @@ async function applyEditExpected() {
     initForecastGrid(forecastItems);
 
     // 3. 즉시 저장
-    await saveForecast();
+    try {
+      await saveForecast();
+    } catch {
+      // saveForecast에서 이미 에러 토스트 표시, 여기서는 중단만
+      return;
+    }
 
     // 4. allPeriods 갱신
     cachedAllForecasts = null;
@@ -1453,7 +1459,7 @@ function initLedgerGrid(ledgerRows) {
   ledgerApi = agGrid.createGrid(el, {
     columnDefs: _wrapEditableWithCompleted(colDefs),
     rowData: ledgerRows,
-    defaultColDef: { resizable: true, sortable: false },
+    defaultColDef: { resizable: true, sortable: true },
     tooltipShowDelay: 300,
     enableCellTextSelection: true,
     ensureDomOrder: true,
@@ -1565,7 +1571,12 @@ async function deleteSelectedLedgerRows() {
 async function saveForecast() {
   const btn = document.querySelector('.btn-save-forecast');
   btn.disabled = true; btn.textContent = '저장 중...';
-  try { await _doSaveForecast(); } finally { btn.disabled = false; _updateDirtyIndicators(); }
+  try {
+    await _doSaveForecast();
+  } catch (e) {
+    showToast(e.message || 'Forecast 저장에 실패했습니다.', 'error');
+    throw e;
+  } finally { btn.disabled = false; _updateDirtyIndicators(); }
 }
 async function _doSaveForecast() {
   const months = _getPeriodMonths();
@@ -1584,8 +1595,8 @@ async function _doSaveForecast() {
     body: JSON.stringify(items),
   });
   if (!res.ok) {
-    alert('Forecast 저장에 실패했습니다.');
-    return;
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Forecast 저장에 실패했습니다.');
   }
   // 저장 성공 후 forecast 합계 갱신 & GP 요약 반영
   cachedAllForecasts = null;  // 멀티뷰 캐시 무효화
@@ -2683,7 +2694,7 @@ function initReceiptGrid(receipts) {
   receiptApi = agGrid.createGrid(el, {
     columnDefs: _wrapEditableWithCompleted(colDefs),
     rowData: receipts,
-    defaultColDef: { resizable: true, sortable: false },
+    defaultColDef: { resizable: true, sortable: true },
     tooltipShowDelay: 300,
     enableCellTextSelection: true,
     ensureDomOrder: true,

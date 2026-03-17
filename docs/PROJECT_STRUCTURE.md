@@ -79,6 +79,7 @@ app/schemas/
 
 ```text
 app/routers/
+├── health.py                # /api/v1/health — 헬스체크 (인증 불요)
 ├── pages.py                 # HTML 페이지 렌더링 (Jinja2)
 ├── contracts.py             # /api/v1/contracts — 사업 CRUD, Period 관리
 ├── customers.py             # /api/v1/customers — 거래처 CRUD, 관련 조회
@@ -214,6 +215,10 @@ alembic/
 ├── alembic.ini              # Alembic 설정
 ├── requirements.txt         # Python 의존성
 ├── .env                     # 환경변수 (git 미추적)
+├── .env.example             # 환경변수 템플릿 (배포 시 참조)
+├── Dockerfile               # 컨테이너 이미지 빌드
+├── docker-compose.yml       # 컨테이너 실행 구성
+├── .dockerignore            # Docker 빌드 제외 파일
 ├── CLAUDE.md                # 상위 개발 지침
 └── README.md                # 프로젝트 소개
 ```
