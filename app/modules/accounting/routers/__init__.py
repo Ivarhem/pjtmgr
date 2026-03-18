@@ -1,6 +1,7 @@
 """Accounting module aggregated router package."""
 from fastapi import APIRouter
 
+from app.core.auth.dependencies import require_module_access
 from app.modules.accounting.routers.contracts import router as contracts_router
 from app.modules.accounting.routers.contract_contacts import router as contract_contacts_router
 from app.modules.accounting.routers.contract_types import router as contract_types_router
@@ -13,7 +14,7 @@ from app.modules.accounting.routers.reports import router as reports_router
 from app.modules.accounting.routers.transaction_lines import router as transaction_lines_router
 from app.modules.accounting.routers.pages import router as pages_router
 
-api_router = APIRouter()
+api_router = APIRouter(dependencies=[require_module_access("accounting", "read")])
 api_router.include_router(dashboard_router)
 api_router.include_router(contracts_router)
 api_router.include_router(contract_contacts_router)

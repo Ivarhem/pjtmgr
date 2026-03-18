@@ -13,7 +13,7 @@ from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_period import ContractPeriod
 from app.modules.accounting.models.monthly_forecast import MonthlyForecast
 from app.modules.accounting.models.transaction_line import TransactionLine
-from app.core.auth.constants import ROLE_USER
+from app.modules.common.services.user import get_default_role_id
 from app.modules.common.services.customer import get_or_create_by_name as _get_or_create_customer_svc
 from app.core.exceptions import BusinessRuleError
 
@@ -70,7 +70,7 @@ def _get_or_create_user(db: Session, name: str) -> User | None:
     name = str(name).strip()
     user = db.query(User).filter(User.name == name).first()
     if not user:
-        user = User(name=name, login_id=name.lower().replace(" ", "_"), role=ROLE_USER)
+        user = User(name=name, login_id=name.lower().replace(" ", "_"), role_id=get_default_role_id(db))
         db.add(user)
         db.flush()
     return user

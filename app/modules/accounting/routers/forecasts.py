@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.auth.dependencies import get_current_user
+from app.core.auth.dependencies import get_current_user, require_module_access
 from app.core.database import get_db
 from app.modules.common.models.user import User
 from app.modules.accounting.schemas.monthly_forecast import MonthlyForecastCreate, MonthlyForecastRead
@@ -38,6 +38,7 @@ def list_all_forecasts(
 @router.patch(
     "/contract-periods/{period_id}/forecasts",
     response_model=list[MonthlyForecastRead],
+    dependencies=[require_module_access("accounting", "full")],
 )
 def upsert_forecasts(
     period_id: int,
@@ -66,7 +67,7 @@ def preview_forecast_sync(
     return sync_svc.preview_forecast_sync(db, contract_id, current_user=current_user)
 
 
-@router.post("/contracts/{contract_id}/forecast-sync", status_code=200)
+@router.post("/contracts/{contract_id}/forecast-sync", status_code=200, dependencies=[require_module_access("accounting", "full")])
 def sync_transaction_lines_from_forecast(
     contract_id: int,
     body: dict | None = None,

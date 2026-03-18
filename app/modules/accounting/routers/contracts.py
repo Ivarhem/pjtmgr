@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.core.auth.dependencies import get_current_user, require_admin
+from app.core.auth.dependencies import get_current_user, require_admin, require_module_access
 from app.core.database import get_db
 from app.modules.common.models.user import User
 from app.modules.accounting.schemas.contract import (
@@ -58,7 +58,7 @@ def get_contract(
     return svc.get_contract(db, contract_id, current_user=current_user)
 
 
-@router.post("/contracts", response_model=ContractRead, status_code=201)
+@router.post("/contracts", response_model=ContractRead, status_code=201, dependencies=[require_module_access("accounting", "full")])
 def create_contract(
     data: ContractCreate,
     db: Session = Depends(get_db),
@@ -67,7 +67,7 @@ def create_contract(
     return svc.create_contract(db, data, created_by=current_user.id)
 
 
-@router.patch("/contracts/{contract_id}", response_model=ContractRead)
+@router.patch("/contracts/{contract_id}", response_model=ContractRead, dependencies=[require_module_access("accounting", "full")])
 def update_contract(
     contract_id: int,
     data: ContractUpdate,
@@ -127,7 +127,7 @@ def get_period(
     return svc.get_period(db, period_id, current_user=current_user)
 
 
-@router.post("/contracts/{contract_id}/periods", status_code=201)
+@router.post("/contracts/{contract_id}/periods", status_code=201, dependencies=[require_module_access("accounting", "full")])
 def create_period(
     contract_id: int,
     data: ContractPeriodCreate,
@@ -137,7 +137,7 @@ def create_period(
     return svc.create_period(db, contract_id, data, current_user=current_user)
 
 
-@router.patch("/contract-periods/{period_id}")
+@router.patch("/contract-periods/{period_id}", dependencies=[require_module_access("accounting", "full")])
 def update_period(
     period_id: int,
     data: ContractPeriodUpdate,
@@ -147,7 +147,7 @@ def update_period(
     return svc.update_period(db, period_id, data, current_user=current_user)
 
 
-@router.delete("/contract-periods/{period_id}", status_code=204)
+@router.delete("/contract-periods/{period_id}", status_code=204, dependencies=[require_module_access("accounting", "full")])
 def delete_period(
     period_id: int,
     db: Session = Depends(get_db),

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import check_contract_access
-from app.core.auth.dependencies import get_current_user
+from app.core.auth.dependencies import get_current_user, require_module_access
 from app.core.database import get_db
 from app.modules.common.models.user import User
 from app.modules.accounting.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
@@ -22,7 +22,7 @@ def list_matches(
     return match_svc.list_matches_by_contract(db, contract_id)
 
 
-@router.post("/contracts/{contract_id}/receipt-matches", status_code=201)
+@router.post("/contracts/{contract_id}/receipt-matches", status_code=201, dependencies=[require_module_access("accounting", "full")])
 def create_match(
     contract_id: int,
     data: ReceiptMatchCreate,
@@ -39,7 +39,7 @@ def create_match(
     )
 
 
-@router.patch("/receipt-matches/{match_id}")
+@router.patch("/receipt-matches/{match_id}", dependencies=[require_module_access("accounting", "full")])
 def update_match(
     match_id: int,
     data: ReceiptMatchUpdate,
@@ -49,7 +49,7 @@ def update_match(
     return match_svc.update_match(db, match_id, data, current_user=current_user)
 
 
-@router.delete("/receipt-matches/{match_id}", status_code=204)
+@router.delete("/receipt-matches/{match_id}", status_code=204, dependencies=[require_module_access("accounting", "full")])
 def delete_match(
     match_id: int,
     db: Session = Depends(get_db),
@@ -58,7 +58,7 @@ def delete_match(
     match_svc.delete_match(db, match_id, current_user=current_user)
 
 
-@router.post("/contracts/{contract_id}/receipt-matches/auto", status_code=200)
+@router.post("/contracts/{contract_id}/receipt-matches/auto", status_code=200, dependencies=[require_module_access("accounting", "full")])
 def auto_match(
     contract_id: int,
     db: Session = Depends(get_db),
