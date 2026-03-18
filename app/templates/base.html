@@ -51,13 +51,28 @@
   <div class="nav-container">
     <nav class="subnav">
       <ul class="subnav-links">
+        {# --- Accounting module menus --- #}
+        {% if "accounting" in enabled_modules %}
         <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
         <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
         <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
+        {% endif %}
+        {# --- Common module menus (always visible) --- #}
         <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
+        {% if "accounting" in enabled_modules %}
         <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
+        {% endif %}
+        {# --- Infra module menus --- #}
+        {% if "infra" in enabled_modules %}
+        <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
+        <li><a href="/ip-subnets"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
+        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책<small class="subnav-sub">보안·운영 정책 관리</small></span></a></li>
+        {% endif %}
         <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
         <li class="subnav-sep"></li>
+        {# --- Admin menus --- #}
         <li class="admin-only admin-nav-item subnav-divider is-hidden"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정 등록·역할·권한 설정</small></span></a></li>
         <li class="admin-only admin-nav-item is-hidden"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직명·사업유형·용어 설정</small></span></a></li>
       </ul>
