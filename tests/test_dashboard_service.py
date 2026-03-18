@@ -7,8 +7,8 @@ from app.modules.common.models.user import User
 from app.modules.accounting.services import dashboard as dashboard_service
 
 
-def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session) -> None:
-    owner = User(name="담당", login_id="owner", role="user")
+def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, user_role_id) -> None:
+    owner = User(name="담당", login_id="owner", role_id=user_role_id)
     customer = Customer(name="고객사")
     db_session.add_all([owner, customer])
     db_session.flush()
@@ -129,8 +129,8 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session) 
     assert response.totals.lost_revenue == 50
 
 
-def test_dashboard_summary_regroups_monthly_trend_by_quarter(db_session) -> None:
-    owner = User(name="담당2", login_id="owner2", role="user")
+def test_dashboard_summary_regroups_monthly_trend_by_quarter(db_session, user_role_id) -> None:
+    owner = User(name="담당2", login_id="owner2", role_id=user_role_id)
     customer = Customer(name="고객사2")
     db_session.add_all([owner, customer])
     db_session.flush()

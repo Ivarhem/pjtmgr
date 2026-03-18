@@ -94,9 +94,9 @@ def test_health_check_hides_internal_error_details(monkeypatch) -> None:
     assert response == {"status": "degraded", "db": "unavailable"}
 
 
-def test_contract_service_checks_access_in_service_layer(db_session) -> None:
-    owner = User(name="담당자", login_id="owner", role="user")
-    outsider = User(name="외부자", login_id="outsider", role="user")
+def test_contract_service_checks_access_in_service_layer(db_session, user_role_id) -> None:
+    owner = User(name="담당자", login_id="owner", role_id=user_role_id)
+    outsider = User(name="외부자", login_id="outsider", role_id=user_role_id)
     contract = Contract(contract_name="테스트 사업", contract_type="MA", owner=owner, status="active")
     db_session.add_all([owner, outsider, contract])
     db_session.commit()
@@ -105,9 +105,9 @@ def test_contract_service_checks_access_in_service_layer(db_session) -> None:
         contract_service.get_contract(db_session, contract.id, current_user=outsider)
 
 
-def test_receipt_service_checks_access_in_service_layer(db_session) -> None:
-    owner = User(name="담당자", login_id="owner", role="user")
-    outsider = User(name="외부자", login_id="outsider", role="user")
+def test_receipt_service_checks_access_in_service_layer(db_session, user_role_id) -> None:
+    owner = User(name="담당자", login_id="owner", role_id=user_role_id)
+    outsider = User(name="외부자", login_id="outsider", role_id=user_role_id)
     contract = Contract(contract_name="테스트 사업", contract_type="MA", owner=owner, status="active")
     db_session.add_all([owner, outsider, contract])
     db_session.commit()

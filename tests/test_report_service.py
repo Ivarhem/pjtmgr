@@ -15,8 +15,8 @@ from app.modules.accounting.services import report as report_service
 from app.modules.accounting.services.metrics import build_filter
 
 
-def _seed_report_data(db_session) -> dict[str, int]:
-    owner = User(name="영업", login_id="sales-report", role="user", department="영업1팀")
+def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
+    owner = User(name="영업", login_id="sales-report", role_id=user_role_id, department="영업1팀")
     end_customer = Customer(name="엔드고객")
     billing_customer = Customer(name="매출처")
     db_session.add_all(
@@ -125,8 +125,8 @@ def _seed_report_data(db_session) -> dict[str, int]:
     return {"contract_id": contract.id}
 
 
-def test_summary_forecast_vs_actual_and_receivables_use_expected_totals(db_session) -> None:
-    ids = _seed_report_data(db_session)
+def test_summary_forecast_vs_actual_and_receivables_use_expected_totals(db_session, user_role_id) -> None:
+    ids = _seed_report_data(db_session, user_role_id)
     filt = build_filter("2026-01", "2026-02")
 
     summary = report_service.get_summary(db_session, filt)
@@ -195,8 +195,8 @@ def test_summary_forecast_vs_actual_and_receivables_use_expected_totals(db_sessi
     }
 
 
-def test_contract_pnl_uses_matched_amount_for_ar(db_session) -> None:
-    ids = _seed_report_data(db_session)
+def test_contract_pnl_uses_matched_amount_for_ar(db_session, user_role_id) -> None:
+    ids = _seed_report_data(db_session, user_role_id)
 
     result = report_service.get_contract_pnl(db_session, ids["contract_id"], 2026)
 
@@ -213,8 +213,8 @@ def test_contract_pnl_uses_matched_amount_for_ar(db_session) -> None:
     assert result["grand_ar"] == 40
 
 
-def test_export_summary_writes_totals_row(db_session) -> None:
-    _seed_report_data(db_session)
+def test_export_summary_writes_totals_row(db_session, user_role_id) -> None:
+    _seed_report_data(db_session, user_role_id)
     filt = build_filter("2026-01", "2026-02")
 
     content = report_service.export_summary(db_session, filt)
@@ -228,8 +228,8 @@ def test_export_summary_writes_totals_row(db_session) -> None:
     assert ws["H7"].value == 40
 
 
-def test_export_contract_pnl_writes_ar_from_matched_amount(db_session) -> None:
-    ids = _seed_report_data(db_session)
+def test_export_contract_pnl_writes_ar_from_matched_amount(db_session, user_role_id) -> None:
+    ids = _seed_report_data(db_session, user_role_id)
 
     content = report_service.export_contract_pnl(db_session, ids["contract_id"], 2026)
     ws = load_workbook(BytesIO(content)).active

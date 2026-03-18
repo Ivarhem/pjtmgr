@@ -30,9 +30,9 @@ def _seed_contract_type(db_session) -> None:
     db_session.commit()
 
 
-def test_create_contract_applies_defaults_and_created_by(db_session) -> None:
+def test_create_contract_applies_defaults_and_created_by(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
-    owner = User(name="홍길동", login_id="hong", role="user")
+    owner = User(name="홍길동", login_id="hong", role_id=user_role_id)
     customer = Customer(name="고객사")
     db_session.add_all([owner, customer])
     db_session.commit()
@@ -56,9 +56,9 @@ def test_create_contract_applies_defaults_and_created_by(db_session) -> None:
     assert saved.contract_code.startswith("MA-")
 
 
-def test_create_period_inherits_contract_fields(db_session) -> None:
+def test_create_period_inherits_contract_fields(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
-    owner = User(name="영업", login_id="sales", role="user")
+    owner = User(name="영업", login_id="sales", role_id=user_role_id)
     end_customer = Customer(name="엔드고객")
     billing_customer = Customer(name="매출처")
     db_session.add_all([owner, end_customer, billing_customer])
@@ -96,9 +96,9 @@ def test_create_period_inherits_contract_fields(db_session) -> None:
     assert period["invoice_day"] == 25
 
 
-def test_completed_period_blocks_transaction_line_create_and_move(db_session) -> None:
+def test_completed_period_blocks_transaction_line_create_and_move(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
-    owner = User(name="영업", login_id="sales2", role="user")
+    owner = User(name="영업", login_id="sales2", role_id=user_role_id)
     customer = Customer(name="고객사")
     db_session.add_all([owner, customer])
     db_session.commit()
@@ -176,9 +176,9 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session) ->
         pass
 
 
-def test_completed_period_blocks_receipt_create_update_delete(db_session) -> None:
+def test_completed_period_blocks_receipt_create_update_delete(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
-    owner = User(name="수금담당", login_id="receipt_owner", role="user")
+    owner = User(name="수금담당", login_id="receipt_owner", role_id=user_role_id)
     customer = Customer(name="매출처")
     db_session.add_all([owner, customer])
     db_session.commit()
@@ -263,9 +263,9 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session) -> Non
         pass
 
 
-def test_auto_match_receipt_is_isolated_to_same_period_range(db_session) -> None:
+def test_auto_match_receipt_is_isolated_to_same_period_range(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
-    owner = User(name="배분담당", login_id="matcher", role="user")
+    owner = User(name="배분담당", login_id="matcher", role_id=user_role_id)
     customer = Customer(name="매출처")
     db_session.add_all([owner, customer])
     db_session.commit()

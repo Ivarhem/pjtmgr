@@ -11,9 +11,9 @@ from app.modules.accounting.schemas.receipt_match import ReceiptMatchCreate, Rec
 from app.modules.accounting.services import receipt_match as receipt_match_service
 
 
-def _seed_contract_graph(db_session):
-    owner_a = User(name="소유자A", login_id="owner_a", role="user")
-    owner_b = User(name="소유자B", login_id="owner_b", role="user")
+def _seed_contract_graph(db_session, user_role_id):
+    owner_a = User(name="소유자A", login_id="owner_a", role_id=user_role_id)
+    owner_b = User(name="소유자B", login_id="owner_b", role_id=user_role_id)
     customer = Customer(name="거래처")
     db_session.add_all([owner_a, owner_b, customer])
     db_session.flush()
@@ -91,8 +91,8 @@ def _seed_contract_graph(db_session):
     return owner_a, owner_b, receipt, line, foreign_line
 
 
-def test_create_match_rejects_contract_path_mismatch(db_session) -> None:
-    owner_a, _owner_b, receipt, line, _foreign_line = _seed_contract_graph(db_session)
+def test_create_match_rejects_contract_path_mismatch(db_session, user_role_id) -> None:
+    owner_a, _owner_b, receipt, line, _foreign_line = _seed_contract_graph(db_session, user_role_id)
 
     with pytest.raises(BusinessRuleError):
         receipt_match_service.create_match(
@@ -108,8 +108,8 @@ def test_create_match_rejects_contract_path_mismatch(db_session) -> None:
         )
 
 
-def test_update_and_delete_match_check_contract_access(db_session) -> None:
-    owner_a, owner_b, receipt, line, _foreign_line = _seed_contract_graph(db_session)
+def test_update_and_delete_match_check_contract_access(db_session, user_role_id) -> None:
+    owner_a, owner_b, receipt, line, _foreign_line = _seed_contract_graph(db_session, user_role_id)
     created = receipt_match_service.create_match(
         db_session,
         ReceiptMatchCreate(

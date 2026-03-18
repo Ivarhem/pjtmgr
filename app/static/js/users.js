@@ -1,5 +1,7 @@
 const COL_STATE_KEY = 'users_col_state_v1';
-const ROLE_LABELS = { user: '일반', admin: '관리자' };
+
+let ROLES = []; // [{id, name, is_system, permissions}, ...]
+let ROLE_MAP = {}; // id -> name
 
 const columnDefs = [
   { headerName: '', width: 40, checkboxSelection: true, headerCheckboxSelection: true,
@@ -8,11 +10,11 @@ const columnDefs = [
   { field: 'name', headerName: '이름', width: 120, editable: true },
   { field: 'department', headerName: '부서', width: 120, editable: true },
   { field: 'position', headerName: '직급', width: 100, editable: true },
-  { field: 'role', headerName: '역할', width: 90,
+  { field: 'role_id', headerName: '역할', width: 110,
     editable: true,
     cellEditor: 'agSelectCellEditor',
-    cellEditorParams: { values: ['user', 'admin'] },
-    valueFormatter: p => ROLE_LABELS[p.value] || p.value },
+    cellEditorParams: { values: [] },
+    valueFormatter: p => ROLE_MAP[p.value] || p.value },
   { field: 'is_active', headerName: '활성', width: 70,
     editable: true,
     cellEditor: 'agSelectCellEditor',
@@ -37,11 +39,12 @@ const gridOptions = {
 let gridApi;
 const changedRows = new Map();
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const el = document.getElementById('grid-users');
   gridApi = agGrid.createGrid(el, gridOptions);
   restoreColState(gridApi, COL_STATE_KEY);
-  loadData();
+  await loadRoles();
+  await loadData();
 
   document.getElementById('btn-import-csv').addEventListener('click', () => {
     document.getElementById('import-csv-file').value = '';
@@ -57,6 +60,32 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-delete').addEventListener('click', deleteSelected);
 });
 
+async function loadRoles() {
+  const res = await fetch('/api/v1/roles');
+  if (res.ok) {
+    ROLES = await res.json();
+    ROLE_MAP = {};
+    ROLES.forEach(r => { ROLE_MAP[r.id] = r.name; });
+    // Update role column editor values
+    const roleCol = gridApi.getColumn('role_id');
+    if (roleCol) {
+      const colDef = roleCol.getColDef();
+      colDef.cellEditorParams = { values: ROLES.map(r => r.id) };
+    }
+    // Update add modal dropdown using safe DOM methods
+    const select = document.getElementById('new-role');
+    if (select) {
+      while (select.firstChild) select.removeChild(select.firstChild);
+      ROLES.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.name;
+        select.appendChild(opt);
+      });
+    }
+  }
+}
+
 async function loadData() {
   const res = await fetch('/api/v1/users');
   const data = await res.json();
@@ -68,19 +97,22 @@ function openAddModal() {
   document.getElementById('new-name').value = '';
   document.getElementById('new-department').value = '';
   document.getElementById('new-position').value = '';
-  document.getElementById('new-role').value = 'user';
   document.getElementById('new-login-id').value = '';
+  // Select first role as default
+  const select = document.getElementById('new-role');
+  if (select && select.options.length > 0) select.selectedIndex = 0;
   document.getElementById('modal-add').showModal();
 }
 
 async function submitNew() {
   const name = document.getElementById('new-name').value.trim();
   if (!name) { alert('이름을 입력하세요.'); return; }
+  const roleId = parseInt(document.getElementById('new-role').value, 10);
   const body = {
     name,
     department: document.getElementById('new-department').value.trim() || null,
     position: document.getElementById('new-position').value.trim() || null,
-    role: document.getElementById('new-role').value,
+    role_id: roleId,
     login_id: document.getElementById('new-login-id').value.trim() || null,
   };
   const res = await fetch('/api/v1/users', {
@@ -156,7 +188,7 @@ async function saveChanges() {
         name: row.name,
         department: row.department,
         position: row.position,
-        role: row.role,
+        role_id: row.role_id,
         login_id: row.login_id,
         is_active: row.is_active,
       }),

@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from app.core.auth.constants import Role
 
 
 class UserCreate(BaseModel):
@@ -7,7 +6,7 @@ class UserCreate(BaseModel):
     department: str | None = None
     position: str | None = None
     login_id: str | None = None          # SSO 연동 시 매핑 기준
-    role: Role = "user"
+    role_id: int
 
 
 class UserUpdate(BaseModel):
@@ -15,7 +14,7 @@ class UserUpdate(BaseModel):
     department: str | None = None
     position: str | None = None
     login_id: str | None = None
-    role: Role | None = None
+    role_id: int | None = None
     is_active: bool | None = None
 
 
@@ -25,7 +24,7 @@ class UserRead(BaseModel):
     department: str | None
     position: str | None
     login_id: str | None
-    role: str
+    role_id: int
     is_active: bool
 
     model_config = {"from_attributes": True}

@@ -22,8 +22,8 @@ from app.modules.common.services import setting as setting_service
 from app.modules.accounting.services import transaction_line as tl_service
 
 
-def _seed_contract_for_receipt(db_session) -> tuple[User, Customer, Contract]:
-    owner = User(name="영업", login_id="sales-safe", role="user")
+def _seed_contract_for_receipt(db_session, user_role_id) -> tuple[User, Customer, Contract]:
+    owner = User(name="영업", login_id="sales-safe", role_id=user_role_id)
     customer = Customer(name="거래처")
     db_session.add_all(
         [
@@ -60,10 +60,10 @@ def _seed_contract_for_receipt(db_session) -> tuple[User, Customer, Contract]:
 
 
 def _seed_forecast_contract_for_access(
-    db_session,
+    db_session, user_role_id,
 ) -> tuple[User, User, Contract, ContractPeriod]:
-    owner = User(name="예측소유자", login_id="forecast-owner", role="user")
-    outsider = User(name="외부사용자", login_id="forecast-outsider", role="user")
+    owner = User(name="예측소유자", login_id="forecast-owner", role_id=user_role_id)
+    outsider = User(name="외부사용자", login_id="forecast-outsider", role_id=user_role_id)
     customer = Customer(name="예측거래처")
     db_session.add_all(
         [
@@ -150,8 +150,8 @@ def _seed_receipt_and_line(
 # ── 테스트 1: create_receipt 롤백 ────────────────────────────────
 
 
-def test_create_receipt_rolls_back_when_auto_match_fails(db_session, monkeypatch) -> None:
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+def test_create_receipt_rolls_back_when_auto_match_fails(db_session, user_role_id, monkeypatch) -> None:
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
 
     def _boom(*_args, **_kwargs):
         raise BusinessRuleError("자동 배분 실패")
@@ -177,9 +177,9 @@ def test_create_receipt_rolls_back_when_auto_match_fails(db_session, monkeypatch
 # ── 테스트 2: update_receipt 롤백 ────────────────────────────────
 
 
-def test_update_receipt_rolls_back_when_auto_match_fails(db_session, monkeypatch) -> None:
+def test_update_receipt_rolls_back_when_auto_match_fails(db_session, user_role_id, monkeypatch) -> None:
     """update_receipt에서 auto_match 실패 시 금액 변경이 롤백되는지 확인."""
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
 
     # 직접 입금 생성 (auto_match 없이)
     receipt = Receipt(
@@ -213,9 +213,9 @@ def test_update_receipt_rolls_back_when_auto_match_fails(db_session, monkeypatch
 # ── 테스트 3: delete_receipt 시 매칭 cascade ─────────────────────
 
 
-def test_delete_receipt_cascades_matches(db_session) -> None:
+def test_delete_receipt_cascades_matches(db_session, user_role_id) -> None:
     """입금 삭제 시 연결된 ReceiptMatch도 CASCADE로 삭제되는지 확인."""
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
     receipt, line = _seed_receipt_and_line(db_session, contract, customer, owner)
     receipt_id = receipt.id
 
@@ -230,9 +230,9 @@ def test_delete_receipt_cascades_matches(db_session) -> None:
 # ── 테스트 4: auto_match_contract 롤백 ──────────────────────────
 
 
-def test_auto_match_contract_rolls_back_on_failure(db_session, monkeypatch) -> None:
+def test_auto_match_contract_rolls_back_on_failure(db_session, user_role_id, monkeypatch) -> None:
     """auto_match_contract 중 예외 시 전체 롤백 확인."""
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
 
     # 입금 2건 생성
     for i in range(2):
@@ -273,9 +273,9 @@ def test_auto_match_contract_rolls_back_on_failure(db_session, monkeypatch) -> N
 # ── 테스트 5: 매칭 존재하는 실적 삭제 차단 ──────────────────────
 
 
-def test_delete_transaction_line_blocked_by_existing_match(db_session) -> None:
+def test_delete_transaction_line_blocked_by_existing_match(db_session, user_role_id) -> None:
     """입금 매칭이 존재하는 TransactionLine 삭제 시 BusinessRuleError."""
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
     _receipt, line = _seed_receipt_and_line(db_session, contract, customer, owner)
 
     with pytest.raises(BusinessRuleError, match="매칭"):
@@ -318,8 +318,8 @@ def test_update_settings_rolls_back_batch_on_failure(db_session, monkeypatch) ->
     assert db_session.get(Setting, "auth.password_min_length").value == "10"
 
 
-def test_delete_receipt_requires_delete_permission_in_service(db_session) -> None:
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+def test_delete_receipt_requires_delete_permission_in_service(db_session, user_role_id) -> None:
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
     receipt = Receipt(
         contract_id=contract.id,
         customer_id=customer.id,
@@ -335,8 +335,8 @@ def test_delete_receipt_requires_delete_permission_in_service(db_session) -> Non
         receipt_service.delete_receipt(db_session, receipt.id, current_user=owner)
 
 
-def test_delete_transaction_line_requires_delete_permission_in_service(db_session) -> None:
-    owner, customer, contract = _seed_contract_for_receipt(db_session)
+def test_delete_transaction_line_requires_delete_permission_in_service(db_session, user_role_id) -> None:
+    owner, customer, contract = _seed_contract_for_receipt(db_session, user_role_id)
     line = TransactionLine(
         contract_id=contract.id,
         revenue_month="2026-01-01",
@@ -353,8 +353,8 @@ def test_delete_transaction_line_requires_delete_permission_in_service(db_sessio
         tl_service.delete_transaction_line(db_session, line.id, current_user=owner)
 
 
-def test_forecast_services_enforce_access_in_service_layer(db_session) -> None:
-    _owner, outsider, contract, period = _seed_forecast_contract_for_access(db_session)
+def test_forecast_services_enforce_access_in_service_layer(db_session, user_role_id) -> None:
+    _owner, outsider, contract, period = _seed_forecast_contract_for_access(db_session, user_role_id)
 
     with pytest.raises(NotFoundError):
         forecast_service.get_forecasts(db_session, period.id, current_user=outsider)
