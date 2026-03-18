@@ -1,9 +1,14 @@
 """FastAPI application factory."""
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from jinja2 import ChoiceLoader, FileSystemLoader
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.auth.middleware import AuthMiddleware
@@ -14,6 +19,7 @@ from app.core.config import (
     SESSION_MAX_AGE,
     SESSION_SAME_SITE,
     SESSION_SECRET_KEY,
+    get_enabled_modules,
 )
 from app.core.exceptions import (
     BusinessRuleError,
@@ -23,53 +29,19 @@ from app.core.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-from app.modules.common.models import (  # noqa: F401 - 테이블 생성을 위해 모두 import
-    AuditLog,
-    Customer,
-    CustomerContact,
-    CustomerContactRole,
-    LoginFailure,
-    Setting,
-    TermConfig,
-    User,
-    UserPreference,
-)
-from app.modules.accounting.models import (  # noqa: F401
-    Contract,
-    ContractContact,
-    ContractPeriod,
-    ContractTypeConfig,
-    MonthlyForecast,
-    Receipt,
-    ReceiptMatch,
-    TransactionLine,
-)
-from app.modules.common.routers import (
-    customers,
-    health,
-    settings,
-    term_configs,
-    user_preferences,
-    users,
-)
-from app.modules.accounting.routers import (
-    contract_contacts,
-    contract_types,
-    contracts,
-    dashboard,
-    excel,
-    forecasts,
-    receipt_matches,
-    receipts,
-    reports,
-    transaction_lines,
-)
-from app.core import pages
+
+# Always import all models for Alembic schema consistency
+import app.modules.common.models  # noqa: F401
+import app.modules.accounting.models  # noqa: F401
+import app.modules.infra.models  # noqa: F401
+
 from app.core.startup.lifespan import lifespan
+
+_APP_ROOT = Path(__file__).resolve().parent.parent
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="영업관리 시스템", lifespan=lifespan)
+    app = FastAPI(title="사업관리 통합 플랫폼", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     app.add_middleware(AuthMiddleware)
@@ -83,7 +55,11 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
-    register_routers(app)
+
+    enabled = get_enabled_modules()
+    register_routers(app, enabled)
+    configure_templates(app, enabled)
+
     return app
 
 
@@ -116,22 +92,63 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(status_code=422, content=payload)
 
 
-def register_routers(app: FastAPI) -> None:
-    app.include_router(health.router)
+def register_routers(app: FastAPI, enabled: list[str]) -> None:
+    # Auth router is always registered
     app.include_router(auth_router)
-    app.include_router(dashboard.router)
-    app.include_router(customers.router)
-    app.include_router(contracts.router)
-    app.include_router(transaction_lines.router)
-    app.include_router(receipts.router)
-    app.include_router(receipt_matches.router)
-    app.include_router(forecasts.router)
-    app.include_router(excel.router)
-    app.include_router(users.router)
-    app.include_router(settings.router)
-    app.include_router(contract_contacts.router)
-    app.include_router(contract_types.router)
-    app.include_router(term_configs.router)
-    app.include_router(user_preferences.router)
-    app.include_router(reports.router)
-    app.include_router(pages.router)
+
+    # Core pages (login, index, change-password) always registered
+    from app.core import pages as core_pages
+
+    app.include_router(core_pages.router)
+
+    # Common module routers
+    if "common" in enabled:
+        from app.modules.common.routers import api_router as common_api_router
+
+        app.include_router(common_api_router)
+
+    # Accounting module routers
+    if "accounting" in enabled:
+        from app.modules.accounting.routers import api_router as accounting_api_router
+
+        app.include_router(accounting_api_router)
+
+    # Infra module routers (placeholder — routers will be added in later tasks)
+    if "infra" in enabled:
+        try:
+            from app.modules.infra.routers import api_router as infra_api_router
+
+            app.include_router(infra_api_router)
+        except ImportError:
+            pass  # Infra routers not yet implemented
+
+
+def configure_templates(app: FastAPI, enabled: list[str]) -> None:
+    """Configure Jinja2 ChoiceLoader with template paths for active modules."""
+    template_dirs: list[str] = []
+
+    # Global templates (base.html, login.html, etc.) — highest priority
+    global_templates = str(_APP_ROOT / "templates")
+    if os.path.isdir(global_templates):
+        template_dirs.append(global_templates)
+
+    # Module template directories for active modules
+    module_template_map = {
+        "common": str(_APP_ROOT / "modules" / "common" / "templates"),
+        "accounting": str(_APP_ROOT / "modules" / "accounting" / "templates"),
+        "infra": str(_APP_ROOT / "modules" / "infra" / "templates"),
+    }
+    for module_name in enabled:
+        tpl_dir = module_template_map.get(module_name)
+        if tpl_dir and os.path.isdir(tpl_dir):
+            template_dirs.append(tpl_dir)
+
+    loader = ChoiceLoader([FileSystemLoader(d) for d in template_dirs])
+    templates = Jinja2Templates(directory=template_dirs[0])
+    templates.env.loader = loader
+
+    # Inject enabled_modules as a Jinja2 global variable
+    templates.env.globals["enabled_modules"] = enabled
+
+    # Store templates on the app for access by page routers
+    app.state.templates = templates
