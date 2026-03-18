@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}IP 인벤토리 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>IP 대역 관리</h1>
+  <button class="btn btn-primary" id="btn-add-subnet">대역 등록</button>
+</div>
+
+<div class="card mb-md">
+  <div id="grid-subnets" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<div class="page-header mt-md">
+  <h1>IP 할당 현황</h1>
+  <button class="btn btn-primary" id="btn-add-ip">IP 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-ips" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<!-- 대역 등록/수정 모달 -->
+<dialog id="modal-subnet" class="modal modal-lg">
+  <h2 id="modal-subnet-title">대역 등록</h2>
+  <form id="form-subnet" class="form-grid">
+    <input type="hidden" id="subnet-id">
+    <label>
+      프로젝트
+      <select id="subnet-project-id" required></select>
+    </label>
+    <label>
+      대역명
+      <input type="text" id="subnet-name" required placeholder="서비스망-A">
+    </label>
+    <label>
+      서브넷
+      <input type="text" id="subnet-cidr" required placeholder="10.10.1.0/24">
+    </label>
+    <label>
+      역할
+      <select id="subnet-role">
+        <option value="service">서비스</option>
+        <option value="management">관리</option>
+        <option value="backup">백업</option>
+        <option value="dmz">DMZ</option>
+        <option value="other">기타</option>
+      </select>
+    </label>
+    <label>
+      VLAN ID
+      <input type="text" id="subnet-vlan-id">
+    </label>
+    <label>
+      게이트웨이
+      <input type="text" id="subnet-gateway">
+    </label>
+    <label>
+      지역
+      <input type="text" id="subnet-region" placeholder="서울">
+    </label>
+    <label>
+      층/위치
+      <input type="text" id="subnet-floor" placeholder="3F">
+    </label>
+    <label>
+      상대국/기관/지점
+      <input type="text" id="subnet-counterpart">
+    </label>
+    <label>
+      할당유형
+      <select id="subnet-allocation-type">
+        <option value="">선택</option>
+        <option value="통신팀">통신팀</option>
+        <option value="사설">사설</option>
+        <option value="기타">기타</option>
+      </select>
+    </label>
+    <label>
+      분류
+      <input type="text" id="subnet-category">
+    </label>
+    <label>
+      존
+      <input type="text" id="subnet-zone">
+    </label>
+    <label>
+      넷마스크
+      <input type="text" id="subnet-netmask" placeholder="255.255.255.0">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="subnet-description" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="subnet-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-subnet">취소</button>
+    <button class="btn btn-primary" id="btn-save-subnet">등록</button>
+  </div>
+</dialog>
+
+<!-- IP 등록/수정 모달 -->
+<dialog id="modal-ip" class="modal modal-lg">
+  <h2 id="modal-ip-title">IP 등록</h2>
+  <form id="form-ip" class="form-grid">
+    <input type="hidden" id="ip-id">
+    <label>
+      자산
+      <select id="ip-asset-id" required></select>
+    </label>
+    <label>
+      IP 대역
+      <select id="ip-subnet-id">
+        <option value="">선택 안 함</option>
+      </select>
+    </label>
+    <label>
+      IP 주소
+      <input type="text" id="ip-address" required placeholder="10.10.1.10">
+    </label>
+    <label>
+      용도
+      <select id="ip-type">
+        <option value="service">서비스</option>
+        <option value="management">관리</option>
+        <option value="backup">백업</option>
+        <option value="vip">VIP</option>
+        <option value="other">기타</option>
+      </select>
+    </label>
+    <label>
+      인터페이스명
+      <input type="text" id="ip-interface" placeholder="eth0">
+    </label>
+    <label>
+      존
+      <input type="text" id="ip-zone">
+    </label>
+    <label>
+      서비스명
+      <input type="text" id="ip-service-name">
+    </label>
+    <label>
+      호스트명
+      <input type="text" id="ip-hostname">
+    </label>
+    <label>
+      VLAN ID
+      <input type="text" id="ip-vlan-id">
+    </label>
+    <label>
+      네트워크
+      <input type="text" id="ip-network" placeholder="10.10.1.0">
+    </label>
+    <label>
+      넷마스크
+      <input type="text" id="ip-netmask" placeholder="255.255.255.0">
+    </label>
+    <label>
+      게이트웨이
+      <input type="text" id="ip-gateway">
+    </label>
+    <label>
+      기본 DNS
+      <input type="text" id="ip-dns-primary">
+    </label>
+    <label>
+      보조 DNS
+      <input type="text" id="ip-dns-secondary">
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="ip-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-ip">취소</button>
+    <button class="btn btn-primary" id="btn-save-ip">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_ip_inventory.js"></script>
+{% endblock %}
+
+

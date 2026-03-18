@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}프로젝트 목록 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>프로젝트 목록</h1>
+  <button class="btn btn-primary" id="btn-add-project">프로젝트 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-projects" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+</div>
+
+<!-- 프로젝트 등록/수정 모달 -->
+<dialog id="modal-project" class="modal">
+  <h2 id="modal-project-title">프로젝트 등록</h2>
+  <form id="form-project" class="form-grid">
+    <input type="hidden" id="project-id">
+    <label>
+      프로젝트 코드
+      <input type="text" id="project-code" required>
+    </label>
+    <label>
+      프로젝트명
+      <input type="text" id="project-name" required>
+    </label>
+    <label>
+      고객사
+      <input type="text" id="client-name" required>
+    </label>
+    <label>
+      상태
+      <select id="project-status">
+        <option value="planned">계획</option>
+        <option value="active">진행중</option>
+        <option value="on_hold">보류</option>
+        <option value="completed">완료</option>
+      </select>
+    </label>
+    <label>
+      시작일
+      <input type="date" id="start-date">
+    </label>
+    <label>
+      종료일
+      <input type="date" id="end-date">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="project-desc" rows="3"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-project">취소</button>
+    <button class="btn btn-primary" id="btn-save-project">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_projects.js"></script>
+{% endblock %}
+
+

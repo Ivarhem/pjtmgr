@@ -1,0 +1,27 @@
+/* ── Infra Module Styles ── */
+
+/* Asset status badges */
+.badge-planned   { background: #e0e7ff; color: #3730a3; }
+.badge-active    { background: #dcfce7; color: #166534; }
+.badge-completed { background: #f1f5f9; color: #475569; }
+.badge-on-hold   { background: #fef3c7; color: #92400e; }
+.badge-decommissioned { background: #f1f5f9; color: #475569; }
+
+/* Port map status badges */
+.badge-required  { background: #e0e7ff; color: #3730a3; }
+.badge-approved  { background: #dcfce7; color: #166534; }
+.badge-denied    { background: #fff5f5; color: #dc3545; }
+
+/* Policy assignment status badges */
+.badge-not_checked { background: #f1f5f9; color: #475569; }
+.badge-compliant   { background: #dcfce7; color: #166534; }
+.badge-non_compliant { background: #fff5f5; color: #dc3545; }
+.badge-exception   { background: #fef3c7; color: #92400e; }
+
+/* Project phase status badges */
+.badge-not_started { background: #f1f5f9; color: #475569; }
+.badge-in_progress { background: #e0e7ff; color: #3730a3; }
+
+/* Submission status badges */
+.badge-pending   { background: #fef3c7; color: #92400e; }
+.badge-submitted { background: #dcfce7; color: #166534; }
