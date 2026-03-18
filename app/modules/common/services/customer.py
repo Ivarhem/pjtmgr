@@ -37,7 +37,11 @@ __all__ = [
 
 
 def list_customers(
-    db: Session, current_user: User | None = None, *, my_only: bool = False
+    db: Session,
+    current_user: User | None = None,
+    *,
+    my_only: bool = False,
+    customer_type: str | None = None,
 ) -> list[dict]:
     """거래처 목록 (요약 데이터 포함: active_count, total_revenue)."""
     if my_only and current_user:
@@ -47,9 +51,9 @@ def list_customers(
         customer_ids = _collect_customer_ids(db, contract_ids)
         if not customer_ids:
             return []
-        customers = db.query(Customer).filter(Customer.id.in_(customer_ids)).order_by(Customer.name).all()
+        query = db.query(Customer).filter(Customer.id.in_(customer_ids))
     elif not current_user or has_full_contract_scope(current_user):
-        customers = db.query(Customer).order_by(Customer.name).all()
+        query = db.query(Customer)
     else:
         contract_ids = list_accessible_contract_ids(db, current_user)
         if not contract_ids:
@@ -57,7 +61,12 @@ def list_customers(
         customer_ids = _collect_customer_ids(db, contract_ids)
         if not customer_ids:
             return []
-        customers = db.query(Customer).filter(Customer.id.in_(customer_ids)).order_by(Customer.name).all()
+        query = db.query(Customer).filter(Customer.id.in_(customer_ids))
+
+    if customer_type:
+        query = query.filter(Customer.customer_type == customer_type)
+
+    customers = query.order_by(Customer.name).all()
 
     if not customers:
         return []
@@ -110,6 +119,10 @@ def _enrich_customers_with_summary(db: Session, customers: list[Customer]) -> li
             "name": c.name,
             "business_no": c.business_no,
             "notes": c.notes,
+            "customer_type": c.customer_type,
+            "phone": c.phone,
+            "address": c.address,
+            "note": c.note,
             "contacts": [_contact_to_dict(cc) for cc in c.contacts],
             "active_count": active_map.get(c.id, 0),
             "total_revenue": rev_map.get(c.id, 0),
@@ -312,6 +325,10 @@ def create_contact(db: Session, customer_id: int, data: CustomerContactCreate) -
         name=data.name,
         phone=data.phone,
         email=data.email,
+        department=data.department,
+        title=data.title,
+        emergency_phone=data.emergency_phone,
+        note=data.note,
     )
     db.add(obj)
     db.flush()
@@ -335,7 +352,7 @@ def update_contact(db: Session, contact_id: int, data: CustomerContactUpdate) ->
         raise NotFoundError("담당자를 찾을 수 없습니다.")
     updates = data.model_dump(exclude_unset=True)
     # 기본 필드 업데이트
-    for field in ("name", "phone", "email"):
+    for field in ("name", "phone", "email", "department", "title", "emergency_phone", "note"):
         if field in updates:
             setattr(obj, field, updates[field])
     # 역할 업데이트 (전달된 경우 전체 교체)
@@ -394,6 +411,10 @@ def _contact_to_dict(obj: CustomerContact) -> dict:
         "name": obj.name,
         "phone": obj.phone,
         "email": obj.email,
+        "department": obj.department,
+        "title": obj.title,
+        "emergency_phone": obj.emergency_phone,
+        "note": obj.note,
         "roles": [
             {"id": r.id, "role_type": r.role_type, "is_default": r.is_default}
             for r in obj.roles

@@ -12,6 +12,10 @@ class Customer(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     business_no: Mapped[str | None] = mapped_column(String(50))          # 사업자번호
     notes: Mapped[str | None] = mapped_column(Text)
+    customer_type: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 고객사/공급사/유지보수사/통신사
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     contacts: Mapped[list["CustomerContact"]] = relationship(
         back_populates="customer", cascade="all, delete-orphan",

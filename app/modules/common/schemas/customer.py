@@ -6,12 +6,20 @@ class CustomerCreate(BaseModel):
     name: str
     business_no: str | None = None
     notes: str | None = None
+    customer_type: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    note: str | None = None
 
 
 class CustomerUpdate(BaseModel):
     name: str | None = None
     business_no: str | None = None
     notes: str | None = None
+    customer_type: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    note: str | None = None
 
 
 class CustomerRead(BaseModel):
@@ -19,6 +27,10 @@ class CustomerRead(BaseModel):
     name: str
     business_no: str | None
     notes: str | None
+    customer_type: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    note: str | None = None
     contacts: list[CustomerContactRead] = []
 
     model_config = {"from_attributes": True}
@@ -29,6 +41,10 @@ class CustomerListRead(BaseModel):
     name: str
     business_no: str | None
     notes: str | None
+    customer_type: str | None = None
+    phone: str | None = None
+    address: str | None = None
+    note: str | None = None
     contacts: list[CustomerContactRead] = []
     active_count: int = 0
     total_revenue: int = 0

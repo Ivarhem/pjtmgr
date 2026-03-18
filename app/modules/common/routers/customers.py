@@ -13,10 +13,11 @@ router = APIRouter(prefix="/api/v1/customers", tags=["customers"])
 @router.get("", response_model=list[CustomerListRead])
 def list_customers(
     my_only: bool = False,
+    customer_type: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[CustomerListRead]:
-    return svc.list_customers(db, current_user=current_user, my_only=my_only)
+    return svc.list_customers(db, current_user=current_user, my_only=my_only, customer_type=customer_type)
 
 
 @router.post("", response_model=CustomerRead, status_code=201)

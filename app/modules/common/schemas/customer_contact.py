@@ -9,6 +9,10 @@ class CustomerContactCreate(BaseModel):
     name: str
     phone: str | None = None
     email: str | None = None
+    department: str | None = None
+    title: str | None = None
+    emergency_phone: str | None = None
+    note: str | None = None
     roles: list[CustomerContactRoleCreate]
 
     @field_validator("roles")
@@ -23,6 +27,10 @@ class CustomerContactUpdate(BaseModel):
     name: str | None = None
     phone: str | None = None
     email: str | None = None
+    department: str | None = None
+    title: str | None = None
+    emergency_phone: str | None = None
+    note: str | None = None
     roles: list[CustomerContactRoleCreate] | None = None
 
 
@@ -32,6 +40,10 @@ class CustomerContactRead(BaseModel):
     name: str
     phone: str | None
     email: str | None
+    department: str | None = None
+    title: str | None = None
+    emergency_phone: str | None = None
+    note: str | None = None
     roles: list[CustomerContactRoleRead]
 
     model_config = {"from_attributes": True}
