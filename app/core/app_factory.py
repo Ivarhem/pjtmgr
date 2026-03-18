@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.auth.middleware import AuthMiddleware
 from app.core.auth.router import router as auth_router
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="사업관리 통합 플랫폼", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
+    app.add_middleware(ModuleContextMiddleware)
     app.add_middleware(AuthMiddleware)
     app.add_middleware(
         SessionMiddleware,
@@ -152,3 +154,71 @@ def configure_templates(app: FastAPI, enabled: list[str]) -> None:
 
     # Store templates on the app for access by page routers
     app.state.templates = templates
+
+
+# ── Module context detection ──
+
+_ACCOUNTING_PREFIXES = ("/my-contracts", "/contracts", "/dashboard", "/reports")
+_INFRA_PREFIXES = (
+    "/projects", "/assets", "/ip-inventory", "/port-maps",
+    "/policies", "/infra-dashboard",
+)
+
+
+def _detect_module(path: str) -> str | None:
+    """Return 'accounting' or 'infra' if the path belongs to a module, else None."""
+    for p in _ACCOUNTING_PREFIXES:
+        if path.startswith(p):
+            return "accounting"
+    for p in _INFRA_PREFIXES:
+        if path.startswith(p):
+            return "infra"
+    return None
+
+
+class ModuleContextMiddleware:
+    """Set request.state.module_context based on URL path + cookie fallback.
+
+    Module-specific pages set the cookie to persist context across
+    common pages (customers, audit-logs, users, etc.).
+    """
+
+    COOKIE_NAME = "module_context"
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope)
+        path = request.url.path
+        detected = _detect_module(path)
+        cookie_val = request.cookies.get(self.COOKIE_NAME)
+
+        # Module page → use detected; common page → use cookie fallback
+        module_ctx = detected or cookie_val or "accounting"
+        scope.setdefault("state", {})["module_context"] = module_ctx
+
+        # If the detected module changed, update cookie via response wrapper
+        need_cookie = detected and detected != cookie_val
+
+        if not need_cookie:
+            await self.app(scope, receive, send)
+            return
+
+        # Wrap send to inject Set-Cookie header
+        async def send_with_cookie(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                cookie = (
+                    f"{self.COOKIE_NAME}={detected}; Path=/; "
+                    "HttpOnly; SameSite=Lax; Max-Age=31536000"
+                )
+                headers.append((b"set-cookie", cookie.encode()))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_cookie)
