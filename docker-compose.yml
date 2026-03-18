@@ -1,22 +1,49 @@
 services:
-  app:
-    build: .
+  db:
+    image: postgres:16
+    container_name: projmgr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-projmgr}
+      POSTGRES_USER: ${POSTGRES_USER:-projmgr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     ports:
-      - "8000:8000"
+      - "${DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - projmgr_postgres_data:/var/lib/postgresql/data
+
+  app:
+    container_name: projmgr-app
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      - ENV=production
-      - DATABASE_URL=sqlite:////app/data/sales.db
-    volumes:
-      - app-data:/app/data
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://projmgr:${POSTGRES_PASSWORD}@db:5432/projmgr}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY is required}
+      BOOTSTRAP_ADMIN_LOGIN_ID: ${BOOTSTRAP_ADMIN_LOGIN_ID:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-관리자}
+      ENABLED_MODULES: ${ENABLED_MODULES:-common,accounting,infra}
+    ports:
+      - "${APP_HOST_PORT:-9000}:9000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/v1/health')"]
       interval: 30s
       timeout: 5s
-      start_period: 10s
+      start_period: 15s
       retries: 3
     restart: unless-stopped
 
 volumes:
-  app-data:
+  projmgr_postgres_data:
+    name: projmgr_postgres_data
