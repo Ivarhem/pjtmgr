@@ -1,7 +1,8 @@
-from sqlalchemy import String, Boolean
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.core.database import Base
+
 from app.core.base_model import TimestampMixin
+from app.core.database import Base
 
 
 class User(TimestampMixin, Base):
@@ -12,9 +13,10 @@ class User(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     department: Mapped[str | None] = mapped_column(String(100))
     position: Mapped[str | None] = mapped_column(String(100))
-    role: Mapped[str] = mapped_column(String(30), default="user")  # user / admin
+    role_id: Mapped[int] = mapped_column(Integer, ForeignKey("roles.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    hashed_password: Mapped[str | None] = mapped_column(String(255))
+    password_hash: Mapped[str | None] = mapped_column(String(255))
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    role_obj: Mapped["Role"] = relationship("Role", lazy="joined")
     contracts: Mapped[list["Contract"]] = relationship(back_populates="owner")

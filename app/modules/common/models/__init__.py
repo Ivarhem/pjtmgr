@@ -1,4 +1,5 @@
 from app.core.base_model import TimestampMixin
+from app.modules.common.models.role import Role
 from app.modules.common.models.user import User
 from app.modules.common.models.login_failure import LoginFailure
 from app.modules.common.models.user_preference import UserPreference
@@ -11,6 +12,7 @@ from app.modules.common.models.audit_log import AuditLog
 
 __all__ = [
     "TimestampMixin",
+    "Role",
     "User",
     "LoginFailure",
     "UserPreference",
