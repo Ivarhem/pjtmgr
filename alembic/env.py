@@ -12,6 +12,7 @@ from app.core.database import Base
 # 모든 모델을 import하여 Base.metadata에 등록
 import app.modules.common.models  # noqa: F401
 import app.modules.accounting.models  # noqa: F401
+import app.modules.infra.models  # noqa: F401
 
 config = context.config
 
