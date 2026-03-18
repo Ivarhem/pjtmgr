@@ -16,7 +16,8 @@ def _get_alembic_config():
     """Alembic Config 객체를 생성한다."""
     from alembic.config import Config
 
-    ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "alembic.ini")
+    # 프로젝트 루트의 alembic.ini를 찾는다 (app/core/startup/ → 3단계 상위)
+    ini_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "alembic.ini")
     ini_path = os.path.normpath(ini_path)
     cfg = Config(ini_path)
     cfg.set_main_option("sqlalchemy.url", str(engine.url))
