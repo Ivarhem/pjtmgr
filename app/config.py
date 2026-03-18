@@ -1,6 +1,18 @@
 import os
 import secrets
 
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL", "postgresql://projmgr:projmgr@localhost:5432/projmgr"
+)
+APP_PORT: int = int(os.getenv("APP_PORT", "9000"))
+ENABLED_MODULES: str = os.getenv("ENABLED_MODULES", "common,accounting,infra")
+
+
+def get_enabled_modules() -> list[str]:
+    """Parse ENABLED_MODULES string into a list."""
+    return [m.strip() for m in ENABLED_MODULES.split(",") if m.strip()]
+
+
 # 기본 홈 페이지 (/ 접속 시 리다이렉트 대상)
 # 향후 보고서/통계 등 메뉴 추가 후 .env에서 변경 가능
 # 예: DEFAULT_HOME=/reports

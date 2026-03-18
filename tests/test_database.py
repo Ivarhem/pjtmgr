@@ -1,16 +1,30 @@
-from app.database import _engine_kwargs
-from app.config import PASSWORD_MIN_LENGTH, SESSION_COOKIE_NAME, SESSION_HTTPS_ONLY, SESSION_MAX_AGE, SESSION_SAME_SITE
+from app.config import (
+    DATABASE_URL,
+    APP_PORT,
+    ENABLED_MODULES,
+    PASSWORD_MIN_LENGTH,
+    SESSION_COOKIE_NAME,
+    SESSION_HTTPS_ONLY,
+    SESSION_MAX_AGE,
+    SESSION_SAME_SITE,
+    get_enabled_modules,
+)
 from app.services.setting import get_password_min_length
 
 
-def test_engine_kwargs_adds_sqlite_connect_args() -> None:
-    assert _engine_kwargs("sqlite:///./sales.db") == {
-        "connect_args": {"check_same_thread": False}
-    }
+def test_database_url_defaults_to_postgresql() -> None:
+    assert DATABASE_URL.startswith("postgresql://")
 
 
-def test_engine_kwargs_skips_sqlite_only_args_for_other_backends() -> None:
-    assert _engine_kwargs("postgresql://user:pass@localhost/db") == {}
+def test_app_port_default() -> None:
+    assert APP_PORT == 9000
+
+
+def test_enabled_modules_parsing() -> None:
+    modules = get_enabled_modules()
+    assert isinstance(modules, list)
+    assert len(modules) > 0
+    assert "common" in modules
 
 
 def test_session_defaults_are_exposed() -> None:
