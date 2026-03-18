@@ -4,6 +4,7 @@
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+<link rel="stylesheet" href="/static/css/infra_common.css">
 {% endblock %}
 
 {% block head_scripts %}
@@ -25,24 +26,62 @@
   </div>
 </div>
 
-<!-- 단계 관리 -->
-<div class="page-header mt-md">
-  <h1>프로젝트 단계</h1>
-  <button class="btn btn-primary" id="btn-add-phase">단계 등록</button>
+<!-- Tab navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="overview" onclick="activateTab('overview')">개요</button>
+  <button class="tab-btn" data-tab="assets" onclick="activateTab('assets')">자산</button>
+  <button class="tab-btn" data-tab="ip" onclick="activateTab('ip')">IP/네트워크</button>
+  <button class="tab-btn" data-tab="portmap" onclick="activateTab('portmap')">포트맵</button>
+  <button class="tab-btn" data-tab="policy" onclick="activateTab('policy')">정책</button>
+  <button class="tab-btn" data-tab="contacts" onclick="activateTab('contacts')">담당자/업체</button>
+  <button class="tab-btn" data-tab="history" onclick="activateTab('history')">변경이력</button>
 </div>
 
-<div class="card mb-md">
-  <div id="grid-phases" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+<!-- Tab contents -->
+<div class="tab-content" id="tab-overview">
+  <!-- 단계 관리 -->
+  <div class="page-header mt-md">
+    <h1>프로젝트 단계</h1>
+    <button class="btn btn-primary" id="btn-add-phase">단계 등록</button>
+  </div>
+
+  <div class="card mb-md">
+    <div id="grid-phases" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+  </div>
+
+  <!-- 산출물 관리 -->
+  <div class="page-header mt-md">
+    <h1>산출물</h1>
+    <button class="btn btn-primary" id="btn-add-deliverable">산출물 등록</button>
+  </div>
+
+  <div class="card">
+    <div id="grid-deliverables" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+  </div>
 </div>
 
-<!-- 산출물 관리 -->
-<div class="page-header mt-md">
-  <h1>산출물</h1>
-  <button class="btn btn-primary" id="btn-add-deliverable">산출물 등록</button>
+<div class="tab-content hidden" id="tab-assets">
+  <div class="placeholder-message">자산 관리 (Phase 2b에서 구현)</div>
 </div>
 
-<div class="card">
-  <div id="grid-deliverables" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+<div class="tab-content hidden" id="tab-ip">
+  <div class="placeholder-message">IP/네트워크 관리 (Phase 2b에서 구현)</div>
+</div>
+
+<div class="tab-content hidden" id="tab-portmap">
+  <div class="placeholder-message">포트맵 관리 (Phase 2b에서 구현)</div>
+</div>
+
+<div class="tab-content hidden" id="tab-policy">
+  <div class="placeholder-message">정책 관리 (Phase 2c에서 구현)</div>
+</div>
+
+<div class="tab-content hidden" id="tab-contacts">
+  <div class="placeholder-message">담당자/업체 관리 (Phase 2c에서 구현)</div>
+</div>
+
+<div class="tab-content hidden" id="tab-history">
+  <div class="placeholder-message">변경이력 (감사 로그 연동 후 활성화)</div>
 </div>
 
 <!-- 단계 등록/수정 모달 -->

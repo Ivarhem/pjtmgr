@@ -2,6 +2,14 @@
 
 const PROJECT_ID = window.__PROJECT_ID__;
 
+/* ── Tab switching ── */
+function activateTab(tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+  document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+  document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+}
+
 const PHASE_TYPE_MAP = {
   analysis: "분석",
   design: "설계",
