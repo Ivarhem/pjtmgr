@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}현황판 - 프로젝트관리{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>프로젝트 현황판</h1>
+</div>
+
+<!-- 단계별 요약 카드 -->
+<div class="summary-cards" id="phase-summary">
+  <div class="summary-card">
+    <div class="card-label">전체 프로젝트</div>
+    <div class="card-value" id="card-total">-</div>
+  </div>
+  <div class="summary-card">
+    <div class="card-label">분석/설계</div>
+    <div class="card-value" id="card-early">-</div>
+  </div>
+  <div class="summary-card">
+    <div class="card-label">구축</div>
+    <div class="card-value" id="card-build">-</div>
+  </div>
+  <div class="summary-card">
+    <div class="card-label">시험/안정화</div>
+    <div class="card-value" id="card-late">-</div>
+  </div>
+</div>
+
+<!-- 미제출 산출물 알림 -->
+<div class="card mb-md" id="alert-section" style="display:none;">
+  <div class="card-body">
+    <h3 class="text-warning" id="alert-title">미제출 산출물</h3>
+    <ul id="alert-list" class="alert-list"></ul>
+  </div>
+</div>
+
+<!-- 프로젝트별 요약 Grid -->
+<div class="page-header mt-md">
+  <h2>프로젝트 요약</h2>
+</div>
+<div class="card mb-md">
+  <div id="grid-projects" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<!-- 정책 미준수 Grid -->
+<div class="page-header mt-md">
+  <h2>정책 미준수 항목</h2>
+</div>
+<div class="card">
+  <div id="grid-non-compliant" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_dashboard.js"></script>
+{% endblock %}

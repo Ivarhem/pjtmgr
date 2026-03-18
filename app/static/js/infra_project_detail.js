@@ -224,8 +224,13 @@ async function loadSummaryCards(projectId) {
     console.warn('IP count load error:', e);
   }
 
-  // 정책 준수율 — 메트릭 API 구현 후 활성화
-  document.getElementById('card-policy-rate').textContent = '-';
+  try {
+    const metrics = await apiFetch(`/api/v1/infra-dashboard/project/${projectId}`);
+    document.getElementById('card-policy-rate').textContent =
+      metrics.compliance_rate != null ? metrics.compliance_rate + '%' : '-';
+  } catch (e) {
+    document.getElementById('card-policy-rate').textContent = '-';
+  }
 }
 
 function updateDeliverableProgress(deliverables) {

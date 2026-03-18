@@ -51,3 +51,10 @@ def policies_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
         "infra_policies.html", {"request": request}
     )
+
+
+@router.get("/infra-dashboard", response_class=HTMLResponse)
+def infra_dashboard_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_dashboard.html", {"request": request}
+    )
