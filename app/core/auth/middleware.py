@@ -25,4 +25,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 raise UnauthorizedError("로그인이 필요합니다.")
             return RedirectResponse(url="/login")
 
+        # request.state에 user_id 설정 (페이지 라우터에서 사용)
+        request.state.user_id = user_id
+
         return await call_next(request)

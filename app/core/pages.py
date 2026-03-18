@@ -32,9 +32,9 @@ def change_password_page(request: Request, db: Session = Depends(get_db)) -> HTM
 def index(request: Request) -> RedirectResponse:
     """Redirect to appropriate home page based on enabled modules."""
     enabled = get_enabled_modules()
-    user = getattr(request.state, "user", None)
+    user_id = getattr(request.state, "user_id", None)
 
-    if not user:
+    if not user_id:
         return RedirectResponse(url="/login")
 
     if "accounting" in enabled:
