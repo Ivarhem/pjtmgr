@@ -9,6 +9,7 @@ from app.modules.common.models.customer_contact_role import CustomerContactRole
 from app.modules.common.models.setting import Setting
 from app.modules.common.models.term_config import TermConfig
 from app.modules.common.models.audit_log import AuditLog
+from app.modules.common.models.project_contract_link import ProjectContractLink
 
 __all__ = [
     "TimestampMixin",
@@ -22,4 +23,5 @@ __all__ = [
     "Setting",
     "TermConfig",
     "AuditLog",
+    "ProjectContractLink",
 ]

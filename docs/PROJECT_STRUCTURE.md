@@ -46,12 +46,14 @@ app/modules/common/
 │   ├── customer_contact_role.py # CustomerContactRole (담당자 역할)
 │   ├── setting.py               # Setting (시스템 설정)
 │   ├── term_config.py           # TermConfig (UI 용어 설정)
-│   └── audit_log.py             # AuditLog (감사 로그)
+│   ├── audit_log.py             # AuditLog (감사 로그)
+│   └── project_contract_link.py # ProjectContractLink (프로젝트-계약 연결)
 ├── schemas/
 │   ├── auth.py                  # 인증 관련 스키마
 │   ├── customer.py              # 거래처 스키마
 │   ├── customer_contact.py      # 거래처 담당자 스키마
 │   ├── customer_contact_role.py # 담당자 역할 스키마
+│   ├── project_contract_link.py # 프로젝트-계약 연결 스키마
 │   ├── role.py                  # 역할 스키마
 │   ├── setting.py               # 시스템 설정 스키마
 │   ├── term_config.py           # 용어 설정 스키마
@@ -60,6 +62,7 @@ app/modules/common/
 │   ├── user.py                  # 사용자 CRUD, CSV 일괄 등록
 │   ├── customer.py              # 거래처/담당자 CRUD
 │   ├── _customer_helpers.py     # 거래처 관련 헬퍼
+│   ├── project_contract_link.py # 프로젝트-계약 연결 CRUD
 │   ├── setting.py               # 시스템 설정 CRUD
 │   ├── term_config.py           # 용어 설정 CRUD, 시드 데이터
 │   ├── user_preference.py       # 사용자 환경설정
@@ -69,6 +72,7 @@ app/modules/common/
 ├── routers/
 │   ├── users.py                 # /api/v1/users
 │   ├── customers.py             # /api/v1/customers
+│   ├── project_contract_links.py # /api/v1/project-contract-links
 │   ├── settings.py              # /api/v1/settings
 │   ├── term_configs.py          # /api/v1/term-configs
 │   ├── health.py                # /api/v1/health
