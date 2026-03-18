@@ -105,6 +105,18 @@ def can_admin_create_contract(user: User) -> bool:
     return _is_admin(user) and ENABLE_ADMIN_CONTRACT_CREATE
 
 
+def can_edit_inventory(user: User) -> bool:
+    """인프라 인벤토리 편집 권한. admin 또는 infra 모듈 full 접근."""
+    if _is_admin(user):
+        return True
+    return get_module_access_level(user, "infra") == "full"
+
+
+def can_manage_policies(user: User) -> bool:
+    """보안 정책 관리 권한. admin만 가능."""
+    return _is_admin(user)
+
+
 def can_export(user: User) -> bool:
     """현재는 전체 허용. 향후 role별 제한 가능."""
     return True
