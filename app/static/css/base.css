@@ -333,6 +333,19 @@ body.hide-desc .data-note { display: none; }
   padding-left: 12px;
   border-left: 1px solid var(--border-color);
 }
+.nav-group-header {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-color-tertiary);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  list-style: none;
+  font-weight: 600;
+  white-space: nowrap;
+}
 
 
 /* 메인 영역 */
@@ -653,6 +666,17 @@ label.chk-inline { flex-direction: row; align-items: center; gap: 8px; cursor: p
     border-top: 1px solid var(--border-color);
   }
   .subnav-sep { display: none; }
+  .nav-group-header {
+    padding: 12px 20px 4px;
+    font-size: 0.65rem;
+    color: var(--text-color-tertiary);
+    border-top: 1px solid var(--border-color);
+    margin-top: 4px;
+  }
+  .nav-group-header:first-child {
+    border-top: none;
+    margin-top: 0;
+  }
   
   .main-content {
     padding: 16px;
