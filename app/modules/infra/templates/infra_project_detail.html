@@ -39,6 +39,31 @@
 
 <!-- Tab contents -->
 <div class="tab-content" id="tab-overview">
+  <!-- 요약 카드 -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="card-label">자산</div>
+      <div class="card-value" id="card-asset-count">-</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">IP 할당</div>
+      <div class="card-value" id="card-ip-count">-</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">정책 준수</div>
+      <div class="card-value" id="card-policy-rate">-</div>
+    </div>
+    <div class="summary-card">
+      <div class="card-label">산출물</div>
+      <div class="card-value" id="card-deliverable-progress">-</div>
+    </div>
+  </div>
+
+  <!-- 단계 타임라인 -->
+  <div class="phase-timeline" id="phase-timeline">
+    <p class="text-muted">로딩 중...</p>
+  </div>
+
   <!-- 단계 관리 -->
   <div class="page-header mt-md">
     <h1>프로젝트 단계</h1>
@@ -171,6 +196,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/utils.js"></script>
 <script src="/static/js/infra_project_detail.js"></script>
 {% endblock %}
 
