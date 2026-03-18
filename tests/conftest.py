@@ -28,6 +28,18 @@ from app.modules.accounting.models import (  # noqa: F401
     ReceiptMatch,
     TransactionLine,
 )
+from app.modules.infra.models import (  # noqa: F401
+    Asset,
+    AssetContact,
+    AssetIP,
+    IpSubnet,
+    PolicyAssignment,
+    PolicyDefinition,
+    PortMap,
+    Project,
+    ProjectDeliverable,
+    ProjectPhase,
+)
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
