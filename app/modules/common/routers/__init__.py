@@ -7,6 +7,7 @@ from app.modules.common.routers.settings import router as settings_router
 from app.modules.common.routers.term_configs import router as term_configs_router
 from app.modules.common.routers.user_preferences import router as user_preferences_router
 from app.modules.common.routers.users import router as users_router
+from app.modules.common.routers.pages import router as pages_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -15,6 +16,7 @@ api_router.include_router(users_router)
 api_router.include_router(settings_router)
 api_router.include_router(term_configs_router)
 api_router.include_router(user_preferences_router)
+api_router.include_router(pages_router)
 
 # Re-export individual routers for backward compatibility
 from app.modules.common.routers import customers  # noqa: E402, F811

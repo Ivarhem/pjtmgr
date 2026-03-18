@@ -11,6 +11,7 @@ from app.modules.accounting.routers.receipt_matches import router as receipt_mat
 from app.modules.accounting.routers.receipts import router as receipts_router
 from app.modules.accounting.routers.reports import router as reports_router
 from app.modules.accounting.routers.transaction_lines import router as transaction_lines_router
+from app.modules.accounting.routers.pages import router as pages_router
 
 api_router = APIRouter()
 api_router.include_router(dashboard_router)
@@ -23,6 +24,7 @@ api_router.include_router(receipts_router)
 api_router.include_router(receipt_matches_router)
 api_router.include_router(excel_router)
 api_router.include_router(reports_router)
+api_router.include_router(pages_router)
 
 # Re-export individual routers for backward compatibility
 from app.modules.accounting.routers import contracts  # noqa: E402, F811
