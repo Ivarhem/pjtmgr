@@ -83,6 +83,17 @@
   <div class="card">
     <div id="grid-deliverables" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
   </div>
+
+  <!-- 연결된 계약 (accounting 모듈 활성 시만) -->
+  {% if "accounting" in enabled_modules %}
+  <div class="page-header mt-md">
+    <h2>연결된 계약</h2>
+    <button class="btn btn-primary btn-sm" id="btn-link-contract">계약 연결</button>
+  </div>
+  <div class="card" id="linked-contracts-section">
+    <div id="grid-linked-contracts" class="ag-theme-quartz" style="height: 200px; width: 100%;"></div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="tab-content hidden" id="tab-assets">
@@ -122,11 +133,22 @@
 </div>
 
 <div class="tab-content hidden" id="tab-policy">
-  <div class="placeholder-message">정책 관리 (Phase 2c에서 구현)</div>
+  <div class="page-header">
+    <h2>정책 적용 현황</h2>
+    <a href="/policies" class="btn btn-secondary btn-sm">정책 관리 페이지 &rarr;</a>
+  </div>
+  <div class="card">
+    <div id="grid-tab-policies" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  </div>
 </div>
 
 <div class="tab-content hidden" id="tab-contacts">
-  <div class="placeholder-message">담당자/업체 관리 (Phase 2c에서 구현)</div>
+  <div class="page-header">
+    <h2>담당자 / 업체</h2>
+  </div>
+  <div class="card">
+    <div id="grid-tab-contacts" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  </div>
 </div>
 
 <div class="tab-content hidden" id="tab-history">
@@ -216,6 +238,7 @@
 
 <script>
   window.__PROJECT_ID__ = {{ project_id }};
+  window.__ENABLED_MODULES__ = {{ enabled_modules | tojson }};
 </script>
 {% endblock %}
 

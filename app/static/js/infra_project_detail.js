@@ -16,6 +16,8 @@ function activateTab(tabId) {
     if (tabId === 'assets') initAssetsTab();
     else if (tabId === 'ip') initIpTab();
     else if (tabId === 'portmap') initPortmapTab();
+    else if (tabId === 'policy') initPolicyTab();
+    else if (tabId === 'contacts') initContactsTab();
   }
 }
 
@@ -593,8 +595,159 @@ function initPortmapTab() {
   });
 }
 
+/* ── Policy Tab (lazy-load) ── */
+const ASSIGN_STATUS_LABELS = { not_checked: "미확인", compliant: "준수", non_compliant: "미준수", exception: "예외", not_applicable: "해당없음" };
+
+function initPolicyTab() {
+  const colDefs = [
+    { field: "policy_definition_id", headerName: "정책 ID", width: 90 },
+    { field: "asset_id", headerName: "자산 ID", width: 90 },
+    {
+      field: "status", headerName: "상태", width: 100,
+      cellRenderer: params => {
+        const span = document.createElement("span");
+        span.className = "badge badge-" + params.value;
+        span.textContent = ASSIGN_STATUS_LABELS[params.value] || params.value;
+        return span;
+      },
+    },
+    { field: "checked_by", headerName: "확인자", width: 120 },
+    { field: "checked_date", headerName: "확인일", width: 120, valueFormatter: p => fmtDate(p.value) },
+    { field: "exception_reason", headerName: "예외 사유", flex: 1, minWidth: 160 },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-policies"), {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/policy-assignments`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
+}
+
+/* ── Contacts Tab (lazy-load) ── */
+function initContactsTab() {
+  const colDefs = [
+    { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180, sort: "asc" },
+    { field: "primary_contact_name", headerName: "주 담당자", width: 140 },
+    { field: "secondary_contact_name", headerName: "부 담당자", width: 140 },
+    { field: "maintenance_vendor", headerName: "유지보수사", width: 150 },
+    { field: "dept", headerName: "부서", width: 120 },
+    { field: "hostname", headerName: "호스트명", width: 140 },
+    { field: "location", headerName: "위치", width: 130 },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-contacts"), {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/assets?project_id=${PROJECT_ID}`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
+}
+
+/* ── Linked Contracts (overview tab, accounting module only) ── */
+let linkedContractsGridApi;
+
+function initLinkedContracts() {
+  const el = document.getElementById("grid-linked-contracts");
+  if (!el) return;
+
+  const colDefs = [
+    { field: "contract_code", headerName: "사업코드", width: 130 },
+    { field: "contract_name", headerName: "사업명", flex: 1, minWidth: 200 },
+    { field: "is_primary", headerName: "주계약", width: 90,
+      cellRenderer: params => {
+        const span = document.createElement("span");
+        span.className = "badge " + (params.value ? "badge-active" : "badge-planned");
+        span.textContent = params.value ? "주" : "-";
+        return span;
+      },
+    },
+    { field: "note", headerName: "메모", width: 200 },
+    {
+      headerName: "", width: 80,
+      cellRenderer: params => {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-xs btn-danger";
+        btn.textContent = "해제";
+        btn.addEventListener("click", () => unlinkContract(params.data));
+        return btn;
+      },
+      sortable: false, filter: false,
+    },
+  ];
+
+  linkedContractsGridApi = agGrid.createGrid(el, {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+  });
+
+  loadLinkedContracts();
+}
+
+async function loadLinkedContracts() {
+  if (!linkedContractsGridApi) return;
+  try {
+    const data = await apiFetch(`/api/v1/project-contract-links?project_id=${PROJECT_ID}`);
+    linkedContractsGridApi.setGridOption("rowData", data);
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function unlinkContract(link) {
+  confirmDelete(
+    `계약 연결을 해제하시겠습니까?`,
+    async () => {
+      try {
+        await apiFetch(`/api/v1/project-contract-links/${link.id}`, { method: "DELETE" });
+        showToast("계약 연결이 해제되었습니다.");
+        loadLinkedContracts();
+        loadSummaryCards(PROJECT_ID);
+      } catch (err) { showToast(err.message, "error"); }
+    }
+  );
+}
+
+async function linkContract() {
+  const code = prompt("연결할 계약의 ID를 입력하세요:");
+  if (!code) return;
+  try {
+    await apiFetch("/api/v1/project-contract-links", {
+      method: "POST",
+      body: { project_id: PROJECT_ID, contract_id: Number(code), is_primary: false },
+    });
+    showToast("계약이 연결되었습니다.");
+    loadLinkedContracts();
+    loadSummaryCards(PROJECT_ID);
+  } catch (err) { showToast(err.message, "error"); }
+}
+
 /* ── Events ── */
-document.addEventListener("DOMContentLoaded", initGrids);
+document.addEventListener("DOMContentLoaded", () => {
+  initGrids();
+  if (window.__ENABLED_MODULES__?.includes('accounting')) {
+    initLinkedContracts();
+    const linkBtn = document.getElementById("btn-link-contract");
+    if (linkBtn) linkBtn.addEventListener("click", linkContract);
+  }
+});
 document.getElementById("btn-add-phase").addEventListener("click", openCreatePhase);
 document.getElementById("btn-cancel-phase").addEventListener("click", () => phaseModal.close());
 document.getElementById("btn-save-phase").addEventListener("click", savePhase);
