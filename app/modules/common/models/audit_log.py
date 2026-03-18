@@ -13,6 +13,7 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(50), nullable=False)      # create / update / delete
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # contract / contract_period / transaction_line / receipt
     entity_id: Mapped[int | None] = mapped_column(Integer)
+    module: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)  # "common", "accounting", "infra"
     summary: Mapped[str | None] = mapped_column(String(500))             # 변경 요약 (사람이 읽을 수 있는 형태)
     detail: Mapped[str | None] = mapped_column(Text)                     # JSON diff 등 상세 (향후 확장)
     created_at: Mapped[datetime] = mapped_column(

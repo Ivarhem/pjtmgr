@@ -13,6 +13,7 @@ def log(
     entity_id: int | None = None,
     summary: str | None = None,
     detail: str | None = None,
+    module: str | None = None,
 ) -> None:
     """감사 로그 1건을 기록한다. flush만 수행 (commit은 호출자 트랜잭션에 맡김)."""
     db.add(AuditLog(
@@ -22,5 +23,6 @@ def log(
         entity_id=entity_id,
         summary=summary,
         detail=detail,
+        module=module,
     ))
     db.flush()
