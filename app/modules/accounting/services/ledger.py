@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
-from app.services.transaction_line import list_transaction_lines_for_contract
+from app.modules.accounting.services.transaction_line import list_transaction_lines_for_contract
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 def get_ledger(db: Session, contract_id: int, *, current_user: User | None = None) -> list[dict]:

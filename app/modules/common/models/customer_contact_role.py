@@ -1,8 +1,8 @@
 """거래처 담당자 역할 (CustomerContactRole) - 담당자 1명이 여러 역할을 가질 수 있음"""
 from sqlalchemy import String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.database import Base
-from app.models.base import TimestampMixin
+from app.core.database import Base
+from app.core.base_model import TimestampMixin
 
 
 class CustomerContactRole(TimestampMixin, Base):

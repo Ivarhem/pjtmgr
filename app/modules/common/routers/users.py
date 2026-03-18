@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth.dependencies import require_admin
-from app.schemas.user import UserCreate, UserUpdate, UserRead
-from app.services import user as svc
-from app.services.importer import validate_csv
+from app.core.database import get_db
+from app.core.auth.dependencies import require_admin
+from app.modules.common.schemas.user import UserCreate, UserUpdate, UserRead
+from app.modules.common.services import user as svc
+from app.modules.accounting.services.importer import validate_csv
 
 router = APIRouter(
     prefix="/api/v1/users",

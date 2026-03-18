@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access, check_period_access
-from app.exceptions import BusinessRuleError
-from app.models.contract_period import ContractPeriod
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.user import User
+from app.core.auth.authorization import check_contract_access, check_period_access
+from app.core.exceptions import BusinessRuleError
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.common.models.user import User
 
 
 def get_forecasts(

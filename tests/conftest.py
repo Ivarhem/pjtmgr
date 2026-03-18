@@ -5,24 +5,27 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.database import Base
-from app.models import (  # noqa: F401
+from app.core.database import Base
+from app.modules.common.models import (  # noqa: F401
     AuditLog,
+    Customer,
+    CustomerContact,
+    CustomerContactRole,
+    LoginFailure,
+    Setting,
+    TermConfig,
+    User,
+    UserPreference,
+)
+from app.modules.accounting.models import (  # noqa: F401
     Contract,
     ContractContact,
     ContractPeriod,
     ContractTypeConfig,
-    Customer,
-    CustomerContact,
-    CustomerContactRole,
     MonthlyForecast,
     Receipt,
     ReceiptMatch,
-    Setting,
-    TermConfig,
     TransactionLine,
-    User,
-    UserPreference,
 )
 
 TEST_DATABASE_URL = os.getenv(

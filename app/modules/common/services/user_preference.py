@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from app.models.user_preference import UserPreference
+from app.modules.common.models.user_preference import UserPreference
 
 
 def get_preference(db: Session, user_id: int, key: str) -> str | None:

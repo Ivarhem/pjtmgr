@@ -6,16 +6,16 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.auth.middleware import AuthMiddleware
-from app.auth.router import router as auth_router
-from app.config import (
+from app.core.auth.middleware import AuthMiddleware
+from app.core.auth.router import router as auth_router
+from app.core.config import (
     SESSION_COOKIE_NAME,
     SESSION_HTTPS_ONLY,
     SESSION_MAX_AGE,
     SESSION_SAME_SITE,
     SESSION_SECRET_KEY,
 )
-from app.exceptions import (
+from app.core.exceptions import (
     BusinessRuleError,
     DuplicateError,
     NotFoundError,
@@ -23,45 +23,49 @@ from app.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-from app.models import (  # noqa: F401 - 테이블 생성을 위해 모두 import
+from app.modules.common.models import (  # noqa: F401 - 테이블 생성을 위해 모두 import
     AuditLog,
-    Contract,
-    ContractContact,
-    ContractPeriod,
-    ContractTypeConfig,
     Customer,
     CustomerContact,
     CustomerContactRole,
     LoginFailure,
-    MonthlyForecast,
-    Receipt,
-    ReceiptMatch,
     Setting,
     TermConfig,
-    TransactionLine,
     User,
     UserPreference,
 )
-from app.routers import (
-    contract_contacts,
-    contract_types,
-    contracts,
+from app.modules.accounting.models import (  # noqa: F401
+    Contract,
+    ContractContact,
+    ContractPeriod,
+    ContractTypeConfig,
+    MonthlyForecast,
+    Receipt,
+    ReceiptMatch,
+    TransactionLine,
+)
+from app.modules.common.routers import (
     customers,
-    dashboard,
-    excel,
-    forecasts,
     health,
-    pages,
-    receipt_matches,
-    receipts,
-    reports,
     settings,
     term_configs,
-    transaction_lines,
     user_preferences,
     users,
 )
-from app.startup.lifespan import lifespan
+from app.modules.accounting.routers import (
+    contract_contacts,
+    contract_types,
+    contracts,
+    dashboard,
+    excel,
+    forecasts,
+    receipt_matches,
+    receipts,
+    reports,
+    transaction_lines,
+)
+from app.core import pages
+from app.core.startup.lifespan import lifespan
 
 
 def create_app() -> FastAPI:

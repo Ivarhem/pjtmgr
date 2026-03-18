@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.auth.dependencies import get_current_user
-from app.auth.authorization import check_contract_access
-from app.models.user import User
-from app.services import report as svc
+from app.core.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.auth.authorization import check_contract_access
+from app.modules.common.models.user import User
+from app.modules.accounting.services import report as svc
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 

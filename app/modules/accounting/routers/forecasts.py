@@ -2,12 +2,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
-from app.models.user import User
-from app.schemas.monthly_forecast import MonthlyForecastCreate, MonthlyForecastRead
-from app.services import forecast_sync as sync_svc
-from app.services import monthly_forecast as svc
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
+from app.modules.common.models.user import User
+from app.modules.accounting.schemas.monthly_forecast import MonthlyForecastCreate, MonthlyForecastRead
+from app.modules.accounting.services import forecast_sync as sync_svc
+from app.modules.accounting.services import monthly_forecast as svc
 
 router = APIRouter(prefix="/api/v1", tags=["forecasts"])
 

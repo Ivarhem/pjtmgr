@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import or_
 
-from app.auth.constants import ROLE_ADMIN
+from app.core.auth.constants import ROLE_ADMIN
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Query, Session
-    from app.models.user import User
-    from app.models.contract import Contract
+    from app.modules.common.models.user import User
+    from app.modules.accounting.models.contract import Contract
 
 
 # ── 기능(Action) 권한 ────────────────────────────────────────
@@ -54,7 +54,7 @@ def has_full_contract_scope(user: User) -> bool:
 
 def can_admin_create_contract(user: User) -> bool:
     """사업관리 화면에서 신규 등록 — 개발/정비용, 실 서비스 배포 시 비활성화."""
-    from app.config import ENABLE_ADMIN_CONTRACT_CREATE
+    from app.core.config import ENABLE_ADMIN_CONTRACT_CREATE
     return user.role == ROLE_ADMIN and ENABLE_ADMIN_CONTRACT_CREATE
 
 
@@ -74,7 +74,7 @@ def check_contract_access(db: "Session", contract_id: int, user: "User") -> None
     """단건 사업 접근 권한 확인. admin은 전체, user는 본인 담당만."""
     if has_full_contract_scope(user):
         return
-    from app.models.contract import Contract
+    from app.modules.accounting.models.contract import Contract
     contract = (
         db.query(Contract.id)
         .filter(Contract.id == contract_id)
@@ -82,7 +82,7 @@ def check_contract_access(db: "Session", contract_id: int, user: "User") -> None
         .first()
     )
     if not contract:
-        from app.exceptions import NotFoundError
+        from app.core.exceptions import NotFoundError
         raise NotFoundError("사업을 찾을 수 없습니다.")
 
 
@@ -90,10 +90,10 @@ def check_period_access(db: "Session", period_id: int, user: "User") -> None:
     """기간(period_id) 기반 사업 접근 권한 확인."""
     if has_full_contract_scope(user):
         return
-    from app.models.contract_period import ContractPeriod
+    from app.modules.accounting.models.contract_period import ContractPeriod
     period = db.get(ContractPeriod, period_id)
     if not period:
-        from app.exceptions import NotFoundError
+        from app.core.exceptions import NotFoundError
         raise NotFoundError("기간을 찾을 수 없습니다.")
     check_contract_access(db, period.contract_id, user)
 
@@ -137,7 +137,7 @@ def get_owner_filter(user: User) -> int | None:
 
 def list_accessible_contract_ids(db: "Session", user: "User") -> list[int]:
     """현재 사용자가 접근 가능한 사업 ID 목록."""
-    from app.models.contract import Contract
+    from app.modules.accounting.models.contract import Contract
 
     q = db.query(Contract.id)
     q = apply_contract_scope(q, user)
@@ -146,8 +146,8 @@ def list_accessible_contract_ids(db: "Session", user: "User") -> list[int]:
 
 def _contract_visibility_clause(user: User):
     """Contract owner 또는 Period owner 기준의 가시 범위 조건."""
-    from app.models.contract import Contract
-    from app.models.contract_period import ContractPeriod
+    from app.modules.accounting.models.contract import Contract
+    from app.modules.accounting.models.contract_period import ContractPeriod
 
     return or_(
         Contract.owner_user_id == user.id,

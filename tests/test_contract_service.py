@@ -1,18 +1,18 @@
-from app.models.contract import Contract
-from app.models.contract_type_config import ContractTypeConfig
-from app.models.customer import Customer
-from app.models.contract_period import ContractPeriod
-from app.models.receipt import Receipt
-from app.models.transaction_line import STATUS_CONFIRMED, TransactionLine
-from app.models.user import User
-from app.exceptions import BusinessRuleError
-from app.schemas.contract import ContractCreate, ContractPeriodCreate
-from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
-from app.schemas.transaction_line import TransactionLineCreate, TransactionLineUpdate
-from app.services import contract as contract_service
-from app.services import receipt as receipt_service
-from app.services import receipt_match as receipt_match_service
-from app.services import transaction_line as tl_service
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_type_config import ContractTypeConfig
+from app.modules.common.models.customer import Customer
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
+from app.modules.common.models.user import User
+from app.core.exceptions import BusinessRuleError
+from app.modules.accounting.schemas.contract import ContractCreate, ContractPeriodCreate
+from app.modules.accounting.schemas.receipt import ReceiptCreate, ReceiptUpdate
+from app.modules.accounting.schemas.transaction_line import TransactionLineCreate, TransactionLineUpdate
+from app.modules.accounting.services import contract as contract_service
+from app.modules.accounting.services import receipt as receipt_service
+from app.modules.accounting.services import receipt_match as receipt_match_service
+from app.modules.accounting.services import transaction_line as tl_service
 
 
 def _seed_contract_type(db_session) -> None:

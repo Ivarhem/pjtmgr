@@ -4,12 +4,12 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.config import PASSWORD_MIN_LENGTH
-from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate
-from app.auth.constants import ROLE_ADMIN, ROLE_USER
-from app.auth.password import hash_password
-from app.exceptions import NotFoundError, BusinessRuleError
+from app.core.config import PASSWORD_MIN_LENGTH
+from app.modules.common.models.user import User
+from app.modules.common.schemas.user import UserCreate, UserUpdate
+from app.core.auth.constants import ROLE_ADMIN, ROLE_USER
+from app.core.auth.password import hash_password
+from app.core.exceptions import NotFoundError, BusinessRuleError
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ def ensure_bootstrap_admin(
 
 def delete_user(db: Session, user_id: int) -> None:
     """사용자 삭제. 미존재 시 NotFoundError, 관리자 삭제 시 BusinessRuleError."""
-    from app.models.contract import Contract
+    from app.modules.accounting.models.contract import Contract
 
     obj = db.get(User, user_id)
     if not obj:

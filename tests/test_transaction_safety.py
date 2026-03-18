@@ -1,25 +1,25 @@
 import pytest
 
-from app.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.contract_type_config import ContractTypeConfig
-from app.models.customer import Customer
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.receipt import Receipt
-from app.models.receipt_match import ReceiptMatch
-from app.models.setting import Setting
-from app.models.transaction_line import TransactionLine
-from app.models.user import User
-from app.schemas.monthly_forecast import MonthlyForecastCreate
-from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
-from app.schemas.setting import SettingUpdate
-from app.services import forecast_sync as forecast_sync_service
-from app.services import monthly_forecast as forecast_service
-from app.services import receipt as receipt_service
-from app.services import receipt_match as match_service
-from app.services import setting as setting_service
-from app.services import transaction_line as tl_service
+from app.core.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.contract_type_config import ContractTypeConfig
+from app.modules.common.models.customer import Customer
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.modules.common.models.setting import Setting
+from app.modules.accounting.models.transaction_line import TransactionLine
+from app.modules.common.models.user import User
+from app.modules.accounting.schemas.monthly_forecast import MonthlyForecastCreate
+from app.modules.accounting.schemas.receipt import ReceiptCreate, ReceiptUpdate
+from app.modules.common.schemas.setting import SettingUpdate
+from app.modules.accounting.services import forecast_sync as forecast_sync_service
+from app.modules.accounting.services import monthly_forecast as forecast_service
+from app.modules.accounting.services import receipt as receipt_service
+from app.modules.accounting.services import receipt_match as match_service
+from app.modules.common.services import setting as setting_service
+from app.modules.accounting.services import transaction_line as tl_service
 
 
 def _seed_contract_for_receipt(db_session) -> tuple[User, Customer, Contract]:

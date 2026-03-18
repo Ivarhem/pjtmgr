@@ -1,14 +1,14 @@
 import pytest
 
-from app.exceptions import BusinessRuleError, NotFoundError
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.customer import Customer
-from app.models.receipt import Receipt
-from app.models.transaction_line import STATUS_CONFIRMED, TransactionLine
-from app.models.user import User
-from app.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
-from app.services import receipt_match as receipt_match_service
+from app.core.exceptions import BusinessRuleError, NotFoundError
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.common.models.customer import Customer
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
+from app.modules.common.models.user import User
+from app.modules.accounting.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
+from app.modules.accounting.services import receipt_match as receipt_match_service
 
 
 def _seed_contract_graph(db_session):

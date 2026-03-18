@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth.dependencies import get_current_user
-from app.models.user import User
-from app.services import user_preference as svc
+from app.core.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
+from app.modules.common.services import user_preference as svc
 
 router = APIRouter(prefix="/api/v1/preferences", tags=["preferences"])
 

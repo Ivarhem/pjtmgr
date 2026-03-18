@@ -10,16 +10,16 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.transaction_line import STATUS_CONFIRMED, TransactionLine
-from app.schemas.report import (
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
+from app.modules.accounting.schemas.report import (
     ReportFilter,
     TargetVsActualResponse,
     TargetVsActualRow,
     TargetVsActualTotals,
 )
-from app.services.metrics import (
+from app.modules.accounting.services.metrics import (
     aggregate_by_field,
     aggregate_monthly_trend,
     aggregate_totals,
@@ -36,7 +36,7 @@ from app.services.metrics import (
 )
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 def _default_date_from() -> str:

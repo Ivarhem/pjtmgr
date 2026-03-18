@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth.dependencies import get_current_user, require_admin
-from app.models.user import User
-from app.schemas.term_config import TermConfigRead, TermConfigCreate, TermConfigUpdate
-from app.services import term_config as svc
+from app.core.database import get_db
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.modules.common.models.user import User
+from app.modules.common.schemas.term_config import TermConfigRead, TermConfigCreate, TermConfigUpdate
+from app.modules.common.services import term_config as svc
 
 router = APIRouter(prefix="/api/v1/term-configs", tags=["term-configs"])
 

@@ -7,8 +7,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.startup.bootstrap import initialize_reference_data
-from app.startup.database_init import prepare_database
+from app.core.startup.bootstrap import initialize_reference_data
+from app.core.startup.database_init import prepare_database
 
 logger = logging.getLogger("sales")
 

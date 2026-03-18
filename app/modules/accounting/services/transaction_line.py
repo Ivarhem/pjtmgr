@@ -5,23 +5,23 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import can_delete_transaction_line, check_contract_access
-from app.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
-from app.models.contract import Contract
-from app.models.transaction_line import (
+from app.core.auth.authorization import can_delete_transaction_line, check_contract_access
+from app.core.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.transaction_line import (
     STATUS_CONFIRMED,
     STATUS_EXPECTED,
     TransactionLine,
 )
-from app.schemas.transaction_line import TransactionLineCreate, TransactionLineUpdate
-from app.services._contract_helpers import (
+from app.modules.accounting.schemas.transaction_line import TransactionLineCreate, TransactionLineUpdate
+from app.modules.accounting.services._contract_helpers import (
     check_period_not_completed,
     check_periods_not_completed,
 )
-from app.services.customer import get_or_create_by_name as _get_or_create_customer
+from app.modules.common.services.customer import get_or_create_by_name as _get_or_create_customer
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 # ── dict 변환 ─────────────────────────────────────────────
@@ -164,7 +164,7 @@ def delete_transaction_line(
                 raise PermissionDeniedError("실적 삭제 권한이 없습니다.")
             check_contract_access(db, row.contract_id, current_user)
         check_period_not_completed(db, row.contract_id, row.revenue_month)
-        from app.models.receipt_match import ReceiptMatch
+        from app.modules.accounting.models.receipt_match import ReceiptMatch
         from sqlalchemy import func as sa_func
 
         matched = (

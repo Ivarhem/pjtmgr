@@ -2,14 +2,14 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.auth.password import hash_password
-from app.auth.service import authenticate, change_password, reset_login_failures
-from app.models.login_failure import LoginFailure
-from app.models.user import User
-from app.schemas.user import UserCreate
-from app.services.setting import update_setting
-from app.services.user import create_user, ensure_bootstrap_admin
-from app.exceptions import BusinessRuleError
+from app.core.auth.password import hash_password
+from app.core.auth.service import authenticate, change_password, reset_login_failures
+from app.modules.common.models.login_failure import LoginFailure
+from app.modules.common.models.user import User
+from app.modules.common.schemas.user import UserCreate
+from app.modules.common.services.setting import update_setting
+from app.modules.common.services.user import create_user, ensure_bootstrap_admin
+from app.core.exceptions import BusinessRuleError
 
 
 def test_authenticate_locks_after_repeated_failures(db_session, monkeypatch) -> None:

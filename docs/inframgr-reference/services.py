@@ -9,8 +9,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_edit_inventory
-from app.exceptions import DuplicateError, NotFoundError, PermissionDeniedError
+from app.core.auth.authorization import can_edit_inventory
+from app.core.exceptions import DuplicateError, NotFoundError, PermissionDeniedError
 from app.models.asset import Asset
 from app.models.project import Project
 from app.schemas.asset import AssetCreate, AssetUpdate
@@ -105,8 +105,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_edit_inventory
-from app.exceptions import (
+from app.core.auth.authorization import can_edit_inventory
+from app.core.exceptions import (
     BusinessRuleError,
     DuplicateError,
     NotFoundError,
@@ -382,8 +382,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_edit_inventory
-from app.exceptions import (
+from app.core.auth.authorization import can_edit_inventory
+from app.core.exceptions import (
     BusinessRuleError,
     DuplicateError,
     NotFoundError,
@@ -634,8 +634,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_edit_inventory
-from app.exceptions import (
+from app.core.auth.authorization import can_edit_inventory
+from app.core.exceptions import (
     BusinessRuleError,
     DuplicateError,
     NotFoundError,
@@ -812,8 +812,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_edit_inventory, can_manage_policies
-from app.exceptions import (
+from app.core.auth.authorization import can_edit_inventory, can_manage_policies
+from app.core.exceptions import (
     BusinessRuleError,
     DuplicateError,
     NotFoundError,
@@ -1027,8 +1027,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_edit_inventory
-from app.exceptions import BusinessRuleError, DuplicateError, NotFoundError, PermissionDeniedError
+from app.core.auth.authorization import can_edit_inventory
+from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError, PermissionDeniedError
 from app.models.asset import Asset
 from app.models.project import Project
 from app.schemas.project import ProjectCreate, ProjectUpdate
@@ -1117,11 +1117,11 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.exceptions import BusinessRuleError
+from app.core.config import settings
+from app.core.exceptions import BusinessRuleError
 from app.models.contact import Contact
 from app.models.partner import Partner
-from app.models.user import User
+from app.modules.common.models.user import User
 
 
 SOURCE = "sales"
@@ -1342,16 +1342,16 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import can_manage_users
-from app.auth.password import hash_password, verify_password
-from app.exceptions import (
+from app.core.auth.authorization import can_manage_users
+from app.core.auth.password import hash_password, verify_password
+from app.core.exceptions import (
     DuplicateError,
     NotFoundError,
     PermissionDeniedError,
     UnauthorizedError,
 )
-from app.models.user import User
-from app.schemas.user import UserChangePassword, UserCreate, UserResetPassword, UserUpdate
+from app.modules.common.models.user import User
+from app.modules.common.schemas.user import UserChangePassword, UserCreate, UserResetPassword, UserUpdate
 
 
 def list_users(db: Session, current_user) -> list[User]:

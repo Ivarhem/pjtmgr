@@ -10,13 +10,13 @@ from __future__ import annotations
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access
-from app.exceptions import BusinessRuleError, NotFoundError
-from app.models.contract_period import ContractPeriod
-from app.models.receipt_match import ReceiptMatch
-from app.models.transaction_line import TransactionLine, STATUS_CONFIRMED
-from app.models.receipt import Receipt
-from app.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
+from app.core.auth.authorization import check_contract_access
+from app.core.exceptions import BusinessRuleError, NotFoundError
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.modules.accounting.models.transaction_line import TransactionLine, STATUS_CONFIRMED
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
 
 
 # ── 조회 ─────────────────────────────────────────────────────────

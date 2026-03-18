@@ -6,8 +6,8 @@ import os
 
 from sqlalchemy import inspect
 
-from app.config import ENV
-from app.database import Base, engine
+from app.core.config import ENV
+from app.core.database import Base, engine
 
 logger = logging.getLogger(__name__)
 

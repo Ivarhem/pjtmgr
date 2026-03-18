@@ -13,15 +13,15 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func, and_
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.transaction_line import TransactionLine, STATUS_CONFIRMED
-from app.models.receipt import Receipt
-from app.models.receipt_match import ReceiptMatch
-from app.exceptions import NotFoundError
-from app.schemas.report import ReportFilter
-from app.services.metrics import (
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.transaction_line import TransactionLine, STATUS_CONFIRMED
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.core.exceptions import NotFoundError
+from app.modules.accounting.schemas.report import ReportFilter
+from app.modules.accounting.services.metrics import (
     build_filter as _build_filter,
     month_range as _month_range,
     years_in_range as _years_in_range,
@@ -36,7 +36,7 @@ from app.services.metrics import (
 )
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 # ═══ 보고서 1: 요약 현황 ═════════════════════════════════════════
@@ -382,8 +382,8 @@ def get_contract_pnl(
         rcpt_q = rcpt_q.filter(Receipt.revenue_month.like(year_filter))
     receipts = rcpt_q.order_by(Receipt.receipt_date).all()
 
-    from app.models.contract_contact import ContractContact
-    from app.models.contract_period import ContractPeriod as _DP
+    from app.modules.accounting.models.contract_contact import ContractContact
+    from app.modules.accounting.models.contract_period import ContractPeriod as _DP
     from sqlalchemy.orm import joinedload as _jl
     period_ids = [p.id for p in db.query(_DP.id).filter(_DP.contract_id == contract_id).all()]
     contacts = (
@@ -533,7 +533,7 @@ def get_contract_pnl(
 
 
 # ═══ Excel Export (분리됨 → _report_export.py) ═════════════════
-from app.services._report_export import (  # noqa: E402
+from app.modules.accounting.services._report_export import (  # noqa: E402
     export_summary,
     export_forecast_vs_actual,
     export_receivables,

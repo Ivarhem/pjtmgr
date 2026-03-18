@@ -1,10 +1,10 @@
 """FastAPI 의존성: 현재 로그인 사용자 확인 및 권한 검사."""
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models.user import User
-from app.auth.constants import ROLE_ADMIN
-from app.exceptions import PermissionDeniedError, UnauthorizedError
+from app.core.database import get_db
+from app.modules.common.models.user import User
+from app.core.auth.constants import ROLE_ADMIN
+from app.core.exceptions import PermissionDeniedError, UnauthorizedError
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:

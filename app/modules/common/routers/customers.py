@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerRead, CustomerListRead
-from app.schemas.customer_contact import CustomerContactCreate, CustomerContactUpdate
-from app.services import customer as svc
-from app.auth.dependencies import get_current_user, require_admin
-from app.models.user import User
+from app.core.database import get_db
+from app.modules.common.schemas.customer import CustomerCreate, CustomerUpdate, CustomerRead, CustomerListRead
+from app.modules.common.schemas.customer_contact import CustomerContactCreate, CustomerContactUpdate
+from app.modules.common.services import customer as svc
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.modules.common.models.user import User
 
 router = APIRouter(prefix="/api/v1/customers", tags=["customers"])
 

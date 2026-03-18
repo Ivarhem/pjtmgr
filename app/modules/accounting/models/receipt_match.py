@@ -1,8 +1,8 @@
 """수금 대사 (ReceiptMatch) - Receipt를 매출 라인(TransactionLine)에 매칭"""
 from sqlalchemy import String, Integer, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.database import Base
-from app.models.base import TimestampMixin
+from app.core.database import Base
+from app.core.base_model import TimestampMixin
 
 
 class ReceiptMatch(TimestampMixin, Base):

@@ -5,12 +5,12 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.config import LOGIN_LOCKOUT_SECONDS, LOGIN_MAX_FAILURES
-from app.models.login_failure import LoginFailure
-from app.models.user import User
-from app.auth.password import hash_password, verify_password
-from app.exceptions import BusinessRuleError
-from app.services.setting import get_password_min_length
+from app.core.config import LOGIN_LOCKOUT_SECONDS, LOGIN_MAX_FAILURES
+from app.modules.common.models.login_failure import LoginFailure
+from app.modules.common.models.user import User
+from app.core.auth.password import hash_password, verify_password
+from app.core.exceptions import BusinessRuleError
+from app.modules.common.services.setting import get_password_min_length
 
 
 def _now() -> datetime:

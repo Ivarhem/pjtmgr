@@ -1,4 +1,4 @@
-from app.services.metrics import build_filter, month_range, safe_pct, years_in_range
+from app.modules.accounting.services.metrics import build_filter, month_range, safe_pct, years_in_range
 
 
 def test_build_filter_normalizes_month_bounds() -> None:

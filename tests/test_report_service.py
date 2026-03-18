@@ -2,17 +2,17 @@ from io import BytesIO
 
 from openpyxl import load_workbook
 
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.contract_type_config import ContractTypeConfig
-from app.models.customer import Customer
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.receipt import Receipt
-from app.models.receipt_match import ReceiptMatch
-from app.models.transaction_line import STATUS_CONFIRMED, TransactionLine
-from app.models.user import User
-from app.services import report as report_service
-from app.services.metrics import build_filter
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.contract_type_config import ContractTypeConfig
+from app.modules.common.models.customer import Customer
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
+from app.modules.common.models.user import User
+from app.modules.accounting.services import report as report_service
+from app.modules.accounting.services.metrics import build_filter
 
 
 def _seed_report_data(db_session) -> dict[str, int]:

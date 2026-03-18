@@ -6,13 +6,13 @@ import datetime
 
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.transaction_line import STATUS_EXPECTED, TransactionLine
-from app.models.user import User
-from app.services.transaction_line import _transaction_line_dict
+from app.core.auth.authorization import check_contract_access
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.transaction_line import STATUS_EXPECTED, TransactionLine
+from app.modules.common.models.user import User
+from app.modules.accounting.services.transaction_line import _transaction_line_dict
 
 
 def _calc_invoice_date(src: ContractPeriod | Contract, revenue_month: str) -> str | None:

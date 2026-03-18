@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
-from app.schemas._normalize import normalize_date, normalize_month
+from app.core._normalize import normalize_date, normalize_month
 
 Stage = Literal["10%", "50%", "70%", "90%", "계약완료", "실주"]
 ContractStatus = Literal["active", "closed", "cancelled"]

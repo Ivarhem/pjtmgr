@@ -1,6 +1,6 @@
 from pydantic import BaseModel, field_validator
 
-from app.config import PASSWORD_MIN_LENGTH
+from app.core.config import PASSWORD_MIN_LENGTH
 
 
 def _validate_password_min_length(v: int | None) -> int | None:

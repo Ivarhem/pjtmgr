@@ -2,12 +2,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import check_contract_access
-from app.auth.dependencies import get_current_user
-from app.database import get_db
-from app.models.user import User
-from app.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
-from app.services import receipt_match as match_svc
+from app.core.auth.authorization import check_contract_access
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
+from app.modules.common.models.user import User
+from app.modules.accounting.schemas.receipt_match import ReceiptMatchCreate, ReceiptMatchUpdate
+from app.modules.accounting.services import receipt_match as match_svc
 
 router = APIRouter(prefix="/api/v1", tags=["receipt-matches"])
 

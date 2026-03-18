@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.schemas.customer_contact import CustomerContactRead
+from app.modules.common.schemas.customer_contact import CustomerContactRead
 
 
 class CustomerCreate(BaseModel):

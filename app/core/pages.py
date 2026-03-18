@@ -4,9 +4,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app.config import DEFAULT_HOME
-from app.database import get_db
-from app.services.setting import get_password_min_length
+from app.core.config import DEFAULT_HOME
+from app.core.database import get_db
+from app.modules.common.services.setting import get_password_min_length
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(tags=["pages"])

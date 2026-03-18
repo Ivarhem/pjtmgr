@@ -1,7 +1,7 @@
 """감사 로그 기록 유틸리티."""
 from __future__ import annotations
 from sqlalchemy.orm import Session
-from app.models.audit_log import AuditLog
+from app.modules.common.models.audit_log import AuditLog
 
 
 def log(

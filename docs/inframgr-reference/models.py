@@ -7,7 +7,7 @@
 from app.models.asset import Asset
 from app.models.asset_contact import AssetContact
 from app.models.asset_ip import AssetIP
-from app.models.base import Base
+from app.core.base_model import Base
 from app.models.contact import Contact
 from app.models.ip_subnet import IpSubnet
 from app.models.partner import Partner
@@ -17,7 +17,7 @@ from app.models.port_map import PortMap
 from app.models.project import Project
 from app.models.project_deliverable import ProjectDeliverable
 from app.models.project_phase import ProjectPhase
-from app.models.user import User
+from app.modules.common.models.user import User
 
 
 # ============================================
@@ -30,7 +30,7 @@ from datetime import date
 from sqlalchemy import Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class Asset(TimestampMixin, Base):
@@ -95,7 +95,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class AssetContact(TimestampMixin, Base):
@@ -115,7 +115,7 @@ from __future__ import annotations
 from sqlalchemy import Boolean, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class AssetIP(TimestampMixin, Base):
@@ -172,7 +172,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class Contact(TimestampMixin, Base):
@@ -200,7 +200,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class IpSubnet(TimestampMixin, Base):
@@ -232,7 +232,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class Partner(TimestampMixin, Base):
@@ -260,7 +260,7 @@ from datetime import date
 from sqlalchemy import Date, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class PolicyAssignment(TimestampMixin, Base):
@@ -287,7 +287,7 @@ from datetime import date
 from sqlalchemy import Boolean, Date, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class PolicyDefinition(TimestampMixin, Base):
@@ -320,7 +320,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class PortMap(TimestampMixin, Base):
@@ -390,7 +390,7 @@ from datetime import date
 from sqlalchemy import Date, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class Project(TimestampMixin, Base):
@@ -418,7 +418,7 @@ from datetime import date
 from sqlalchemy import Boolean, Date, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class ProjectDeliverable(TimestampMixin, Base):
@@ -441,7 +441,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class ProjectPhase(TimestampMixin, Base):
@@ -466,7 +466,7 @@ from __future__ import annotations
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin
+from app.core.base_model import Base, TimestampMixin
 
 
 class User(TimestampMixin, Base):

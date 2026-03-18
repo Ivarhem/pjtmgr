@@ -8,19 +8,19 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 from sqlalchemy.orm import Session
-from app.models.user import User
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.transaction_line import TransactionLine
-from app.auth.constants import ROLE_USER
-from app.services.customer import get_or_create_by_name as _get_or_create_customer_svc
-from app.exceptions import BusinessRuleError
+from app.modules.common.models.user import User
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.transaction_line import TransactionLine
+from app.core.auth.constants import ROLE_USER
+from app.modules.common.services.customer import get_or_create_by_name as _get_or_create_customer_svc
+from app.core.exceptions import BusinessRuleError
 
 if TYPE_CHECKING:
-    from app.models.customer import Customer
-from app.schemas.contract import VALID_STAGES
-from app.services.contract_type_config import get_valid_codes as _get_valid_contract_types
+    from app.modules.common.models.customer import Customer
+from app.modules.accounting.schemas.contract import VALID_STAGES
+from app.modules.accounting.services.contract_type_config import get_valid_codes as _get_valid_contract_types
 
 # ── 파일 유효성 검증 ──
 

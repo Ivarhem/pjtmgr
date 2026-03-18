@@ -4,10 +4,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user, require_admin
-from app.database import get_db
-from app.models.user import User
-from app.schemas.contract import (
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.core.database import get_db
+from app.modules.common.models.user import User
+from app.modules.accounting.schemas.contract import (
     BulkAssignOwnerRequest,
     ContractCreate,
     ContractPeriodCreate,
@@ -15,9 +15,9 @@ from app.schemas.contract import (
     ContractRead,
     ContractUpdate,
 )
-from app.services import contract as svc
-from app.services import ledger as ledger_svc
-from app.services.dashboard import get_my_contracts_summary
+from app.modules.accounting.services import contract as svc
+from app.modules.accounting.services import ledger as ledger_svc
+from app.modules.accounting.services.dashboard import get_my_contracts_summary
 
 router = APIRouter(prefix="/api/v1", tags=["contracts"])
 

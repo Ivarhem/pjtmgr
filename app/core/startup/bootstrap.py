@@ -3,16 +3,16 @@ from __future__ import annotations
 
 import logging
 
-from app.config import (
+from app.core.config import (
     BOOTSTRAP_ADMIN_LOGIN_ID,
     BOOTSTRAP_ADMIN_NAME,
     BOOTSTRAP_ADMIN_PASSWORD,
     ENV,
 )
-from app.database import SessionLocal
-from app.services.contract_type_config import seed_defaults as seed_contract_types
-from app.services.term_config import seed_defaults as seed_terms
-from app.services.user import ensure_bootstrap_admin
+from app.core.database import SessionLocal
+from app.modules.accounting.services.contract_type_config import seed_defaults as seed_contract_types
+from app.modules.common.services.term_config import seed_defaults as seed_terms
+from app.modules.common.services.user import ensure_bootstrap_admin
 
 logger = logging.getLogger("sales")
 

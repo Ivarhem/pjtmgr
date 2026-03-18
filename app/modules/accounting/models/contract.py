@@ -2,8 +2,8 @@
 from sqlalchemy import String, Integer, ForeignKey, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import datetime
-from app.database import Base
-from app.models.base import TimestampMixin
+from app.core.database import Base
+from app.core.base_model import TimestampMixin
 
 
 class Contract(TimestampMixin, Base):

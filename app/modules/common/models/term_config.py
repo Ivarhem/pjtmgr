@@ -1,7 +1,7 @@
 """용어 설정 (TermConfig) - 관리자가 UI 표시 라벨을 커스터마이징할 수 있는 용어 사전"""
 from sqlalchemy import String, Integer, Boolean, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from app.database import Base
+from app.core.database import Base
 
 
 class TermConfig(Base):

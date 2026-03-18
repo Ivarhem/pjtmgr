@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from app.schemas._normalize import normalize_month, normalize_date
+from app.core._normalize import normalize_month, normalize_date
 
 
 class ReceiptCreate(BaseModel):

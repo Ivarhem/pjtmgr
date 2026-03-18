@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from app.models.contract_type_config import ContractTypeConfig
-from app.schemas.contract_type_config import ContractTypeRead
-from app.exceptions import NotFoundError, DuplicateError
+from app.modules.accounting.models.contract_type_config import ContractTypeConfig
+from app.modules.accounting.schemas.contract_type_config import ContractTypeRead
+from app.core.exceptions import NotFoundError, DuplicateError
 
 
 def to_read(dt: ContractTypeConfig) -> ContractTypeRead:

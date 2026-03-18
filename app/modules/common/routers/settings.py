@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth.dependencies import get_current_user, require_admin
-from app.models.user import User
-from app.schemas.setting import SettingRead, SettingUpdate
-from app.services import setting as svc
+from app.core.database import get_db
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.modules.common.models.user import User
+from app.modules.common.schemas.setting import SettingRead, SettingUpdate
+from app.modules.common.services import setting as svc
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 

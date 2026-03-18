@@ -5,23 +5,23 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
+from app.core.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
 
 if TYPE_CHECKING:
-    from app.models.user import User
-from app.models.customer import Customer
-from app.models.customer_contact import CustomerContact
-from app.models.customer_contact_role import CustomerContactRole
-from app.models.contract import Contract
-from app.models.contract_contact import ContractContact
-from app.models.contract_period import ContractPeriod
-from app.models.transaction_line import TransactionLine
-from app.models.receipt import Receipt
-from app.models.receipt_match import ReceiptMatch
-from app.schemas.customer import CustomerCreate, CustomerUpdate
-from app.schemas.customer_contact import CustomerContactCreate, CustomerContactUpdate
-from app.exceptions import NotFoundError, BusinessRuleError, DuplicateError
-from app.services._customer_helpers import (
+    from app.modules.common.models.user import User
+from app.modules.common.models.customer import Customer
+from app.modules.common.models.customer_contact import CustomerContact
+from app.modules.common.models.customer_contact_role import CustomerContactRole
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_contact import ContractContact
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.transaction_line import TransactionLine
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.modules.common.schemas.customer import CustomerCreate, CustomerUpdate
+from app.modules.common.schemas.customer_contact import CustomerContactCreate, CustomerContactUpdate
+from app.core.exceptions import NotFoundError, BusinessRuleError, DuplicateError
+from app.modules.common.services._customer_helpers import (
     _related_contract_ids,
     list_related_contracts,
     list_customer_financials,

@@ -1,4 +1,4 @@
-from app.schemas.contract import ContractPeriodCreate, ContractPeriodUpdate, ContractUpdate
+from app.modules.accounting.schemas.contract import ContractPeriodCreate, ContractPeriodUpdate, ContractUpdate
 
 
 def test_contract_update_normalizes_inspection_date() -> None:

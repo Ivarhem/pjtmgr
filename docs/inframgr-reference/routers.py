@@ -15,8 +15,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.asset_contact import AssetContactCreate, AssetContactRead, AssetContactUpdate
 from app.services.partner_service import (
     create_asset_contact,
@@ -91,8 +91,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.asset_ip import AssetIPCreate, AssetIPRead, AssetIPUpdate
 from app.services.network_service import (
     create_asset_ip,
@@ -192,8 +192,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.asset import AssetCreate, AssetRead, AssetUpdate
 from app.services.asset_service import (
     create_asset,
@@ -262,8 +262,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.contact import ContactCreate, ContactRead, ContactUpdate
 from app.services.partner_service import (
     create_contact,
@@ -350,8 +350,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.ip_subnet import IpSubnetCreate, IpSubnetRead, IpSubnetUpdate
 from app.services.network_service import (
     create_subnet,
@@ -554,8 +554,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.partner import PartnerCreate, PartnerRead, PartnerUpdate
 from app.services.partner_service import (
     create_partner,
@@ -642,8 +642,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.policy_definition import (
     PolicyDefinitionCreate,
     PolicyDefinitionRead,
@@ -715,8 +715,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.policy_assignment import (
     PolicyAssignmentCreate,
     PolicyAssignmentRead,
@@ -807,8 +807,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.port_map import PortMapCreate, PortMapRead, PortMapUpdate
 from app.services.network_service import (
     create_port_map,
@@ -895,8 +895,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.project_deliverable import (
     ProjectDeliverableCreate,
     ProjectDeliverableRead,
@@ -987,8 +987,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.project_phase import ProjectPhaseCreate, ProjectPhaseRead, ProjectPhaseUpdate
 from app.services.phase_service import (
     create_phase,
@@ -1075,8 +1075,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user
+from app.core.database import get_db
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.project_service import (
     create_project,
@@ -1145,8 +1145,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user, require_admin
-from app.database import get_db
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.core.database import get_db
 from app.services.sync_service import sync_all
 
 
@@ -1189,16 +1189,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user, require_admin
-from app.database import get_db
-from app.schemas.user import (
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.core.database import get_db
+from app.modules.common.schemas.user import (
     UserChangePassword,
     UserCreate,
     UserRead,
     UserResetPassword,
     UserUpdate,
 )
-from app.services.user_service import (
+from app.modules.common.services.user_service import (
     change_password,
     create_user,
     get_user,

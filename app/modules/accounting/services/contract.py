@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import apply_contract_scope, check_contract_access, check_period_access
-from app.exceptions import BusinessRuleError, NotFoundError
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.schemas.contract import (
+from app.core.auth.authorization import apply_contract_scope, check_contract_access, check_period_access
+from app.core.exceptions import BusinessRuleError, NotFoundError
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.schemas.contract import (
     ContractCreate,
     ContractPeriodCreate,
     ContractPeriodUpdate,
@@ -19,7 +19,7 @@ from app.schemas.contract import (
 )
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 # ── dict 변환 헬퍼 ───────────────────────────────────────────
@@ -176,7 +176,7 @@ def list_periods_flat(
     active_month: str | None = None,
 ) -> list[dict]:
     """원장 목록: contract_periods + contracts JOIN (flat)"""
-    from app.models.user import User as UserModel
+    from app.modules.common.models.user import User as UserModel
 
     q = (
         db.query(ContractPeriod)
@@ -268,8 +268,8 @@ def get_period(db: Session, period_id: int, *, current_user: User | None = None)
 
 def create_contract(db: Session, data: ContractCreate, *, created_by: int | None = None) -> dict:
     """사업 생성. owner_user_id 미지정 시 created_by를 자동 지정."""
-    from app.models.contract_type_config import ContractTypeConfig
-    from app.services.contract_type_config import get_valid_codes
+    from app.modules.accounting.models.contract_type_config import ContractTypeConfig
+    from app.modules.accounting.services.contract_type_config import get_valid_codes
 
     if data.owner_user_id is None and created_by is not None:
         data.owner_user_id = created_by

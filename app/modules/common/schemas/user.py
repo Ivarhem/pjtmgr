@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from app.auth.constants import Role
+from app.core.auth.constants import Role
 
 
 class UserCreate(BaseModel):

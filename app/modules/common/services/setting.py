@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from app.config import PASSWORD_MIN_LENGTH
-from app.models.setting import Setting
+from app.core.config import PASSWORD_MIN_LENGTH
+from app.modules.common.models.setting import Setting
 
 
 def get_setting(db: Session, key: str) -> str | None:
@@ -23,7 +23,7 @@ def _set_setting_value(db: Session, key: str, value: str | None) -> None:
 
 def update_settings(db: Session, data: "SettingUpdate") -> None:
     """SettingUpdate 스키마 기반 일괄 설정 업데이트."""
-    from app.schemas.setting import SettingUpdate  # noqa: F811
+    from app.modules.common.schemas.setting import SettingUpdate  # noqa: F811
 
     updates = data.model_dump(exclude_unset=True)
     if "org_name" in updates:

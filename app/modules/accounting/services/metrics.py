@@ -9,18 +9,18 @@ from typing import TYPE_CHECKING
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.transaction_line import TransactionLine, STATUS_CONFIRMED
-from app.models.receipt import Receipt
-from app.models.receipt_match import ReceiptMatch
-from app.auth.authorization import apply_contract_scope
-from app.schemas.report import ReportFilter
-from app.models.customer import Customer
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.transaction_line import TransactionLine, STATUS_CONFIRMED
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.core.auth.authorization import apply_contract_scope
+from app.modules.accounting.schemas.report import ReportFilter
+from app.modules.common.models.customer import Customer
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 # ── 필터·범위 유틸 ────────────────────────────────────────────────
@@ -86,7 +86,7 @@ def apply_common_filters(
     current_user: User | None,
 ) -> tuple:
     """ContractPeriod 쿼리에 공통 필터를 적용하고, 범위 내 연도 목록을 반환."""
-    from app.models.user import User as UserModel
+    from app.modules.common.models.user import User as UserModel
 
     years = years_in_range(filt.date_from, filt.date_to)
     # period_year가 범위 내이거나, start_month~end_month가 조회 기간과 겹치는 Period 포함
@@ -574,7 +574,7 @@ def aggregate_by_field(
     field: "contract_type" | "department"
     반환: [{label, contract_count, forecast_revenue, actual_revenue, gp, gp_pct}]
     """
-    from app.models.user import User as UserModel
+    from app.modules.common.models.user import User as UserModel
     from sqlalchemy.orm import aliased
 
     # ── group_col 결정 및 scope 서브쿼리 생성 ──

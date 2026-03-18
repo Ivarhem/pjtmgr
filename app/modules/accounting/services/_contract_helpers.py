@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.exceptions import BusinessRuleError
-from app.models.contract_period import ContractPeriod
+from app.core.exceptions import BusinessRuleError
+from app.modules.accounting.models.contract_period import ContractPeriod
 
 
 def check_period_not_completed(

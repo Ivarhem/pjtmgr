@@ -1,7 +1,7 @@
 """사업유형 설정 (ContractTypeConfig) - 관리자가 관리하는 사업유형 목록 + 기본값"""
 from sqlalchemy import String, Integer, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
-from app.database import Base
+from app.core.database import Base
 
 
 class ContractTypeConfig(Base):

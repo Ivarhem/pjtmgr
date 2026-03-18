@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
-from app.schemas.report import ReportFilter
-from app.services.report import (
+from app.modules.accounting.schemas.report import ReportFilter
+from app.modules.accounting.services.report import (
     get_summary,
     list_forecast_vs_actual,
     list_receivables,
@@ -17,7 +17,7 @@ from app.services.report import (
 )
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 def export_summary(

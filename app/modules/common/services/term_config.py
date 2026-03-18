@@ -1,8 +1,8 @@
 """용어 설정 서비스 (TermConfig) - CRUD + 시드 데이터"""
 from sqlalchemy.orm import Session
-from app.models.term_config import TermConfig
-from app.schemas.term_config import TermConfigRead
-from app.exceptions import NotFoundError, DuplicateError
+from app.modules.common.models.term_config import TermConfig
+from app.modules.common.schemas.term_config import TermConfigRead
+from app.core.exceptions import NotFoundError, DuplicateError
 
 
 def to_read(t: TermConfig) -> TermConfigRead:

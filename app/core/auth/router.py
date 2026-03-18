@@ -1,13 +1,13 @@
 """인증 API 라우터: 로그인, 로그아웃, 비밀번호 변경."""
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth.service import authenticate, change_password as svc_change_password
-from app.auth.dependencies import get_current_user
-from app.auth.authorization import get_permissions
-from app.models.user import User
-from app.exceptions import UnauthorizedError
-from app.schemas.auth import ChangePasswordRequest, LoginRequest
+from app.core.database import get_db
+from app.core.auth.service import authenticate, change_password as svc_change_password
+from app.core.auth.dependencies import get_current_user
+from app.core.auth.authorization import get_permissions
+from app.modules.common.models.user import User
+from app.core.exceptions import UnauthorizedError
+from app.modules.common.schemas.auth import ChangePasswordRequest, LoginRequest
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 

@@ -1,8 +1,8 @@
 """수금 (Receipt) - 공급가액 기준, contract 단위"""
 from sqlalchemy import String, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.database import Base
-from app.models.base import TimestampMixin
+from app.core.database import Base
+from app.core.base_model import TimestampMixin
 
 
 class Receipt(TimestampMixin, Base):

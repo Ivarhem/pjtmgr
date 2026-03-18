@@ -1,6 +1,6 @@
-from app.models.customer import Customer
-from app.models.customer_contact import CustomerContact
-from app.services import customer as customer_service
+from app.modules.common.models.customer import Customer
+from app.modules.common.models.customer_contact import CustomerContact
+from app.modules.common.services import customer as customer_service
 
 
 def test_delete_contact_removes_customer_contact(db_session) -> None:

@@ -2,14 +2,14 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user, require_admin
-from app.database import get_db
-from app.models.user import User
-from app.schemas.transaction_line import (
+from app.core.auth.dependencies import get_current_user, require_admin
+from app.core.database import get_db
+from app.modules.common.models.user import User
+from app.modules.accounting.schemas.transaction_line import (
     TransactionLineCreate,
     TransactionLineUpdate,
 )
-from app.services import transaction_line as svc
+from app.modules.accounting.services import transaction_line as svc
 
 router = APIRouter(prefix="/api/v1", tags=["transaction-lines"])
 

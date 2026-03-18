@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from app.schemas.customer_contact_role import CustomerContactRoleCreate, CustomerContactRoleRead
+from app.modules.common.schemas.customer_contact_role import CustomerContactRoleCreate, CustomerContactRoleRead
 
 # 하위호환
 VALID_CONTACT_TYPES = {"영업", "세금계산서", "업무"}

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.schemas.contract_contact import ContractContactCreate, ContractContactUpdate
-from app.services import contract_contact as svc
-from app.auth.dependencies import get_current_user
-from app.models.user import User
-from app.auth.authorization import check_contract_access, check_period_access
+from app.core.database import get_db
+from app.modules.accounting.schemas.contract_contact import ContractContactCreate, ContractContactUpdate
+from app.modules.accounting.services import contract_contact as svc
+from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
+from app.core.auth.authorization import check_contract_access, check_period_access
 
 router = APIRouter(prefix="/api/v1", tags=["contract-contacts"])
 

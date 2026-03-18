@@ -10,18 +10,18 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
-from app.models.contract import Contract
-from app.models.contract_contact import ContractContact
-from app.models.contract_period import ContractPeriod
-from app.models.customer import Customer
-from app.models.receipt import Receipt
-from app.models.receipt_match import ReceiptMatch
-from app.models.transaction_line import TransactionLine
-from app.exceptions import NotFoundError
+from app.core.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_contact import ContractContact
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.common.models.customer import Customer
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.models.receipt_match import ReceiptMatch
+from app.modules.accounting.models.transaction_line import TransactionLine
+from app.core.exceptions import NotFoundError
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 def _related_contract_ids(db: Session, customer_id: int) -> set[int]:

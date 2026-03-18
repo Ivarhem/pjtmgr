@@ -5,18 +5,18 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, joinedload
 
-from app.auth.authorization import can_delete_receipt, check_contract_access
-from app.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
-from app.models.contract import Contract
-from app.models.receipt import Receipt
-from app.schemas.receipt import ReceiptCreate, ReceiptUpdate
-from app.services._contract_helpers import (
+from app.core.auth.authorization import can_delete_receipt, check_contract_access
+from app.core.exceptions import BusinessRuleError, NotFoundError, PermissionDeniedError
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.receipt import Receipt
+from app.modules.accounting.schemas.receipt import ReceiptCreate, ReceiptUpdate
+from app.modules.accounting.services._contract_helpers import (
     check_period_not_completed,
     check_periods_not_completed,
 )
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.modules.common.models.user import User
 
 
 def _receipt_dict(p: Receipt) -> dict:
@@ -55,7 +55,7 @@ def create_receipt(
     created_by: int | None = None,
     current_user: User | None = None,
 ) -> dict:
-    from app.services.receipt_match import auto_match_receipt
+    from app.modules.accounting.services.receipt_match import auto_match_receipt
 
     try:
         if current_user:
@@ -96,7 +96,7 @@ def update_receipt(
     *,
     current_user: User | None = None,
 ) -> dict:
-    from app.services.receipt_match import auto_match_receipt
+    from app.modules.accounting.services.receipt_match import auto_match_receipt
 
     try:
         row = (

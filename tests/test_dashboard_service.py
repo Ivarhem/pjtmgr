@@ -1,10 +1,10 @@
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.customer import Customer
-from app.models.monthly_forecast import MonthlyForecast
-from app.models.transaction_line import STATUS_CONFIRMED, TransactionLine
-from app.models.user import User
-from app.services import dashboard as dashboard_service
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.common.models.customer import Customer
+from app.modules.accounting.models.monthly_forecast import MonthlyForecast
+from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
+from app.modules.common.models.user import User
+from app.modules.accounting.services import dashboard as dashboard_service
 
 
 def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session) -> None:

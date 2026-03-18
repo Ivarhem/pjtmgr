@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, File, UploadFile, Form, Request
 from fastapi.responses import Response, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.auth.dependencies import require_admin
-from app.models.user import User
-from app.services.exporter import build_template, build_template_contracts, build_template_forecast, build_template_actuals
-from app.services.importer import parse_and_validate, import_data, import_forecast_sheet, import_actuals_sheet, validate_xlsx
-from app.services import contract as contract_svc
-from app.services.contract_type_config import list_contract_types as _list_contract_types
-from app.exceptions import ValidationError
+from app.core.database import get_db
+from app.core.auth.dependencies import require_admin
+from app.modules.common.models.user import User
+from app.modules.accounting.services.exporter import build_template, build_template_contracts, build_template_forecast, build_template_actuals
+from app.modules.accounting.services.importer import parse_and_validate, import_data, import_forecast_sheet, import_actuals_sheet, validate_xlsx
+from app.modules.accounting.services import contract as contract_svc
+from app.modules.accounting.services.contract_type_config import list_contract_types as _list_contract_types
+from app.core.exceptions import ValidationError
 
 router = APIRouter(prefix="/api/v1/excel", tags=["excel"])
 templates = Jinja2Templates(directory="app/templates")

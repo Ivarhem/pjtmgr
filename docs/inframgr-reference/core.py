@@ -4,7 +4,7 @@
 # ============================================
 # FILE: app/main.py
 # ============================================
-from app.app_factory import create_app
+from app.core.app_factory import create_app
 
 
 app = create_app()
@@ -23,8 +23,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.config import settings
-from app.exceptions import (
+from app.core.config import settings
+from app.core.exceptions import (
     BusinessRuleError,
     DuplicateError,
     NotFoundError,
@@ -32,7 +32,7 @@ from app.exceptions import (
     UnauthorizedError,
     ValidationError,
 )
-from app.auth.router import router as auth_router
+from app.core.auth.router import router as auth_router
 from app.routers.asset_contacts import router as asset_contacts_router
 from app.routers.asset_ips import router as asset_ips_router
 from app.routers.assets import router as assets_router
@@ -48,9 +48,9 @@ from app.routers.project_phases import router as project_phases_router
 from app.routers.projects import router as projects_router
 from app.routers.sync import router as sync_router
 from app.routers.users import router as users_router
-from app.database import SessionLocal
-from app.startup.bootstrap import bootstrap_admin
-from app.startup.database_init import initialize_database
+from app.core.database import SessionLocal
+from app.core.startup.bootstrap import bootstrap_admin
+from app.core.startup.database_init import initialize_database
 
 
 @asynccontextmanager
@@ -179,7 +179,7 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.config import settings
+from app.core.config import settings
 
 
 _connect_args: dict = {}
@@ -240,7 +240,7 @@ class ValidationError(AppError):
 # ============================================
 from __future__ import annotations
 
-from app.auth.constants import ROLE_ADMIN
+from app.core.auth.constants import ROLE_ADMIN
 
 
 def can_manage_users(user) -> bool:
@@ -271,8 +271,8 @@ from dataclasses import dataclass
 
 from fastapi import Request
 
-from app.auth.constants import ROLE_ADMIN
-from app.exceptions import PermissionDeniedError, UnauthorizedError
+from app.core.auth.constants import ROLE_ADMIN
+from app.core.exceptions import PermissionDeniedError, UnauthorizedError
 
 
 @dataclass
@@ -331,10 +331,10 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.constants import ROLE_ADMIN
-from app.auth.dependencies import get_current_user
-from app.auth.service import authenticate
-from app.database import get_db
+from app.core.auth.constants import ROLE_ADMIN
+from app.core.auth.dependencies import get_current_user
+from app.core.auth.service import authenticate
+from app.core.database import get_db
 
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -384,9 +384,9 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.auth.password import verify_password
-from app.exceptions import UnauthorizedError
-from app.services.user_service import get_user_by_login_id
+from app.core.auth.password import verify_password
+from app.core.exceptions import UnauthorizedError
+from app.modules.common.services.user_service import get_user_by_login_id
 
 
 def authenticate(db: Session, login_id: str, password: str) -> dict[str, str]:
@@ -420,8 +420,8 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.config import settings
-from app.services.user_service import ensure_bootstrap_admin
+from app.core.config import settings
+from app.modules.common.services.user_service import ensure_bootstrap_admin
 
 
 def bootstrap_admin(db: Session) -> None:
@@ -444,13 +444,13 @@ from __future__ import annotations
 
 from sqlalchemy import text
 
-from app.config import settings
-from app.database import engine
+from app.core.config import settings
+from app.core.database import engine
 
 
 def initialize_database() -> None:
     if settings.database_url.startswith("sqlite"):
-        from app.models.base import Base
+        from app.core.base_model import Base
         Base.metadata.create_all(bind=engine)
     else:
         with engine.connect() as connection:

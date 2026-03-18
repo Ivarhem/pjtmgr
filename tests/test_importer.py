@@ -2,10 +2,10 @@ from io import BytesIO
 
 import pandas as pd
 
-from app.models.contract import Contract
-from app.models.contract_period import ContractPeriod
-from app.models.contract_type_config import ContractTypeConfig
-from app.services import importer
+from app.modules.accounting.models.contract import Contract
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.contract_type_config import ContractTypeConfig
+from app.modules.accounting.services import importer
 
 
 def _workbook_bytes(*, contracts: pd.DataFrame, forecasts: pd.DataFrame | None = None, actuals: pd.DataFrame | None = None) -> bytes:

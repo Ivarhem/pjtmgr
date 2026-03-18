@@ -3,7 +3,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
-from app.exceptions import UnauthorizedError
+from app.core.exceptions import UnauthorizedError
 
 # 인증 없이 접근 가능한 경로
 _PUBLIC_PREFIXES = ("/static",)

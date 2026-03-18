@@ -1,4 +1,4 @@
-from app.config import (
+from app.core.config import (
     DATABASE_URL,
     APP_PORT,
     ENABLED_MODULES,
@@ -9,7 +9,7 @@ from app.config import (
     SESSION_SAME_SITE,
     get_enabled_modules,
 )
-from app.services.setting import get_password_min_length
+from app.modules.common.services.setting import get_password_min_length
 
 
 def test_database_url_defaults_to_postgresql() -> None:

@@ -40,7 +40,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import DuplicateError, NotFoundError
+from app.core.exceptions import DuplicateError, NotFoundError
 from app.schemas.asset import AssetCreate
 from app.schemas.asset_contact import AssetContactCreate, AssetContactUpdate
 from app.schemas.contact import ContactCreate
@@ -175,7 +175,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import DuplicateError, NotFoundError
+from app.core.exceptions import DuplicateError, NotFoundError
 from app.schemas.asset import AssetCreate, AssetUpdate
 from app.schemas.project import ProjectCreate
 from app.services.asset_service import create_asset, delete_asset, list_assets, update_asset
@@ -268,7 +268,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import BusinessRuleError, DuplicateError, NotFoundError
+from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
 from app.schemas.asset import AssetCreate
 from app.schemas.asset_ip import AssetIPCreate, AssetIPUpdate
 from app.schemas.ip_subnet import IpSubnetCreate, IpSubnetUpdate
@@ -584,7 +584,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import BusinessRuleError, NotFoundError
+from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.schemas.contact import ContactCreate, ContactUpdate
 from app.schemas.partner import PartnerCreate, PartnerUpdate
 from app.schemas.project import ProjectCreate
@@ -789,7 +789,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import BusinessRuleError, DuplicateError, NotFoundError
+from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
 from app.schemas.project import ProjectCreate
 from app.schemas.project_deliverable import ProjectDeliverableCreate, ProjectDeliverableUpdate
 from app.schemas.project_phase import ProjectPhaseCreate, ProjectPhaseUpdate
@@ -1014,7 +1014,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import BusinessRuleError, DuplicateError, NotFoundError, PermissionDeniedError
+from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError, PermissionDeniedError
 from app.schemas.asset import AssetCreate
 from app.schemas.policy_assignment import PolicyAssignmentCreate, PolicyAssignmentUpdate
 from app.schemas.policy_definition import PolicyDefinitionCreate, PolicyDefinitionUpdate
@@ -1322,7 +1322,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import BusinessRuleError, NotFoundError
+from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.schemas.asset import AssetCreate
 from app.schemas.port_map import PortMapCreate, PortMapUpdate
 from app.schemas.project import ProjectCreate
@@ -1484,7 +1484,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.exceptions import BusinessRuleError, DuplicateError
+from app.core.exceptions import BusinessRuleError, DuplicateError
 from app.schemas.project import ProjectCreate, ProjectUpdate
 from app.services.project_service import create_project, delete_project, list_projects, update_project
 
@@ -1561,7 +1561,7 @@ def test_update_project_changes_fields(db_session) -> None:
 # ============================================
 # FILE: tests/test_smoke.py
 # ============================================
-from app.config import settings
+from app.core.config import settings
 
 
 def test_settings_load() -> None:
@@ -1577,11 +1577,11 @@ from dataclasses import dataclass
 
 import pytest
 
-from app.auth.password import hash_password, verify_password
-from app.auth.service import authenticate
-from app.exceptions import DuplicateError, NotFoundError, PermissionDeniedError, UnauthorizedError
-from app.schemas.user import UserChangePassword, UserCreate, UserResetPassword, UserUpdate
-from app.services.user_service import (
+from app.core.auth.password import hash_password, verify_password
+from app.core.auth.service import authenticate
+from app.core.exceptions import DuplicateError, NotFoundError, PermissionDeniedError, UnauthorizedError
+from app.modules.common.schemas.user import UserChangePassword, UserCreate, UserResetPassword, UserUpdate
+from app.modules.common.services.user_service import (
     change_password,
     create_user,
     ensure_bootstrap_admin,

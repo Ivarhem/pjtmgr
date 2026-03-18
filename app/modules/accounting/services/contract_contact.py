@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session, joinedload
-from app.auth.authorization import check_period_access, has_full_contract_scope, list_accessible_contract_ids
-from app.models.contract_contact import ContractContact
-from app.models.contract_period import ContractPeriod
-from app.models.contract import Contract
-from app.models.customer import Customer
-from app.models.customer_contact import CustomerContact
-from app.models.user import User
-from app.exceptions import NotFoundError
-from app.schemas.contract_contact import ContractContactCreate, ContractContactUpdate
+from app.core.auth.authorization import check_period_access, has_full_contract_scope, list_accessible_contract_ids
+from app.modules.accounting.models.contract_contact import ContractContact
+from app.modules.accounting.models.contract_period import ContractPeriod
+from app.modules.accounting.models.contract import Contract
+from app.modules.common.models.customer import Customer
+from app.modules.common.models.customer_contact import CustomerContact
+from app.modules.common.models.user import User
+from app.core.exceptions import NotFoundError
+from app.modules.accounting.schemas.contract_contact import ContractContactCreate, ContractContactUpdate
 
 
 def list_by_period(db: Session, period_id: int) -> list[dict]:
@@ -73,7 +73,7 @@ def list_by_customer_pivoted(db: Session, customer_id: int, current_user: User |
     관련 사업의 **모든 period**를 행으로 포함 (담당자 미배정 period 포함).
     한 행에 영업(정) + 세금계산서(정) + 업무(정) 담당자 정보를 함께 포함.
     """
-    from app.services.customer import _related_contract_ids
+    from app.modules.common.services.customer import _related_contract_ids
 
     contract_ids = _related_contract_ids(db, customer_id)
     if current_user and not has_full_contract_scope(current_user):

@@ -7,10 +7,11 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.database import Base
+from app.core.database import Base
 
 # 모든 모델을 import하여 Base.metadata에 등록
-import app.models  # noqa: F401
+import app.modules.common.models  # noqa: F401
+import app.modules.accounting.models  # noqa: F401
 
 config = context.config
 

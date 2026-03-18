@@ -1,15 +1,15 @@
 import pytest
 
-from app.app_factory import create_app
-from app.auth.middleware import AuthMiddleware
-from app.exceptions import NotFoundError
-from app.exceptions import UnauthorizedError
-from app.models.contract import Contract
-from app.models.user import User
-from app.routers import health as health_router
-from app.schemas.receipt import ReceiptCreate
-from app.services import contract as contract_service
-from app.services import receipt as receipt_service
+from app.core.app_factory import create_app
+from app.core.auth.middleware import AuthMiddleware
+from app.core.exceptions import NotFoundError
+from app.core.exceptions import UnauthorizedError
+from app.modules.accounting.models.contract import Contract
+from app.modules.common.models.user import User
+from app.modules.common.routers import health as health_router
+from app.modules.accounting.schemas.receipt import ReceiptCreate
+from app.modules.accounting.services import contract as contract_service
+from app.modules.accounting.services import receipt as receipt_service
 
 
 def test_create_app_registers_core_routes() -> None:
@@ -56,7 +56,7 @@ def test_prepare_database_runs_upgrade_for_fresh_db(monkeypatch) -> None:
     monkeypatch.setattr("alembic.command.upgrade", lambda _cfg, rev: calls.append(("upgrade", rev)))
     monkeypatch.setattr("alembic.command.stamp", lambda _cfg, rev: calls.append(("stamp", rev)))
 
-    from app.startup.database_init import prepare_database
+    from app.core.startup.database_init import prepare_database
 
     prepare_database()
 
