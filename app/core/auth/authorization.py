@@ -1,61 +1,108 @@
 """권한 판단 헬퍼.
 
 라우터/서비스에서 직접 role 비교하지 않고 이 모듈을 통해 판단한다.
-현재는 admin/user 수준만 구현. 향후 manager/viewer 확장 시
-이 파일의 함수 내부만 수정하면 라우터/서비스 변경 불필요.
+RBAC: user.role_obj.permissions (JSON) 기반으로 판단한다.
 """
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from sqlalchemy import or_
 
-from app.core.auth.constants import ROLE_ADMIN
-
 if TYPE_CHECKING:
     from sqlalchemy.orm import Query, Session
+
     from app.modules.common.models.user import User
     from app.modules.accounting.models.contract import Contract
+
+
+# ── 헬퍼: permissions 접근 ─────────────────────────────────────
+
+def _is_admin(user: User) -> bool:
+    """user.role_obj.permissions의 admin 플래그 확인."""
+    perms = getattr(user, "role_obj", None)
+    if perms is None:
+        return False
+    return bool(user.role_obj.permissions.get("admin", False))
+
+
+def can_access_module(user: User, module_name: str) -> bool:
+    """사용자가 특정 모듈에 접근 가능한지 반환."""
+    if _is_admin(user):
+        return True
+    perms = getattr(user, "role_obj", None)
+    if perms is None:
+        return False
+    modules = user.role_obj.permissions.get("modules", {})
+    return modules.get(module_name) in ("read", "full")
+
+
+def get_module_access_level(user: User, module_name: str) -> str | None:
+    """사용자의 모듈 접근 수준 반환. None/read/full."""
+    if _is_admin(user):
+        return "full"
+    perms = getattr(user, "role_obj", None)
+    if perms is None:
+        return None
+    modules = user.role_obj.permissions.get("modules", {})
+    level = modules.get(module_name)
+    if level in ("read", "full"):
+        return level
+    return None
+
+
+def check_resource_permission(user: User, resource: str, action: str) -> None:
+    """리소스-행위 단위 권한 검사 (향후 풀 RBAC 확장용).
+
+    TODO: permissions["resources"] 구조가 추가되면 구현.
+    현재는 호출 시 NotImplementedError를 발생시킨다.
+    """
+    raise NotImplementedError(
+        "Full resource-level RBAC is not yet implemented. "
+        "Use module-level access control (can_access_module / get_module_access_level)."
+    )
 
 
 # ── 기능(Action) 권한 ────────────────────────────────────────
 
 def can_delete_contract(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_delete_customer(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_manage_users(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_manage_settings(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_delete_transaction_line(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_delete_receipt(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_import(user: User) -> bool:
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def has_full_contract_scope(user: User) -> bool:
     """전체 사업 범위를 조회할 수 있는지 반환."""
-    return user.role == ROLE_ADMIN
+    return _is_admin(user)
 
 
 def can_admin_create_contract(user: User) -> bool:
     """사업관리 화면에서 신규 등록 — 개발/정비용, 실 서비스 배포 시 비활성화."""
     from app.core.config import ENABLE_ADMIN_CONTRACT_CREATE
-    return user.role == ROLE_ADMIN and ENABLE_ADMIN_CONTRACT_CREATE
+
+    return _is_admin(user) and ENABLE_ADMIN_CONTRACT_CREATE
 
 
 def can_export(user: User) -> bool:
@@ -75,6 +122,7 @@ def check_contract_access(db: "Session", contract_id: int, user: "User") -> None
     if has_full_contract_scope(user):
         return
     from app.modules.accounting.models.contract import Contract
+
     contract = (
         db.query(Contract.id)
         .filter(Contract.id == contract_id)
@@ -83,6 +131,7 @@ def check_contract_access(db: "Session", contract_id: int, user: "User") -> None
     )
     if not contract:
         from app.core.exceptions import NotFoundError
+
         raise NotFoundError("사업을 찾을 수 없습니다.")
 
 
@@ -91,9 +140,11 @@ def check_period_access(db: "Session", period_id: int, user: "User") -> None:
     if has_full_contract_scope(user):
         return
     from app.modules.accounting.models.contract_period import ContractPeriod
+
     period = db.get(ContractPeriod, period_id)
     if not period:
         from app.core.exceptions import NotFoundError
+
         raise NotFoundError("기간을 찾을 수 없습니다.")
     check_contract_access(db, period.contract_id, user)
 
@@ -118,10 +169,6 @@ def apply_contract_scope(query: Query, user: User) -> Query:
     현재:
     - admin: 전체 데이터
     - user: 본인 담당 사업만
-
-    향후 확장:
-    - manager: 같은 부서 데이터
-    - viewer: 읽기 전용 (scope는 admin과 동일, 수정 권한만 차이)
     """
     if has_full_contract_scope(user):
         return query
@@ -175,21 +222,3 @@ def get_permissions(user: User) -> dict[str, bool]:
         "can_view_reports": can_view_reports(user),
         "can_admin_create_contract": can_admin_create_contract(user),
     }
-
-
-# ── 향후 확장 예시 (주석) ─────────────────────────────────────
-# def can_view_contract(user: User, contract: Contract) -> bool:
-#     if user.role == ROLE_ADMIN:
-#         return True
-#     if user.role == "manager":
-#         return contract.owner and contract.owner.department == user.department
-#     if user.role == ROLE_USER:
-#         return contract.owner_user_id == user.id
-#     return False  # viewer
-#
-# def apply_contract_scope(query, user):
-#     if user.role == ROLE_ADMIN:
-#         return query
-#     if user.role == "manager":
-#         return query.filter(Contract.owner.has(User.department == user.department))
-#     return query.filter(Contract.owner_user_id == user.id)

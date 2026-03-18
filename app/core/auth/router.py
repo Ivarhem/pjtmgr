@@ -42,7 +42,8 @@ def get_me(current_user: User = Depends(get_current_user)) -> dict:
     return {
         "id": current_user.id,
         "name": current_user.name,
-        "role": current_user.role,
+        "role": current_user.role_obj.name if current_user.role_obj else None,
+        "role_id": current_user.role_id,
         "department": current_user.department,
         "must_change_password": current_user.must_change_password,
         "permissions": get_permissions(current_user),

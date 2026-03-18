@@ -74,11 +74,11 @@ def authenticate(db: Session, login_id: str, password: str) -> User | None:
         .filter(User.login_id == login_id, User.is_active.is_(True))
         .first()
     )
-    if not user or not user.hashed_password:
+    if not user or not user.password_hash:
         _record_failure(db, login_id)
         db.commit()
         return None
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.password_hash):
         _record_failure(db, login_id)
         db.commit()
         return None
@@ -89,11 +89,11 @@ def authenticate(db: Session, login_id: str, password: str) -> User | None:
 
 def change_password(db: Session, user: User, current_password: str, new_password: str) -> None:
     """비밀번호 변경. 현재 비밀번호 검증 후 새 비밀번호로 교체."""
-    if not user.hashed_password or not verify_password(current_password, user.hashed_password):
+    if not user.password_hash or not verify_password(current_password, user.password_hash):
         raise BusinessRuleError("현재 비밀번호가 올바르지 않습니다.", status_code=400)
     min_length = get_password_min_length(db)
     if len(new_password) < min_length:
         raise BusinessRuleError(f"새 비밀번호는 {min_length}자 이상이어야 합니다.", status_code=400)
-    user.hashed_password = hash_password(new_password)
+    user.password_hash = hash_password(new_password)
     user.must_change_password = False
     db.commit()

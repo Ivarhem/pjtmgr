@@ -1,28 +1,15 @@
-"""비밀번호 해싱 및 검증 (Python 표준 라이브러리 전용, 외부 의존성 없음).
-
-해시 형식: pbkdf2:{algo}:{iterations}:{salt_hex}:{key_hex}
-"""
-import hashlib
-import hmac
-import os
-import binascii
-
-_ITERATIONS = 260_000
-_ALGO = "sha256"
+"""비밀번호 해싱 및 검증 (bcrypt)."""
+import bcrypt
 
 
 def hash_password(password: str) -> str:
-    salt = os.urandom(16)
-    key = hashlib.pbkdf2_hmac(_ALGO, password.encode(), salt, _ITERATIONS)
-    return f"pbkdf2:{_ALGO}:{_ITERATIONS}:{binascii.hexlify(salt).decode()}:{binascii.hexlify(key).decode()}"
+    """비밀번호를 bcrypt로 해싱하여 문자열로 반환."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(password: str, hashed: str) -> bool:
+    """비밀번호와 해시를 비교하여 일치 여부 반환."""
     try:
-        _, algo, iters, salt_hex, key_hex = hashed.split(":")
-        salt = binascii.unhexlify(salt_hex)
-        expected = binascii.unhexlify(key_hex)
-        candidate = hashlib.pbkdf2_hmac(algo, password.encode(), salt, int(iters))
-        return hmac.compare_digest(candidate, expected)
+        return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
     except Exception:
         return False
