@@ -86,15 +86,39 @@
 </div>
 
 <div class="tab-content hidden" id="tab-assets">
-  <div class="placeholder-message">자산 관리 (Phase 2b에서 구현)</div>
+  <div class="page-header">
+    <h2>자산 목록</h2>
+    <a href="/assets" class="btn btn-secondary btn-sm">자산 관리 페이지 &rarr;</a>
+  </div>
+  <div class="card">
+    <div id="grid-tab-assets" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  </div>
 </div>
 
 <div class="tab-content hidden" id="tab-ip">
-  <div class="placeholder-message">IP/네트워크 관리 (Phase 2b에서 구현)</div>
+  <div class="page-header">
+    <h2>IP 대역</h2>
+    <a href="/ip-inventory" class="btn btn-secondary btn-sm">IP 인벤토리 페이지 &rarr;</a>
+  </div>
+  <div class="card mb-md">
+    <div id="grid-tab-subnets" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+  </div>
+  <div class="page-header">
+    <h2>IP 할당</h2>
+  </div>
+  <div class="card">
+    <div id="grid-tab-ips" class="ag-theme-quartz" style="height: 300px; width: 100%;"></div>
+  </div>
 </div>
 
 <div class="tab-content hidden" id="tab-portmap">
-  <div class="placeholder-message">포트맵 관리 (Phase 2b에서 구현)</div>
+  <div class="page-header">
+    <h2>포트맵 / 케이블 배선</h2>
+    <a href="/port-maps" class="btn btn-secondary btn-sm">포트맵 관리 페이지 &rarr;</a>
+  </div>
+  <div class="card">
+    <div id="grid-tab-portmaps" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  </div>
 </div>
 
 <div class="tab-content hidden" id="tab-policy">

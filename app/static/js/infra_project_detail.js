@@ -2,12 +2,21 @@
 
 const PROJECT_ID = window.__PROJECT_ID__;
 
-/* ── Tab switching ── */
+/* ── Tab switching + lazy-load ── */
+const _tabLoaded = {};
+
 function activateTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
   document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
   document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+  if (!_tabLoaded[tabId]) {
+    _tabLoaded[tabId] = true;
+    if (tabId === 'assets') initAssetsTab();
+    else if (tabId === 'ip') initIpTab();
+    else if (tabId === 'portmap') initPortmapTab();
+  }
 }
 
 const PHASE_TYPE_MAP = {
@@ -112,6 +121,7 @@ async function loadPhases() {
     phases = await apiFetch(`/api/v1/projects/${PROJECT_ID}/phases`);
     phaseGridApi.setGridOption("rowData", phases);
     populatePhaseDropdown();
+    renderPhaseTimeline(phases);
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -188,9 +198,83 @@ async function loadDeliverables() {
       allDeliverables.push(...items);
     }
     deliverableGridApi.setGridOption("rowData", allDeliverables);
+    updateDeliverableProgress(allDeliverables);
   } catch (err) {
     showToast(err.message, "error");
   }
+}
+
+/* ── 요약 카드 ── */
+async function loadSummaryCards(projectId) {
+  try {
+    const assets = await apiFetch(`/api/v1/assets?project_id=${projectId}`);
+    document.getElementById('card-asset-count').textContent =
+      Array.isArray(assets) ? `${assets.length} 대` : '-';
+  } catch (e) {
+    console.warn('Asset count load error:', e);
+  }
+
+  try {
+    const ips = await apiFetch(`/api/v1/asset-ips?project_id=${projectId}`);
+    document.getElementById('card-ip-count').textContent =
+      Array.isArray(ips) ? `${ips.length} 개` : '-';
+  } catch (e) {
+    console.warn('IP count load error:', e);
+  }
+
+  // 정책 준수율 — 메트릭 API 구현 후 활성화
+  document.getElementById('card-policy-rate').textContent = '-';
+}
+
+function updateDeliverableProgress(deliverables) {
+  const total = deliverables.length;
+  const submitted = deliverables.filter(d => d.is_submitted).length;
+  document.getElementById('card-deliverable-progress').textContent =
+    total > 0 ? `${submitted}/${total}` : '-';
+}
+
+/* ── 단계 타임라인 ── */
+function renderPhaseTimeline(phaseList) {
+  const container = document.getElementById('phase-timeline');
+  if (!phaseList || phaseList.length === 0) {
+    container.textContent = '';
+    const msg = document.createElement('p');
+    msg.className = 'text-muted';
+    msg.textContent = '등록된 단계가 없습니다.';
+    container.appendChild(msg);
+    return;
+  }
+
+  container.textContent = '';
+  phaseList.forEach((p, i) => {
+    const statusClass = p.status === 'completed' ? 'phase-done' :
+                        p.status === 'in_progress' ? 'phase-active' : 'phase-pending';
+    const icon = p.status === 'completed' ? '\u25CF' :
+                 p.status === 'in_progress' ? '\u25D0' : '\u25CB';
+    const label = PHASE_TYPE_MAP[p.phase_type] || p.phase_type || '';
+
+    const step = document.createElement('div');
+    step.className = 'phase-step ' + statusClass;
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'phase-icon';
+    iconSpan.textContent = icon;
+    step.appendChild(iconSpan);
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'phase-label';
+    labelSpan.textContent = label;
+    step.appendChild(labelSpan);
+
+    container.appendChild(step);
+
+    if (i < phaseList.length - 1) {
+      const connector = document.createElement('span');
+      connector.className = 'phase-connector';
+      connector.textContent = '\u2500\u2500';
+      container.appendChild(connector);
+    }
+  });
 }
 
 /* ── Init ── */
@@ -214,6 +298,7 @@ function initGrids() {
   });
 
   loadProjectInfo();
+  loadSummaryCards(PROJECT_ID);
   loadPhases().then(() => loadDeliverables());
 }
 
@@ -364,6 +449,148 @@ async function deleteDeliverable(d) {
       }
     }
   );
+}
+
+/* ── Assets Tab (lazy-load) ── */
+const ASSET_TYPE_LABELS = { server: "서버", network: "네트워크", security: "보안장비", storage: "스토리지", other: "기타" };
+const ASSET_ENV_LABELS = { prod: "운영", dev: "개발", staging: "스테이징", dr: "DR" };
+const ASSET_STATUS_LABELS = { planned: "계획", active: "운영중", decommissioned: "폐기" };
+
+function initAssetsTab() {
+  const colDefs = [
+    { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180, sort: "asc" },
+    { field: "asset_type", headerName: "유형", width: 110, valueFormatter: p => ASSET_TYPE_LABELS[p.value] || p.value },
+    { field: "vendor", headerName: "제조사", width: 130 },
+    { field: "model", headerName: "모델", width: 130 },
+    { field: "role", headerName: "역할", width: 130 },
+    { field: "environment", headerName: "환경", width: 90, valueFormatter: p => ASSET_ENV_LABELS[p.value] || p.value },
+    { field: "hostname", headerName: "호스트명", width: 140 },
+    { field: "location", headerName: "위치", width: 130 },
+    { field: "zone", headerName: "존", width: 100 },
+    {
+      field: "status", headerName: "상태", width: 100,
+      cellRenderer: params => {
+        const span = document.createElement("span");
+        span.className = "badge badge-" + params.value;
+        span.textContent = ASSET_STATUS_LABELS[params.value] || params.value;
+        return span;
+      },
+    },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-assets"), {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/assets?project_id=${PROJECT_ID}`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
+}
+
+/* ── IP / Network Tab (lazy-load) ── */
+const SUBNET_ROLE_LABELS = { service: "서비스", management: "관리", backup: "백업", dmz: "DMZ", other: "기타" };
+const IP_TYPE_LABELS = { service: "서비스", management: "관리", backup: "백업", vip: "VIP", other: "기타" };
+
+function initIpTab() {
+  // Subnet grid
+  const subnetCols = [
+    { field: "name", headerName: "대역명", flex: 1, minWidth: 160, sort: "asc" },
+    { field: "subnet", headerName: "서브넷", width: 160 },
+    { field: "role", headerName: "역할", width: 100, valueFormatter: p => SUBNET_ROLE_LABELS[p.value] || p.value },
+    { field: "vlan_id", headerName: "VLAN", width: 80 },
+    { field: "gateway", headerName: "게이트웨이", width: 140 },
+    { field: "region", headerName: "지역", width: 100 },
+    { field: "zone", headerName: "존", width: 100 },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-subnets"), {
+    columnDefs: subnetCols,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/ip-subnets`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
+
+  // IP grid
+  const ipCols = [
+    { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc" },
+    { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_LABELS[p.value] || p.value },
+    { field: "hostname", headerName: "호스트명", width: 130 },
+    { field: "service_name", headerName: "서비스명", width: 130 },
+    { field: "interface_name", headerName: "인터페이스", width: 120 },
+    { field: "zone", headerName: "존", width: 100 },
+    { field: "vlan_id", headerName: "VLAN", width: 80 },
+    { field: "note", headerName: "비고", flex: 1, minWidth: 150 },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-ips"), {
+    columnDefs: ipCols,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/ip-inventory`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
+}
+
+/* ── Portmap Tab (lazy-load) ── */
+const PORTMAP_STATUS_LABELS = { required: "필요", open: "오픈", closed: "차단", pending: "대기" };
+
+function initPortmapTab() {
+  const colDefs = [
+    { field: "seq", headerName: "순번", width: 70 },
+    { field: "cable_no", headerName: "케이블번호", width: 110 },
+    { field: "connection_type", headerName: "연결유형", width: 110 },
+    { field: "src_hostname", headerName: "출발 호스트", width: 130 },
+    { field: "src_port_name", headerName: "출발 포트", width: 100 },
+    { field: "src_zone", headerName: "출발 존", width: 90 },
+    { field: "dst_hostname", headerName: "도착 호스트", width: 130 },
+    { field: "dst_port_name", headerName: "도착 포트", width: 100 },
+    { field: "dst_zone", headerName: "도착 존", width: 90 },
+    { field: "cable_type", headerName: "케이블종류", width: 100 },
+    { field: "cable_speed", headerName: "속도", width: 80 },
+    { field: "purpose", headerName: "용도", flex: 1, minWidth: 120 },
+    {
+      field: "status", headerName: "상태", width: 80,
+      cellRenderer: params => {
+        const span = document.createElement("span");
+        span.className = "badge badge-" + params.value;
+        span.textContent = PORTMAP_STATUS_LABELS[params.value] || params.value;
+        return span;
+      },
+    },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-portmaps"), {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/port-maps`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
 }
 
 /* ── Events ── */
