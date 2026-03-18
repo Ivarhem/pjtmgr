@@ -50,38 +50,50 @@
 
   <div class="nav-container">
     <nav class="subnav">
+      {# 모듈 스위처: 두 모듈 모두 활성일 때만 표시 #}
+      {% if "accounting" in enabled_modules and "infra" in enabled_modules %}
+      <div class="module-switcher" id="module-switcher">
+        <button class="module-btn active" data-module-switch="accounting">
+          <i data-lucide="briefcase" class="icon-sm"></i> 영업관리
+        </button>
+        <button class="module-btn" data-module-switch="infra">
+          <i data-lucide="server" class="icon-sm"></i> 프로젝트관리
+        </button>
+      </div>
+      {% endif %}
+
       <ul class="subnav-links">
-        {# --- 공통 --- #}
-        <li class="nav-group-header">공통</li>
-        <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
+        {# --- 공통 (항상 표시) --- #}
+        <li class="nav-group-header" data-module="common">공통</li>
+        <li data-module="common"><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
 
         {# --- 영업관리 --- #}
         {% if "accounting" in enabled_modules %}
-        <li class="nav-group-header">영업관리</li>
-        <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
-        <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
-        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
-        <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
+        <li class="nav-group-header" data-module="accounting">영업관리</li>
+        <li data-module="accounting"><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
+        <li data-module="accounting"><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
+        <li data-module="accounting"><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
+        <li data-module="accounting"><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
         {% endif %}
 
         {# --- 프로젝트관리 --- #}
         {% if "infra" in enabled_modules %}
-        <li class="nav-group-header">프로젝트관리</li>
-        <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
-        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책<small class="subnav-sub">보안·운영 정책 관리</small></span></a></li>
-        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판<small class="subnav-sub">프로젝트 현황 요약</small></span></a></li>
+        <li class="nav-group-header" data-module="infra">프로젝트관리</li>
+        <li data-module="infra"><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
+        <li data-module="infra"><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
+        <li data-module="infra"><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
+        <li data-module="infra"><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
+        <li data-module="infra"><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책<small class="subnav-sub">보안·운영 정책 관리</small></span></a></li>
+        <li data-module="infra"><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판<small class="subnav-sub">프로젝트 현황 요약</small></span></a></li>
         {% endif %}
 
-        <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
+        <li data-module="common"><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
         <li class="subnav-sep"></li>
 
-        {# --- 관리 --- #}
-        <li class="nav-group-header admin-only admin-nav-item is-hidden">관리</li>
-        <li class="admin-only admin-nav-item subnav-divider is-hidden"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정 등록·역할·권한 설정</small></span></a></li>
-        <li class="admin-only admin-nav-item is-hidden"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직명·사업유형·용어 설정</small></span></a></li>
+        {# --- 관리 (항상 표시, 권한 체크는 JS) --- #}
+        <li class="nav-group-header admin-only admin-nav-item is-hidden" data-module="admin">관리</li>
+        <li class="admin-only admin-nav-item subnav-divider is-hidden" data-module="admin"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정 등록·역할·권한 설정</small></span></a></li>
+        <li class="admin-only admin-nav-item is-hidden" data-module="admin"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직명·사업유형·용어 설정</small></span></a></li>
       </ul>
     </nav>
   </div>
@@ -90,6 +102,61 @@
     document.querySelectorAll('.subnav-links a').forEach(a => {
       if (a.getAttribute('href') === window.location.pathname) a.classList.add('active');
     });
+
+    // Module switcher logic
+    (function() {
+      const switcher = document.getElementById('module-switcher');
+      if (!switcher) return; // single module — no switcher needed
+
+      const ACCOUNTING_PATHS = ['/my-contracts', '/contracts', '/dashboard', '/reports'];
+      const INFRA_PATHS = ['/projects', '/assets', '/ip-inventory', '/port-maps', '/policies', '/infra-dashboard'];
+
+      function detectModule() {
+        const path = window.location.pathname;
+        if (ACCOUNTING_PATHS.some(p => path.startsWith(p))) return 'accounting';
+        if (INFRA_PATHS.some(p => path.startsWith(p))) return 'infra';
+        return localStorage.getItem('activeModule') || 'accounting';
+      }
+
+      function applyModule(mod) {
+        localStorage.setItem('activeModule', mod);
+
+        // Update switcher buttons
+        switcher.querySelectorAll('.module-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.moduleSwitch === mod);
+        });
+
+        // Show/hide nav items
+        document.querySelectorAll('.subnav-links > li[data-module]').forEach(li => {
+          const m = li.dataset.module;
+          if (m === 'common' || m === 'admin' || m === mod) {
+            li.style.display = '';
+          } else {
+            li.style.display = 'none';
+          }
+        });
+
+        // Update brand text
+        const brandText = document.getElementById('nav-brand-text');
+        const prefix = brandText.dataset.orgName || '';
+        if (mod === 'infra') {
+          brandText.textContent = prefix ? prefix + ' 프로젝트관리' : '프로젝트관리 시스템';
+        } else {
+          brandText.textContent = prefix ? prefix + ' 영업관리시스템' : '영업관리 시스템';
+        }
+      }
+
+      // Button click handlers
+      switcher.querySelectorAll('.module-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyModule(btn.dataset.moduleSwitch));
+      });
+
+      // Initial apply
+      applyModule(detectModule());
+
+      // Expose for settings callback
+      window.__applyModule = applyModule;
+    })();
 
     // Mobile navigation toggle
     (function() {
@@ -126,7 +193,14 @@
         }
       }
       if (settings?.org_name) {
-        document.getElementById('nav-brand-text').textContent = settings.org_name + ' 영업관리시스템';
+        const brandEl = document.getElementById('nav-brand-text');
+        brandEl.dataset.orgName = settings.org_name;
+        // Re-apply module context with org name
+        if (window.__applyModule) {
+          window.__applyModule(localStorage.getItem('activeModule') || 'accounting');
+        } else {
+          brandEl.textContent = settings.org_name + ' 영업관리시스템';
+        }
       }
     });
 
