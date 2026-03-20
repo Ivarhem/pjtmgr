@@ -1,6 +1,6 @@
 # 인프라모듈 고객사 중심 구조 전환 설계
 
-> **Status:** Draft
+> **Status:** Reviewed
 > **Date:** 2026-03-20
 > **Scope:** 인프라모듈의 데이터 소유 구조를 프로젝트 중심에서 고객사 중심으로 전환하고, 네비게이션/UI를 재설계한다.
 
@@ -38,6 +38,28 @@
 - `Asset` ↔ `Project`: 기존 `ProjectAsset` N:M 테이블 활용 (변경 없음)
 - `IpSubnet`, `PortMap`: 프로젝트 N:M 불필요 — 자산 FK를 통해 간접 추적
 - `Asset.project_id` FK: **삭제** (ProjectAsset N:M이 대체)
+
+> **CLAUDE.md 규칙 변경**: 현재 CLAUDE.md SS6에 "기존 `Asset.project_id` FK는 병행 유지"라는 규칙이 있다. 이 스펙의 구현 완료 시 해당 규칙을 "Asset은 customer_id로 고객사에 귀속되며, 프로젝트와는 ProjectAsset N:M으로만 연결한다"로 갱신해야 한다.
+
+### 2.3 자산명 유일성 규칙 변경
+
+현재 CLAUDE.md: "자산명은 프로젝트 내 unique를 기본 원칙으로 한다."
+
+변경: **자산명은 고객사 내 unique**로 변경한다. `asset_service.py`의 `_ensure_asset_name_unique()`를 `customer_id` 기준으로 수정한다.
+
+### 2.4 PortMap nullable 자산 처리
+
+`PortMap.src_asset_id`, `dst_asset_id`는 nullable이다 (외부 구간 표현용). 프로젝트 필터 시 자산 FK 경유로 필터링하면 **양쪽 자산 ID가 모두 NULL인 외부 구간 행은 필터에서 누락**된다. 이 경우:
+
+- 프로젝트 필터 체크박스 활성 시에도 외부 구간 행(양쪽 NULL)은 **항상 표시**한다.
+- 한쪽만 NULL인 경우 나머지 한쪽 자산이 프로젝트에 포함되면 표시한다.
+
+### 2.5 AssetRelation 조회 범위
+
+`AssetRelation`은 `src_asset_id`/`dst_asset_id`만 가지며 고유 FK가 없다. 고객사 범위 조회 시:
+
+- `GET /api/v1/asset-relations?customer_id=N`: `AssetRelation.src_asset_id IN (assets WHERE customer_id=N)` 기준으로 필터
+- 교차 고객사 관계(src와 dst가 다른 고객사)는 생성 시 차단하지 않되, 조회 시 한쪽이 해당 고객사에 포함되면 표시한다.
 
 ### 2.3 Pin 프로젝트 → Pin 고객사
 
@@ -77,7 +99,7 @@
 | 자산 | 고객사 전체 | ☐ 선택 프로젝트만 (ProjectAsset 기준) |
 | IP 인벤토리 | 고객사 전체 | 필터 없음 (서브넷은 고객사 레벨) |
 | 포트맵 | 고객사 전체 | ☐ 선택 프로젝트만 (자산 FK 경유) |
-| 정책 정의 | 고객사 적용 정책 | 없음 |
+| 정책 정의 | 전역 목록 + 고객사 적용 강조 | 없음 |
 | 적용 현황 | 고객사 전체 | ☐ 선택 프로젝트만 (자산 FK 경유) |
 | 담당자/업체 | 고객사 연락처 | 없음 |
 | 변경이력 | 고객사 감사 로그 | 없음 |
@@ -215,25 +237,33 @@ def get_project_asset_ids(db: Session, project_id: int) -> set[int]:
 
 ### 6.1 Alembic migration (`0005_customer_centric_restructure`)
 
+`down_revision = "0004"`
+
 ```
 upgrade:
   1. Asset, IpSubnet, PortMap, PolicyAssignment에 customer_id 컬럼 추가 (nullable, FK → customers.id)
+  1b. Project.customer_id가 NULL인 행이 있으면 migration 실패 (op.execute로 검증).
+      운영 환경에서는 migration 전에 모든 프로젝트에 고객사를 지정해야 한다.
   2. Project.customer_id를 NOT NULL로 변경
   3. 데이터 백필: 각 테이블의 project_id → Project.customer_id 역추적 → customer_id 채움
   4. customer_id NOT NULL 제약 적용
   5. Asset.project_id, IpSubnet.project_id, PortMap.project_id, PolicyAssignment.project_id FK 제거
 
 downgrade:
-  역순 복원 (customer_id → project_id 역추적)
+  downgrade는 지원하지 않는다 (raise NotImplementedError).
+  project_id 제거 후 customer_id → project_id 역매핑은 1:N 관계로 인해
+  단일 project_id를 결정할 수 없다. 롤백이 필요하면 DB 백업에서 복원한다.
 ```
 
 ### 6.2 UserPreference 마이그레이션
 
 기존 `infra.pinned_project_id` 값이 있으면:
 1. 해당 프로젝트의 `customer_id`를 조회
-2. `infra.pinned_customer_id`에 저장
+2. `customer_id`가 NULL이 아니면 `infra.pinned_customer_id`에 저장
 3. `infra.last_project_id`에 기존 값 이동
 4. `infra.pinned_project_id` 삭제
+
+pinned project의 `customer_id`가 NULL인 경우, `infra.pinned_customer_id`는 설정하지 않고 `infra.last_project_id`만 보존한다. 사용자는 재로그인 시 고객사 선택 안내를 받는다.
 
 ### 6.3 프론트엔드 변경 범위
 
@@ -246,12 +276,13 @@ downgrade:
 | 자산 페이지 | 그리드 + 하단 확장 패널 (B안 기본, A안 전환 가능) |
 | IP 인벤토리 페이지 | 좌우 분할 + 서브넷 상세 카드 |
 | 프로젝트 상세 페이지 | 자산/IP/포트맵 탭의 scope 조정 (프로젝트 연결 항목만) |
+| Excel Import/Export | `infra_importer.py`: `parse_inventory_sheet(file_bytes, project_id)` → `(file_bytes, customer_id)`. Import 시 자산을 고객사에 귀속. Export는 고객사 단위 또는 프로젝트 필터 적용 가능. `docs/guidelines/excel.md` 갱신 필요. |
 
 ---
 
 ## 7. 영향 받지 않는 영역
 
 - **회계모듈**: 변경 없음. Customer 모델은 common 모듈 소유로 공유만 됨.
-- **PolicyDefinition**: 전역 테이블 유지. 정책 정의 페이지에서 고객사별 적용 현황만 필터.
+- **PolicyDefinition**: 전역 테이블 유지. 정책 정의 페이지에서는 전역 목록을 표시하되, 현재 선택 고객사에 `PolicyAssignment`가 있는 정책을 상단 정렬/강조한다.
 - **AssetContact**: asset_id FK — 자산이 고객사로 이동하면 자동으로 따라감.
 - **ProjectCustomer, ProjectCustomerContact**: 프로젝트-업체 연결 유지 (프로젝트 상세에서 사용).
