@@ -1017,6 +1017,11 @@ document.getElementById("btn-add-deliverable").addEventListener("click", openCre
 document.getElementById("btn-cancel-deliverable").addEventListener("click", () => deliverableModal.close());
 document.getElementById("btn-save-deliverable").addEventListener("click", saveDeliverable);
 
+// ── Excel Export ──
+document.getElementById("btn-export-project")?.addEventListener("click", () => {
+  window.location.href = `/api/v1/infra-excel/export/${PROJECT_ID}`;
+});
+
 // ── Asset Import (프로젝트 상세 내) ──
 document.getElementById("btn-asset-import")?.addEventListener("click", () => {
   document.getElementById("asset-import-panel").classList.toggle("hidden");
