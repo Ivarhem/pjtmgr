@@ -48,7 +48,7 @@ def list_by_project(db: Session, project_id: int) -> list[dict]:
     return _enrich(db, links)
 
 
-def create(
+def create_project_customer_contact(
     db: Session, payload: ProjectCustomerContactCreate, current_user
 ) -> ProjectCustomerContact:
     _require_edit(current_user)
@@ -65,7 +65,7 @@ def create(
     return pcc
 
 
-def update(
+def update_project_customer_contact(
     db: Session, link_id: int, payload: ProjectCustomerContactUpdate, current_user
 ) -> ProjectCustomerContact:
     _require_edit(current_user)
@@ -77,7 +77,7 @@ def update(
     return pcc
 
 
-def delete(db: Session, link_id: int, current_user) -> None:
+def delete_project_customer_contact(db: Session, link_id: int, current_user) -> None:
     _require_edit(current_user)
     pcc = _get(db, link_id)
     db.delete(pcc)

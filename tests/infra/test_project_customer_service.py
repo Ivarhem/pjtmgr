@@ -10,10 +10,10 @@ from app.modules.infra.schemas.project_customer import (
     ProjectCustomerUpdate,
 )
 from app.modules.infra.services.project_customer_service import (
-    create,
-    delete,
+    create_project_customer,
+    delete_project_customer,
     list_by_project,
-    update,
+    update_project_customer,
 )
 from app.modules.infra.services.project_service import create_project
 
@@ -47,7 +47,7 @@ def test_create_and_list(db_session, admin_role_id) -> None:
     )
     cust = _make_customer(db_session)
 
-    pc = create(
+    pc = create_project_customer(
         db_session,
         ProjectCustomerCreate(
             project_id=proj.id, customer_id=cust.id, role="고객사"
@@ -73,7 +73,7 @@ def test_duplicate_rejected(db_session, admin_role_id) -> None:
     )
     cust = _make_customer(db_session, name="DupCorp", bno="111-11-11111")
 
-    create(
+    create_project_customer(
         db_session,
         ProjectCustomerCreate(
             project_id=proj.id, customer_id=cust.id, role="수행사"
@@ -81,7 +81,7 @@ def test_duplicate_rejected(db_session, admin_role_id) -> None:
         admin,
     )
     with pytest.raises(DuplicateError):
-        create(
+        create_project_customer(
             db_session,
             ProjectCustomerCreate(
                 project_id=proj.id, customer_id=cust.id, role="수행사"
@@ -99,14 +99,14 @@ def test_same_customer_different_role_allowed(db_session, admin_role_id) -> None
     )
     cust = _make_customer(db_session, name="MultiCorp", bno="222-22-22222")
 
-    create(
+    create_project_customer(
         db_session,
         ProjectCustomerCreate(
             project_id=proj.id, customer_id=cust.id, role="고객사"
         ),
         admin,
     )
-    pc2 = create(
+    pc2 = create_project_customer(
         db_session,
         ProjectCustomerCreate(
             project_id=proj.id, customer_id=cust.id, role="유지보수사"
@@ -126,14 +126,14 @@ def test_update(db_session, admin_role_id) -> None:
     )
     cust = _make_customer(db_session, name="UpdCorp", bno="333-33-33333")
 
-    pc = create(
+    pc = create_project_customer(
         db_session,
         ProjectCustomerCreate(
             project_id=proj.id, customer_id=cust.id, role="벤더"
         ),
         admin,
     )
-    updated = update(
+    updated = update_project_customer(
         db_session,
         pc.id,
         ProjectCustomerUpdate(scope_text="HW 납품"),
@@ -151,14 +151,14 @@ def test_delete(db_session, admin_role_id) -> None:
     )
     cust = _make_customer(db_session, name="DelCorp", bno="444-44-44444")
 
-    pc = create(
+    pc = create_project_customer(
         db_session,
         ProjectCustomerCreate(
             project_id=proj.id, customer_id=cust.id, role="통신사"
         ),
         admin,
     )
-    delete(db_session, pc.id, admin)
+    delete_project_customer(db_session, pc.id, admin)
     assert len(list_by_project(db_session, proj.id)) == 0
 
 
@@ -167,7 +167,7 @@ def test_not_found_project(db_session, admin_role_id) -> None:
     cust = _make_customer(db_session, name="NfCorp", bno="555-55-55555")
 
     with pytest.raises(NotFoundError):
-        create(
+        create_project_customer(
             db_session,
             ProjectCustomerCreate(
                 project_id=99999, customer_id=cust.id, role="고객사"

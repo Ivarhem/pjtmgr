@@ -30,7 +30,7 @@ def create_project_customer(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    pc = svc.create(db, payload, current_user)
+    pc = svc.create_project_customer(db, payload, current_user)
     enriched = svc.list_by_project(db, pc.project_id)
     return next((r for r in enriched if r["id"] == pc.id), enriched[0])
 
@@ -42,7 +42,7 @@ def update_project_customer(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    pc = svc.update(db, link_id, payload, current_user)
+    pc = svc.update_project_customer(db, link_id, payload, current_user)
     enriched = svc.list_by_project(db, pc.project_id)
     return next((r for r in enriched if r["id"] == pc.id), enriched[0])
 
@@ -53,4 +53,4 @@ def delete_project_customer(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    svc.delete(db, link_id, current_user)
+    svc.delete_project_customer(db, link_id, current_user)

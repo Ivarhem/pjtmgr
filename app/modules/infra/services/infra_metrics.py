@@ -68,7 +68,7 @@ def get_project_summary(db: Session, project_id: int) -> dict:
     }
 
 
-def get_all_projects_summary(db: Session) -> list[dict]:
+def list_projects_summary(db: Session) -> list[dict]:
     """All projects summary list for dashboard."""
     project_ids = list(db.scalars(select(Project.id).order_by(Project.id)))
     return [get_project_summary(db, pid) for pid in project_ids]

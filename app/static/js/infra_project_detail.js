@@ -700,8 +700,7 @@ function _renderProjectCustomers(container, customers, contacts) {
   container.textContent = "";
   if (customers.length === 0) {
     const p = document.createElement("p");
-    p.className = "text-muted";
-    p.style.padding = "1rem";
+    p.className = "text-muted pc-placeholder";
     p.textContent = "연결된 업체가 없습니다. '업체 연결' 버튼으로 추가하세요.";
     container.appendChild(p);
     return;
@@ -709,12 +708,11 @@ function _renderProjectCustomers(container, customers, contacts) {
 
   customers.forEach(pc => {
     const card = document.createElement("div");
-    card.className = "card mb-sm";
-    card.style.padding = "12px 16px";
+    card.className = "card mb-sm pc-card";
 
     // Header: role badge + customer name + actions
     const header = document.createElement("div");
-    header.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+    header.className = "pc-header";
     const badge = document.createElement("span");
     badge.className = "badge badge-active";
     badge.textContent = pc.role;
@@ -724,14 +722,13 @@ function _renderProjectCustomers(container, customers, contacts) {
     header.appendChild(name);
     if (pc.scope_text) {
       const scope = document.createElement("span");
-      scope.className = "text-muted";
-      scope.style.fontSize = "0.85rem";
+      scope.className = "text-muted pc-scope";
       scope.textContent = " — " + pc.scope_text;
       header.appendChild(scope);
     }
     // spacer
     const spacer = document.createElement("span");
-    spacer.style.flex = "1";
+    spacer.className = "pc-spacer";
     header.appendChild(spacer);
     // add contact btn
     const addBtn = document.createElement("button");
@@ -751,10 +748,9 @@ function _renderProjectCustomers(container, customers, contacts) {
     const pcContacts = contacts.filter(c => c.project_customer_id === pc.id);
     if (pcContacts.length > 0) {
       const table = document.createElement("table");
-      table.style.cssText = "width:100%;font-size:0.85rem;border-collapse:collapse;";
+      table.className = "pc-contacts-table";
       pcContacts.forEach(ct => {
         const tr = document.createElement("tr");
-        tr.style.borderBottom = "1px solid var(--border-color, #e2e8f0)";
         const cells = [
           ct.project_role,
           ct.contact_name || "",
@@ -763,13 +759,11 @@ function _renderProjectCustomers(container, customers, contacts) {
         ];
         cells.forEach(txt => {
           const td = document.createElement("td");
-          td.style.padding = "4px 8px";
           td.textContent = txt;
           tr.appendChild(td);
         });
         // delete contact btn
         const tdAction = document.createElement("td");
-        tdAction.style.cssText = "padding:4px;text-align:right;";
         const rmBtn = document.createElement("button");
         rmBtn.className = "btn btn-xs btn-danger";
         rmBtn.textContent = "해제";
@@ -781,8 +775,7 @@ function _renderProjectCustomers(container, customers, contacts) {
       card.appendChild(table);
     } else {
       const empty = document.createElement("p");
-      empty.className = "text-muted";
-      empty.style.cssText = "font-size:0.85rem;margin:0;";
+      empty.className = "text-muted pc-empty";
       empty.textContent = "담당자 없음";
       card.appendChild(empty);
     }

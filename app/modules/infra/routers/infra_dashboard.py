@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.modules.common.models.audit_log import AuditLog
 from app.modules.common.models.user import User
 from app.modules.infra.services.infra_metrics import (
-    get_all_projects_summary,
+    list_projects_summary,
     get_non_compliant_assignments,
     get_project_summary,
     get_unsubmitted_deliverables,
@@ -24,7 +24,7 @@ def dashboard_summary(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[dict]:
-    return get_all_projects_summary(db)
+    return list_projects_summary(db)
 
 
 @router.get("/project/{project_id}")

@@ -11,14 +11,14 @@ from app.modules.infra.schemas.project_customer_contact import (
     ProjectCustomerContactUpdate,
 )
 from app.modules.infra.services.project_customer_service import (
-    create as create_pc,
+    create_project_customer as create_pc,
 )
 from app.modules.infra.services.project_customer_contact_service import (
-    create,
-    delete,
+    create_project_customer_contact,
+    delete_project_customer_contact,
     list_by_project,
     list_by_project_customer,
-    update,
+    update_project_customer_contact,
 )
 from app.modules.infra.services.project_service import create_project
 
@@ -66,7 +66,7 @@ def test_create_and_list(db_session, admin_role_id) -> None:
         admin,
     )
 
-    pcc = create(
+    pcc = create_project_customer_contact(
         db_session,
         ProjectCustomerContactCreate(
             project_customer_id=pc.id,
@@ -105,7 +105,7 @@ def test_duplicate_rejected(db_session, admin_role_id) -> None:
         admin,
     )
 
-    create(
+    create_project_customer_contact(
         db_session,
         ProjectCustomerContactCreate(
             project_customer_id=pc.id,
@@ -115,7 +115,7 @@ def test_duplicate_rejected(db_session, admin_role_id) -> None:
         admin,
     )
     with pytest.raises(DuplicateError):
-        create(
+        create_project_customer_contact(
             db_session,
             ProjectCustomerContactCreate(
                 project_customer_id=pc.id,
@@ -142,7 +142,7 @@ def test_same_contact_different_role_allowed(db_session, admin_role_id) -> None:
         admin,
     )
 
-    create(
+    create_project_customer_contact(
         db_session,
         ProjectCustomerContactCreate(
             project_customer_id=pc.id,
@@ -151,7 +151,7 @@ def test_same_contact_different_role_allowed(db_session, admin_role_id) -> None:
         ),
         admin,
     )
-    pcc2 = create(
+    pcc2 = create_project_customer_contact(
         db_session,
         ProjectCustomerContactCreate(
             project_customer_id=pc.id,
@@ -179,7 +179,7 @@ def test_update(db_session, admin_role_id) -> None:
         ),
         admin,
     )
-    pcc = create(
+    pcc = create_project_customer_contact(
         db_session,
         ProjectCustomerContactCreate(
             project_customer_id=pc.id,
@@ -188,7 +188,7 @@ def test_update(db_session, admin_role_id) -> None:
         ),
         admin,
     )
-    updated = update(
+    updated = update_project_customer_contact(
         db_session,
         pcc.id,
         ProjectCustomerContactUpdate(note="주간보고 참석"),
@@ -212,7 +212,7 @@ def test_delete(db_session, admin_role_id) -> None:
         ),
         admin,
     )
-    pcc = create(
+    pcc = create_project_customer_contact(
         db_session,
         ProjectCustomerContactCreate(
             project_customer_id=pc.id,
@@ -221,5 +221,5 @@ def test_delete(db_session, admin_role_id) -> None:
         ),
         admin,
     )
-    delete(db_session, pcc.id, admin)
+    delete_project_customer_contact(db_session, pcc.id, admin)
     assert len(list_by_project_customer(db_session, pc.id)) == 0

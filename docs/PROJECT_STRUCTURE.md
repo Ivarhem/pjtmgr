@@ -324,7 +324,7 @@ alembic/
 ├── script.py.mako               # 마이그레이션 템플릿
 └── versions/
     ├── 0001_initial_modular_baseline.py  # 통합 모듈 초기 스키마
-    ├── 0002_...                          # (이전 마이그레이션)
+    ├── 0002_add_project_contract_link_and_audit_module.py
     ├── 0003_asset_restructure.py         # project_assets, asset_code, asset_relations
     └── 0004_project_customer.py          # project_customers, project_customer_contacts
 ```
