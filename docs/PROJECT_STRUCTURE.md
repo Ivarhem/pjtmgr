@@ -147,6 +147,10 @@ app/modules/infra/
 │   ├── asset.py                 # Asset (기술 자산)
 │   ├── asset_ip.py              # AssetIP (자산 IP)
 │   ├── asset_contact.py         # AssetContact (자산 담당자 매핑)
+│   ├── asset_relation.py        # AssetRelation (자산 간 관계)
+│   ├── project_asset.py         # ProjectAsset (프로젝트-자산 N:M)
+│   ├── project_customer.py      # ProjectCustomer (프로젝트-업체 역할)
+│   ├── project_customer_contact.py # ProjectCustomerContact (프로젝트-담당자 역할)
 │   ├── ip_subnet.py             # IpSubnet (IP 대역)
 │   ├── port_map.py              # PortMap (포트맵)
 │   ├── policy_definition.py     # PolicyDefinition (정책 정의)
@@ -158,6 +162,11 @@ app/modules/infra/
 │   ├── asset.py                 # 자산 스키마
 │   ├── asset_ip.py              # 자산 IP 스키마
 │   ├── asset_contact.py         # 자산 담당자 스키마
+│   ├── asset_relation.py        # 자산 관계 스키마
+│   ├── project_asset.py         # 프로젝트-자산 스키마
+│   ├── project_customer.py      # 프로젝트-업체 스키마
+│   ├── project_customer_contact.py # 프로젝트-담당자 스키마
+│   ├── infra_import.py          # Import 프리뷰/결과 스키마
 │   ├── ip_subnet.py             # IP 대역 스키마
 │   ├── port_map.py              # 포트맵 스키마
 │   ├── policy_definition.py     # 정책 정의 스키마
@@ -168,7 +177,13 @@ app/modules/infra/
 │   ├── asset_service.py         # 자산/자산IP/담당자 CRUD
 │   ├── network_service.py       # IP 대역 CRUD
 │   ├── policy_service.py        # 정책 정의/적용 CRUD
-│   └── (port_map은 asset_service 또는 network_service에 포함)
+│   ├── project_asset_service.py  # 프로젝트-자산 연결/해제
+│   ├── project_customer_service.py # 프로젝트-업체 CRUD
+│   ├── project_customer_contact_service.py # 프로젝트-담당자 CRUD
+│   ├── asset_relation_service.py # 자산 관계 CRUD
+│   ├── infra_metrics.py         # 현황판 집계 서비스
+│   ├── infra_importer.py        # Excel Import (자산/IP/포트맵)
+│   └── infra_exporter.py        # Excel Export (프로젝트 단위 3시트)
 ├── routers/
 │   ├── projects.py              # /api/v1/projects
 │   ├── project_phases.py        # /api/v1/.../phases
@@ -180,14 +195,24 @@ app/modules/infra/
 │   ├── port_maps.py             # /api/v1/port-maps
 │   ├── policies.py              # /api/v1/policies
 │   ├── policy_assignments.py    # /api/v1/policy-assignments
+│   ├── project_assets.py        # /api/v1/project-assets
+│   ├── asset_relations.py       # /api/v1/asset-relations
+│   ├── project_customers.py     # /api/v1/project-customers
+│   ├── project_customer_contacts.py # /api/v1/project-customer-contacts
+│   ├── infra_dashboard.py       # /api/v1/infra-dashboard (집계 + 감사로그)
+│   ├── infra_excel.py           # /api/v1/infra-excel (Import/Export)
 │   └── pages.py                 # 인프라 HTML 페이지 렌더링
 └── templates/
     ├── infra_projects.html      # 프로젝트 목록
-    ├── infra_project_detail.html # 프로젝트 상세
+    ├── infra_project_detail.html # 프로젝트 상세 (탭 구조)
     ├── infra_assets.html        # 자산 목록
     ├── infra_ip_inventory.html  # IP 대역 관리
     ├── infra_port_maps.html     # 포트맵
-    └── infra_policies.html      # 정책 관리
+    ├── infra_policies.html      # 정책 적용 현황
+    ├── infra_policy_definitions.html # 정책 정의 관리
+    ├── infra_dashboard.html     # 인프라 현황판
+    ├── infra_inventory_assets.html # 자산 횡단 검색
+    └── infra_import.html        # 자산 Excel Import (3단계 위저드)
 ```
 
 ## CLI (MVP 이후)
@@ -218,6 +243,10 @@ app/static/
 │   ├── infra_ip_inventory.js    # 인프라 IP 대역
 │   ├── infra_port_maps.js       # 인프라 포트맵
 │   ├── infra_policies.js        # 인프라 정책
+│   ├── infra_policy_definitions.js # 정책 정의 관리
+│   ├── infra_dashboard.js       # 인프라 현황판
+│   ├── infra_inventory_assets.js # 자산 횡단 검색
+│   ├── infra_import.js          # 자산 Excel Import
 │   └── lucide.js                # 아이콘 라이브러리
 ├── css/
 │   ├── base.css                 # 전역 스타일, CSS 변수 (light/dark)
@@ -275,7 +304,12 @@ tests/
 │   ├── test_asset_contact_service.py
 │   ├── test_network_service.py
 │   ├── test_port_map_service.py
-│   └── test_policy_service.py
+│   ├── test_policy_service.py
+│   ├── test_infra_importer.py
+│   ├── test_project_asset_service.py
+│   ├── test_asset_relation_service.py
+│   ├── test_project_customer_service.py
+│   └── test_project_customer_contact_service.py
 ├── test_database.py             # 스키마 정합성
 ├── test_startup.py              # bootstrap, lifespan
 ├── test_module_isolation.py     # accounting <-> infra import 금지 검증
@@ -289,7 +323,10 @@ alembic/
 ├── env.py                       # Alembic 환경 설정
 ├── script.py.mako               # 마이그레이션 템플릿
 └── versions/
-    └── 0001_initial_modular_baseline.py  # 통합 모듈 초기 스키마
+    ├── 0001_initial_modular_baseline.py  # 통합 모듈 초기 스키마
+    ├── 0002_...                          # (이전 마이그레이션)
+    ├── 0003_asset_restructure.py         # project_assets, asset_code, asset_relations
+    └── 0004_project_customer.py          # project_customers, project_customer_contacts
 ```
 
 ## 루트 파일

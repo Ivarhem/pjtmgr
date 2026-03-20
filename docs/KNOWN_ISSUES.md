@@ -22,10 +22,10 @@
 
 ## 감사 로그
 
-- 모델과 유틸 준비 완료
-- 서비스 레이어에서 `audit.log()` 호출 미연동 — CRUD 동작에 감사 기록이 남지 않음
-- 감사 로그 조회 API 엔드포인트(`/api/v1/audit-logs`) 미구현
-- `/audit-logs` 화면은 placeholder — 목록/필터 UI 미구현
+- 인프라모듈: `audit.log()` 연동 완료 (프로젝트/자산/IP대역/포트맵/정책 CRUD)
+- 인프라모듈: 변경이력 탭에서 AG Grid 조회 가능 (`/api/v1/infra-dashboard/audit-log`)
+- 회계모듈: `audit.log()` 호출 미연동 — CRUD 동작에 감사 기록이 남지 않음
+- `/audit-logs` 공통 화면은 placeholder — 목록/필터 UI 미구현
 
 ## 권한
 

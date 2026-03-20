@@ -62,6 +62,11 @@
 | 정책 정의 (PolicyDefinition) | 적용 기준이 되는 정책 원본 |
 | 정책 적용 상태 (PolicyAssignment) | 프로젝트/자산 단위 정책 준수 현황 |
 | 자산 담당자 매핑 (AssetContact) | 특정 자산과 담당자(CustomerContact)의 역할 연결 |
+| 프로젝트-자산 연결 (ProjectAsset) | Asset↔Project N:M 연결. role, note 포함 |
+| 자산 관계 (AssetRelation) | 자산 간 관계(parent-child, cluster, ha-pair 등) |
+| 프로젝트 업체 (ProjectCustomer) | 프로젝트별 업체 역할(고객사/수행사/유지보수사/통신사/벤더) |
+| 프로젝트 담당자 (ProjectCustomerContact) | 프로젝트별 담당자 역할(고객PM/수행PM/구축엔지니어 등) |
+| Pin 프로젝트 | UserPreference 기반 사용자별 고정 프로젝트. topbar 뱃지 표시, 전 페이지 기본 선택 |
 
 ### 공통모듈 (common)
 
@@ -211,6 +216,11 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 
 - `Project`는 상위 컨텍스트이고, 기술 인벤토리의 탐색 중심은 `Asset`이다.
 - `Asset`을 중심으로 `AssetIP`, `PortMap`, `AssetContact`가 연결된다.
+- `Asset`은 `ProjectAsset` N:M 테이블을 통해 여러 프로젝트에 연결 가능. 기존 `Asset.project_id` FK는 병행 유지.
+- `AssetRelation`으로 자산 간 관계(parent-child, cluster, ha-pair 등)를 표현한다.
+- `ProjectCustomer`로 프로젝트-업체 역할(고객사/수행사/유지보수사/통신사/벤더)을 관리한다.
+- `ProjectCustomerContact`로 프로젝트-담당자 역할(고객PM/수행PM/구축엔지니어 등)을 관리한다. `ProjectCustomer`에 종속(CASCADE 삭제).
+- Pin 프로젝트: `UserPreference`(key=`infra.pinned_project_id`)로 사용자별 고정 프로젝트를 DB 저장. 인프라 전 페이지에서 기본 컨텍스트로 동작.
 - 정책은 반드시 `PolicyDefinition`과 `PolicyAssignment`로 분리한다.
 - IP 중복 검증은 최소한 프로젝트 범위 내에서 수행한다.
 - 자산명은 프로젝트 내 unique를 기본 원칙으로 한다.
@@ -218,6 +228,8 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 - 포트맵은 자산 간 연결뿐 아니라 외부 구간 표현을 위해 `src_asset_id`, `dst_asset_id`를 nullable로 둘 수 있다.
 - 정책 적용 상태는 `not_checked`, `compliant`, `non_compliant`, `exception`, `not_applicable` 범위를 기본값으로 사용한다.
 - 연락처는 거래처에 소속되고, 자산에는 매핑(AssetContact)으로 연결한다.
+- 인프라 CRUD(프로젝트/자산/IP대역/포트맵/정책)는 `audit.log()`로 감사 로그를 기록한다.
+- Excel Export는 프로젝트 단위 3시트(Inventory/IP대역/Portmap)로 내보낸다.
 
 ### 공통
 
