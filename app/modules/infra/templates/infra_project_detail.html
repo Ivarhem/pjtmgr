@@ -163,13 +163,90 @@
 </div>
 
 <div class="tab-content hidden" id="tab-contacts">
+  <!-- 프로젝트 업체 -->
   <div class="page-header">
-    <h2>담당자 / 업체</h2>
+    <h2>프로젝트 업체</h2>
+    <button class="btn btn-primary btn-sm" id="btn-add-project-customer">업체 연결</button>
   </div>
-  <div class="card">
-    <div id="grid-tab-contacts" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  <div id="project-customers-list" class="project-customers-grid">
+    <p class="text-muted" style="padding:1rem;">로딩 중...</p>
   </div>
+
+  <!-- 자산별 담당자 (기존) -->
+  <details class="mt-md">
+    <summary class="text-secondary" style="cursor:pointer;font-weight:600;margin-bottom:8px;">자산별 담당자 (AssetContact)</summary>
+    <div class="card">
+      <div id="grid-tab-contacts" class="ag-theme-quartz" style="height: 300px; width: 100%;"></div>
+    </div>
+  </details>
 </div>
+
+<!-- 업체 연결 모달 -->
+<dialog id="modal-project-customer" class="modal">
+  <h2 id="modal-pc-title">업체 연결</h2>
+  <form class="form-grid">
+    <input type="hidden" id="pc-id">
+    <label>
+      거래처
+      <select id="pc-customer-id" required></select>
+    </label>
+    <label>
+      역할
+      <select id="pc-role" required>
+        <option value="고객사">고객사</option>
+        <option value="수행사">수행사</option>
+        <option value="유지보수사">유지보수사</option>
+        <option value="통신사">통신사</option>
+        <option value="벤더">벤더</option>
+      </select>
+    </label>
+    <label class="full-width">
+      범위/설명
+      <input type="text" id="pc-scope-text">
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="pc-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-pc">취소</button>
+    <button class="btn btn-primary" id="btn-save-pc">저장</button>
+  </div>
+</dialog>
+
+<!-- 담당자 연결 모달 -->
+<dialog id="modal-project-customer-contact" class="modal">
+  <h2 id="modal-pcc-title">담당자 연결</h2>
+  <form class="form-grid">
+    <input type="hidden" id="pcc-id">
+    <input type="hidden" id="pcc-project-customer-id">
+    <label>
+      담당자
+      <select id="pcc-contact-id" required></select>
+    </label>
+    <label>
+      프로젝트 역할
+      <select id="pcc-project-role" required>
+        <option value="고객PM">고객PM</option>
+        <option value="고객실무">고객실무</option>
+        <option value="승인자">승인자</option>
+        <option value="수행PM">수행PM</option>
+        <option value="구축엔지니어">구축엔지니어</option>
+        <option value="유지보수담당">유지보수담당</option>
+        <option value="보안업무담당">보안업무담당</option>
+      </select>
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="pcc-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-pcc">취소</button>
+    <button class="btn btn-primary" id="btn-save-pcc">저장</button>
+  </div>
+</dialog>
 
 <div class="tab-content hidden" id="tab-history">
   <div class="placeholder-message">변경이력 (감사 로그 연동 후 활성화)</div>

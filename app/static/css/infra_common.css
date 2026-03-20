@@ -100,6 +100,13 @@
 .phase-active .phase-icon { color: var(--primary, #3b82f6); }
 .phase-pending .phase-icon { color: var(--text-muted, #94a3b8); }
 
+/* ── Project customers grid ── */
+.project-customers-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
 /* Pin toggle button in grids/headers */
 .btn-pin {
   background: none;

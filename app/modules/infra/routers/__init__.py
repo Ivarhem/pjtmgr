@@ -16,7 +16,14 @@ from app.modules.infra.routers.policy_assignments import (
     router as policy_assignments_router,
 )
 from app.modules.infra.routers.asset_contacts import router as asset_contacts_router
+from app.modules.infra.routers.project_assets import router as project_assets_router
+from app.modules.infra.routers.asset_relations import router as asset_relations_router
+from app.modules.infra.routers.project_customers import router as project_customers_router
+from app.modules.infra.routers.project_customer_contacts import (
+    router as project_customer_contacts_router,
+)
 from app.modules.infra.routers.infra_dashboard import router as infra_dashboard_router
+from app.modules.infra.routers.infra_excel import router as infra_excel_router
 from app.modules.infra.routers.pages import router as pages_router
 
 api_router = APIRouter(dependencies=[require_module_access("infra", "read")])
@@ -30,7 +37,12 @@ api_router.include_router(port_maps_router)
 api_router.include_router(policies_router)
 api_router.include_router(policy_assignments_router)
 api_router.include_router(asset_contacts_router)
+api_router.include_router(project_assets_router)
+api_router.include_router(asset_relations_router)
+api_router.include_router(project_customers_router)
+api_router.include_router(project_customer_contacts_router)
 api_router.include_router(infra_dashboard_router)
+api_router.include_router(infra_excel_router)
 api_router.include_router(pages_router)
 
 __all__ = ["api_router"]

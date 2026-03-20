@@ -645,7 +645,11 @@ function initPolicyTab() {
 }
 
 /* ── Contacts Tab (lazy-load) ── */
+let _pcCustomersCache = [];
+let _pcContactsCache = [];
+
 function initContactsTab() {
+  // 자산별 담당자 Grid (기존)
   const colDefs = [
     { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180, sort: "asc" },
     { field: "primary_contact_name", headerName: "주 담당자", width: 140 },
@@ -668,6 +672,250 @@ function initContactsTab() {
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
+  });
+
+  // 프로젝트 업체/담당자 로드
+  loadProjectCustomers();
+  _initPcModals();
+}
+
+async function loadProjectCustomers() {
+  const container = document.getElementById("project-customers-list");
+  try {
+    const [customers, contacts] = await Promise.all([
+      apiFetch(`/api/v1/project-customers?project_id=${PROJECT_ID}`),
+      apiFetch(`/api/v1/project-customer-contacts?project_id=${PROJECT_ID}`),
+    ]);
+    _pcCustomersCache = customers;
+    _pcContactsCache = contacts;
+    _renderProjectCustomers(container, customers, contacts);
+  } catch (err) {
+    container.textContent = "업체 정보를 불러올 수 없습니다.";
+    showToast(err.message, "error");
+  }
+}
+
+function _renderProjectCustomers(container, customers, contacts) {
+  container.textContent = "";
+  if (customers.length === 0) {
+    const p = document.createElement("p");
+    p.className = "text-muted";
+    p.style.padding = "1rem";
+    p.textContent = "연결된 업체가 없습니다. '업체 연결' 버튼으로 추가하세요.";
+    container.appendChild(p);
+    return;
+  }
+
+  customers.forEach(pc => {
+    const card = document.createElement("div");
+    card.className = "card mb-sm";
+    card.style.padding = "12px 16px";
+
+    // Header: role badge + customer name + actions
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+    const badge = document.createElement("span");
+    badge.className = "badge badge-active";
+    badge.textContent = pc.role;
+    header.appendChild(badge);
+    const name = document.createElement("strong");
+    name.textContent = pc.customer_name || "(알수없음)";
+    header.appendChild(name);
+    if (pc.scope_text) {
+      const scope = document.createElement("span");
+      scope.className = "text-muted";
+      scope.style.fontSize = "0.85rem";
+      scope.textContent = " — " + pc.scope_text;
+      header.appendChild(scope);
+    }
+    // spacer
+    const spacer = document.createElement("span");
+    spacer.style.flex = "1";
+    header.appendChild(spacer);
+    // add contact btn
+    const addBtn = document.createElement("button");
+    addBtn.className = "btn btn-xs btn-secondary";
+    addBtn.textContent = "+ 담당자";
+    addBtn.addEventListener("click", () => openAddContactModal(pc));
+    header.appendChild(addBtn);
+    // delete btn
+    const delBtn = document.createElement("button");
+    delBtn.className = "btn btn-xs btn-danger";
+    delBtn.textContent = "해제";
+    delBtn.addEventListener("click", () => deleteProjectCustomer(pc.id));
+    header.appendChild(delBtn);
+    card.appendChild(header);
+
+    // Contacts list
+    const pcContacts = contacts.filter(c => c.project_customer_id === pc.id);
+    if (pcContacts.length > 0) {
+      const table = document.createElement("table");
+      table.style.cssText = "width:100%;font-size:0.85rem;border-collapse:collapse;";
+      pcContacts.forEach(ct => {
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border-color, #e2e8f0)";
+        const cells = [
+          ct.project_role,
+          ct.contact_name || "",
+          ct.contact_phone || "",
+          ct.contact_email || "",
+        ];
+        cells.forEach(txt => {
+          const td = document.createElement("td");
+          td.style.padding = "4px 8px";
+          td.textContent = txt;
+          tr.appendChild(td);
+        });
+        // delete contact btn
+        const tdAction = document.createElement("td");
+        tdAction.style.cssText = "padding:4px;text-align:right;";
+        const rmBtn = document.createElement("button");
+        rmBtn.className = "btn btn-xs btn-danger";
+        rmBtn.textContent = "해제";
+        rmBtn.addEventListener("click", () => deleteProjectCustomerContact(ct.id));
+        tdAction.appendChild(rmBtn);
+        tr.appendChild(tdAction);
+        table.appendChild(tr);
+      });
+      card.appendChild(table);
+    } else {
+      const empty = document.createElement("p");
+      empty.className = "text-muted";
+      empty.style.cssText = "font-size:0.85rem;margin:0;";
+      empty.textContent = "담당자 없음";
+      card.appendChild(empty);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+/* ── Project Customer Modal ── */
+const pcModal = document.getElementById("modal-project-customer");
+const pccModal = document.getElementById("modal-project-customer-contact");
+
+function _initPcModals() {
+  document.getElementById("btn-add-project-customer")?.addEventListener("click", openAddCustomerModal);
+  document.getElementById("btn-cancel-pc")?.addEventListener("click", () => pcModal.close());
+  document.getElementById("btn-save-pc")?.addEventListener("click", saveProjectCustomer);
+  document.getElementById("btn-cancel-pcc")?.addEventListener("click", () => pccModal.close());
+  document.getElementById("btn-save-pcc")?.addEventListener("click", saveProjectCustomerContact);
+}
+
+async function openAddCustomerModal() {
+  document.getElementById("pc-id").value = "";
+  document.getElementById("pc-scope-text").value = "";
+  document.getElementById("pc-note").value = "";
+  document.getElementById("pc-role").value = "고객사";
+  document.getElementById("modal-pc-title").textContent = "업체 연결";
+
+  // 거래처 목록 로드
+  const sel = document.getElementById("pc-customer-id");
+  sel.textContent = "";
+  try {
+    const customers = await apiFetch("/api/v1/customers");
+    customers.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  } catch (err) { showToast("거래처 로드 실패", "error"); }
+  pcModal.showModal();
+}
+
+async function saveProjectCustomer() {
+  const pcId = document.getElementById("pc-id").value;
+  const payload = {
+    project_id: PROJECT_ID,
+    customer_id: Number(document.getElementById("pc-customer-id").value),
+    role: document.getElementById("pc-role").value,
+    scope_text: document.getElementById("pc-scope-text").value || null,
+    note: document.getElementById("pc-note").value || null,
+  };
+
+  try {
+    if (pcId) {
+      await apiFetch(`/api/v1/project-customers/${pcId}`, { method: "PATCH", body: payload });
+      showToast("업체 정보가 수정되었습니다.");
+    } else {
+      await apiFetch("/api/v1/project-customers", { method: "POST", body: payload });
+      showToast("업체가 연결되었습니다.");
+    }
+    pcModal.close();
+    loadProjectCustomers();
+  } catch (err) { showToast(err.message, "error"); }
+}
+
+async function deleteProjectCustomer(pcId) {
+  confirmDelete("업체 연결을 해제하시겠습니까? 소속 담당자 연결도 함께 삭제됩니다.", async () => {
+    try {
+      await apiFetch(`/api/v1/project-customers/${pcId}`, { method: "DELETE" });
+      showToast("업체 연결이 해제되었습니다.");
+      loadProjectCustomers();
+    } catch (err) { showToast(err.message, "error"); }
+  });
+}
+
+/* ── Project Customer Contact Modal ── */
+async function openAddContactModal(pc) {
+  document.getElementById("pcc-id").value = "";
+  document.getElementById("pcc-project-customer-id").value = pc.id;
+  document.getElementById("pcc-note").value = "";
+  document.getElementById("pcc-project-role").value = "고객PM";
+  document.getElementById("modal-pcc-title").textContent =
+    `담당자 연결 — ${pc.customer_name} (${pc.role})`;
+
+  // 해당 거래처 담당자 목록 로드
+  const sel = document.getElementById("pcc-contact-id");
+  sel.textContent = "";
+  try {
+    const contacts = await apiFetch(`/api/v1/customers/${pc.customer_id}/contacts`);
+    contacts.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name + (c.phone ? ` (${c.phone})` : "");
+      sel.appendChild(opt);
+    });
+    if (contacts.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "(등록된 담당자 없음)";
+      sel.appendChild(opt);
+    }
+  } catch (err) { showToast("담당자 로드 실패", "error"); }
+  pccModal.showModal();
+}
+
+async function saveProjectCustomerContact() {
+  const pccId = document.getElementById("pcc-id").value;
+  const payload = {
+    project_customer_id: Number(document.getElementById("pcc-project-customer-id").value),
+    contact_id: Number(document.getElementById("pcc-contact-id").value),
+    project_role: document.getElementById("pcc-project-role").value,
+    note: document.getElementById("pcc-note").value || null,
+  };
+
+  try {
+    if (pccId) {
+      await apiFetch(`/api/v1/project-customer-contacts/${pccId}`, { method: "PATCH", body: payload });
+      showToast("담당자 정보가 수정되었습니다.");
+    } else {
+      await apiFetch("/api/v1/project-customer-contacts", { method: "POST", body: payload });
+      showToast("담당자가 연결되었습니다.");
+    }
+    pccModal.close();
+    loadProjectCustomers();
+  } catch (err) { showToast(err.message, "error"); }
+}
+
+async function deleteProjectCustomerContact(pccId) {
+  confirmDelete("담당자 연결을 해제하시겠습니까?", async () => {
+    try {
+      await apiFetch(`/api/v1/project-customer-contacts/${pccId}`, { method: "DELETE" });
+      showToast("담당자 연결이 해제되었습니다.");
+      loadProjectCustomers();
+    } catch (err) { showToast(err.message, "error"); }
   });
 }
 
