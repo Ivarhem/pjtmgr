@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class AssetCreate(BaseModel):
     project_id: int
+    asset_code: str | None = None
     asset_name: str
     asset_type: str
     vendor: str | None = None
@@ -54,6 +55,7 @@ class AssetCreate(BaseModel):
 
 class AssetUpdate(BaseModel):
     project_id: int | None = None
+    asset_code: str | None = None
     asset_name: str | None = None
     asset_type: str | None = None
     vendor: str | None = None
@@ -104,6 +106,7 @@ class AssetRead(BaseModel):
 
     id: int
     project_id: int
+    asset_code: str | None = None
     asset_name: str
     asset_type: str
     vendor: str | None
@@ -147,5 +150,8 @@ class AssetRead(BaseModel):
     primary_contact_name: str | None = None
     secondary_contact_name: str | None = None
     maintenance_vendor: str | None = None
+    # Enriched fields (inventory view)
+    project_code: str | None = None
+    project_name: str | None = None
     created_at: datetime
     updated_at: datetime

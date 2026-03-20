@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   await Promise.all([loadCustomers(), loadUsers()]);
   await loadAll();
+  loadLinkedProjects();
   setupModals();
   _initPillNav();
   // 날짜 텍스트 입력 blur 시 자동 정규화
@@ -1191,28 +1192,13 @@ function _distributeAmounts(contractType, months, salesTotal, gpTotal) {
   const result = months.map(m => ({ month: m, sales: 0, gp: 0 }));
   const count = months.length;
 
-  if (['MA', 'TS', 'ETC'].includes(contractType)) {
-    // 균등 배분
-    const perSales = Math.floor(salesTotal / count);
-    const perGp = Math.floor(gpTotal / count);
-    result.forEach((r, i) => {
-      r.sales = perSales + (i === count - 1 ? salesTotal - perSales * count : 0);
-      r.gp = perGp + (i === count - 1 ? gpTotal - perGp * count : 0);
-    });
-  } else {
-    // SI/HW/Prod: 검수월 전액 또는 종료월 전액 (Period의 검수일 참조)
-    let targetMonth = null;
-    if (periodData?.inspection_date) {
-      targetMonth = periodData.inspection_date.slice(0, 7) + '-01';
-    }
-    if (!targetMonth || !months.find(m => m === targetMonth)) {
-      targetMonth = months[months.length - 1]; // 종료월
-    }
-    const idx = months.indexOf(targetMonth);
-    const targetIdx = idx >= 0 ? idx : months.length - 1;
-    result[targetIdx].sales = salesTotal;
-    result[targetIdx].gp = gpTotal;
-  }
+  // 모든 계약유형에 대해 균등 배분 (나머지는 마지막 달에 합산)
+  const perSales = Math.floor(salesTotal / count);
+  const perGp = Math.floor(gpTotal / count);
+  result.forEach((r, i) => {
+    r.sales = perSales + (i === count - 1 ? salesTotal - perSales * count : 0);
+    r.gp = perGp + (i === count - 1 ? gpTotal - perGp * count : 0);
+  });
   return result;
 }
 
@@ -2134,7 +2120,7 @@ function generateRepeatRows() {
   const start = document.getElementById('repeat-start').value;
   const end = document.getElementById('repeat-end').value;
   const type = document.getElementById('repeat-line-type').value; // 매출 / 매입
-  const customer_name = document.getElementById('repeat-customer').value;
+  const customerName = document.getElementById('repeat-customer').value;
   const useForecast = document.getElementById('repeat-use-forecast').checked;
   const amount = parseInt(document.getElementById('repeat-amount').value) || 0;
   const desc = document.getElementById('repeat-desc').value;
@@ -2162,10 +2148,10 @@ function generateRepeatRows() {
     const ym = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-01`;
     const rowAmount = useForecast ? (costMap[ym] || 0) : amount;
     if (rowAmount > 0) {
-      if (existingKeys.has(`${ym}|${customer_name}`)) {
+      if (existingKeys.has(`${ym}|${customerName}`)) {
         skipped++;
       } else {
-        const row = { revenue_month: ym, type, customer_name, amount: rowAmount, status: '예정', description: desc };
+        const row = { revenue_month: ym, type, customer_name: customerName, amount: rowAmount, status: '예정', description: desc };
         const invoiceDate = _calcInvoiceDate(ym, periodData);
         if (invoiceDate) row.date = invoiceDate;
         rows.push(row);
@@ -2458,14 +2444,15 @@ class CustomerCellEditor {
     setElementHidden(this.dropdown, false);
 
     this.dropdown.querySelectorAll('.cust-option').forEach(el => {
-      el.addEventListener('click', () => {
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // blur 방지: stopEditingWhenCellsLoseFocus 대응
         this.value = el.dataset.name;
         this.input.value = this.value;
         setElementHidden(this.dropdown, true);
         this.params.stopEditing();
       });
       el.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { el.click(); }
+        if (e.key === 'Enter') { this.value = el.dataset.name; this.input.value = this.value; setElementHidden(this.dropdown, true); this.params.stopEditing(); }
         if (e.key === 'ArrowDown' && el.nextElementSibling) { e.preventDefault(); el.nextElementSibling.focus(); }
         if (e.key === 'ArrowUp' && el.previousElementSibling) { e.preventDefault(); el.previousElementSibling.focus(); }
       });
@@ -2473,7 +2460,8 @@ class CustomerCellEditor {
 
     const newBtn = this.dropdown.querySelector('.cust-option-new');
     if (newBtn) {
-      newBtn.addEventListener('click', () => {
+      newBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // blur 방지
         setElementHidden(this.dropdown, true);
         this.params.stopEditing();
         _openNewCustomerPopup(this.input.value.trim());
@@ -3214,3 +3202,101 @@ document.getElementById('btn-match-save')?.addEventListener('click', saveManualM
 document.getElementById('btn-match-cancel')?.addEventListener('click', () => {
   document.getElementById('modal-add-receipt-match')?.close();
 });
+
+// ── 연결된 프로젝트 (infra 모듈 활성 시) ──
+
+async function loadLinkedProjects() {
+  const container = document.getElementById('linked-projects-list');
+  if (!container) return; // infra 비활성
+  try {
+    const links = await apiFetch(`/api/v1/project-contract-links?contract_id=${contractId}`);
+    container.textContent = '';
+    if (!links || links.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'text-muted';
+      p.style.padding = '1rem';
+      p.textContent = '연결된 프로젝트가 없습니다.';
+      container.appendChild(p);
+      return;
+    }
+    const table = document.createElement('table');
+    table.className = 'data-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['프로젝트 코드', '프로젝트명', '메모', ''].forEach(text => {
+      const th = document.createElement('th');
+      th.textContent = text;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    links.forEach(link => {
+      const tr = document.createElement('tr');
+      const tdCode = document.createElement('td');
+      const a = document.createElement('a');
+      a.href = '/projects/' + link.project_id;
+      a.textContent = link.project_code || link.project_id;
+      tdCode.appendChild(a);
+      const tdName = document.createElement('td');
+      tdName.textContent = link.project_name || '';
+      const tdNote = document.createElement('td');
+      tdNote.textContent = link.note || '';
+      const tdAction = document.createElement('td');
+      const btnUnlink = document.createElement('button');
+      btnUnlink.className = 'btn btn-secondary btn-compact btn-text-danger';
+      btnUnlink.textContent = '해제';
+      btnUnlink.addEventListener('click', () => unlinkProject(link.id));
+      tdAction.appendChild(btnUnlink);
+      tr.appendChild(tdCode);
+      tr.appendChild(tdName);
+      tr.appendChild(tdNote);
+      tr.appendChild(tdAction);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
+  } catch (e) {
+    container.textContent = '';
+    const p = document.createElement('p');
+    p.className = 'text-muted';
+    p.style.padding = '1rem';
+    p.textContent = '프로젝트 연결 정보를 불러올 수 없습니다.';
+    container.appendChild(p);
+  }
+}
+
+async function unlinkProject(linkId) {
+  if (!confirm('프로젝트 연결을 해제하시겠습니까?')) return;
+  try {
+    await apiFetch(`/api/v1/project-contract-links/${linkId}`, { method: 'DELETE' });
+    showToast('프로젝트 연결이 해제되었습니다.');
+    await loadLinkedProjects();
+  } catch (e) {
+    showToast('연결 해제 실패: ' + e.message, 'error');
+  }
+}
+
+async function linkProjectPrompt() {
+  const projectCode = prompt('연결할 프로젝트 코드를 입력하세요:');
+  if (!projectCode) return;
+  // 프로젝트 검색
+  try {
+    const projects = await apiFetch('/api/v1/projects');
+    const match = projects.find(p => p.project_code === projectCode.trim());
+    if (!match) {
+      showToast('프로젝트를 찾을 수 없습니다: ' + projectCode, 'error');
+      return;
+    }
+    await apiFetch('/api/v1/project-contract-links', {
+      method: 'POST',
+      body: { project_id: match.id, contract_id: contractId },
+    });
+    showToast('프로젝트가 연결되었습니다.');
+    await loadLinkedProjects();
+  } catch (e) {
+    showToast('연결 실패: ' + e.message, 'error');
+  }
+}
+
+document.getElementById('btn-link-project')?.addEventListener('click', linkProjectPrompt);

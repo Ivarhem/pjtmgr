@@ -13,7 +13,30 @@
 {% block content %}
 <div class="page-header">
   <h1>IP 대역 관리</h1>
-  <button class="btn btn-primary" id="btn-add-subnet">대역 등록</button>
+  <div style="display:flex;gap:8px;">
+    <a href="/api/v1/infra-excel/template/subnet" class="btn btn-secondary">양식 다운로드</a>
+    <button class="btn btn-secondary" id="btn-subnet-import-toggle">Excel Import</button>
+    <button class="btn btn-primary" id="btn-add-subnet">대역 등록</button>
+  </div>
+</div>
+<div id="subnet-import-panel" class="card hidden" style="margin-bottom:12px; padding:16px;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <label style="font-size:13px;">프로젝트
+      <select id="subnet-import-project" style="margin-left:4px;"></select>
+    </label>
+    <label style="font-size:13px;">Excel (.xlsx)
+      <input type="file" id="subnet-import-file" accept=".xlsx" style="margin-left:4px;">
+    </label>
+    <label style="font-size:13px;">중복 처리
+      <select id="subnet-import-dup" style="margin-left:4px;">
+        <option value="skip">건너뛰기</option>
+        <option value="overwrite">덮어쓰기</option>
+      </select>
+    </label>
+    <button class="btn btn-primary btn-sm" id="btn-subnet-import-run">Import</button>
+    <button class="btn btn-sm" id="btn-subnet-import-close">닫기</button>
+  </div>
+  <div id="subnet-import-result" style="margin-top:8px;font-size:13px;"></div>
 </div>
 
 <div class="card mb-md">

@@ -46,6 +46,13 @@ def port_maps_page(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/policy-definitions", response_class=HTMLResponse)
+def policy_definitions_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_policy_definitions.html", {"request": request}
+    )
+
+
 @router.get("/policies", response_class=HTMLResponse)
 def policies_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
@@ -57,4 +64,18 @@ def policies_page(request: Request) -> HTMLResponse:
 def infra_dashboard_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
         "infra_dashboard.html", {"request": request}
+    )
+
+
+@router.get("/inventory/assets", response_class=HTMLResponse)
+def inventory_assets_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_inventory_assets.html", {"request": request}
+    )
+
+
+@router.get("/infra-import", response_class=HTMLResponse)
+def infra_import_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_import.html", {"request": request}
     )

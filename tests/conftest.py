@@ -38,6 +38,8 @@ from app.modules.infra.models import (  # noqa: F401
     PolicyDefinition,
     PortMap,
     Project,
+    ProjectAsset,
+    AssetRelation,
     ProjectDeliverable,
     ProjectPhase,
 )

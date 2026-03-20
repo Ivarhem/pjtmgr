@@ -1,117 +1,39 @@
 {% extends "base.html" %}
-{% block title %}정책 관리 - SI Project Inventory{% endblock %}
-
-{% block styles %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
-{% endblock %}
-
-{% block head_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
-{% endblock %}
+{% block title %}정책 적용 현황 - 프로젝트관리{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1>정책 정의</h1>
-  <button class="btn btn-primary" id="btn-add-policy">정책 등록</button>
-</div>
-
-<div class="card mb-md">
-  <div id="grid-policies" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
-</div>
-
-<div class="page-header mt-md">
   <h1>정책 적용 현황</h1>
   <button class="btn btn-primary" id="btn-add-assignment">적용 등록</button>
 </div>
 
-<div class="card">
-  <div id="grid-assignments" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+<!-- 프로젝트별 준수율 요약 카드 -->
+<div id="compliance-summary" class="summary-cards mb-md"></div>
+
+<div class="filter-bar">
+  <label>
+    프로젝트
+    <select id="filter-project">
+      <option value="">전체</option>
+    </select>
+  </label>
+  <label>
+    상태
+    <select id="filter-status">
+      <option value="">전체</option>
+      <option value="not_checked">미확인</option>
+      <option value="compliant">준수</option>
+      <option value="non_compliant">미준수</option>
+      <option value="exception">예외</option>
+      <option value="not_applicable">해당없음</option>
+    </select>
+  </label>
+  <button class="btn btn-primary" id="btn-filter">조회</button>
 </div>
 
-<!-- 정책 정의 모달 -->
-<dialog id="modal-policy" class="modal modal-lg">
-  <h2 id="modal-policy-title">정책 등록</h2>
-  <form id="form-policy" class="form-grid">
-    <input type="hidden" id="policy-id">
-    <label>
-      정책 코드
-      <input type="text" id="policy-code" required placeholder="SEC-001">
-    </label>
-    <label>
-      정책명
-      <input type="text" id="policy-name" required>
-    </label>
-    <label>
-      카테고리
-      <input type="text" id="policy-category" required placeholder="보안, 네트워크 등">
-    </label>
-    <label>
-      활성 여부
-      <select id="policy-is-active">
-        <option value="true">활성</option>
-        <option value="false">비활성</option>
-      </select>
-    </label>
-    <label>
-      시행일
-      <input type="date" id="policy-effective-from">
-    </label>
-    <label>
-      만료일
-      <input type="date" id="policy-effective-to">
-    </label>
-    <label class="full-width">
-      설명
-      <textarea id="policy-description" rows="3"></textarea>
-    </label>
-  </form>
-  <fieldset class="modal-group">
-    <legend class="modal-group-title">보안 프레임워크</legend>
-    <div class="form-grid">
-      <label>
-        보안 도메인
-        <input type="text" id="policy-security-domain">
-      </label>
-      <label>
-        아키텍처 요소
-        <input type="text" id="policy-architecture-element">
-      </label>
-      <label>
-        통제 포인트
-        <input type="text" id="policy-control-point">
-      </label>
-      <label>
-        ISO 27001 참조
-        <input type="text" id="policy-iso27001-ref">
-      </label>
-      <label>
-        NIST 참조
-        <input type="text" id="policy-nist-ref">
-      </label>
-      <label>
-        ISMS-P 참조
-        <input type="text" id="policy-isms-p-ref">
-      </label>
-      <label class="full-width">
-        요구사항
-        <textarea id="policy-requirement" rows="2"></textarea>
-      </label>
-      <label class="full-width">
-        구현 예시
-        <textarea id="policy-implementation-example" rows="2"></textarea>
-      </label>
-      <label class="full-width">
-        증적
-        <textarea id="policy-evidence" rows="2"></textarea>
-      </label>
-    </div>
-  </fieldset>
-  <div class="modal-actions">
-    <button class="btn btn-secondary" id="btn-cancel-policy">취소</button>
-    <button class="btn btn-primary" id="btn-save-policy">등록</button>
-  </div>
-</dialog>
+<div class="card">
+  <div id="grid-assignments" class="ag-theme-quartz" style="height: 500px; width: 100%;"></div>
+</div>
 
 <!-- 정책 적용 모달 -->
 <dialog id="modal-assignment" class="modal">
@@ -167,8 +89,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/utils.js"></script>
 <script src="/static/js/infra_policies.js"></script>
 {% endblock %}
-
-

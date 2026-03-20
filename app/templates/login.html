@@ -54,6 +54,7 @@
 
         if (res.ok) {
           const data = await res.json();
+          sessionStorage.removeItem('infra_notif_shown');
           window.location.href = data.must_change_password ? '/change-password' : '/';
         } else {
           const err = await res.json().catch(() => ({}));

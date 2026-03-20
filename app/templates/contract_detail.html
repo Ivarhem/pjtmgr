@@ -161,6 +161,19 @@
   <div id="receipt-match-summary-bar" class="grid-summary-bar"></div>
 </div>
 
+<!-- ── 연결된 프로젝트 (infra 모듈 활성 시만) ─────────────────── -->
+{% if "infra" in enabled_modules %}
+<div class="trade-section" id="section-linked-projects">
+  <div class="section-header">
+    <h2 class="section-title">연결된 프로젝트</h2>
+    <div class="section-actions">
+      <button id="btn-link-project" class="btn btn-secondary btn-compact">+ 프로젝트 연결</button>
+    </div>
+  </div>
+  <div id="linked-projects-list"></div>
+</div>
+{% endif %}
+
 <!-- 수동 배분 모달 -->
 <dialog id="modal-add-receipt-match" class="modal modal-sm">
   <h2>수동 배분 추가</h2>

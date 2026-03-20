@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}자산 검색 - 인벤토리{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>자산 검색</h1>
+  <div style="display:flex;gap:8px;">
+    <a href="/api/v1/infra-excel/template/inventory" class="btn btn-secondary">양식 다운로드</a>
+    <button class="btn btn-secondary" id="btn-asset-import-toggle">Excel Import</button>
+  </div>
+</div>
+<div id="asset-import-panel" class="card hidden" style="margin-bottom:12px; padding:16px;">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <label style="font-size:13px;">프로젝트
+      <select id="asset-import-project" style="margin-left:4px;">
+        <option value="">-- 선택 --</option>
+      </select>
+    </label>
+    <label style="font-size:13px;">Excel (.xlsx)
+      <input type="file" id="asset-import-file" accept=".xlsx" style="margin-left:4px;">
+    </label>
+    <label style="font-size:13px;">중복 처리
+      <select id="asset-import-dup" style="margin-left:4px;">
+        <option value="skip">건너뛰기</option>
+        <option value="overwrite">덮어쓰기</option>
+      </select>
+    </label>
+    <button class="btn btn-primary btn-sm" id="btn-asset-import-run">Import</button>
+    <button class="btn btn-sm" id="btn-asset-import-close">닫기</button>
+  </div>
+  <p class="text-muted" style="font-size:12px;margin-top:6px;">※ template.xlsx의 <strong>01. Inventory</strong> 시트 양식 기준. Row 1-2 그룹헤더, Row 3 컬럼헤더, Row 4부터 데이터.</p>
+  <div id="asset-import-result" style="margin-top:8px;font-size:13px;"></div>
+</div>
+
+<div class="filter-bar">
+  <label>
+    프로젝트
+    <select id="filter-project">
+      <option value="">전체</option>
+    </select>
+  </label>
+  <label>
+    유형
+    <select id="filter-type">
+      <option value="">전체</option>
+      <option value="server">서버</option>
+      <option value="network">네트워크</option>
+      <option value="security">보안장비</option>
+      <option value="storage">스토리지</option>
+      <option value="other">기타</option>
+    </select>
+  </label>
+  <label>
+    상태
+    <select id="filter-status">
+      <option value="">전체</option>
+      <option value="planned">계획</option>
+      <option value="active">운영중</option>
+      <option value="decommissioned">폐기</option>
+    </select>
+  </label>
+  <label>
+    검색
+    <input type="text" id="filter-search" placeholder="자산명, 호스트명, IP, 장비ID">
+  </label>
+  <button class="btn btn-primary" id="btn-search">검색</button>
+</div>
+
+<div class="card">
+  <div id="grid-inventory-assets" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_inventory_assets.js"></script>
+{% endblock %}

@@ -196,7 +196,7 @@
     if(!el) return;
 
     const targetRate = k.target_revenue > 0
-      ? safe_pct(k.actual_revenue, k.target_revenue) : null;
+      ? safePct(k.actual_revenue, k.target_revenue) : null;
     const gpSub = `GP% ${k.gp_pct != null ? k.gp_pct + '%' : '-'}`;
     const arSub = `미수율 ${k.ar_rate != null ? k.ar_rate + '%' : '-'}`;
 
@@ -223,7 +223,7 @@
     `).join('');
   }
 
-  function safe_pct(n, d) {
+  function safePct(n, d) {
     return d > 0 ? Math.round(n / d * 1000) / 10 : null;
   }
 

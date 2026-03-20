@@ -14,6 +14,7 @@ class Asset(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    asset_code: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
     asset_name: Mapped[str] = mapped_column(String(255), index=True)
     asset_type: Mapped[str] = mapped_column(String(50))
     vendor: Mapped[str | None] = mapped_column(String(100), nullable=True)
