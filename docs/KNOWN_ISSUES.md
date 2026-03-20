@@ -8,7 +8,8 @@
 ## 모듈화 마이그레이션 — 코드 구조 완료, 런타임 E2E 검증 미완
 
 - 코드 구조 마이그레이션 완료: `app/core/`, `app/modules/{common,accounting,infra}/` 구조로 전환됨
-- 인프라모듈 전체 구현 완료 (프로젝트/자산/IP/포트맵/정책/대시보드/Import/Export/Pin/업체연결/감사로그)
+- 인프라모듈 전체 구현 완료 (고객사 중심 구조, 자산/IP/포트맵/정책/대시보드/Import/Export/업체연결/감사로그)
+- 고객사 중심 구조 전환 완료 (Migration 0005): Asset/IpSubnet/PortMap/PolicyAssignment → customer_id FK, topbar 2단 셀렉터
 - 런타임 통합 테스트 (실제 서버 기동, 브라우저 E2E) 미수행 — 마이그레이션 예외 조항(CLAUDE.md §8)은 런타임 검증 완료 시 삭제 예정
 - Standalone 배포용 데이터 Export/Import CLI 미구현 (`app/cli/export_standalone.py`, `app/cli/import_standalone.py` placeholder만 존재)
 

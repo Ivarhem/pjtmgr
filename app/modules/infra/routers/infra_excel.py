@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.core.exceptions import ValidationError
-from app.modules.infra.services.infra_exporter import export_project
+from app.modules.infra.services.infra_exporter import export_customer
 from app.modules.infra.services.infra_importer import (
     build_sample_template,
     import_inventory,
@@ -33,7 +33,7 @@ _DOMAIN_MAP = {
 @router.post("/import/preview")
 async def import_preview(
     file: UploadFile = File(...),
-    project_id: int = Form(...),
+    customer_id: int = Form(...),
     domain: str = Form(default="inventory"),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -43,7 +43,7 @@ async def import_preview(
     if domain not in _DOMAIN_MAP:
         raise ValidationError([f"지원하지 않는 도메인: {domain}"])
     content = await file.read()
-    result = _DOMAIN_MAP[domain]["parse"](content, project_id)
+    result = _DOMAIN_MAP[domain]["parse"](content, customer_id)
     return {
         "valid": len(result["errors"]) == 0,
         "total": result["total"],
@@ -58,7 +58,7 @@ async def import_preview(
 @router.post("/import/confirm")
 async def import_confirm(
     file: UploadFile = File(...),
-    project_id: int = Form(...),
+    customer_id: int = Form(...),
     domain: str = Form(default="inventory"),
     on_duplicate: str = Form(default="skip"),
     db: Session = Depends(get_db),
@@ -73,16 +73,16 @@ async def import_confirm(
     cfg = _DOMAIN_MAP[domain]
 
     # 재파싱
-    parsed = cfg["parse"](content, project_id)
+    parsed = cfg["parse"](content, customer_id)
     if parsed["errors"]:
         raise ValidationError(parsed["errors"], details=parsed["error_details"])
 
     # DB 저장
     import_fn = cfg["import"]
     if cfg["has_dup"]:
-        result = import_fn(db, project_id, parsed["rows"], current_user, on_duplicate)
+        result = import_fn(db, customer_id, parsed["rows"], current_user, on_duplicate)
     else:
-        result = import_fn(db, project_id, parsed["rows"], current_user)
+        result = import_fn(db, customer_id, parsed["rows"], current_user)
 
     if result["errors"]:
         raise ValidationError(result["errors"], details=result["error_details"])
@@ -90,15 +90,16 @@ async def import_confirm(
     return {"created": result["created"], "skipped": result["skipped"]}
 
 
-@router.get("/export/{project_id}")
-def export_project_xlsx(
-    project_id: int,
+@router.get("/export")
+def export_customer_xlsx(
+    customer_id: int = Query(...),
+    project_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> Response:
-    """프로젝트 단위 Excel Export (자산/IP대역/포트맵)."""
-    content = export_project(db, project_id)
-    filename = f"project_{project_id}_export.xlsx"
+    """고객사 단위 Excel Export (자산/IP대역/포트맵). 프로젝트 필터 옵션."""
+    content = export_customer(db, customer_id, project_id)
+    filename = f"customer_{customer_id}_export.xlsx"
     return Response(
         content=content,
         media_type=_XLSX_MIME,

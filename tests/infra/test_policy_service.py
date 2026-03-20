@@ -9,6 +9,7 @@ from app.core.exceptions import (
     NotFoundError,
     PermissionDeniedError,
 )
+from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.policy_assignment import (
     PolicyAssignmentCreate,
@@ -53,6 +54,13 @@ def _make_regular_user(db_session, user_role_id: int):
     db_session.commit()
     db_session.refresh(user)
     return user
+
+
+def _make_customer(db_session):
+    customer = Customer(name="테스트고객", business_no="123-45-67890")
+    db_session.add(customer)
+    db_session.flush()
+    return customer
 
 
 # ── PolicyDefinition tests ──
@@ -140,10 +148,11 @@ def test_update_policy(db_session, admin_role_id) -> None:
 
 def test_delete_policy_blocked_with_assignments(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     policy = create_policy(
@@ -156,7 +165,7 @@ def test_delete_policy_blocked_with_assignments(db_session, admin_role_id) -> No
     create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            project_id=project.id, policy_definition_id=policy.id
+            customer_id=customer.id, policy_definition_id=policy.id
         ),
         admin,
     )
@@ -187,10 +196,11 @@ def test_delete_policy_without_assignments(db_session, admin_role_id) -> None:
 
 def test_create_and_list_assignments(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     policy = create_policy(
@@ -204,28 +214,29 @@ def test_create_and_list_assignments(db_session, admin_role_id) -> None:
     create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            project_id=project.id, policy_definition_id=policy.id
+            customer_id=customer.id, policy_definition_id=policy.id
         ),
         admin,
     )
 
-    assignments = list_assignments(db_session, project.id)
+    assignments = list_assignments(db_session, customer_id=customer.id)
     assert len(assignments) == 1
     assert assignments[0].status == "not_checked"
 
 
 def test_create_assignment_with_asset(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     asset = create_asset(
         db_session,
         AssetCreate(
-            project_id=project.id, asset_name="SRV-01", asset_type="server"
+            customer_id=customer.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
@@ -240,7 +251,7 @@ def test_create_assignment_with_asset(db_session, admin_role_id) -> None:
     assignment = create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            project_id=project.id,
+            customer_id=customer.id,
             asset_id=asset.id,
             policy_definition_id=policy.id,
         ),
@@ -250,25 +261,29 @@ def test_create_assignment_with_asset(db_session, admin_role_id) -> None:
     assert assignment.asset_id == asset.id
 
 
-def test_create_assignment_rejects_asset_from_other_project(
+def test_create_assignment_rejects_asset_from_other_customer(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer1 = _make_customer(db_session)
+    customer2 = Customer(name="다른고객", business_no="999-99-99999")
+    db_session.add(customer2)
+    db_session.flush()
 
     project1 = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer1.id),
         admin,
     )
     project2 = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-002", project_name="Other"),
+        ProjectCreate(project_code="PRJ-002", project_name="Other", customer_id=customer2.id),
         admin,
     )
     asset = create_asset(
         db_session,
         AssetCreate(
-            project_id=project2.id, asset_name="SRV-01", asset_type="server"
+            customer_id=customer2.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
@@ -284,7 +299,7 @@ def test_create_assignment_rejects_asset_from_other_project(
         create_assignment(
             db_session,
             PolicyAssignmentCreate(
-                project_id=project1.id,
+                customer_id=customer1.id,
                 asset_id=asset.id,
                 policy_definition_id=policy.id,
             ),
@@ -294,10 +309,11 @@ def test_create_assignment_rejects_asset_from_other_project(
 
 def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     policy = create_policy(
@@ -311,7 +327,7 @@ def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
     create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            project_id=project.id, policy_definition_id=policy.id
+            customer_id=customer.id, policy_definition_id=policy.id
         ),
         admin,
     )
@@ -320,7 +336,7 @@ def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
         create_assignment(
             db_session,
             PolicyAssignmentCreate(
-                project_id=project.id, policy_definition_id=policy.id
+                customer_id=customer.id, policy_definition_id=policy.id
             ),
             admin,
         )
@@ -328,10 +344,11 @@ def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
 
 def test_update_assignment(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     policy = create_policy(
@@ -344,7 +361,7 @@ def test_update_assignment(db_session, admin_role_id) -> None:
     assignment = create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            project_id=project.id, policy_definition_id=policy.id
+            customer_id=customer.id, policy_definition_id=policy.id
         ),
         admin,
     )
@@ -364,10 +381,11 @@ def test_update_assignment(db_session, admin_role_id) -> None:
 
 def test_delete_assignment(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     policy = create_policy(
@@ -380,7 +398,7 @@ def test_delete_assignment(db_session, admin_role_id) -> None:
     assignment = create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            project_id=project.id, policy_definition_id=policy.id
+            customer_id=customer.id, policy_definition_id=policy.id
         ),
         admin,
     )

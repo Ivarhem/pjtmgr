@@ -31,23 +31,23 @@ def _make_admin_user(db_session, admin_role_id: int):
 
 
 def _setup(db, admin):
-    """Create project, asset, customer, and customer contact for tests."""
+    """Create customer, project, asset, and customer contact for tests."""
+    customer = Customer(name="ABC Corp")
+    db.add(customer)
+    db.flush()
+
     project = create_project(
         db,
-        ProjectCreate(project_code="PRJ-001", project_name="Test"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
         admin,
     )
     asset = create_asset(
         db,
         AssetCreate(
-            project_id=project.id, asset_name="SRV-01", asset_type="server"
+            customer_id=customer.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
-    # Create customer and customer_contact directly via ORM
-    customer = Customer(name="ABC Corp")
-    db.add(customer)
-    db.flush()
 
     contact = CustomerContact(
         customer_id=customer.id, name="홍길동", contact_type=""

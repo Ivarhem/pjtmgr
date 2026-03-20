@@ -40,12 +40,12 @@ def _make_customer(db_session, name: str = "TestCorp", bno: str = "123-45-67890"
 
 def test_create_and_list(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
+    cust = _make_customer(db_session)
     proj = create_project(
         db_session,
-        ProjectCreate(project_code="PC-01", project_name="Cust Link Test"),
+        ProjectCreate(project_code="PC-01", project_name="Cust Link Test", customer_id=cust.id),
         admin,
     )
-    cust = _make_customer(db_session)
 
     pc = create_project_customer(
         db_session,
@@ -66,12 +66,12 @@ def test_create_and_list(db_session, admin_role_id) -> None:
 
 def test_duplicate_rejected(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
+    cust = _make_customer(db_session, name="DupCorp", bno="111-11-11111")
     proj = create_project(
         db_session,
-        ProjectCreate(project_code="PC-02", project_name="Dup Test"),
+        ProjectCreate(project_code="PC-02", project_name="Dup Test", customer_id=cust.id),
         admin,
     )
-    cust = _make_customer(db_session, name="DupCorp", bno="111-11-11111")
 
     create_project_customer(
         db_session,
@@ -92,12 +92,12 @@ def test_duplicate_rejected(db_session, admin_role_id) -> None:
 
 def test_same_customer_different_role_allowed(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
+    cust = _make_customer(db_session, name="MultiCorp", bno="222-22-22222")
     proj = create_project(
         db_session,
-        ProjectCreate(project_code="PC-03", project_name="Multi Role Test"),
+        ProjectCreate(project_code="PC-03", project_name="Multi Role Test", customer_id=cust.id),
         admin,
     )
-    cust = _make_customer(db_session, name="MultiCorp", bno="222-22-22222")
 
     create_project_customer(
         db_session,
@@ -119,12 +119,12 @@ def test_same_customer_different_role_allowed(db_session, admin_role_id) -> None
 
 def test_update(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
+    cust = _make_customer(db_session, name="UpdCorp", bno="333-33-33333")
     proj = create_project(
         db_session,
-        ProjectCreate(project_code="PC-04", project_name="Update Test"),
+        ProjectCreate(project_code="PC-04", project_name="Update Test", customer_id=cust.id),
         admin,
     )
-    cust = _make_customer(db_session, name="UpdCorp", bno="333-33-33333")
 
     pc = create_project_customer(
         db_session,
@@ -144,12 +144,12 @@ def test_update(db_session, admin_role_id) -> None:
 
 def test_delete(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
+    cust = _make_customer(db_session, name="DelCorp", bno="444-44-44444")
     proj = create_project(
         db_session,
-        ProjectCreate(project_code="PC-05", project_name="Del Test"),
+        ProjectCreate(project_code="PC-05", project_name="Del Test", customer_id=cust.id),
         admin,
     )
-    cust = _make_customer(db_session, name="DelCorp", bno="444-44-44444")
 
     pc = create_project_customer(
         db_session,

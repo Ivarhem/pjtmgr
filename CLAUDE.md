@@ -56,7 +56,7 @@
 | 프로젝트 단계 (ProjectPhase) | 분석, 설계, 구축, 시험, 안정화 등 진행 단계 |
 | 산출물 (Deliverable) | 프로젝트 단계별 제출 대상 문서/결과물 |
 | 자산 (Asset) | 서버, 네트워크 장비, 보안 장비 등 기술 자산 |
-| IP 대역 (IpSubnet) | 프로젝트 범위의 IP 대역, 역할/지역/상대국 등 메타데이터 포함 |
+| IP 대역 (IpSubnet) | 고객사 범위의 IP 대역, 역할/지역/상대국 등 메타데이터 포함 |
 | IP 인벤토리 (AssetIP) | Asset에 연결된 IP 정보, IpSubnet 참조 가능 |
 | 포트맵 (PortMap) | 자산 간 통신 관계 |
 | 정책 정의 (PolicyDefinition) | 적용 기준이 되는 정책 원본 |
@@ -66,7 +66,7 @@
 | 자산 관계 (AssetRelation) | 자산 간 관계(parent-child, cluster, ha-pair 등) |
 | 프로젝트 업체 (ProjectCustomer) | 프로젝트별 업체 역할(고객사/수행사/유지보수사/통신사/벤더) |
 | 프로젝트 담당자 (ProjectCustomerContact) | 프로젝트별 담당자 역할(고객PM/수행PM/구축엔지니어 등) |
-| Pin 프로젝트 | UserPreference 기반 사용자별 고정 프로젝트. topbar 뱃지 표시, 전 페이지 기본 선택 |
+| Pin 고객사 | UserPreference 기반 사용자별 고정 고객사. topbar 셀렉터에 표시, 인프라 전 페이지 기본 컨텍스트 |
 
 ### 공통모듈 (common)
 
@@ -214,16 +214,16 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 
 ### 인프라모듈
 
-- `Project`는 상위 컨텍스트이고, 기술 인벤토리의 탐색 중심은 `Asset`이다.
+- **고객사 중심 구조**: `Asset`, `IpSubnet`, `PortMap`, `PolicyAssignment`는 `customer_id` FK로 고객사에 귀속된다. `Project`는 `customer_id` NOT NULL로 고객사에 종속된다.
 - `Asset`을 중심으로 `AssetIP`, `PortMap`, `AssetContact`가 연결된다.
-- `Asset`은 `ProjectAsset` N:M 테이블을 통해 여러 프로젝트에 연결 가능. 기존 `Asset.project_id` FK는 병행 유지.
+- `Asset`은 프로젝트와 `ProjectAsset` N:M으로만 연결한다 (`project_id` FK는 제거됨).
 - `AssetRelation`으로 자산 간 관계(parent-child, cluster, ha-pair 등)를 표현한다.
 - `ProjectCustomer`로 프로젝트-업체 역할(고객사/수행사/유지보수사/통신사/벤더)을 관리한다.
 - `ProjectCustomerContact`로 프로젝트-담당자 역할(고객PM/수행PM/구축엔지니어 등)을 관리한다. `ProjectCustomer`에 종속(CASCADE 삭제).
-- Pin 프로젝트: `UserPreference`(key=`infra.pinned_project_id`)로 사용자별 고정 프로젝트를 DB 저장. 인프라 전 페이지에서 기본 컨텍스트로 동작.
+- Pin 고객사: `UserPreference`(key=`infra.pinned_customer_id`)로 사용자별 고정 고객사를 DB 저장. `infra.last_project_id`로 마지막 선택 프로젝트 기억. topbar 2단 셀렉터(고객사+프로젝트)로 컨텍스트 전환.
 - 정책은 반드시 `PolicyDefinition`과 `PolicyAssignment`로 분리한다.
 - IP 중복 검증은 최소한 프로젝트 범위 내에서 수행한다.
-- 자산명은 프로젝트 내 unique를 기본 원칙으로 한다.
+- 자산명은 고객사 내 unique를 기본 원칙으로 한다.
 - 상태값은 문자열 하드코딩 대신 enum으로 통일한다.
 - 포트맵은 자산 간 연결뿐 아니라 외부 구간 표현을 위해 `src_asset_id`, `dst_asset_id`를 nullable로 둘 수 있다.
 - 정책 적용 상태는 `not_checked`, `compliant`, `non_compliant`, `exception`, `not_applicable` 범위를 기본값으로 사용한다.

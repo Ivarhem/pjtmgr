@@ -6,14 +6,13 @@ from io import BytesIO
 
 import pytest
 
+from app.modules.common.models.customer import Customer
 from app.modules.infra.models.asset import Asset
-from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.services.infra_importer import (
     parse_inventory_sheet,
     import_inventory,
     INVENTORY_SHEET_NAME,
 )
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin_user(db_session, admin_role_id: int):
@@ -24,6 +23,14 @@ def _make_admin_user(db_session, admin_role_id: int):
     db_session.commit()
     db_session.refresh(user)
     return user
+
+
+def _make_customer(db_session, name: str = "Import고객사") -> Customer:
+    customer = Customer(name=name)
+    db_session.add(customer)
+    db_session.commit()
+    db_session.refresh(customer)
+    return customer
 
 
 def _build_inventory_xlsx(rows: list[list], sheet_name: str = INVENTORY_SHEET_NAME) -> bytes:
@@ -124,7 +131,7 @@ def test_parse_normal_rows() -> None:
         _make_data_row(seq="2", hostname="FW-01", category="방화벽", vendor="Palo Alto"),
     ]
     xlsx = _build_inventory_xlsx(rows)
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["total"] == 2
     assert result["valid_count"] == 2
@@ -138,7 +145,7 @@ def test_parse_normal_rows() -> None:
 def test_parse_empty_sheet() -> None:
     """빈 시트 처리."""
     xlsx = _build_inventory_xlsx([])
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["total"] == 0
     assert len(result["errors"]) == 1
@@ -152,7 +159,7 @@ def test_parse_duplicate_asset_name() -> None:
         _make_data_row(seq="2", hostname="SVR-01"),
     ]
     xlsx = _build_inventory_xlsx(rows)
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["total"] == 2
     assert len(result["errors"]) == 1
@@ -166,7 +173,7 @@ def test_parse_missing_hostname_uses_equipment_id() -> None:
         _make_data_row(seq="1", hostname="", equipment_id="MID-999", category="서버"),
     ]
     xlsx = _build_inventory_xlsx(rows)
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["total"] == 1
     assert result["rows"][0]["asset_name"] == "MID-999"
@@ -178,7 +185,7 @@ def test_parse_missing_category_warning() -> None:
         _make_data_row(seq="1", hostname="SVR-01", category=""),
     ]
     xlsx = _build_inventory_xlsx(rows)
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["total"] == 1
     assert any("대분류" in w for w in result["warnings"])
@@ -189,7 +196,7 @@ def test_parse_integer_fields() -> None:
     """정수 필드 정상 변환."""
     rows = [_make_data_row(seq="1", hostname="SVR-01")]
     xlsx = _build_inventory_xlsx(rows)
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["rows"][0]["size_unit"] == 2
     assert result["rows"][0]["power_count"] == 2
@@ -200,7 +207,7 @@ def test_parse_wrong_sheet_name_falls_back() -> None:
     """시트명이 다르면 첫 번째 시트로 폴백 + 경고."""
     rows = [_make_data_row(seq="1", hostname="SVR-01", category="서버")]
     xlsx = _build_inventory_xlsx(rows, sheet_name="Sheet1")
-    result = parse_inventory_sheet(xlsx, project_id=1)
+    result = parse_inventory_sheet(xlsx, customer_id=1)
 
     assert result["total"] == 1
     assert any("첫 번째 시트" in w for w in result["warnings"])
@@ -212,26 +219,22 @@ def test_parse_wrong_sheet_name_falls_back() -> None:
 def test_import_creates_assets(db_session, admin_role_id) -> None:
     """정상 Import: 자산 생성 확인."""
     admin = _make_admin_user(db_session, admin_role_id)
-    project = create_project(
-        db_session,
-        ProjectCreate(project_code="IMP-001", project_name="Import Test"),
-        admin,
-    )
+    customer = _make_customer(db_session)
 
     rows = [
         _make_data_row(seq="1", hostname="IMP-SVR-01", category="서버"),
         _make_data_row(seq="2", hostname="IMP-FW-01", category="방화벽"),
     ]
     xlsx = _build_inventory_xlsx(rows)
-    parsed = parse_inventory_sheet(xlsx, project.id)
+    parsed = parse_inventory_sheet(xlsx, customer.id)
     assert len(parsed["errors"]) == 0
 
-    result = import_inventory(db_session, project.id, parsed["rows"], admin)
+    result = import_inventory(db_session, customer.id, parsed["rows"], admin)
     assert result["created"] == 2
     assert result["skipped"] == 0
 
     # DB 검증
-    assets = db_session.query(Asset).filter(Asset.project_id == project.id).all()
+    assets = db_session.query(Asset).filter(Asset.customer_id == customer.id).all()
     assert len(assets) == 2
     names = {a.asset_name for a in assets}
     assert "IMP-SVR-01" in names
@@ -241,14 +244,10 @@ def test_import_creates_assets(db_session, admin_role_id) -> None:
 def test_import_skip_existing(db_session, admin_role_id) -> None:
     """on_duplicate=skip: 기존 자산 건너뛰기."""
     admin = _make_admin_user(db_session, admin_role_id)
-    project = create_project(
-        db_session,
-        ProjectCreate(project_code="IMP-002", project_name="Skip Test"),
-        admin,
-    )
+    customer = _make_customer(db_session)
 
     # 기존 자산 생성
-    existing = Asset(project_id=project.id, asset_name="SVR-EXIST", asset_type="server")
+    existing = Asset(customer_id=customer.id, asset_name="SVR-EXIST", asset_type="server")
     db_session.add(existing)
     db_session.commit()
 
@@ -257,16 +256,16 @@ def test_import_skip_existing(db_session, admin_role_id) -> None:
         _make_data_row(seq="2", hostname="SVR-NEW", category="서버"),
     ]
     xlsx = _build_inventory_xlsx(rows)
-    parsed = parse_inventory_sheet(xlsx, project.id)
+    parsed = parse_inventory_sheet(xlsx, customer.id)
 
-    result = import_inventory(db_session, project.id, parsed["rows"], admin, on_duplicate="skip")
+    result = import_inventory(db_session, customer.id, parsed["rows"], admin, on_duplicate="skip")
     assert result["created"] == 1
     assert result["skipped"] == 1
 
 
-def test_import_nonexistent_project(db_session, admin_role_id) -> None:
-    """존재하지 않는 프로젝트 Import 시 에러."""
+def test_import_nonexistent_customer(db_session, admin_role_id) -> None:
+    """존재하지 않는 고객사 Import 시 에러."""
     admin = _make_admin_user(db_session, admin_role_id)
-    result = import_inventory(db_session, 99999, [{"asset_name": "X", "project_id": 99999}], admin)
+    result = import_inventory(db_session, 99999, [{"asset_name": "X", "customer_id": 99999}], admin)
     assert len(result["errors"]) == 1
-    assert result["error_details"][0]["code"] == "project_not_found"
+    assert result["error_details"][0]["code"] == "customer_not_found"

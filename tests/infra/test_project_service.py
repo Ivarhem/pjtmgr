@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import BusinessRuleError, DuplicateError
+from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.project import ProjectCreate, ProjectUpdate
 from app.modules.infra.services.project_service import (
     create_project,
@@ -24,12 +25,20 @@ def _make_admin_user(db_session, admin_role_id: int):
     return user
 
 
+def _make_customer(db_session):
+    customer = Customer(name="테스트고객", business_no="123-45-67890")
+    db_session.add(customer)
+    db_session.flush()
+    return customer
+
+
 def test_create_and_list_projects(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Inventory"),
+        ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id),
         admin,
     )
 
@@ -40,7 +49,8 @@ def test_create_and_list_projects(db_session, admin_role_id) -> None:
 
 def test_create_project_rejects_duplicate_code(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    payload = ProjectCreate(project_code="PRJ-001", project_name="Inventory")
+    customer = _make_customer(db_session)
+    payload = ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id)
     create_project(db_session, payload, admin)
 
     with pytest.raises(DuplicateError):
@@ -52,15 +62,16 @@ def test_delete_project_with_assets_is_blocked(db_session, admin_role_id) -> Non
     from app.modules.infra.services.asset_service import create_asset
 
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Inventory"),
+        ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id),
         admin,
     )
     create_asset(
         db_session,
-        AssetCreate(project_id=project.id, asset_name="APP-01", asset_type="server"),
+        AssetCreate(customer_id=customer.id, asset_name="APP-01", asset_type="server"),
         admin,
     )
 
@@ -70,10 +81,11 @@ def test_delete_project_with_assets_is_blocked(db_session, admin_role_id) -> Non
 
 def test_update_project_changes_fields(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
+    customer = _make_customer(db_session)
 
     project = create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Inventory"),
+        ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id),
         admin,
     )
 

@@ -4,11 +4,11 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import DuplicateError, NotFoundError
+from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.project_asset import ProjectAssetCreate, ProjectAssetUpdate
 from app.modules.infra.services.project_asset_service import (
-    backfill_from_legacy,
     create_project_asset,
     list_by_asset,
     list_by_project,
@@ -29,10 +29,18 @@ def _make_admin(db_session, admin_role_id: int):
     return user
 
 
+def _make_customer(db_session):
+    customer = Customer(name="테스트고객", business_no="123-45-67890")
+    db_session.add(customer)
+    db_session.flush()
+    return customer
+
+
 def test_link_and_list(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    proj = create_project(db_session, ProjectCreate(project_code="PA-01", project_name="Link Test"), admin)
-    asset = create_asset(db_session, AssetCreate(project_id=proj.id, asset_name="SVR-01", asset_type="server"), admin)
+    customer = _make_customer(db_session)
+    proj = create_project(db_session, ProjectCreate(project_code="PA-01", project_name="Link Test", customer_id=customer.id), admin)
+    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-01", asset_type="server"), admin)
 
     pa = create_project_asset(db_session, ProjectAssetCreate(project_id=proj.id, asset_id=asset.id, role="primary"), admin)
     assert pa.project_id == proj.id
@@ -49,8 +57,9 @@ def test_link_and_list(db_session, admin_role_id) -> None:
 
 def test_duplicate_link_rejected(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    proj = create_project(db_session, ProjectCreate(project_code="PA-02", project_name="Dup Test"), admin)
-    asset = create_asset(db_session, AssetCreate(project_id=proj.id, asset_name="SVR-02", asset_type="server"), admin)
+    customer = _make_customer(db_session)
+    proj = create_project(db_session, ProjectCreate(project_code="PA-02", project_name="Dup Test", customer_id=customer.id), admin)
+    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-02", asset_type="server"), admin)
 
     create_project_asset(db_session, ProjectAssetCreate(project_id=proj.id, asset_id=asset.id), admin)
     with pytest.raises(DuplicateError):
@@ -59,8 +68,9 @@ def test_duplicate_link_rejected(db_session, admin_role_id) -> None:
 
 def test_unlink(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    proj = create_project(db_session, ProjectCreate(project_code="PA-03", project_name="Unlink Test"), admin)
-    asset = create_asset(db_session, AssetCreate(project_id=proj.id, asset_name="SVR-03", asset_type="server"), admin)
+    customer = _make_customer(db_session)
+    proj = create_project(db_session, ProjectCreate(project_code="PA-03", project_name="Unlink Test", customer_id=customer.id), admin)
+    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-03", asset_type="server"), admin)
 
     pa = create_project_asset(db_session, ProjectAssetCreate(project_id=proj.id, asset_id=asset.id), admin)
     delete_project_asset(db_session, pa.id, admin)
@@ -69,23 +79,10 @@ def test_unlink(db_session, admin_role_id) -> None:
 
 def test_update_role(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    proj = create_project(db_session, ProjectCreate(project_code="PA-04", project_name="Update Test"), admin)
-    asset = create_asset(db_session, AssetCreate(project_id=proj.id, asset_name="SVR-04", asset_type="server"), admin)
+    customer = _make_customer(db_session)
+    proj = create_project(db_session, ProjectCreate(project_code="PA-04", project_name="Update Test", customer_id=customer.id), admin)
+    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-04", asset_type="server"), admin)
 
     pa = create_project_asset(db_session, ProjectAssetCreate(project_id=proj.id, asset_id=asset.id), admin)
     updated = update_project_asset(db_session, pa.id, ProjectAssetUpdate(role="backup"), admin)
     assert updated.role == "backup"
-
-
-def test_backfill(db_session, admin_role_id) -> None:
-    admin = _make_admin(db_session, admin_role_id)
-    proj = create_project(db_session, ProjectCreate(project_code="PA-05", project_name="Backfill Test"), admin)
-    create_asset(db_session, AssetCreate(project_id=proj.id, asset_name="SVR-05", asset_type="server"), admin)
-    create_asset(db_session, AssetCreate(project_id=proj.id, asset_name="SVR-06", asset_type="server"), admin)
-
-    count = backfill_from_legacy(db_session)
-    assert count >= 2
-
-    # 재실행 시 중복 생성 없음
-    count2 = backfill_from_legacy(db_session)
-    assert count2 == 0

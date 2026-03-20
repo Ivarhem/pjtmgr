@@ -33,13 +33,15 @@ from app.modules.infra.models import (  # noqa: F401
     Asset,
     AssetContact,
     AssetIP,
+    AssetRelation,
     IpSubnet,
     PolicyAssignment,
     PolicyDefinition,
     PortMap,
     Project,
     ProjectAsset,
-    AssetRelation,
+    ProjectCustomer,
+    ProjectCustomerContact,
     ProjectDeliverable,
     ProjectPhase,
 )
@@ -110,3 +112,13 @@ def user_role_id(seed_roles: dict[str, int]) -> int:
 def admin_role_id(seed_roles: dict[str, int]) -> int:
     """관리자 role_id."""
     return seed_roles["관리자"]
+
+
+@pytest.fixture
+def sample_customer(db_session: Session) -> Customer:
+    """테스트용 고객사 생성."""
+    customer = Customer(name="테스트고객사")
+    db_session.add(customer)
+    db_session.commit()
+    db_session.refresh(customer)
+    return customer

@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
+from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.schemas.project_deliverable import (
     ProjectDeliverableCreate,
@@ -38,10 +39,18 @@ def _make_admin_user(db_session, admin_role_id: int):
     return user
 
 
+def _make_customer(db_session):
+    customer = Customer(name="테스트고객", business_no="123-45-67890")
+    db_session.add(customer)
+    db_session.flush()
+    return customer
+
+
 def _make_project(db_session, admin):
+    customer = _make_customer(db_session)
     return create_project(
         db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test Project"),
+        ProjectCreate(project_code="PRJ-001", project_name="Test Project", customer_id=customer.id),
         admin,
     )
 
