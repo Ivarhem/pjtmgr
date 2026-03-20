@@ -12,10 +12,22 @@ from app.modules.infra.schemas.asset_relation import (
 )
 from app.modules.infra.services import asset_relation_service as svc
 
-router = APIRouter(prefix="/api/v1/asset-relations", tags=["infra-asset-relations"])
+router = APIRouter(tags=["infra-asset-relations"])
 
 
-@router.get("", response_model=list[AssetRelationRead])
+@router.get(
+    "/api/v1/projects/{project_id}/asset-relations",
+    response_model=list[AssetRelationRead],
+)
+def list_project_asset_relations(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> list[AssetRelationRead]:
+    return svc.list_by_project(db, project_id)
+
+
+@router.get("/api/v1/asset-relations", response_model=list[AssetRelationRead])
 def list_asset_relations(
     asset_id: int,
     db: Session = Depends(get_db),
@@ -24,7 +36,7 @@ def list_asset_relations(
     return svc.list_by_asset(db, asset_id)
 
 
-@router.post("", response_model=AssetRelationRead, status_code=status.HTTP_201_CREATED)
+@router.post("/api/v1/asset-relations", response_model=AssetRelationRead, status_code=status.HTTP_201_CREATED)
 def create_asset_relation(
     payload: AssetRelationCreate,
     db: Session = Depends(get_db),
@@ -35,7 +47,7 @@ def create_asset_relation(
     return next((r for r in enriched if r["id"] == rel.id), enriched[0])
 
 
-@router.patch("/{rel_id}", response_model=AssetRelationRead)
+@router.patch("/api/v1/asset-relations/{rel_id}", response_model=AssetRelationRead)
 def update_asset_relation(
     rel_id: int,
     payload: AssetRelationUpdate,
@@ -47,7 +59,7 @@ def update_asset_relation(
     return next((r for r in enriched if r["id"] == rel.id), enriched[0])
 
 
-@router.delete("/{rel_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/api/v1/asset-relations/{rel_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset_relation(
     rel_id: int,
     db: Session = Depends(get_db),

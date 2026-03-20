@@ -14,6 +14,7 @@ function activateTab(tabId) {
   if (!_tabLoaded[tabId]) {
     _tabLoaded[tabId] = true;
     if (tabId === 'assets') initAssetsTab();
+    else if (tabId === 'relations') initRelationsTab();
     else if (tabId === 'ip') initIpTab();
     else if (tabId === 'portmap') initPortmapTab();
     else if (tabId === 'policy') initPolicyTab();
@@ -507,6 +508,177 @@ function initAssetsTab() {
       } catch (err) { showToast(err.message, "error"); }
     },
   });
+}
+
+/* ── Asset Relations Tab (lazy-load) ── */
+const RELATION_TYPE_LABELS = {
+  HOSTS: "호스팅",
+  USES: "사용",
+  INSTALLED_ON: "설치됨",
+  PROTECTS: "보호",
+  CONNECTS_TO: "연결",
+  DEPENDS_ON: "의존",
+};
+
+let _relationsGridApi = null;
+let _relationAssetsCache = [];
+
+function initRelationsTab() {
+  const colDefs = [
+    { field: "src_asset_name", headerName: "출발 자산", flex: 1, minWidth: 150, sort: "asc" },
+    { field: "src_hostname", headerName: "출발 호스트", width: 130 },
+    {
+      field: "relation_type", headerName: "관계 유형", width: 120,
+      cellRenderer: params => {
+        const span = document.createElement("span");
+        span.className = "badge";
+        span.textContent = RELATION_TYPE_LABELS[params.value] || params.value;
+        return span;
+      },
+    },
+    { field: "dst_asset_name", headerName: "도착 자산", flex: 1, minWidth: 150 },
+    { field: "dst_hostname", headerName: "도착 호스트", width: 130 },
+    { field: "note", headerName: "비고", flex: 1, minWidth: 150 },
+    {
+      headerName: "", width: 80, sortable: false, filter: false,
+      cellRenderer: params => {
+        const wrap = document.createElement("span");
+        wrap.style.display = "flex";
+        wrap.style.gap = "4px";
+
+        const btnEdit = document.createElement("button");
+        btnEdit.className = "btn btn-sm";
+        btnEdit.textContent = "수정";
+        btnEdit.onclick = () => openRelationModal(params.data);
+        wrap.appendChild(btnEdit);
+
+        const btnDel = document.createElement("button");
+        btnDel.className = "btn btn-sm btn-danger";
+        btnDel.textContent = "삭제";
+        btnDel.onclick = () => deleteRelation(params.data.id);
+        wrap.appendChild(btnDel);
+
+        return wrap;
+      },
+    },
+  ];
+
+  _relationsGridApi = agGrid.createGrid(document.getElementById("grid-tab-relations"), {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/asset-relations`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
+  });
+
+  // 자산 목록 캐싱 (모달 셀렉트용)
+  loadRelationAssets();
+
+  // 이벤트 바인딩
+  document.getElementById("btn-add-relation").onclick = () => openRelationModal(null);
+  document.getElementById("btn-cancel-relation").onclick = () => document.getElementById("modal-relation").close();
+  document.getElementById("btn-save-relation").onclick = saveRelation;
+}
+
+async function loadRelationAssets() {
+  try {
+    _relationAssetsCache = await apiFetch(`/api/v1/assets?project_id=${PROJECT_ID}`);
+  } catch (err) { _relationAssetsCache = []; }
+}
+
+function openRelationModal(data) {
+  const modal = document.getElementById("modal-relation");
+  const isEdit = !!data;
+  document.getElementById("modal-relation-title").textContent = isEdit ? "자산 관계 수정" : "자산 관계 등록";
+  document.getElementById("relation-id").value = isEdit ? data.id : "";
+
+  // 자산 셀렉트 채우기 (DOM 방식)
+  const srcSel = document.getElementById("relation-src-asset");
+  const dstSel = document.getElementById("relation-dst-asset");
+  [srcSel, dstSel].forEach(sel => {
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    const emptyOpt = document.createElement("option");
+    emptyOpt.value = "";
+    emptyOpt.textContent = "선택";
+    sel.appendChild(emptyOpt);
+    _relationAssetsCache.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a.id;
+      opt.textContent = a.asset_name + " (" + (a.hostname || "-") + ")";
+      sel.appendChild(opt);
+    });
+  });
+
+  if (isEdit) {
+    srcSel.value = data.src_asset_id;
+    dstSel.value = data.dst_asset_id;
+    document.getElementById("relation-type").value = data.relation_type;
+    document.getElementById("relation-note").value = data.note || "";
+  } else {
+    document.getElementById("relation-type").value = "CONNECTS_TO";
+    document.getElementById("relation-note").value = "";
+  }
+  modal.showModal();
+}
+
+async function saveRelation() {
+  const id = document.getElementById("relation-id").value;
+  const isEdit = !!id;
+
+  const body = {
+    relation_type: document.getElementById("relation-type").value,
+    note: document.getElementById("relation-note").value || null,
+  };
+
+  if (!isEdit) {
+    body.src_asset_id = parseInt(document.getElementById("relation-src-asset").value);
+    body.dst_asset_id = parseInt(document.getElementById("relation-dst-asset").value);
+    if (!body.src_asset_id || !body.dst_asset_id) {
+      showToast("출발/도착 자산을 선택하세요.", "error");
+      return;
+    }
+    if (body.src_asset_id === body.dst_asset_id) {
+      showToast("동일 자산 간 관계를 생성할 수 없습니다.", "error");
+      return;
+    }
+  }
+
+  try {
+    if (isEdit) {
+      await apiFetch(`/api/v1/asset-relations/${id}`, { method: "PATCH", body });
+    } else {
+      await apiFetch("/api/v1/asset-relations", { method: "POST", body });
+    }
+    document.getElementById("modal-relation").close();
+    showToast(isEdit ? "관계가 수정되었습니다." : "관계가 등록되었습니다.");
+    await refreshRelationsGrid();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function deleteRelation(relId) {
+  if (!confirm("이 관계를 삭제하시겠습니까?")) return;
+  try {
+    await apiFetch(`/api/v1/asset-relations/${relId}`, { method: "DELETE" });
+    showToast("관계가 삭제되었습니다.");
+    await refreshRelationsGrid();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function refreshRelationsGrid() {
+  try {
+    const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/asset-relations`);
+    _relationsGridApi.setGridOption("rowData", data);
+  } catch (err) { showToast(err.message, "error"); }
 }
 
 /* ── IP / Network Tab (lazy-load) ── */

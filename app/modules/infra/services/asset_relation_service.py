@@ -34,6 +34,24 @@ def list_by_asset(db: Session, asset_id: int) -> list[dict]:
     return _enrich(db, rels)
 
 
+def list_by_project(db: Session, project_id: int) -> list[dict]:
+    """프로젝트 소속 자산들의 모든 관계 조회."""
+    asset_ids_q = select(Asset.id).where(Asset.project_id == project_id)
+    rels = list(
+        db.scalars(
+            select(AssetRelation)
+            .where(
+                or_(
+                    AssetRelation.src_asset_id.in_(asset_ids_q),
+                    AssetRelation.dst_asset_id.in_(asset_ids_q),
+                )
+            )
+            .order_by(AssetRelation.id.asc())
+        )
+    )
+    return _enrich(db, rels)
+
+
 def create_asset_relation(db: Session, payload: AssetRelationCreate, current_user) -> AssetRelation:
     _require_edit(current_user)
 

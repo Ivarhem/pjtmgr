@@ -31,6 +31,7 @@
 <div class="tab-nav">
   <button class="tab-btn active" data-tab="overview" onclick="activateTab('overview')">개요</button>
   <button class="tab-btn" data-tab="assets" onclick="activateTab('assets')">자산</button>
+  <button class="tab-btn" data-tab="relations" onclick="activateTab('relations')">자산 관계</button>
   <button class="tab-btn" data-tab="ip" onclick="activateTab('ip')">IP/네트워크</button>
   <button class="tab-btn" data-tab="portmap" onclick="activateTab('portmap')">포트맵</button>
   <button class="tab-btn" data-tab="policy" onclick="activateTab('policy')">정책</button>
@@ -126,6 +127,51 @@
     <div id="grid-tab-assets" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
   </div>
 </div>
+
+<div class="tab-content hidden" id="tab-relations">
+  <div class="page-header">
+    <h2>자산 관계</h2>
+    <button class="btn btn-primary btn-sm" id="btn-add-relation">관계 등록</button>
+  </div>
+  <div class="card">
+    <div id="grid-tab-relations" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  </div>
+</div>
+
+<!-- 자산 관계 등록/수정 모달 -->
+<dialog id="modal-relation" class="modal">
+  <h2 id="modal-relation-title">자산 관계 등록</h2>
+  <form class="form-grid">
+    <input type="hidden" id="relation-id">
+    <label>
+      출발 자산
+      <select id="relation-src-asset" required></select>
+    </label>
+    <label>
+      도착 자산
+      <select id="relation-dst-asset" required></select>
+    </label>
+    <label>
+      관계 유형
+      <select id="relation-type" required>
+        <option value="HOSTS">HOSTS</option>
+        <option value="USES">USES</option>
+        <option value="INSTALLED_ON">INSTALLED_ON</option>
+        <option value="PROTECTS">PROTECTS</option>
+        <option value="CONNECTS_TO">CONNECTS_TO</option>
+        <option value="DEPENDS_ON">DEPENDS_ON</option>
+      </select>
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="relation-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-relation">취소</button>
+    <button class="btn btn-primary" id="btn-save-relation">저장</button>
+  </div>
+</dialog>
 
 <div class="tab-content hidden" id="tab-ip">
   <div class="page-header">
