@@ -10,6 +10,7 @@ from app.core.exceptions import (
     NotFoundError,
     PermissionDeniedError,
 )
+from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_ip import AssetIP
 from app.modules.infra.models.ip_subnet import IpSubnet
@@ -47,6 +48,10 @@ def create_subnet(db: Session, payload: IpSubnetCreate, current_user) -> IpSubne
 
     subnet = IpSubnet(**payload.model_dump())
     db.add(subnet)
+    audit.log(
+        db, user_id=current_user.id, action="create", entity_type="ip_subnet",
+        entity_id=None, summary=f"IP대역 생성: {subnet.name}", module="infra",
+    )
     db.commit()
     db.refresh(subnet)
     return subnet
@@ -62,6 +67,10 @@ def update_subnet(
     for field, value in changes.items():
         setattr(subnet, field, value)
 
+    audit.log(
+        db, user_id=current_user.id, action="update", entity_type="ip_subnet",
+        entity_id=subnet.id, summary=f"IP대역 수정: {subnet.name}", module="infra",
+    )
     db.commit()
     db.refresh(subnet)
     return subnet
@@ -77,6 +86,10 @@ def delete_subnet(db: Session, subnet_id: int, current_user) -> None:
     if has_ips is not None:
         raise BusinessRuleError("Subnet with assigned IPs cannot be deleted")
 
+    audit.log(
+        db, user_id=current_user.id, action="delete", entity_type="ip_subnet",
+        entity_id=subnet.id, summary=f"IP대역 삭제: {subnet.name}", module="infra",
+    )
     db.delete(subnet)
     db.commit()
 
@@ -192,6 +205,10 @@ def create_port_map(db: Session, payload: PortMapCreate, current_user) -> PortMa
 
     port_map = PortMap(**payload.model_dump())
     db.add(port_map)
+    audit.log(
+        db, user_id=current_user.id, action="create", entity_type="port_map",
+        entity_id=None, summary=f"포트맵 생성: {port_map.summary or ''}", module="infra",
+    )
     db.commit()
     db.refresh(port_map)
     return port_map
@@ -216,6 +233,10 @@ def update_port_map(
     for field, value in changes.items():
         setattr(port_map, field, value)
 
+    audit.log(
+        db, user_id=current_user.id, action="update", entity_type="port_map",
+        entity_id=port_map.id, summary=f"포트맵 수정: {port_map.summary or ''}", module="infra",
+    )
     db.commit()
     db.refresh(port_map)
     return port_map
@@ -224,6 +245,10 @@ def update_port_map(
 def delete_port_map(db: Session, port_map_id: int, current_user) -> None:
     _require_inventory_edit(current_user)
     port_map = get_port_map(db, port_map_id)
+    audit.log(
+        db, user_id=current_user.id, action="delete", entity_type="port_map",
+        entity_id=port_map.id, summary=f"포트맵 삭제: {port_map.summary or ''}", module="infra",
+    )
     db.delete(port_map)
     db.commit()
 

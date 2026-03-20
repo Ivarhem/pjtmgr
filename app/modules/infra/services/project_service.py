@@ -10,6 +10,7 @@ from app.core.exceptions import (
     NotFoundError,
     PermissionDeniedError,
 )
+from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.project import Project
 from app.modules.infra.schemas.project import ProjectCreate, ProjectUpdate
@@ -32,6 +33,10 @@ def create_project(db: Session, payload: ProjectCreate, current_user) -> Project
 
     project = Project(**payload.model_dump())
     db.add(project)
+    audit.log(
+        db, user_id=current_user.id, action="create", entity_type="project",
+        entity_id=None, summary=f"프로젝트 생성: {project.project_name}", module="infra",
+    )
     db.commit()
     db.refresh(project)
     return project
@@ -50,6 +55,10 @@ def update_project(
     for field, value in changes.items():
         setattr(project, field, value)
 
+    audit.log(
+        db, user_id=current_user.id, action="update", entity_type="project",
+        entity_id=project.id, summary=f"프로젝트 수정: {project.project_name}", module="infra",
+    )
     db.commit()
     db.refresh(project)
     return project
@@ -65,6 +74,10 @@ def delete_project(db: Session, project_id: int, current_user) -> None:
     if has_assets is not None:
         raise BusinessRuleError("Project with assets cannot be deleted")
 
+    audit.log(
+        db, user_id=current_user.id, action="delete", entity_type="project",
+        entity_id=project.id, summary=f"프로젝트 삭제: {project.project_name}", module="infra",
+    )
     db.delete(project)
     db.commit()
 

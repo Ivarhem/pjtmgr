@@ -10,6 +10,7 @@ from app.core.exceptions import (
     NotFoundError,
     PermissionDeniedError,
 )
+from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.policy_assignment import PolicyAssignment
 from app.modules.infra.models.policy_definition import PolicyDefinition
@@ -50,6 +51,10 @@ def create_policy(
 
     policy = PolicyDefinition(**payload.model_dump())
     db.add(policy)
+    audit.log(
+        db, user_id=current_user.id, action="create", entity_type="policy",
+        entity_id=None, summary=f"정책 생성: {policy.policy_name}", module="infra",
+    )
     db.commit()
     db.refresh(policy)
     return policy
@@ -68,6 +73,10 @@ def update_policy(
     for field, value in changes.items():
         setattr(policy, field, value)
 
+    audit.log(
+        db, user_id=current_user.id, action="update", entity_type="policy",
+        entity_id=policy.id, summary=f"정책 수정: {policy.policy_name}", module="infra",
+    )
     db.commit()
     db.refresh(policy)
     return policy
@@ -85,6 +94,10 @@ def delete_policy(db: Session, policy_id: int, current_user) -> None:
     if has_assignments is not None:
         raise BusinessRuleError("Policy with assignments cannot be deleted")
 
+    audit.log(
+        db, user_id=current_user.id, action="delete", entity_type="policy",
+        entity_id=policy.id, summary=f"정책 삭제: {policy.policy_name}", module="infra",
+    )
     db.delete(policy)
     db.commit()
 

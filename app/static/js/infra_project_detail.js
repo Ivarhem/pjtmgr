@@ -18,6 +18,7 @@ function activateTab(tabId) {
     else if (tabId === 'portmap') initPortmapTab();
     else if (tabId === 'policy') initPolicyTab();
     else if (tabId === 'contacts') initContactsTab();
+    else if (tabId === 'history') initHistoryTab();
   }
 }
 
@@ -916,6 +917,37 @@ async function deleteProjectCustomerContact(pccId) {
       showToast("담당자 연결이 해제되었습니다.");
       loadProjectCustomers();
     } catch (err) { showToast(err.message, "error"); }
+  });
+}
+
+/* ── History Tab (audit log, lazy-load) ── */
+const _ACTION_MAP = { create: "생성", update: "수정", delete: "삭제" };
+const _ENTITY_MAP = {
+  project: "프로젝트", asset: "자산", ip_subnet: "IP대역",
+  port_map: "포트맵", policy: "정책", policy_assignment: "정책적용",
+};
+
+function initHistoryTab() {
+  const colDefs = [
+    { field: "created_at", headerName: "일시", width: 160, valueFormatter: (p) => fmtDate(p.value) + " " + (p.value ? p.value.slice(11, 19) : "") },
+    { field: "user_name", headerName: "사용자", width: 120 },
+    { field: "action", headerName: "동작", width: 80, valueFormatter: (p) => _ACTION_MAP[p.value] || p.value },
+    { field: "entity_type", headerName: "대상", width: 100, valueFormatter: (p) => _ENTITY_MAP[p.value] || p.value },
+    { field: "summary", headerName: "요약", flex: 1, minWidth: 250 },
+  ];
+
+  agGrid.createGrid(document.getElementById("grid-tab-history"), {
+    columnDefs: colDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    onGridReady: async (params) => {
+      try {
+        const data = await apiFetch(`/api/v1/infra-dashboard/audit-log`);
+        params.api.setGridOption("rowData", data);
+      } catch (err) { showToast(err.message, "error"); }
+    },
   });
 }
 

@@ -9,6 +9,7 @@ from app.core.exceptions import (
     NotFoundError,
     PermissionDeniedError,
 )
+from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_contact import AssetContact
 from app.modules.infra.models.project import Project
@@ -23,12 +24,51 @@ from app.modules.common.models.customer_contact import CustomerContact
 # ── Asset ──
 
 
-def list_assets(db: Session, project_id: int | None = None) -> list[Asset]:
+def list_assets(
+    db: Session,
+    project_id: int | None = None,
+    asset_type: str | None = None,
+    status: str | None = None,
+    q: str | None = None,
+) -> list[Asset]:
     stmt = select(Asset)
     if project_id is not None:
         stmt = stmt.where(Asset.project_id == project_id)
+    if asset_type is not None:
+        stmt = stmt.where(Asset.asset_type == asset_type)
+    if status is not None:
+        stmt = stmt.where(Asset.status == status)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            Asset.asset_name.ilike(like)
+            | Asset.hostname.ilike(like)
+            | Asset.service_ip.ilike(like)
+            | Asset.equipment_id.ilike(like)
+        )
     stmt = stmt.order_by(Asset.project_id.asc(), Asset.asset_name.asc())
     return list(db.scalars(stmt))
+
+
+def enrich_assets_with_project(db: Session, assets: list[Asset]) -> list[dict]:
+    """Attach project_code and project_name to each asset for inventory view."""
+    if not assets:
+        return []
+    project_ids = {a.project_id for a in assets}
+    projects = {
+        p.id: p
+        for p in db.scalars(select(Project).where(Project.id.in_(project_ids)))
+    }
+    result = []
+    for a in assets:
+        d = {c.key: getattr(a, c.key) for c in Asset.__table__.columns}
+        d["created_at"] = a.created_at
+        d["updated_at"] = a.updated_at
+        proj = projects.get(a.project_id)
+        d["project_code"] = proj.project_code if proj else None
+        d["project_name"] = proj.project_name if proj else None
+        result.append(d)
+    return result
 
 
 def get_asset(db: Session, asset_id: int) -> Asset:
@@ -45,6 +85,10 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
 
     asset = Asset(**payload.model_dump())
     db.add(asset)
+    audit.log(
+        db, user_id=current_user.id, action="create", entity_type="asset",
+        entity_id=None, summary=f"자산 생성: {asset.asset_name}", module="infra",
+    )
     db.commit()
     db.refresh(asset)
     return asset
@@ -69,6 +113,10 @@ def update_asset(
     for field, value in changes.items():
         setattr(asset, field, value)
 
+    audit.log(
+        db, user_id=current_user.id, action="update", entity_type="asset",
+        entity_id=asset.id, summary=f"자산 수정: {asset.asset_name}", module="infra",
+    )
     db.commit()
     db.refresh(asset)
     return asset
@@ -77,6 +125,10 @@ def update_asset(
 def delete_asset(db: Session, asset_id: int, current_user) -> None:
     _require_inventory_edit(current_user)
     asset = get_asset(db, asset_id)
+    audit.log(
+        db, user_id=current_user.id, action="delete", entity_type="asset",
+        entity_id=asset.id, summary=f"자산 삭제: {asset.asset_name}", module="infra",
+    )
     db.delete(asset)
     db.commit()
 
