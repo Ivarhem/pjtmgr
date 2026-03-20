@@ -1,4 +1,4 @@
-/* ── 자산 인벤토리 ── */
+/* ── 자산 인벤토리 (고객사 중심) ── */
 
 const ASSET_TYPE_MAP = {
   server: "서버",
@@ -31,20 +31,11 @@ const columnDefs = [
   },
   { field: "vendor", headerName: "제조사", width: 130 },
   { field: "model", headerName: "모델", width: 130 },
-  { field: "role", headerName: "역할", width: 130 },
-  {
-    field: "environment",
-    headerName: "환경",
-    width: 90,
-    valueFormatter: (p) => ENV_MAP[p.value] || p.value,
-  },
-  { field: "location", headerName: "위치", width: 130 },
-  { field: "equipment_id", headerName: "장비 ID", width: 120 },
   { field: "hostname", headerName: "호스트명", width: 140 },
-  { field: "serial_no", headerName: "시리얼", width: 130 },
+  { field: "service_ip", headerName: "서비스IP", width: 130 },
   { field: "zone", headerName: "존", width: 100 },
   { field: "category", headerName: "분류", width: 110 },
-  { field: "rack_no", headerName: "랙 번호", width: 100 },
+  { field: "rack_no", headerName: "랙", width: 80 },
   {
     field: "status",
     headerName: "상태",
@@ -57,63 +48,33 @@ const columnDefs = [
       return span;
     },
   },
-  {
-    headerName: "",
-    width: 120,
-    cellRenderer: (params) => {
-      const wrap = document.createElement("span");
-      wrap.className = "gap-sm";
-      wrap.style.display = "inline-flex";
-
-      const editBtn = document.createElement("button");
-      editBtn.className = "btn btn-xs btn-secondary";
-      editBtn.textContent = "수정";
-      editBtn.addEventListener("click", () => openEditModal(params.data));
-
-      const delBtn = document.createElement("button");
-      delBtn.className = "btn btn-xs btn-danger";
-      delBtn.textContent = "삭제";
-      delBtn.addEventListener("click", () => deleteAsset(params.data));
-
-      wrap.appendChild(editBtn);
-      wrap.appendChild(delBtn);
-      return wrap;
-    },
-    sortable: false,
-    filter: false,
-  },
 ];
 
 let gridApi;
+let _selectedAsset = null;
+
+/* ── Data loading ── */
 
 async function loadAssets() {
+  const cid = getCtxCustomerId();
+  if (!cid) {
+    gridApi.setGridOption("rowData", []);
+    return;
+  }
+  let url = "/api/v1/assets?customer_id=" + cid;
+  const pid = getCtxProjectId();
+  const chk = document.getElementById("chk-project-filter");
+  if (pid && chk && chk.checked) url += "&project_id=" + pid;
+
   try {
-    const data = await apiFetch("/api/v1/assets");
+    const data = await apiFetch(url);
     gridApi.setGridOption("rowData", data);
   } catch (err) {
     showToast(err.message, "error");
   }
 }
 
-function populateProjectOptions(projects) {
-  const select = document.getElementById("asset-project-id");
-  while (select.firstChild) select.removeChild(select.firstChild);
-  projects.forEach((p) => {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = p.project_code + " - " + p.project_name;
-    select.appendChild(opt);
-  });
-}
-
-async function loadProjectOptions() {
-  try {
-    const projects = await apiFetch("/api/v1/projects");
-    populateProjectOptions(projects);
-  } catch (err) {
-    showToast("프로젝트 목록을 불러올 수 없습니다.", "error");
-  }
-}
+/* ── Grid init ── */
 
 function initGrid() {
   const gridDiv = document.getElementById("grid-assets");
@@ -124,9 +85,91 @@ function initGrid() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    onRowClicked: (e) => showAssetDetail(e.data),
   });
   loadAssets();
-  loadProjectOptions();
+}
+
+/* ── Detail panel ── */
+
+const DETAIL_TABS = {
+  basic: [
+    ["자산명", "asset_name"], ["유형", "asset_type", v => ASSET_TYPE_MAP[v] || v],
+    ["제조사", "vendor"], ["모델", "model"], ["시리얼", "serial_no"],
+    ["환경", "environment", v => ENV_MAP[v] || v], ["상태", "status", v => ASSET_STATUS_MAP[v] || v],
+    ["비고", "note"],
+  ],
+  location: [
+    ["센터", "center"], ["장비 ID", "equipment_id"],
+    ["랙 번호", "rack_no"], ["랙 유닛", "rack_unit"],
+    ["위치", "location"], ["운영 유형", "operation_type"],
+    ["분류", "category"], ["세부 분류", "subcategory"],
+    ["단계", "phase"], ["입고일", "received_date"],
+  ],
+  network: [
+    ["호스트명", "hostname"], ["클러스터", "cluster"],
+    ["서비스명", "service_name"], ["존", "zone"],
+    ["서비스 IP", "service_ip"], ["관리 IP", "mgmt_ip"],
+  ],
+  hw: [
+    ["크기(U)", "size_unit"], ["LC", "lc_count"], ["HA", "ha_count"],
+    ["UTP", "utp_count"], ["전원", "power_count"], ["전원 유형", "power_type"],
+    ["펌웨어", "firmware_version"],
+  ],
+  mgmt: [
+    ["자산 등급", "asset_class"], ["자산 번호", "asset_number"],
+    ["도입 연도", "year_acquired"], ["부서", "dept"],
+    ["주 담당자", "primary_contact_name"], ["부 담당자", "secondary_contact_name"],
+    ["유지보수 업체", "maintenance_vendor"],
+  ],
+};
+
+function showAssetDetail(asset) {
+  _selectedAsset = asset;
+  const panel = document.getElementById("asset-detail-panel");
+  panel.classList.remove("hidden");
+  document.getElementById("detail-asset-name").textContent =
+    asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "");
+  renderDetailTab("basic");
+}
+
+function renderDetailTab(tab) {
+  const container = document.getElementById("detail-content");
+  // Clear safely
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  document.querySelectorAll(".detail-tabs .tab-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.dtab === tab);
+  });
+
+  if (tab === "relations") {
+    const p = document.createElement("p");
+    p.className = "text-muted";
+    p.textContent = "관계 정보는 별도 탭에서 조회합니다.";
+    container.appendChild(p);
+    return;
+  }
+
+  const fields = DETAIL_TABS[tab];
+  if (!fields || !_selectedAsset) return;
+
+  const grid = document.createElement("div");
+  grid.className = "detail-grid";
+  fields.forEach(([label, key, fmt]) => {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    const raw = _selectedAsset[key];
+    dd.textContent = raw != null ? (fmt ? fmt(raw) : String(raw)) : "—";
+    grid.appendChild(dt);
+    grid.appendChild(dd);
+  });
+  container.appendChild(grid);
+}
+
+function closeDetail() {
+  document.getElementById("asset-detail-panel").classList.add("hidden");
+  _selectedAsset = null;
 }
 
 /* ── Modal ── */
@@ -134,53 +177,11 @@ const modal = document.getElementById("modal-asset");
 
 function resetForm() {
   document.getElementById("asset-id").value = "";
-  document.getElementById("asset-name").value = "";
-  document.getElementById("asset-type").value = "server";
-  document.getElementById("asset-vendor").value = "";
-  document.getElementById("asset-model").value = "";
-  document.getElementById("asset-status").value = "planned";
-  document.getElementById("asset-note").value = "";
-
-  // 장비 명세
-  document.getElementById("asset-serial-no").value = "";
-  document.getElementById("asset-equipment-id").value = "";
-  document.getElementById("asset-rack-no").value = "";
-  document.getElementById("asset-rack-unit").value = "";
-  document.getElementById("asset-center").value = "";
-  document.getElementById("asset-operation-type").value = "";
-  document.getElementById("asset-category").value = "";
-  document.getElementById("asset-subcategory").value = "";
-  document.getElementById("asset-phase").value = "";
-  document.getElementById("asset-received-date").value = "";
-
-  // 논리 구성
-  document.getElementById("asset-hostname").value = "";
-  document.getElementById("asset-cluster").value = "";
-  document.getElementById("asset-service-name").value = "";
-  document.getElementById("asset-zone").value = "";
-  document.getElementById("asset-service-ip").value = "";
-  document.getElementById("asset-mgmt-ip").value = "";
-
-  // Hardware 구성
-  document.getElementById("asset-size-unit").value = "";
-  document.getElementById("asset-lc-count").value = "";
-  document.getElementById("asset-ha-count").value = "";
-  document.getElementById("asset-utp-count").value = "";
-  document.getElementById("asset-power-count").value = "";
-  document.getElementById("asset-power-type").value = "";
-  document.getElementById("asset-firmware-version").value = "";
-
-  // 자산 정보
-  document.getElementById("asset-asset-class").value = "";
-  document.getElementById("asset-asset-number").value = "";
-  document.getElementById("asset-year-acquired").value = "";
-  document.getElementById("asset-dept").value = "";
-  document.getElementById("asset-primary-contact-name").value = "";
-  document.getElementById("asset-secondary-contact-name").value = "";
-  document.getElementById("asset-maintenance-vendor").value = "";
+  document.getElementById("form-asset").reset();
 }
 
 function openCreateModal() {
+  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetForm();
   document.getElementById("modal-asset-title").textContent = "자산 등록";
   document.getElementById("btn-save-asset").textContent = "등록";
@@ -188,8 +189,9 @@ function openCreateModal() {
 }
 
 function openEditModal(asset) {
+  if (!asset) asset = _selectedAsset;
+  if (!asset) return;
   document.getElementById("asset-id").value = asset.id;
-  document.getElementById("asset-project-id").value = asset.project_id;
   document.getElementById("asset-name").value = asset.asset_name;
   document.getElementById("asset-type").value = asset.asset_type;
   document.getElementById("asset-vendor").value = asset.vendor || "";
@@ -197,7 +199,6 @@ function openEditModal(asset) {
   document.getElementById("asset-status").value = asset.status;
   document.getElementById("asset-note").value = asset.note || "";
 
-  // 장비 명세
   document.getElementById("asset-serial-no").value = asset.serial_no || "";
   document.getElementById("asset-equipment-id").value = asset.equipment_id || "";
   document.getElementById("asset-rack-no").value = asset.rack_no || "";
@@ -209,7 +210,6 @@ function openEditModal(asset) {
   document.getElementById("asset-phase").value = asset.phase || "";
   document.getElementById("asset-received-date").value = asset.received_date || "";
 
-  // 논리 구성
   document.getElementById("asset-hostname").value = asset.hostname || "";
   document.getElementById("asset-cluster").value = asset.cluster || "";
   document.getElementById("asset-service-name").value = asset.service_name || "";
@@ -217,7 +217,6 @@ function openEditModal(asset) {
   document.getElementById("asset-service-ip").value = asset.service_ip || "";
   document.getElementById("asset-mgmt-ip").value = asset.mgmt_ip || "";
 
-  // Hardware 구성
   document.getElementById("asset-size-unit").value = asset.size_unit != null ? asset.size_unit : "";
   document.getElementById("asset-lc-count").value = asset.lc_count != null ? asset.lc_count : "";
   document.getElementById("asset-ha-count").value = asset.ha_count != null ? asset.ha_count : "";
@@ -226,7 +225,6 @@ function openEditModal(asset) {
   document.getElementById("asset-power-type").value = asset.power_type || "";
   document.getElementById("asset-firmware-version").value = asset.firmware_version || "";
 
-  // 자산 정보
   document.getElementById("asset-asset-class").value = asset.asset_class || "";
   document.getElementById("asset-asset-number").value = asset.asset_number || "";
   document.getElementById("asset-year-acquired").value = asset.year_acquired != null ? asset.year_acquired : "";
@@ -246,17 +244,17 @@ function intOrNull(id) {
 }
 
 async function saveAsset() {
+  const cid = getCtxCustomerId();
+  if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const assetId = document.getElementById("asset-id").value;
   const payload = {
-    project_id: Number(document.getElementById("asset-project-id").value),
+    customer_id: cid,
     asset_name: document.getElementById("asset-name").value,
     asset_type: document.getElementById("asset-type").value,
     vendor: document.getElementById("asset-vendor").value || null,
     model: document.getElementById("asset-model").value || null,
     status: document.getElementById("asset-status").value,
     note: document.getElementById("asset-note").value || null,
-
-    // 장비 명세
     serial_no: document.getElementById("asset-serial-no").value || null,
     equipment_id: document.getElementById("asset-equipment-id").value || null,
     rack_no: document.getElementById("asset-rack-no").value || null,
@@ -267,16 +265,12 @@ async function saveAsset() {
     subcategory: document.getElementById("asset-subcategory").value || null,
     phase: document.getElementById("asset-phase").value || null,
     received_date: document.getElementById("asset-received-date").value || null,
-
-    // 논리 구성
     hostname: document.getElementById("asset-hostname").value || null,
     cluster: document.getElementById("asset-cluster").value || null,
     service_name: document.getElementById("asset-service-name").value || null,
     zone: document.getElementById("asset-zone").value || null,
     service_ip: document.getElementById("asset-service-ip").value || null,
     mgmt_ip: document.getElementById("asset-mgmt-ip").value || null,
-
-    // Hardware 구성
     size_unit: intOrNull("asset-size-unit"),
     lc_count: intOrNull("asset-lc-count"),
     ha_count: intOrNull("asset-ha-count"),
@@ -284,8 +278,6 @@ async function saveAsset() {
     power_count: intOrNull("asset-power-count"),
     power_type: document.getElementById("asset-power-type").value || null,
     firmware_version: document.getElementById("asset-firmware-version").value || null,
-
-    // 자산 정보
     asset_class: document.getElementById("asset-asset-class").value || null,
     asset_number: document.getElementById("asset-asset-number").value || null,
     year_acquired: intOrNull("asset-year-acquired"),
@@ -297,7 +289,7 @@ async function saveAsset() {
 
   try {
     if (assetId) {
-      await apiFetch(`/api/v1/assets/${assetId}`, { method: "PATCH", body: payload });
+      await apiFetch("/api/v1/assets/" + assetId, { method: "PATCH", body: payload });
       showToast("자산이 수정되었습니다.");
     } else {
       await apiFetch("/api/v1/assets", { method: "POST", body: payload });
@@ -305,18 +297,22 @@ async function saveAsset() {
     }
     modal.close();
     loadAssets();
+    closeDetail();
   } catch (err) {
     showToast(err.message, "error");
   }
 }
 
-async function deleteAsset(asset) {
+async function deleteAssetAction() {
+  if (!_selectedAsset) return;
+  const asset = _selectedAsset;
   confirmDelete(
-    `자산 "${asset.asset_name}"을(를) 삭제하시겠습니까?`,
+    '자산 "' + asset.asset_name + '"을(를) 삭제하시겠습니까?',
     async () => {
       try {
-        await apiFetch(`/api/v1/assets/${asset.id}`, { method: "DELETE" });
+        await apiFetch("/api/v1/assets/" + asset.id, { method: "DELETE" });
         showToast("자산이 삭제되었습니다.");
+        closeDetail();
         loadAssets();
       } catch (err) {
         showToast(err.message, "error");
@@ -330,4 +326,20 @@ document.addEventListener("DOMContentLoaded", initGrid);
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-asset").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-asset").addEventListener("click", saveAsset);
+document.getElementById("btn-edit-asset").addEventListener("click", () => openEditModal());
+document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
+document.getElementById("btn-close-detail").addEventListener("click", closeDetail);
 
+// Detail tab switching
+document.querySelectorAll(".detail-tabs .tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => renderDetailTab(btn.dataset.dtab));
+});
+
+// Project filter checkbox
+document.getElementById("chk-project-filter").addEventListener("change", loadAssets);
+
+// Context selector change
+window.addEventListener("ctx-changed", () => {
+  closeDetail();
+  loadAssets();
+});

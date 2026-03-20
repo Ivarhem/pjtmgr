@@ -1,23 +1,39 @@
 {% extends "base.html" %}
-{% block title %}자산 인벤토리 - SI Project Inventory{% endblock %}
-
-{% block styles %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
-{% endblock %}
-
-{% block head_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
-{% endblock %}
+{% block title %}자산 인벤토리{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <h1>자산 인벤토리</h1>
-  <button class="btn btn-primary" id="btn-add-asset">자산 등록</button>
+  <div class="page-header-actions">
+    <label class="chk-inline"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
+    <button class="btn btn-secondary" id="btn-import-asset">Import</button>
+    <button class="btn btn-primary" id="btn-add-asset">자산 등록</button>
+  </div>
 </div>
 
 <div class="card">
-  <div id="grid-assets" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+  <div id="grid-assets" class="ag-theme-quartz" style="height: 480px; width: 100%;"></div>
+</div>
+
+<!-- 하단 상세 패널 -->
+<div id="asset-detail-panel" class="detail-panel hidden">
+  <div class="detail-header">
+    <span id="detail-asset-name" class="detail-title"></span>
+    <div class="detail-header-actions">
+      <button class="btn btn-sm btn-secondary" id="btn-edit-asset">수정</button>
+      <button class="btn btn-sm btn-danger" id="btn-delete-asset">삭제</button>
+      <button class="btn btn-sm" id="btn-close-detail" title="닫기">&times;</button>
+    </div>
+  </div>
+  <div class="detail-tabs">
+    <button class="tab-btn active" data-dtab="basic">기본 정보</button>
+    <button class="tab-btn" data-dtab="location">설치 위치</button>
+    <button class="tab-btn" data-dtab="network">네트워크</button>
+    <button class="tab-btn" data-dtab="hw">HW 사양</button>
+    <button class="tab-btn" data-dtab="mgmt">자산 관리</button>
+    <button class="tab-btn" data-dtab="relations">관계</button>
+  </div>
+  <div id="detail-content" class="detail-body"></div>
 </div>
 
 <!-- 자산 등록/수정 모달 -->
@@ -30,10 +46,6 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">장비 명세</legend>
       <div class="form-grid">
-        <label>
-          프로젝트
-          <select id="asset-project-id" required></select>
-        </label>
         <label>
           자산명
           <input type="text" id="asset-name" required>
@@ -208,7 +220,7 @@
       </div>
     </fieldset>
 
-    <!-- 비고 (full-width, outside groups) -->
+    <!-- 비고 -->
     <label class="full-width">
       비고
       <textarea id="asset-note" rows="2"></textarea>

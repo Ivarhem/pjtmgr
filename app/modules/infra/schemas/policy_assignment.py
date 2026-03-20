@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class PolicyAssignmentCreate(BaseModel):
-    project_id: int
+    customer_id: int
     asset_id: int | None = None
     policy_definition_id: int
     status: str = "not_checked"
@@ -28,7 +28,7 @@ class PolicyAssignmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    project_id: int
+    customer_id: int
     asset_id: int | None
     policy_definition_id: int
     status: str

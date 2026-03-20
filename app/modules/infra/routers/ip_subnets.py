@@ -19,40 +19,32 @@ from app.modules.infra.services.network_service import (
 )
 
 
-router = APIRouter(tags=["infra-ip-subnets"])
+router = APIRouter(prefix="/api/v1/ip-subnets", tags=["infra-ip-subnets"])
 
 
-@router.get(
-    "/api/v1/projects/{project_id}/ip-subnets",
-    response_model=list[IpSubnetRead],
-)
+@router.get("", response_model=list[IpSubnetRead])
 def list_subnets_endpoint(
-    project_id: int,
+    customer_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[IpSubnetRead]:
-    return list_subnets(db, project_id)
+    return list_subnets(db, customer_id)
 
 
 @router.post(
-    "/api/v1/projects/{project_id}/ip-subnets",
+    "",
     response_model=IpSubnetRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_subnet_endpoint(
-    project_id: int,
     payload: IpSubnetCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> IpSubnetRead:
-    payload.project_id = project_id
     return create_subnet(db, payload, current_user)
 
 
-@router.get(
-    "/api/v1/ip-subnets/{subnet_id}",
-    response_model=IpSubnetRead,
-)
+@router.get("/{subnet_id}", response_model=IpSubnetRead)
 def get_subnet_endpoint(
     subnet_id: int,
     db: Session = Depends(get_db),
@@ -61,10 +53,7 @@ def get_subnet_endpoint(
     return get_subnet(db, subnet_id)
 
 
-@router.patch(
-    "/api/v1/ip-subnets/{subnet_id}",
-    response_model=IpSubnetRead,
-)
+@router.patch("/{subnet_id}", response_model=IpSubnetRead)
 def update_subnet_endpoint(
     subnet_id: int,
     payload: IpSubnetUpdate,
@@ -74,10 +63,7 @@ def update_subnet_endpoint(
     return update_subnet(db, subnet_id, payload, current_user)
 
 
-@router.delete(
-    "/api/v1/ip-subnets/{subnet_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@router.delete("/{subnet_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_subnet_endpoint(
     subnet_id: int,
     db: Session = Depends(get_db),

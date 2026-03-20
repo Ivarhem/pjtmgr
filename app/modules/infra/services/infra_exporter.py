@@ -1,4 +1,4 @@
-"""인프라모듈 Excel Export 서비스 — 프로젝트 단위 데이터 내보내기."""
+"""인프라모듈 Excel Export 서비스 — 고객사 단위 데이터 내보내기."""
 from __future__ import annotations
 
 from io import BytesIO
@@ -10,10 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
+from app.modules.common.models.customer import Customer
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
-from app.modules.infra.models.project import Project
+from app.modules.infra.models.project_asset import ProjectAsset
 
 # ── 헤더 / 필드 매핑 ──
 
@@ -123,10 +124,11 @@ def _auto_width(ws, headers: list[tuple[str, str | None]]) -> None:
 
 
 def export_project(db: Session, project_id: int) -> bytes:
-    """프로젝트 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export."""
+    """프로젝트의 고객사 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export."""
     project = db.get(Project, project_id)
     if project is None:
         raise NotFoundError("Project not found")
+    customer_id = project.customer_id
 
     wb = openpyxl.Workbook()
 
@@ -136,7 +138,7 @@ def export_project(db: Session, project_id: int) -> bytes:
     assets = list(
         db.scalars(
             select(Asset)
-            .where(Asset.project_id == project_id)
+            .where(Asset.customer_id == customer_id)
             .order_by(Asset.id.asc())
         )
     )
@@ -157,7 +159,7 @@ def export_project(db: Session, project_id: int) -> bytes:
     subnets = list(
         db.scalars(
             select(IpSubnet)
-            .where(IpSubnet.project_id == project_id)
+            .where(IpSubnet.customer_id == customer_id)
             .order_by(IpSubnet.id.asc())
         )
     )
@@ -175,7 +177,7 @@ def export_project(db: Session, project_id: int) -> bytes:
     portmaps = list(
         db.scalars(
             select(PortMap)
-            .where(PortMap.project_id == project_id)
+            .where(PortMap.customer_id == customer_id)
             .order_by(PortMap.id.asc())
         )
     )

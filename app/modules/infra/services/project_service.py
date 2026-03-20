@@ -11,13 +11,19 @@ from app.core.exceptions import (
     PermissionDeniedError,
 )
 from app.modules.common.services import audit
-from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.project import Project
+from app.modules.infra.models.project_asset import ProjectAsset
 from app.modules.infra.schemas.project import ProjectCreate, ProjectUpdate
+from app.modules.infra.services._helpers import ensure_customer_exists
 
 
-def list_projects(db: Session) -> list[Project]:
-    return list(db.scalars(select(Project).order_by(Project.project_code.asc())))
+def list_projects(
+    db: Session, customer_id: int | None = None
+) -> list[Project]:
+    stmt = select(Project).order_by(Project.project_code.asc())
+    if customer_id is not None:
+        stmt = stmt.where(Project.customer_id == customer_id)
+    return list(db.scalars(stmt))
 
 
 def get_project(db: Session, project_id: int) -> Project:
@@ -29,6 +35,7 @@ def get_project(db: Session, project_id: int) -> Project:
 
 def create_project(db: Session, payload: ProjectCreate, current_user) -> Project:
     _require_inventory_edit(current_user)
+    ensure_customer_exists(db, payload.customer_id)
     _ensure_project_code_unique(db, payload.project_code)
 
     project = Project(**payload.model_dump())
@@ -69,10 +76,10 @@ def delete_project(db: Session, project_id: int, current_user) -> None:
     project = get_project(db, project_id)
 
     has_assets = db.scalar(
-        select(Asset.id).where(Asset.project_id == project_id).limit(1)
+        select(ProjectAsset.id).where(ProjectAsset.project_id == project_id).limit(1)
     )
     if has_assets is not None:
-        raise BusinessRuleError("Project with assets cannot be deleted")
+        raise BusinessRuleError("Project with linked assets cannot be deleted")
 
     audit.log(
         db, user_id=current_user.id, action="delete", entity_type="project",

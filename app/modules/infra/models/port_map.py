@@ -11,7 +11,7 @@ class PortMap(TimestampMixin, Base):
     __tablename__ = "port_maps"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
     src_asset_id: Mapped[int | None] = mapped_column(
         ForeignKey("assets.id"), nullable=True
     )

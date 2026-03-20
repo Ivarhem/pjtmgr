@@ -15,8 +15,8 @@ class Project(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     project_code: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     project_name: Mapped[str] = mapped_column(String(255), index=True)
-    customer_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("customers.id"), nullable=True
+    customer_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("customers.id"), nullable=False, index=True
     )
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)

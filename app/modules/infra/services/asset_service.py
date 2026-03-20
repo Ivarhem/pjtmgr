@@ -12,8 +12,8 @@ from app.core.exceptions import (
 from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_contact import AssetContact
-from app.modules.infra.models.project import Project
 from app.modules.infra.schemas.asset import AssetCreate, AssetUpdate
+from app.modules.infra.services._helpers import ensure_customer_exists, get_project_asset_ids
 from app.modules.infra.schemas.asset_contact import (
     AssetContactCreate,
     AssetContactUpdate,
@@ -26,14 +26,18 @@ from app.modules.common.models.customer_contact import CustomerContact
 
 def list_assets(
     db: Session,
+    customer_id: int,
     project_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
     q: str | None = None,
 ) -> list[Asset]:
-    stmt = select(Asset)
+    stmt = select(Asset).where(Asset.customer_id == customer_id)
     if project_id is not None:
-        stmt = stmt.where(Asset.project_id == project_id)
+        asset_ids = get_project_asset_ids(db, project_id)
+        if not asset_ids:
+            return []
+        stmt = stmt.where(Asset.id.in_(asset_ids))
     if asset_type is not None:
         stmt = stmt.where(Asset.asset_type == asset_type)
     if status is not None:
@@ -46,25 +50,49 @@ def list_assets(
             | Asset.service_ip.ilike(like)
             | Asset.equipment_id.ilike(like)
         )
-    stmt = stmt.order_by(Asset.project_id.asc(), Asset.asset_name.asc())
+    stmt = stmt.order_by(Asset.asset_name.asc())
     return list(db.scalars(stmt))
 
 
 def enrich_assets_with_project(db: Session, assets: list[Asset]) -> list[dict]:
-    """Attach project_code and project_name to each asset for inventory view."""
+    """Attach project_code and project_name via ProjectAsset for inventory view."""
+    from app.modules.infra.models.project import Project
+    from app.modules.infra.models.project_asset import ProjectAsset
+
     if not assets:
         return []
-    project_ids = {a.project_id for a in assets}
-    projects = {
-        p.id: p
-        for p in db.scalars(select(Project).where(Project.id.in_(project_ids)))
-    }
+
+    asset_ids = [a.id for a in assets]
+    # Load ProjectAsset links for these assets
+    pa_rows = list(
+        db.execute(
+            select(ProjectAsset.asset_id, ProjectAsset.project_id).where(
+                ProjectAsset.asset_id.in_(asset_ids)
+            )
+        )
+    )
+    # Map asset_id -> first project_id (for display)
+    asset_project_map: dict[int, int] = {}
+    project_ids: set[int] = set()
+    for row in pa_rows:
+        if row.asset_id not in asset_project_map:
+            asset_project_map[row.asset_id] = row.project_id
+        project_ids.add(row.project_id)
+
+    projects = {}
+    if project_ids:
+        projects = {
+            p.id: p
+            for p in db.scalars(select(Project).where(Project.id.in_(project_ids)))
+        }
+
     result = []
     for a in assets:
         d = {c.key: getattr(a, c.key) for c in Asset.__table__.columns}
         d["created_at"] = a.created_at
         d["updated_at"] = a.updated_at
-        proj = projects.get(a.project_id)
+        proj_id = asset_project_map.get(a.id)
+        proj = projects.get(proj_id) if proj_id else None
         d["project_code"] = proj.project_code if proj else None
         d["project_name"] = proj.project_name if proj else None
         result.append(d)
@@ -80,8 +108,8 @@ def get_asset(db: Session, asset_id: int) -> Asset:
 
 def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     _require_inventory_edit(current_user)
-    _ensure_project_exists(db, payload.project_id)
-    _ensure_asset_name_unique(db, payload.project_id, payload.asset_name)
+    ensure_customer_exists(db, payload.customer_id)
+    _ensure_asset_name_unique(db, payload.customer_id, payload.asset_name)
 
     asset = Asset(**payload.model_dump())
     db.add(asset)
@@ -101,14 +129,14 @@ def update_asset(
     asset = get_asset(db, asset_id)
     changes = payload.model_dump(exclude_unset=True)
 
-    target_project_id = changes.get("project_id", asset.project_id)
+    target_customer_id = changes.get("customer_id", asset.customer_id)
     target_asset_name = changes.get("asset_name", asset.asset_name)
 
-    if "project_id" in changes:
-        _ensure_project_exists(db, target_project_id)
+    if "customer_id" in changes:
+        ensure_customer_exists(db, target_customer_id)
 
-    if target_project_id != asset.project_id or target_asset_name != asset.asset_name:
-        _ensure_asset_name_unique(db, target_project_id, target_asset_name, asset.id)
+    if target_customer_id != asset.customer_id or target_asset_name != asset.asset_name:
+        _ensure_asset_name_unique(db, target_customer_id, target_asset_name, asset.id)
 
     for field, value in changes.items():
         setattr(asset, field, value)
@@ -199,11 +227,6 @@ def delete_asset_contact(db: Session, asset_contact_id: int, current_user) -> No
 # ── Private helpers ──
 
 
-def _ensure_project_exists(db: Session, project_id: int) -> None:
-    if db.get(Project, project_id) is None:
-        raise NotFoundError("Project not found")
-
-
 def _ensure_asset_exists(db: Session, asset_id: int) -> None:
     if db.get(Asset, asset_id) is None:
         raise NotFoundError("Asset not found")
@@ -216,19 +239,19 @@ def _ensure_contact_exists(db: Session, contact_id: int) -> None:
 
 def _ensure_asset_name_unique(
     db: Session,
-    project_id: int,
+    customer_id: int,
     asset_name: str,
     asset_id: int | None = None,
 ) -> None:
     stmt = select(Asset).where(
-        Asset.project_id == project_id, Asset.asset_name == asset_name
+        Asset.customer_id == customer_id, Asset.asset_name == asset_name
     )
     existing = db.scalar(stmt)
     if existing is None:
         return
     if asset_id is not None and existing.id == asset_id:
         return
-    raise DuplicateError("Asset name already exists in the project")
+    raise DuplicateError("이 고객사에 동일한 자산명이 이미 존재합니다.")
 
 
 def _ensure_asset_contact_unique(

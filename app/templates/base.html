@@ -57,10 +57,18 @@
       </div>
     </div>
     {% endif %}
+    {% if "infra" in enabled_modules and mc == "infra" %}
+    <span class="topbar-sep"></span>
+    <div class="ctx-selector">
+      <label class="ctx-label">고객사</label>
+      <select id="ctx-customer"><option value="">선택</option></select>
+    </div>
+    <div class="ctx-selector">
+      <label class="ctx-label">프로젝트</label>
+      <select id="ctx-project"><option value="">전체</option></select>
+    </div>
+    {% endif %}
     <div class="topbar-right">
-      {% if "infra" in enabled_modules %}
-      <span id="pinned-project-badge" class="pinned-badge" style="display:none;" title="고정 프로젝트"></span>
-      {% endif %}
       <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
         <i data-lucide="sun" class="sun"></i>
         <i data-lucide="moon" class="moon"></i>
@@ -89,15 +97,15 @@
         {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
         {% if "infra" in enabled_modules and mc == "infra" %}
 
-        <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
-        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
-        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책 정의<small class="subnav-sub">전사 보안·운영 정책</small></span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용 현황<small class="subnav-sub">프로젝트별 정책 준수</small></span></a></li>
-        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판<small class="subnav-sub">프로젝트 현황 요약</small></span></a></li>
-
-        <li><a href="/inventory/assets"><i class="icon" data-lucide="search"></i><span>자산 검색<small class="subnav-sub">전체 프로젝트 자산 조회</small></span></a></li>
+        <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
+        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리</span></a></li>
+        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵</span></a></li>
+        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책정의</span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용현황</span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>담당자</span></a></li>
+        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
+        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판</span></a></li>
 
         {% endif %}
 
@@ -111,15 +119,15 @@
         {% endif %}
         {% if "infra" in enabled_modules and "accounting" not in enabled_modules %}
 
-        <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
-        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
-        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책 정의<small class="subnav-sub">전사 보안·운영 정책</small></span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용 현황<small class="subnav-sub">프로젝트별 정책 준수</small></span></a></li>
-        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판<small class="subnav-sub">프로젝트 현황 요약</small></span></a></li>
-
-        <li><a href="/inventory/assets"><i class="icon" data-lucide="search"></i><span>자산 검색<small class="subnav-sub">전체 프로젝트 자산 조회</small></span></a></li>
+        <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
+        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리</span></a></li>
+        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵</span></a></li>
+        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책정의</span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용현황</span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>담당자</span></a></li>
+        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
+        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판</span></a></li>
 
         {% endif %}
 
@@ -192,9 +200,9 @@
         brandEl.textContent = settings.org_name + ' ' + suffix;
       }
 
-      // Pin 프로젝트 뱃지 초기화 (infra 모듈 활성 시)
-      {% if "infra" in enabled_modules %}
-      if (me) refreshPinnedBadge();
+      // 고객사/프로젝트 셀렉터 초기화 (infra 모듈 활성 시)
+      {% if "infra" in enabled_modules and mc == "infra" %}
+      if (me) initContextSelectors();
       {% endif %}
 
       // 미제출 산출물 로그인 알림 (infra 모듈 활성 시, 세션당 1회)

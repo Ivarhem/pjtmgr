@@ -20,10 +20,11 @@ router = APIRouter(prefix="/api/v1/projects", tags=["infra-projects"])
 
 @router.get("", response_model=list[ProjectRead])
 def list_projects_endpoint(
+    customer_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[ProjectRead]:
-    return list_projects(db)
+    return list_projects(db, customer_id)
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)

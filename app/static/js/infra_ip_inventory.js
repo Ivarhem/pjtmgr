@@ -1,90 +1,32 @@
-/* ── IP 인벤토리 ── */
+/* ── IP 인벤토리 (좌우 분할, 고객사 중심) ── */
 
 const SUBNET_ROLE_MAP = {
-  service: "서비스",
-  management: "관리",
-  backup: "백업",
-  dmz: "DMZ",
-  other: "기타",
+  service: "서비스", management: "관리", backup: "백업", dmz: "DMZ", other: "기타",
 };
-
 const IP_TYPE_MAP = {
-  service: "서비스",
-  management: "관리",
-  backup: "백업",
-  vip: "VIP",
-  other: "기타",
+  service: "서비스", management: "관리", backup: "백업", vip: "VIP", other: "기타",
 };
 
-/* ── Subnet Grid ── */
-const subnetColDefs = [
-  { field: "name", headerName: "대역명", flex: 1, minWidth: 160, sort: "asc" },
-  { field: "subnet", headerName: "서브넷", width: 160 },
-  {
-    field: "role",
-    headerName: "역할",
-    width: 100,
-    valueFormatter: (p) => SUBNET_ROLE_MAP[p.value] || p.value,
-  },
-  { field: "vlan_id", headerName: "VLAN", width: 80 },
-  { field: "gateway", headerName: "게이트웨이", width: 140 },
-  { field: "region", headerName: "지역", width: 100 },
-  { field: "floor", headerName: "층", width: 70 },
-  { field: "counterpart", headerName: "상대국/기관", width: 160 },
-  { field: "allocation_type", headerName: "할당유형", width: 100 },
-  { field: "category", headerName: "분류", width: 100 },
-  { field: "zone", headerName: "존", width: 100 },
-  { field: "netmask", headerName: "넷마스크", width: 140 },
-  {
-    headerName: "",
-    width: 120,
-    cellRenderer: (params) => {
-      const span = document.createElement("span");
-      span.className = "gap-sm";
-      span.style.display = "inline-flex";
-      const btnEdit = document.createElement("button");
-      btnEdit.className = "btn btn-xs btn-secondary";
-      btnEdit.textContent = "수정";
-      btnEdit.addEventListener("click", () => openEditSubnet(params.data));
-      const btnDel = document.createElement("button");
-      btnDel.className = "btn btn-xs btn-danger";
-      btnDel.textContent = "삭제";
-      btnDel.addEventListener("click", () => deleteSubnet(params.data));
-      span.appendChild(btnEdit);
-      span.appendChild(btnDel);
-      return span;
-    },
-    sortable: false,
-    filter: false,
-  },
-];
+let ipGridApi;
+let _subnets = [];
+let _selectedSubnet = null;
 
-let subnetGridApi;
-
-/* ── IP Grid ── */
+/* ── IP Grid columns ── */
 const ipColDefs = [
   { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc" },
-  {
-    field: "ip_type",
-    headerName: "용도",
-    width: 100,
-    valueFormatter: (p) => IP_TYPE_MAP[p.value] || p.value,
-  },
+  { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_MAP[p.value] || p.value },
   { field: "interface_name", headerName: "인터페이스", width: 120 },
-  { field: "asset_id", headerName: "자산 ID", width: 90 },
-  { field: "ip_subnet_id", headerName: "대역 ID", width: 90 },
-  { field: "note", headerName: "비고", flex: 1, minWidth: 150 },
-  { field: "zone", headerName: "존", width: 100 },
-  { field: "service_name", headerName: "서비스명", width: 130 },
   { field: "hostname", headerName: "호스트명", width: 130 },
+  { field: "service_name", headerName: "서비스명", width: 130 },
+  { field: "zone", headerName: "존", width: 100 },
   { field: "vlan_id", headerName: "VLAN", width: 80 },
+  { field: "note", headerName: "비고", flex: 1, minWidth: 150 },
   {
-    headerName: "",
-    width: 120,
+    headerName: "", width: 120, sortable: false, filter: false,
     cellRenderer: (params) => {
-      const span = document.createElement("span");
-      span.className = "gap-sm";
-      span.style.display = "inline-flex";
+      const wrap = document.createElement("span");
+      wrap.className = "gap-sm";
+      wrap.style.display = "inline-flex";
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-xs btn-secondary";
       btnEdit.textContent = "수정";
@@ -93,64 +35,101 @@ const ipColDefs = [
       btnDel.className = "btn btn-xs btn-danger";
       btnDel.textContent = "삭제";
       btnDel.addEventListener("click", () => deleteIp(params.data));
-      span.appendChild(btnEdit);
-      span.appendChild(btnDel);
-      return span;
+      wrap.appendChild(btnEdit);
+      wrap.appendChild(btnDel);
+      return wrap;
     },
-    sortable: false,
-    filter: false,
   },
 ];
 
-let ipGridApi;
-
 /* ── Data Loading ── */
+
 async function loadSubnets() {
+  const cid = getCtxCustomerId();
+  if (!cid) { _subnets = []; renderSubnetList(); return; }
   try {
-    const data = await apiFetch("/api/v1/ip-subnets");
-    subnetGridApi.setGridOption("rowData", data);
-  } catch (err) {
-    showToast(err.message, "error");
-  }
+    _subnets = await apiFetch("/api/v1/ip-subnets?customer_id=" + cid);
+  } catch { _subnets = []; }
+  renderSubnetList();
 }
 
-async function loadIps() {
-  try {
-    const data = await apiFetch("/api/v1/asset-ips");
-    ipGridApi.setGridOption("rowData", data);
-  } catch (err) {
-    showToast(err.message, "error");
-  }
-}
+function renderSubnetList() {
+  const container = document.getElementById("subnet-list");
+  while (container.firstChild) container.removeChild(container.firstChild);
 
-function populateSelect(selectEl, items, textFn) {
-  while (selectEl.options.length > (selectEl.dataset.keepFirst ? 1 : 0)) {
-    selectEl.remove(selectEl.options.length - 1);
-  }
-  items.forEach((item) => {
-    const opt = document.createElement("option");
-    opt.value = item.id;
-    opt.textContent = textFn(item);
-    selectEl.appendChild(opt);
+  // "전체" 항목
+  const allItem = document.createElement("div");
+  allItem.className = "subnet-item" + (!_selectedSubnet ? " active" : "");
+  allItem.textContent = "전체 (" + _subnets.length + ")";
+  allItem.addEventListener("click", () => { _selectedSubnet = null; renderSubnetList(); showSubnetDetail(null); loadIps(); });
+  container.appendChild(allItem);
+
+  _subnets.forEach(s => {
+    const item = document.createElement("div");
+    item.className = "subnet-item" + (_selectedSubnet && _selectedSubnet.id === s.id ? " active" : "");
+    const name = document.createElement("div");
+    name.className = "subnet-item-name";
+    name.textContent = s.name;
+    const sub = document.createElement("div");
+    sub.className = "subnet-item-sub";
+    sub.textContent = s.subnet + (s.vlan_id ? " (VLAN " + s.vlan_id + ")" : "");
+    item.appendChild(name);
+    item.appendChild(sub);
+    item.addEventListener("click", () => { _selectedSubnet = s; renderSubnetList(); showSubnetDetail(s); loadIps(); });
+    container.appendChild(item);
   });
 }
 
-async function loadDropdowns() {
+function showSubnetDetail(subnet) {
+  const card = document.getElementById("subnet-detail-card");
+  if (!subnet) { card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  document.getElementById("subnet-detail-name").textContent = subnet.name + " (" + subnet.subnet + ")";
+
+  const fields = document.getElementById("subnet-detail-fields");
+  while (fields.firstChild) fields.removeChild(fields.firstChild);
+  const pairs = [
+    ["역할", SUBNET_ROLE_MAP[subnet.role] || subnet.role],
+    ["VLAN", subnet.vlan_id], ["게이트웨이", subnet.gateway],
+    ["지역", subnet.region], ["층", subnet.floor],
+    ["상대국", subnet.counterpart], ["존", subnet.zone],
+    ["넷마스크", subnet.netmask], ["할당유형", subnet.allocation_type],
+  ];
+  pairs.forEach(([label, val]) => {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = val || "—";
+    fields.appendChild(dt);
+    fields.appendChild(dd);
+  });
+}
+
+async function loadIps() {
+  const cid = getCtxCustomerId();
+  if (!cid) { ipGridApi.setGridOption("rowData", []); return; }
   try {
-    const [projects, assets, subnets] = await Promise.all([
-      apiFetch("/api/v1/projects"),
-      apiFetch("/api/v1/assets"),
-      apiFetch("/api/v1/ip-subnets"),
+    const data = await apiFetch("/api/v1/ip-inventory?customer_id=" + cid);
+    if (_selectedSubnet) {
+      ipGridApi.setGridOption("rowData", data.filter(ip => ip.ip_subnet_id === _selectedSubnet.id));
+    } else {
+      ipGridApi.setGridOption("rowData", data);
+    }
+  } catch (err) { showToast(err.message, "error"); }
+}
+
+async function loadDropdowns() {
+  const cid = getCtxCustomerId();
+  if (!cid) return;
+  try {
+    const [assets, subnets] = await Promise.all([
+      apiFetch("/api/v1/assets?customer_id=" + cid),
+      apiFetch("/api/v1/ip-subnets?customer_id=" + cid),
     ]);
-    populateSelect(
-      document.getElementById("subnet-project-id"),
-      projects,
-      (p) => p.project_code + " - " + p.project_name
-    );
 
     const assetSelect = document.getElementById("ip-asset-id");
     while (assetSelect.firstChild) assetSelect.removeChild(assetSelect.firstChild);
-    assets.forEach((a) => {
+    assets.forEach(a => {
       const opt = document.createElement("option");
       opt.value = a.id;
       opt.textContent = a.asset_name;
@@ -158,29 +137,17 @@ async function loadDropdowns() {
     });
 
     const subnetSelect = document.getElementById("ip-subnet-id");
-    // keep first "선택 안 함" option
     while (subnetSelect.options.length > 1) subnetSelect.remove(1);
-    subnets.forEach((s) => {
+    subnets.forEach(s => {
       const opt = document.createElement("option");
       opt.value = s.id;
       opt.textContent = s.name + " (" + s.subnet + ")";
       subnetSelect.appendChild(opt);
     });
-  } catch (err) {
-    showToast("드롭다운을 불러올 수 없습니다.", "error");
-  }
+  } catch { /* ignore */ }
 }
 
-function initGrids() {
-  subnetGridApi = agGrid.createGrid(document.getElementById("grid-subnets"), {
-    columnDefs: subnetColDefs,
-    rowData: [],
-    defaultColDef: { resizable: true, sortable: true, filter: true },
-    rowSelection: "single",
-    animateRows: true,
-    enableCellTextSelection: true,
-  });
-
+function initPage() {
   ipGridApi = agGrid.createGrid(document.getElementById("grid-ips"), {
     columnDefs: ipColDefs,
     rowData: [],
@@ -189,7 +156,6 @@ function initGrids() {
     animateRows: true,
     enableCellTextSelection: true,
   });
-
   loadSubnets();
   loadIps();
   loadDropdowns();
@@ -200,23 +166,11 @@ const subnetModal = document.getElementById("modal-subnet");
 
 function resetSubnetForm() {
   document.getElementById("subnet-id").value = "";
-  document.getElementById("subnet-name").value = "";
-  document.getElementById("subnet-cidr").value = "";
-  document.getElementById("subnet-role").value = "service";
-  document.getElementById("subnet-vlan-id").value = "";
-  document.getElementById("subnet-gateway").value = "";
-  document.getElementById("subnet-region").value = "";
-  document.getElementById("subnet-floor").value = "";
-  document.getElementById("subnet-counterpart").value = "";
-  document.getElementById("subnet-description").value = "";
-  document.getElementById("subnet-note").value = "";
-  document.getElementById("subnet-allocation-type").value = "";
-  document.getElementById("subnet-category").value = "";
-  document.getElementById("subnet-zone").value = "";
-  document.getElementById("subnet-netmask").value = "";
+  document.getElementById("form-subnet").reset();
 }
 
 function openCreateSubnet() {
+  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetSubnetForm();
   document.getElementById("modal-subnet-title").textContent = "대역 등록";
   document.getElementById("btn-save-subnet").textContent = "등록";
@@ -224,8 +178,9 @@ function openCreateSubnet() {
 }
 
 function openEditSubnet(subnet) {
+  if (!subnet) subnet = _selectedSubnet;
+  if (!subnet) return;
   document.getElementById("subnet-id").value = subnet.id;
-  document.getElementById("subnet-project-id").value = subnet.project_id;
   document.getElementById("subnet-name").value = subnet.name;
   document.getElementById("subnet-cidr").value = subnet.subnet;
   document.getElementById("subnet-role").value = subnet.role;
@@ -246,9 +201,11 @@ function openEditSubnet(subnet) {
 }
 
 async function saveSubnet() {
+  const cid = getCtxCustomerId();
+  if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const subnetId = document.getElementById("subnet-id").value;
   const payload = {
-    project_id: Number(document.getElementById("subnet-project-id").value),
+    customer_id: cid,
     name: document.getElementById("subnet-name").value,
     subnet: document.getElementById("subnet-cidr").value,
     role: document.getElementById("subnet-role").value,
@@ -267,18 +224,35 @@ async function saveSubnet() {
 
   try {
     if (subnetId) {
-      await apiFetch(`/api/v1/ip-subnets/${subnetId}`, { method: "PATCH", body: payload });
+      await apiFetch("/api/v1/ip-subnets/" + subnetId, { method: "PATCH", body: payload });
       showToast("대역이 수정되었습니다.");
     } else {
       await apiFetch("/api/v1/ip-subnets", { method: "POST", body: payload });
       showToast("대역이 등록되었습니다.");
     }
     subnetModal.close();
+    _selectedSubnet = null;
     loadSubnets();
     loadDropdowns();
-  } catch (err) {
-    showToast(err.message, "error");
-  }
+  } catch (err) { showToast(err.message, "error"); }
+}
+
+async function deleteSubnet(subnet) {
+  if (!subnet) subnet = _selectedSubnet;
+  if (!subnet) return;
+  confirmDelete(
+    '대역 "' + subnet.name + '"을(를) 삭제하시겠습니까?',
+    async () => {
+      try {
+        await apiFetch("/api/v1/ip-subnets/" + subnet.id, { method: "DELETE" });
+        showToast("대역이 삭제되었습니다.");
+        _selectedSubnet = null;
+        loadSubnets();
+        loadIps();
+        loadDropdowns();
+      } catch (err) { showToast(err.message, "error"); }
+    }
+  );
 }
 
 /* ── IP Modal ── */
@@ -286,23 +260,11 @@ const ipModal = document.getElementById("modal-ip");
 
 function resetIpForm() {
   document.getElementById("ip-id").value = "";
-  document.getElementById("ip-address").value = "";
-  document.getElementById("ip-type").value = "service";
-  document.getElementById("ip-interface").value = "";
-  document.getElementById("ip-subnet-id").value = "";
-  document.getElementById("ip-note").value = "";
-  document.getElementById("ip-zone").value = "";
-  document.getElementById("ip-service-name").value = "";
-  document.getElementById("ip-hostname").value = "";
-  document.getElementById("ip-vlan-id").value = "";
-  document.getElementById("ip-network").value = "";
-  document.getElementById("ip-netmask").value = "";
-  document.getElementById("ip-gateway").value = "";
-  document.getElementById("ip-dns-primary").value = "";
-  document.getElementById("ip-dns-secondary").value = "";
+  document.getElementById("form-ip").reset();
 }
 
 function openCreateIp() {
+  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetIpForm();
   document.getElementById("modal-ip-title").textContent = "IP 등록";
   document.getElementById("btn-save-ip").textContent = "등록";
@@ -355,7 +317,7 @@ async function saveIp() {
 
   try {
     if (ipId) {
-      await apiFetch(`/api/v1/asset-ips/${ipId}`, { method: "PATCH", body: payload });
+      await apiFetch("/api/v1/asset-ips/" + ipId, { method: "PATCH", body: payload });
       showToast("IP가 수정되었습니다.");
     } else {
       await apiFetch("/api/v1/asset-ips", { method: "POST", body: payload });
@@ -363,95 +325,36 @@ async function saveIp() {
     }
     ipModal.close();
     loadIps();
-  } catch (err) {
-    showToast(err.message, "error");
-  }
-}
-
-async function deleteSubnet(subnet) {
-  confirmDelete(
-    `대역 "${subnet.name}"을(를) 삭제하시겠습니까?`,
-    async () => {
-      try {
-        await apiFetch(`/api/v1/ip-subnets/${subnet.id}`, { method: "DELETE" });
-        showToast("대역이 삭제되었습니다.");
-        loadSubnets();
-        loadDropdowns();
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-    }
-  );
+  } catch (err) { showToast(err.message, "error"); }
 }
 
 async function deleteIp(ip) {
   confirmDelete(
-    `IP "${ip.ip_address}"을(를) 삭제하시겠습니까?`,
+    'IP "' + ip.ip_address + '"을(를) 삭제하시겠습니까?',
     async () => {
       try {
-        await apiFetch(`/api/v1/asset-ips/${ip.id}`, { method: "DELETE" });
+        await apiFetch("/api/v1/asset-ips/" + ip.id, { method: "DELETE" });
         showToast("IP가 삭제되었습니다.");
         loadIps();
-      } catch (err) {
-        showToast(err.message, "error");
-      }
+      } catch (err) { showToast(err.message, "error"); }
     }
   );
 }
 
 /* ── Events ── */
-document.addEventListener("DOMContentLoaded", initGrids);
+document.addEventListener("DOMContentLoaded", initPage);
 document.getElementById("btn-add-subnet").addEventListener("click", openCreateSubnet);
 document.getElementById("btn-cancel-subnet").addEventListener("click", () => subnetModal.close());
 document.getElementById("btn-save-subnet").addEventListener("click", saveSubnet);
 document.getElementById("btn-add-ip").addEventListener("click", openCreateIp);
 document.getElementById("btn-cancel-ip").addEventListener("click", () => ipModal.close());
 document.getElementById("btn-save-ip").addEventListener("click", saveIp);
+document.getElementById("btn-edit-subnet-detail").addEventListener("click", () => openEditSubnet());
+document.getElementById("btn-delete-subnet-detail").addEventListener("click", () => deleteSubnet());
 
-// ── IP대역 Import ──
-document.getElementById("btn-subnet-import-toggle")?.addEventListener("click", () => {
-  const panel = document.getElementById("subnet-import-panel");
-  panel.classList.toggle("hidden");
-  if (!panel.classList.contains("hidden")) _loadImportProjects("subnet-import-project");
+window.addEventListener("ctx-changed", () => {
+  _selectedSubnet = null;
+  loadSubnets();
+  loadIps();
+  loadDropdowns();
 });
-document.getElementById("btn-subnet-import-close")?.addEventListener("click", () => {
-  document.getElementById("subnet-import-panel").classList.add("hidden");
-});
-document.getElementById("btn-subnet-import-run")?.addEventListener("click", async () => {
-  const projectId = document.getElementById("subnet-import-project").value;
-  const file = document.getElementById("subnet-import-file").files[0];
-  if (!projectId) { showToast("프로젝트를 선택하세요.", "warning"); return; }
-  if (!file) { showToast("파일을 선택하세요.", "warning"); return; }
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("project_id", projectId);
-  fd.append("domain", "subnet");
-  fd.append("on_duplicate", document.getElementById("subnet-import-dup").value);
-  const btn = document.getElementById("btn-subnet-import-run");
-  btn.disabled = true; btn.textContent = "Import 중...";
-  const r = document.getElementById("subnet-import-result");
-  r.textContent = "";
-  try {
-    const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) { r.textContent = "오류: " + (data.detail || "실패"); r.style.color = "var(--danger-color)"; }
-    else { r.textContent = "생성 " + data.created + "건, 건너뜀 " + data.skipped + "건"; r.style.color = "var(--success, #22c55e)"; loadSubnets(); }
-  } catch (e) { r.textContent = "실패: " + e.message; r.style.color = "var(--danger-color)"; }
-  finally { btn.disabled = false; btn.textContent = "Import"; }
-});
-
-async function _loadImportProjects(selectId) {
-  const sel = document.getElementById(selectId);
-  if (sel.options.length > 1) return;
-  try {
-    const projects = await apiFetch("/api/v1/projects");
-    const pinnedId = await getPinnedProjectId();
-    projects.forEach(p => {
-      const o = document.createElement("option");
-      o.value = p.id; o.textContent = p.project_code + " — " + p.project_name;
-      if (pinnedId && String(p.id) === pinnedId) o.selected = true;
-      sel.appendChild(o);
-    });
-  } catch (e) { showToast("프로젝트 로드 실패", "error"); }
-}
-

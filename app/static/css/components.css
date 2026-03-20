@@ -453,3 +453,39 @@ body.dark-mode .toast { box-shadow: var(--modal-shadow); }
 .pill-tab-nav:hover { background: var(--secondary-color); }
 .pill-tab-multi-toggle { margin-right: 8px; font-size: 12px; border-style: dashed; }
 .pill-tab-multi-toggle.selected { border-style: solid; }
+
+/* ── Detail panel (하단 상세) ── */
+.detail-panel { border-top: 2px solid var(--primary-color); padding: 16px; background: var(--surface-color); border-radius: 0 0 var(--control-radius) var(--control-radius); margin-top: -1px; }
+.detail-panel.hidden { display: none; }
+.detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.detail-title { font-size: 15px; font-weight: 600; }
+.detail-header-actions { display: flex; gap: 6px; }
+.detail-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
+.detail-tabs .tab-btn { padding: 6px 14px; font-size: 12px; border: none; background: none; cursor: pointer; color: var(--text-color-secondary); border-bottom: 2px solid transparent; }
+.detail-tabs .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
+.detail-tabs .tab-btn:hover { color: var(--text-color); }
+.detail-body { min-height: 80px; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; }
+.detail-grid dt { font-size: 11px; color: var(--text-color-tertiary); margin: 0; padding: 2px 0 0; }
+.detail-grid dd { font-size: 13px; margin: 0 0 6px; padding: 0; }
+
+/* ── Split layout (좌우 분할) ── */
+.split-layout { display: flex; gap: 16px; min-height: 500px; }
+.split-left { width: 280px; flex-shrink: 0; }
+.split-right { flex: 1; min-width: 0; }
+
+/* ── Panel header ── */
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.panel-header h3 { font-size: 14px; font-weight: 600; margin: 0; }
+
+/* ── Subnet list (left panel) ── */
+.subnet-list { display: flex; flex-direction: column; gap: 2px; max-height: 500px; overflow-y: auto; }
+.subnet-item { padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid transparent; }
+.subnet-item:hover { background: var(--hover-bg); }
+.subnet-item.active { background: var(--primary-soft-bg); border-color: var(--primary-color); font-weight: 600; }
+.subnet-item-name { font-weight: 500; }
+.subnet-item-sub { font-size: 11px; color: var(--text-color-tertiary); margin-top: 2px; }
+
+/* ── Page header actions ── */
+.page-header-actions { display: flex; align-items: center; gap: 8px; }
+.chk-inline { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; white-space: nowrap; }

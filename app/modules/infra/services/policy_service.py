@@ -14,7 +14,6 @@ from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.policy_assignment import PolicyAssignment
 from app.modules.infra.models.policy_definition import PolicyDefinition
-from app.modules.infra.models.project import Project
 from app.modules.infra.schemas.policy_assignment import (
     PolicyAssignmentCreate,
     PolicyAssignmentUpdate,
@@ -22,6 +21,10 @@ from app.modules.infra.schemas.policy_assignment import (
 from app.modules.infra.schemas.policy_definition import (
     PolicyDefinitionCreate,
     PolicyDefinitionUpdate,
+)
+from app.modules.infra.services._helpers import (
+    ensure_customer_exists,
+    get_project_asset_ids,
 )
 
 
@@ -105,15 +108,19 @@ def delete_policy(db: Session, policy_id: int, current_user) -> None:
 # ── PolicyAssignment ──
 
 
-def list_assignments(db: Session, project_id: int) -> list[PolicyAssignment]:
-    _ensure_project_exists(db, project_id)
-    return list(
-        db.scalars(
-            select(PolicyAssignment)
-            .where(PolicyAssignment.project_id == project_id)
-            .order_by(PolicyAssignment.id.asc())
-        )
+def list_assignments(
+    db: Session, customer_id: int, project_id: int | None = None
+) -> list[PolicyAssignment]:
+    ensure_customer_exists(db, customer_id)
+    stmt = (
+        select(PolicyAssignment)
+        .where(PolicyAssignment.customer_id == customer_id)
+        .order_by(PolicyAssignment.id.asc())
     )
+    if project_id is not None:
+        asset_ids = get_project_asset_ids(db, project_id)
+        stmt = stmt.where(PolicyAssignment.asset_id.in_(asset_ids))
+    return list(db.scalars(stmt))
 
 
 def get_assignment(db: Session, assignment_id: int) -> PolicyAssignment:
@@ -127,14 +134,14 @@ def create_assignment(
     db: Session, payload: PolicyAssignmentCreate, current_user
 ) -> PolicyAssignment:
     _require_inventory_edit(current_user)
-    _ensure_project_exists(db, payload.project_id)
+    ensure_customer_exists(db, payload.customer_id)
     _ensure_policy_exists(db, payload.policy_definition_id)
 
     if payload.asset_id is not None:
-        _ensure_asset_belongs_to_project(db, payload.asset_id, payload.project_id)
+        _ensure_asset_belongs_to_customer(db, payload.asset_id, payload.customer_id)
 
     _ensure_assignment_unique(
-        db, payload.project_id, payload.asset_id, payload.policy_definition_id
+        db, payload.customer_id, payload.asset_id, payload.policy_definition_id
     )
 
     assignment = PolicyAssignment(**payload.model_dump())
@@ -169,11 +176,6 @@ def delete_assignment(db: Session, assignment_id: int, current_user) -> None:
 # ── Private helpers ──
 
 
-def _ensure_project_exists(db: Session, project_id: int) -> None:
-    if db.get(Project, project_id) is None:
-        raise NotFoundError("Project not found")
-
-
 def _ensure_policy_exists(db: Session, policy_id: int) -> None:
     if db.get(PolicyDefinition, policy_id) is None:
         raise NotFoundError("Policy definition not found")
@@ -193,25 +195,25 @@ def _ensure_policy_code_unique(
     raise DuplicateError("Policy code already exists")
 
 
-def _ensure_asset_belongs_to_project(
-    db: Session, asset_id: int, project_id: int
+def _ensure_asset_belongs_to_customer(
+    db: Session, asset_id: int, customer_id: int
 ) -> None:
     asset = db.get(Asset, asset_id)
     if asset is None:
         raise NotFoundError("Asset not found")
-    if asset.project_id != project_id:
-        raise BusinessRuleError("Asset does not belong to this project")
+    if asset.customer_id != customer_id:
+        raise BusinessRuleError("Asset does not belong to this customer")
 
 
 def _ensure_assignment_unique(
     db: Session,
-    project_id: int,
+    customer_id: int,
     asset_id: int | None,
     policy_definition_id: int,
     assignment_id: int | None = None,
 ) -> None:
     stmt = select(PolicyAssignment).where(
-        PolicyAssignment.project_id == project_id,
+        PolicyAssignment.customer_id == customer_id,
         PolicyAssignment.asset_id == asset_id,
         PolicyAssignment.policy_definition_id == policy_definition_id,
     )

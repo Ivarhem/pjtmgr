@@ -63,28 +63,6 @@ def delete_project_asset(db: Session, link_id: int, current_user) -> None:
     db.commit()
 
 
-def backfill_from_legacy(db: Session) -> int:
-    """기존 Asset.project_id → project_assets 백필. 이미 존재하는 매핑은 건너뛰기."""
-    assets = db.scalars(
-        select(Asset).where(Asset.project_id.isnot(None))
-    )
-    created = 0
-    for asset in assets:
-        existing = db.scalar(
-            select(ProjectAsset).where(
-                ProjectAsset.project_id == asset.project_id,
-                ProjectAsset.asset_id == asset.id,
-            )
-        )
-        if existing:
-            continue
-        db.add(ProjectAsset(project_id=asset.project_id, asset_id=asset.id))
-        created += 1
-    if created:
-        db.commit()
-    return created
-
-
 # ── Private ──
 
 

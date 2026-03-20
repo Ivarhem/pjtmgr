@@ -19,40 +19,33 @@ from app.modules.infra.services.network_service import (
 )
 
 
-router = APIRouter(tags=["infra-port-maps"])
+router = APIRouter(prefix="/api/v1/port-maps", tags=["infra-port-maps"])
 
 
-@router.get(
-    "/api/v1/projects/{project_id}/port-maps",
-    response_model=list[PortMapRead],
-)
+@router.get("", response_model=list[PortMapRead])
 def list_port_maps_endpoint(
-    project_id: int,
+    customer_id: int,
+    project_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[PortMapRead]:
-    return list_port_maps(db, project_id)
+    return list_port_maps(db, customer_id, project_id)
 
 
 @router.post(
-    "/api/v1/projects/{project_id}/port-maps",
+    "",
     response_model=PortMapRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_port_map_endpoint(
-    project_id: int,
     payload: PortMapCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> PortMapRead:
-    payload.project_id = project_id
     return create_port_map(db, payload, current_user)
 
 
-@router.get(
-    "/api/v1/port-maps/{port_map_id}",
-    response_model=PortMapRead,
-)
+@router.get("/{port_map_id}", response_model=PortMapRead)
 def get_port_map_endpoint(
     port_map_id: int,
     db: Session = Depends(get_db),
@@ -61,10 +54,7 @@ def get_port_map_endpoint(
     return get_port_map(db, port_map_id)
 
 
-@router.patch(
-    "/api/v1/port-maps/{port_map_id}",
-    response_model=PortMapRead,
-)
+@router.patch("/{port_map_id}", response_model=PortMapRead)
 def update_port_map_endpoint(
     port_map_id: int,
     payload: PortMapUpdate,
@@ -74,10 +64,7 @@ def update_port_map_endpoint(
     return update_port_map(db, port_map_id, payload, current_user)
 
 
-@router.delete(
-    "/api/v1/port-maps/{port_map_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@router.delete("/{port_map_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_port_map_endpoint(
     port_map_id: int,
     db: Session = Depends(get_db),

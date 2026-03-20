@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
@@ -15,21 +15,24 @@ from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_ip import AssetIP
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
-from app.modules.infra.models.project import Project
 from app.modules.infra.schemas.asset_ip import AssetIPCreate, AssetIPUpdate
 from app.modules.infra.schemas.ip_subnet import IpSubnetCreate, IpSubnetUpdate
 from app.modules.infra.schemas.port_map import PortMapCreate, PortMapUpdate
+from app.modules.infra.services._helpers import (
+    ensure_customer_exists,
+    get_project_asset_ids,
+)
 
 
 # ── IpSubnet ──
 
 
-def list_subnets(db: Session, project_id: int) -> list[IpSubnet]:
-    _ensure_project_exists(db, project_id)
+def list_subnets(db: Session, customer_id: int) -> list[IpSubnet]:
+    ensure_customer_exists(db, customer_id)
     return list(
         db.scalars(
             select(IpSubnet)
-            .where(IpSubnet.project_id == project_id)
+            .where(IpSubnet.customer_id == customer_id)
             .order_by(IpSubnet.name.asc())
         )
     )
@@ -44,7 +47,7 @@ def get_subnet(db: Session, subnet_id: int) -> IpSubnet:
 
 def create_subnet(db: Session, payload: IpSubnetCreate, current_user) -> IpSubnet:
     _require_inventory_edit(current_user)
-    _ensure_project_exists(db, payload.project_id)
+    ensure_customer_exists(db, payload.customer_id)
 
     subnet = IpSubnet(**payload.model_dump())
     db.add(subnet)
@@ -108,14 +111,14 @@ def list_asset_ips(db: Session, asset_id: int) -> list[AssetIP]:
     )
 
 
-def list_project_ips(db: Session, project_id: int) -> list[AssetIP]:
-    """프로젝트 전체 IP 인벤토리 조회."""
-    _ensure_project_exists(db, project_id)
+def list_customer_ips(db: Session, customer_id: int) -> list[AssetIP]:
+    """고객사 전체 IP 인벤토리 조회."""
+    ensure_customer_exists(db, customer_id)
     return list(
         db.scalars(
             select(AssetIP)
             .join(Asset, AssetIP.asset_id == Asset.id)
-            .where(Asset.project_id == project_id)
+            .where(Asset.customer_id == customer_id)
             .order_by(AssetIP.ip_address.asc())
         )
     )
@@ -135,7 +138,7 @@ def create_asset_ip(db: Session, payload: AssetIPCreate, current_user) -> AssetI
     if payload.ip_subnet_id is not None:
         _ensure_subnet_exists(db, payload.ip_subnet_id)
 
-    _ensure_ip_unique_in_project(db, asset.project_id, payload.ip_address)
+    _ensure_ip_unique_in_customer(db, asset.customer_id, payload.ip_address)
 
     asset_ip = AssetIP(**payload.model_dump())
     db.add(asset_ip)
@@ -156,7 +159,7 @@ def update_asset_ip(
 
     if "ip_address" in changes and changes["ip_address"] != asset_ip.ip_address:
         asset = db.get(Asset, asset_ip.asset_id)
-        _ensure_ip_unique_in_project(db, asset.project_id, changes["ip_address"], ip_id)
+        _ensure_ip_unique_in_customer(db, asset.customer_id, changes["ip_address"], ip_id)
 
     for field, value in changes.items():
         setattr(asset_ip, field, value)
@@ -176,15 +179,21 @@ def delete_asset_ip(db: Session, ip_id: int, current_user) -> None:
 # ── PortMap ──
 
 
-def list_port_maps(db: Session, project_id: int) -> list[PortMap]:
-    _ensure_project_exists(db, project_id)
-    return list(
-        db.scalars(
-            select(PortMap)
-            .where(PortMap.project_id == project_id)
-            .order_by(PortMap.id.asc())
+def list_port_maps(
+    db: Session, customer_id: int, project_id: int | None = None
+) -> list[PortMap]:
+    ensure_customer_exists(db, customer_id)
+    stmt = select(PortMap).where(PortMap.customer_id == customer_id)
+    if project_id is not None:
+        asset_ids = get_project_asset_ids(db, project_id)
+        stmt = stmt.where(
+            or_(
+                PortMap.src_asset_id.in_(asset_ids),
+                PortMap.dst_asset_id.in_(asset_ids),
+                and_(PortMap.src_asset_id.is_(None), PortMap.dst_asset_id.is_(None)),
+            )
         )
-    )
+    return list(db.scalars(stmt.order_by(PortMap.id.asc())))
 
 
 def get_port_map(db: Session, port_map_id: int) -> PortMap:
@@ -196,12 +205,12 @@ def get_port_map(db: Session, port_map_id: int) -> PortMap:
 
 def create_port_map(db: Session, payload: PortMapCreate, current_user) -> PortMap:
     _require_inventory_edit(current_user)
-    _ensure_project_exists(db, payload.project_id)
+    ensure_customer_exists(db, payload.customer_id)
 
     if payload.src_asset_id is not None:
-        _ensure_asset_belongs_to_project(db, payload.src_asset_id, payload.project_id)
+        _ensure_asset_belongs_to_customer(db, payload.src_asset_id, payload.customer_id)
     if payload.dst_asset_id is not None:
-        _ensure_asset_belongs_to_project(db, payload.dst_asset_id, payload.project_id)
+        _ensure_asset_belongs_to_customer(db, payload.dst_asset_id, payload.customer_id)
 
     port_map = PortMap(**payload.model_dump())
     db.add(port_map)
@@ -222,12 +231,12 @@ def update_port_map(
     changes = payload.model_dump(exclude_unset=True)
 
     if "src_asset_id" in changes and changes["src_asset_id"] is not None:
-        _ensure_asset_belongs_to_project(
-            db, changes["src_asset_id"], port_map.project_id
+        _ensure_asset_belongs_to_customer(
+            db, changes["src_asset_id"], port_map.customer_id
         )
     if "dst_asset_id" in changes and changes["dst_asset_id"] is not None:
-        _ensure_asset_belongs_to_project(
-            db, changes["dst_asset_id"], port_map.project_id
+        _ensure_asset_belongs_to_customer(
+            db, changes["dst_asset_id"], port_map.customer_id
         )
 
     for field, value in changes.items():
@@ -256,11 +265,6 @@ def delete_port_map(db: Session, port_map_id: int, current_user) -> None:
 # ── Private helpers ──
 
 
-def _ensure_project_exists(db: Session, project_id: int) -> None:
-    if db.get(Project, project_id) is None:
-        raise NotFoundError("Project not found")
-
-
 def _ensure_asset_exists(db: Session, asset_id: int) -> Asset:
     asset = db.get(Asset, asset_id)
     if asset is None:
@@ -273,29 +277,29 @@ def _ensure_subnet_exists(db: Session, subnet_id: int) -> None:
         raise NotFoundError("IP subnet not found")
 
 
-def _ensure_asset_belongs_to_project(
-    db: Session, asset_id: int, project_id: int
+def _ensure_asset_belongs_to_customer(
+    db: Session, asset_id: int, customer_id: int
 ) -> None:
     asset = _ensure_asset_exists(db, asset_id)
-    if asset.project_id != project_id:
-        raise BusinessRuleError("Asset does not belong to this project")
+    if asset.customer_id != customer_id:
+        raise BusinessRuleError("Asset does not belong to this customer")
 
 
-def _ensure_ip_unique_in_project(
-    db: Session, project_id: int, ip_address: str, ip_id: int | None = None
+def _ensure_ip_unique_in_customer(
+    db: Session, customer_id: int, ip_address: str, ip_id: int | None = None
 ) -> None:
-    """프로젝트 범위 내 IP 중복 검증."""
+    """고객사 범위 내 IP 중복 검증."""
     stmt = (
         select(AssetIP)
         .join(Asset, AssetIP.asset_id == Asset.id)
-        .where(Asset.project_id == project_id, AssetIP.ip_address == ip_address)
+        .where(Asset.customer_id == customer_id, AssetIP.ip_address == ip_address)
     )
     existing = db.scalar(stmt)
     if existing is None:
         return
     if ip_id is not None and existing.id == ip_id:
         return
-    raise DuplicateError("IP address already exists in this project")
+    raise DuplicateError("이 고객사에 동일한 IP가 이미 존재합니다.")
 
 
 def _require_inventory_edit(current_user) -> None:

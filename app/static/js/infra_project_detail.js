@@ -1,6 +1,15 @@
 /* ── 프로젝트 상세 (단계 + 산출물) ── */
 
 const PROJECT_ID = window.__PROJECT_ID__;
+let _PROJECT_CUSTOMER_ID = null;
+
+// Resolve customer_id from the project
+(async () => {
+  try {
+    const proj = await apiFetch('/api/v1/projects/' + PROJECT_ID);
+    _PROJECT_CUSTOMER_ID = proj.customer_id;
+  } catch { /* fallback in individual calls */ }
+})();
 
 /* ── Tab switching + lazy-load ── */
 const _tabLoaded = {};
@@ -219,7 +228,7 @@ async function loadDeliverables() {
 /* ── 요약 카드 ── */
 async function loadSummaryCards(projectId) {
   try {
-    const assets = await apiFetch(`/api/v1/assets?project_id=${projectId}`);
+    const assets = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${projectId}`);
     document.getElementById('card-asset-count').textContent =
       Array.isArray(assets) ? `${assets.length} 대` : '-';
   } catch (e) {
@@ -503,7 +512,7 @@ function initAssetsTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/assets?project_id=${PROJECT_ID}`);
+        const data = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -571,7 +580,7 @@ function initRelationsTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/asset-relations`);
+        const data = await apiFetch(`/api/v1/asset-relations?customer_id=${_PROJECT_CUSTOMER_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -588,7 +597,7 @@ function initRelationsTab() {
 
 async function loadRelationAssets() {
   try {
-    _relationAssetsCache = await apiFetch(`/api/v1/assets?project_id=${PROJECT_ID}`);
+    _relationAssetsCache = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
   } catch (err) { _relationAssetsCache = []; }
 }
 
@@ -676,7 +685,7 @@ async function deleteRelation(relId) {
 
 async function refreshRelationsGrid() {
   try {
-    const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/asset-relations`);
+    const data = await apiFetch(`/api/v1/asset-relations?customer_id=${_PROJECT_CUSTOMER_ID}`);
     _relationsGridApi.setGridOption("rowData", data);
   } catch (err) { showToast(err.message, "error"); }
 }
@@ -705,7 +714,7 @@ function initIpTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/ip-subnets`);
+        const data = await apiFetch(`/api/v1/ip-subnets?customer_id=${_PROJECT_CUSTOMER_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -731,7 +740,7 @@ function initIpTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/ip-inventory`);
+        const data = await apiFetch(`/api/v1/ip-inventory?customer_id=${_PROJECT_CUSTOMER_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -774,7 +783,7 @@ function initPortmapTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/port-maps`);
+        const data = await apiFetch(`/api/v1/port-maps?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -810,7 +819,7 @@ function initPolicyTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/projects/${PROJECT_ID}/policy-assignments`);
+        const data = await apiFetch(`/api/v1/policy-assignments?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -841,7 +850,7 @@ function initContactsTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/assets?project_id=${PROJECT_ID}`);
+        const data = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },

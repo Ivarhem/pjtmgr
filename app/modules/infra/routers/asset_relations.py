@@ -15,25 +15,18 @@ from app.modules.infra.services import asset_relation_service as svc
 router = APIRouter(tags=["infra-asset-relations"])
 
 
-@router.get(
-    "/api/v1/projects/{project_id}/asset-relations",
-    response_model=list[AssetRelationRead],
-)
-def list_project_asset_relations(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
-) -> list[AssetRelationRead]:
-    return svc.list_by_project(db, project_id)
-
-
 @router.get("/api/v1/asset-relations", response_model=list[AssetRelationRead])
 def list_asset_relations(
-    asset_id: int,
+    customer_id: int | None = None,
+    asset_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRelationRead]:
-    return svc.list_by_asset(db, asset_id)
+    if asset_id is not None:
+        return svc.list_by_asset(db, asset_id)
+    if customer_id is not None:
+        return svc.list_by_customer(db, customer_id)
+    return []
 
 
 @router.post("/api/v1/asset-relations", response_model=AssetRelationRead, status_code=status.HTTP_201_CREATED)

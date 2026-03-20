@@ -229,35 +229,21 @@ body.mobile-nav-open .mobile-nav-toggle .icon-close { display: block; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
 .topbar-user { font-size: 13px; color: var(--text-color-secondary); }
 
-/* Pinned project badge (topbar) */
-.pinned-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--primary-color, #3b82f6);
-  background: var(--bg-color, #fff);
-  border: 1px solid var(--primary-color, #3b82f6);
-  border-radius: 1rem;
+/* Context selector (topbar: 고객사/프로젝트) */
+.topbar-sep { width: 1px; height: 20px; background: var(--border-color); margin: 0 4px; flex-shrink: 0; }
+.ctx-selector { display: flex; align-items: center; gap: 4px; }
+.ctx-label { font-size: 10px; color: var(--text-color-tertiary); white-space: nowrap; }
+.ctx-selector select {
+  font-size: 12px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--surface-color);
+  color: var(--text-color);
+  max-width: 200px;
   cursor: pointer;
-  white-space: nowrap;
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background 0.2s;
 }
-.pinned-badge:hover {
-  background: var(--primary-color, #3b82f6);
-  color: #fff;
-}
-body.dark-mode .pinned-badge {
-  background: var(--bg-color, #1e293b);
-}
-body.dark-mode .pinned-badge:hover {
-  background: var(--primary-color, #3b82f6);
-}
+.ctx-selector select:focus { outline: none; border-color: var(--primary-color); }
 
 .btn-logout {
   background: none;

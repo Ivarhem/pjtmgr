@@ -19,40 +19,33 @@ from app.modules.infra.services.policy_service import (
 )
 
 
-router = APIRouter(tags=["infra-policy-assignments"])
+router = APIRouter(prefix="/api/v1/policy-assignments", tags=["infra-policy-assignments"])
 
 
-@router.get(
-    "/api/v1/projects/{project_id}/policy-assignments",
-    response_model=list[PolicyAssignmentRead],
-)
+@router.get("", response_model=list[PolicyAssignmentRead])
 def list_assignments_endpoint(
-    project_id: int,
+    customer_id: int,
+    project_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[PolicyAssignmentRead]:
-    return list_assignments(db, project_id)
+    return list_assignments(db, customer_id, project_id)
 
 
 @router.post(
-    "/api/v1/projects/{project_id}/policy-assignments",
+    "",
     response_model=PolicyAssignmentRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_assignment_endpoint(
-    project_id: int,
     payload: PolicyAssignmentCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> PolicyAssignmentRead:
-    payload.project_id = project_id
     return create_assignment(db, payload, current_user)
 
 
-@router.get(
-    "/api/v1/policy-assignments/{assignment_id}",
-    response_model=PolicyAssignmentRead,
-)
+@router.get("/{assignment_id}", response_model=PolicyAssignmentRead)
 def get_assignment_endpoint(
     assignment_id: int,
     db: Session = Depends(get_db),
@@ -61,10 +54,7 @@ def get_assignment_endpoint(
     return get_assignment(db, assignment_id)
 
 
-@router.patch(
-    "/api/v1/policy-assignments/{assignment_id}",
-    response_model=PolicyAssignmentRead,
-)
+@router.patch("/{assignment_id}", response_model=PolicyAssignmentRead)
 def update_assignment_endpoint(
     assignment_id: int,
     payload: PolicyAssignmentUpdate,
@@ -74,10 +64,7 @@ def update_assignment_endpoint(
     return update_assignment(db, assignment_id, payload, current_user)
 
 
-@router.delete(
-    "/api/v1/policy-assignments/{assignment_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
+@router.delete("/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_assignment_endpoint(
     assignment_id: int,
     db: Session = Depends(get_db),

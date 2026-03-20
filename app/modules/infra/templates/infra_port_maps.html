@@ -13,12 +13,7 @@
 {% block content %}
 <div class="page-header">
   <h1>케이블 배선도</h1>
-  <div style="display:flex; align-items:center; gap:12px;">
-    <select id="filter-project" style="min-width:220px; padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--control-radius); font-size:var(--font-size-sm);">
-      <option value="">프로젝트 선택</option>
-    </select>
-    <a href="/api/v1/infra-excel/template/portmap" class="btn btn-secondary">양식 다운로드</a>
-    <button class="btn btn-secondary" id="btn-portmap-import-toggle">Excel Import</button>
+  <div class="page-header-actions">
     <button class="btn btn-primary" id="btn-add-portmap">배선 등록</button>
   </div>
 </div>
@@ -48,10 +43,6 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">공통 정보</legend>
       <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
-        <label>
-          프로젝트
-          <select id="portmap-project-id" required></select>
-        </label>
         <label>
           순번
           <input type="number" id="portmap-seq" placeholder="1">

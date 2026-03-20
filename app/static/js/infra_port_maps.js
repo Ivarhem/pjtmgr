@@ -1,10 +1,7 @@
-/* ── 케이블 배선도 (Port Maps) ── */
+/* ── 케이블 배선도 (Port Maps, 고객사 중심) ── */
 
 const PORTMAP_STATUS_MAP = {
-  required: "필요",
-  open: "오픈",
-  closed: "차단",
-  pending: "대기",
+  required: "필요", open: "오픈", closed: "차단", pending: "대기",
 };
 
 const columnDefs = [
@@ -21,147 +18,76 @@ const columnDefs = [
   { field: "cable_speed", headerName: "속도", width: 80 },
   { field: "purpose", headerName: "용도", flex: 1, minWidth: 120 },
   {
-    field: "status",
-    headerName: "상태",
-    width: 80,
+    field: "status", headerName: "상태", width: 80,
     cellRenderer: (params) => {
-      const label = PORTMAP_STATUS_MAP[params.value] || params.value;
       const span = document.createElement("span");
       span.className = "badge badge-" + params.value;
-      span.textContent = label;
+      span.textContent = PORTMAP_STATUS_MAP[params.value] || params.value;
       return span;
     },
   },
   {
-    headerName: "",
-    width: 120,
+    headerName: "", width: 120, sortable: false, filter: false,
     cellRenderer: (params) => {
       const wrap = document.createElement("span");
-      wrap.className = "gap-sm";
-      wrap.style.display = "inline-flex";
+      wrap.className = "gap-sm"; wrap.style.display = "inline-flex";
       const btnEdit = document.createElement("button");
-      btnEdit.className = "btn btn-xs btn-secondary";
-      btnEdit.textContent = "수정";
+      btnEdit.className = "btn btn-xs btn-secondary"; btnEdit.textContent = "수정";
       btnEdit.addEventListener("click", () => openEditModal(params.data));
       const btnDel = document.createElement("button");
-      btnDel.className = "btn btn-xs btn-danger";
-      btnDel.textContent = "삭제";
+      btnDel.className = "btn btn-xs btn-danger"; btnDel.textContent = "삭제";
       btnDel.addEventListener("click", () => deletePortMap(params.data));
-      wrap.appendChild(btnEdit);
-      wrap.appendChild(btnDel);
+      wrap.appendChild(btnEdit); wrap.appendChild(btnDel);
       return wrap;
     },
-    sortable: false,
-    filter: false,
   },
 ];
 
 let gridApi;
-let currentProjectId = null;
 
 /* ── Data Loading ── */
 
 async function loadPortMaps() {
-  if (!currentProjectId) {
-    gridApi.setGridOption("rowData", []);
-    return;
-  }
+  const cid = getCtxCustomerId();
+  if (!cid) { gridApi.setGridOption("rowData", []); return; }
+  let url = "/api/v1/port-maps?customer_id=" + cid;
+  const pid = getCtxProjectId();
+  if (pid) url += "&project_id=" + pid;
   try {
-    const data = await apiFetch(`/api/v1/projects/${currentProjectId}/port-maps`);
+    const data = await apiFetch(url);
     gridApi.setGridOption("rowData", data);
-  } catch (err) {
-    showToast(err.message, "error");
-  }
-}
-
-async function loadProjects() {
-  try {
-    const projects = await apiFetch("/api/v1/projects");
-    const filterSelect = document.getElementById("filter-project");
-    const modalSelect = document.getElementById("portmap-project-id");
-
-    // Clear existing options (keep placeholder for filter)
-    while (filterSelect.options.length > 1) filterSelect.remove(1);
-    while (modalSelect.firstChild) modalSelect.removeChild(modalSelect.firstChild);
-
-    projects.forEach((p) => {
-      const text = p.project_code + " - " + p.project_name;
-
-      const opt1 = document.createElement("option");
-      opt1.value = p.id;
-      opt1.textContent = text;
-      filterSelect.appendChild(opt1);
-
-      const opt2 = document.createElement("option");
-      opt2.value = p.id;
-      opt2.textContent = text;
-      modalSelect.appendChild(opt2);
-    });
-
-    // Pin된 프로젝트 또는 첫 번째 프로젝트 자동 선택
-    const pinnedId = await getPinnedProjectId();
-    const targetId = pinnedId && projects.some(p => String(p.id) === pinnedId)
-      ? pinnedId
-      : (projects.length > 0 ? String(projects[0].id) : null);
-    if (targetId) {
-      filterSelect.value = targetId;
-      modalSelect.value = targetId;
-      currentProjectId = targetId;
-      loadPortMaps();
-    }
-  } catch (err) {
-    showToast("프로젝트를 불러올 수 없습니다.", "error");
-  }
+  } catch (err) { showToast(err.message, "error"); }
 }
 
 function initGrid() {
   gridApi = agGrid.createGrid(document.getElementById("grid-portmaps"), {
-    columnDefs,
-    rowData: [],
+    columnDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
-    rowSelection: "single",
-    animateRows: true,
-    enableCellTextSelection: true,
+    rowSelection: "single", animateRows: true, enableCellTextSelection: true,
   });
-  loadProjects();
+  loadPortMaps();
 }
 
 /* ── Field Helpers ── */
-
-// All text/number input fields in the modal (id -> payload key)
 const TEXT_FIELDS = [
   ["portmap-seq", "seq", "number"],
   ["portmap-cable-no", "cable_no", "text"],
   ["portmap-cable-request", "cable_request", "text"],
   ["portmap-purpose", "purpose", "text"],
   ["portmap-summary", "summary", "text"],
-  // src
-  ["portmap-src-mid", "src_mid", "text"],
-  ["portmap-src-rack-no", "src_rack_no", "text"],
-  ["portmap-src-rack-unit", "src_rack_unit", "text"],
-  ["portmap-src-vendor", "src_vendor", "text"],
-  ["portmap-src-model", "src_model", "text"],
-  ["portmap-src-hostname", "src_hostname", "text"],
-  ["portmap-src-cluster", "src_cluster", "text"],
-  ["portmap-src-slot", "src_slot", "text"],
-  ["portmap-src-port-name", "src_port_name", "text"],
-  ["portmap-src-service-name", "src_service_name", "text"],
-  ["portmap-src-zone", "src_zone", "text"],
-  ["portmap-src-vlan", "src_vlan", "text"],
+  ["portmap-src-mid", "src_mid", "text"], ["portmap-src-rack-no", "src_rack_no", "text"],
+  ["portmap-src-rack-unit", "src_rack_unit", "text"], ["portmap-src-vendor", "src_vendor", "text"],
+  ["portmap-src-model", "src_model", "text"], ["portmap-src-hostname", "src_hostname", "text"],
+  ["portmap-src-cluster", "src_cluster", "text"], ["portmap-src-slot", "src_slot", "text"],
+  ["portmap-src-port-name", "src_port_name", "text"], ["portmap-src-service-name", "src_service_name", "text"],
+  ["portmap-src-zone", "src_zone", "text"], ["portmap-src-vlan", "src_vlan", "text"],
   ["portmap-src-ip", "src_ip", "text"],
-  // dst
-  ["portmap-dst-mid", "dst_mid", "text"],
-  ["portmap-dst-rack-no", "dst_rack_no", "text"],
-  ["portmap-dst-rack-unit", "dst_rack_unit", "text"],
-  ["portmap-dst-vendor", "dst_vendor", "text"],
-  ["portmap-dst-model", "dst_model", "text"],
-  ["portmap-dst-hostname", "dst_hostname", "text"],
-  ["portmap-dst-cluster", "dst_cluster", "text"],
-  ["portmap-dst-slot", "dst_slot", "text"],
-  ["portmap-dst-port-name", "dst_port_name", "text"],
-  ["portmap-dst-service-name", "dst_service_name", "text"],
-  ["portmap-dst-zone", "dst_zone", "text"],
-  ["portmap-dst-vlan", "dst_vlan", "text"],
+  ["portmap-dst-mid", "dst_mid", "text"], ["portmap-dst-rack-no", "dst_rack_no", "text"],
+  ["portmap-dst-rack-unit", "dst_rack_unit", "text"], ["portmap-dst-vendor", "dst_vendor", "text"],
+  ["portmap-dst-model", "dst_model", "text"], ["portmap-dst-hostname", "dst_hostname", "text"],
+  ["portmap-dst-cluster", "dst_cluster", "text"], ["portmap-dst-slot", "dst_slot", "text"],
+  ["portmap-dst-port-name", "dst_port_name", "text"], ["portmap-dst-service-name", "dst_service_name", "text"],
+  ["portmap-dst-zone", "dst_zone", "text"], ["portmap-dst-vlan", "dst_vlan", "text"],
   ["portmap-dst-ip", "dst_ip", "text"],
 ];
 
@@ -179,25 +105,13 @@ const modal = document.getElementById("modal-portmap");
 
 function resetForm() {
   document.getElementById("portmap-id").value = "";
-
-  // Reset project to current filter selection
-  const projSelect = document.getElementById("portmap-project-id");
-  if (currentProjectId) projSelect.value = currentProjectId;
-
-  // Reset text/number fields
-  TEXT_FIELDS.forEach(([elId]) => {
-    document.getElementById(elId).value = "";
-  });
-
-  // Reset selects to defaults
-  SELECT_FIELDS.forEach(([elId, , defaultVal]) => {
-    document.getElementById(elId).value = defaultVal;
-  });
-
+  TEXT_FIELDS.forEach(([elId]) => { document.getElementById(elId).value = ""; });
+  SELECT_FIELDS.forEach(([elId, , dv]) => { document.getElementById(elId).value = dv; });
   document.getElementById("portmap-note").value = "";
 }
 
 function openCreateModal() {
+  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetForm();
   document.getElementById("modal-portmap-title").textContent = "배선 등록";
   document.getElementById("btn-save-portmap").textContent = "등록";
@@ -206,84 +120,56 @@ function openCreateModal() {
 
 function openEditModal(pm) {
   document.getElementById("portmap-id").value = pm.id;
-  document.getElementById("portmap-project-id").value = pm.project_id;
-
-  // Populate text/number fields
-  TEXT_FIELDS.forEach(([elId, key, type]) => {
-    const val = pm[key];
-    document.getElementById(elId).value = val != null ? val : "";
+  TEXT_FIELDS.forEach(([elId, key]) => {
+    document.getElementById(elId).value = pm[key] != null ? pm[key] : "";
   });
-
-  // Populate selects
-  SELECT_FIELDS.forEach(([elId, key, defaultVal]) => {
-    document.getElementById(elId).value = pm[key] || defaultVal;
+  SELECT_FIELDS.forEach(([elId, key, dv]) => {
+    document.getElementById(elId).value = pm[key] || dv;
   });
-
   document.getElementById("portmap-note").value = pm.note || "";
-
   document.getElementById("modal-portmap-title").textContent = "배선 수정";
   document.getElementById("btn-save-portmap").textContent = "저장";
   modal.showModal();
 }
 
 async function savePortMap() {
+  const cid = getCtxCustomerId();
+  if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const pmId = document.getElementById("portmap-id").value;
   const payload = {
-    project_id: Number(document.getElementById("portmap-project-id").value),
-    // Legacy fields set to null
-    protocol: null,
-    port: null,
-    src_asset_id: null,
-    dst_asset_id: null,
+    customer_id: cid,
+    protocol: null, port: null, src_asset_id: null, dst_asset_id: null,
   };
-
-  // Collect text/number fields
   TEXT_FIELDS.forEach(([elId, key, type]) => {
     const raw = document.getElementById(elId).value.trim();
-    if (type === "number") {
-      payload[key] = raw ? Number(raw) : null;
-    } else {
-      payload[key] = raw || null;
-    }
+    payload[key] = type === "number" ? (raw ? Number(raw) : null) : (raw || null);
   });
-
-  // Collect select fields
   SELECT_FIELDS.forEach(([elId, key]) => {
-    const raw = document.getElementById(elId).value;
-    payload[key] = raw || null;
+    payload[key] = document.getElementById(elId).value || null;
   });
-
   payload.note = document.getElementById("portmap-note").value.trim() || null;
 
   try {
     if (pmId) {
-      await apiFetch(`/api/v1/port-maps/${pmId}`, { method: "PATCH", body: payload });
+      await apiFetch("/api/v1/port-maps/" + pmId, { method: "PATCH", body: payload });
       showToast("배선이 수정되었습니다.");
     } else {
-      const projId = payload.project_id;
-      await apiFetch(`/api/v1/projects/${projId}/port-maps`, { method: "POST", body: payload });
+      await apiFetch("/api/v1/port-maps", { method: "POST", body: payload });
       showToast("배선이 등록되었습니다.");
     }
     modal.close();
     loadPortMaps();
-  } catch (err) {
-    showToast(err.message, "error");
-  }
+  } catch (err) { showToast(err.message, "error"); }
 }
 
 async function deletePortMap(pm) {
-  confirmDelete(
-    "이 배선을 삭제하시겠습니까?",
-    async () => {
-      try {
-        await apiFetch(`/api/v1/port-maps/${pm.id}`, { method: "DELETE" });
-        showToast("배선이 삭제되었습니다.");
-        loadPortMaps();
-      } catch (err) {
-        showToast(err.message, "error");
-      }
-    }
-  );
+  confirmDelete("이 배선을 삭제하시겠습니까?", async () => {
+    try {
+      await apiFetch("/api/v1/port-maps/" + pm.id, { method: "DELETE" });
+      showToast("배선이 삭제되었습니다.");
+      loadPortMaps();
+    } catch (err) { showToast(err.message, "error"); }
+  });
 }
 
 /* ── Events ── */
@@ -291,36 +177,4 @@ document.addEventListener("DOMContentLoaded", initGrid);
 document.getElementById("btn-add-portmap").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-portmap").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-portmap").addEventListener("click", savePortMap);
-document.getElementById("filter-project").addEventListener("change", (e) => {
-  currentProjectId = e.target.value ? Number(e.target.value) : null;
-  loadPortMaps();
-});
-
-// ── 포트맵 Import ──
-document.getElementById("btn-portmap-import-toggle")?.addEventListener("click", () => {
-  document.getElementById("portmap-import-panel").classList.toggle("hidden");
-});
-document.getElementById("btn-portmap-import-close")?.addEventListener("click", () => {
-  document.getElementById("portmap-import-panel").classList.add("hidden");
-});
-document.getElementById("btn-portmap-import-run")?.addEventListener("click", async () => {
-  if (!currentProjectId) { showToast("먼저 프로젝트를 선택하세요.", "warning"); return; }
-  const file = document.getElementById("portmap-import-file").files[0];
-  if (!file) { showToast("파일을 선택하세요.", "warning"); return; }
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("project_id", currentProjectId);
-  fd.append("domain", "portmap");
-  const btn = document.getElementById("btn-portmap-import-run");
-  btn.disabled = true; btn.textContent = "Import 중...";
-  const r = document.getElementById("portmap-import-result");
-  r.textContent = "";
-  try {
-    const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
-    const data = await res.json();
-    if (!res.ok) { r.textContent = "오류: " + (data.detail || "실패"); r.style.color = "var(--danger-color)"; }
-    else { r.textContent = "생성 " + data.created + "건"; r.style.color = "var(--success, #22c55e)"; loadPortMaps(); }
-  } catch (e) { r.textContent = "실패: " + e.message; r.style.color = "var(--danger-color)"; }
-  finally { btn.disabled = false; btn.textContent = "Import"; }
-});
-
+window.addEventListener("ctx-changed", loadPortMaps);

@@ -353,70 +353,104 @@ function initTextFilter(inputId, onEnterFn) {
   });
 }
 
-// ── Pin 프로젝트 ────────────────────────────────────────────────────
+// ── 고객사/프로젝트 컨텍스트 셀렉터 ──────────────────────────────────
 
-let _pinnedProjectCache = undefined; // undefined = 미조회, null = 없음, string = ID
+let _ctxCustomerId = null;
+let _ctxProjectId = null;
 
-/** Pin된 프로젝트 ID 조회 (캐시) */
-async function getPinnedProjectId() {
-  if (_pinnedProjectCache !== undefined) return _pinnedProjectCache;
+/** 현재 선택된 고객사 ID */
+function getCtxCustomerId() { return _ctxCustomerId; }
+/** 현재 선택된 프로젝트 ID (null = 전체) */
+function getCtxProjectId() { return _ctxProjectId; }
+
+/** topbar 고객사/프로젝트 셀렉터 초기화 */
+async function initContextSelectors() {
+  const custSel = document.getElementById('ctx-customer');
+  const projSel = document.getElementById('ctx-project');
+  if (!custSel || !projSel) return;
+
+  // 고객사 목록 로드
+  const customers = await apiFetch('/api/v1/customers');
+  customers.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    custSel.appendChild(opt);
+  });
+
+  // 저장된 Pin 고객사 복원
   try {
-    const res = await fetch('/api/v1/preferences/infra.pinned_project_id');
-    if (res.ok) {
-      const data = await res.json();
-      _pinnedProjectCache = data.value || null;
-    } else {
-      _pinnedProjectCache = null;
+    const prefRes = await fetch('/api/v1/preferences/infra.pinned_customer_id');
+    if (prefRes.ok) {
+      const pref = await prefRes.json();
+      if (pref.value) custSel.value = pref.value;
     }
-  } catch {
-    _pinnedProjectCache = null;
+  } catch { /* ignore */ }
+
+  // 저장된 마지막 프로젝트 복원
+  const savedProjId = localStorage.getItem('infra.last_project_id');
+
+  async function loadProjects(customerId) {
+    // Clear existing project options safely
+    while (projSel.options.length > 0) projSel.remove(0);
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = '전체';
+    projSel.appendChild(defaultOpt);
+
+    if (!customerId) return;
+    try {
+      const projects = await apiFetch('/api/v1/projects?customer_id=' + customerId);
+      projects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.project_code + ' \u2014 ' + p.project_name;
+        projSel.appendChild(opt);
+      });
+      // 저장된 프로젝트 복원
+      if (savedProjId) {
+        const exists = Array.from(projSel.options).some(o => o.value === savedProjId);
+        if (exists) projSel.value = savedProjId;
+      }
+    } catch { /* ignore */ }
   }
-  return _pinnedProjectCache;
-}
 
-/** Pin 프로젝트 설정 */
-async function setPinnedProject(projectId) {
-  await apiFetch('/api/v1/preferences/infra.pinned_project_id', {
-    method: 'PATCH',
-    body: { value: String(projectId) },
+  // 고객사 변경 시
+  custSel.addEventListener('change', async () => {
+    _ctxCustomerId = custSel.value ? Number(custSel.value) : null;
+    _ctxProjectId = null;
+    projSel.value = '';
+    await loadProjects(custSel.value);
+    // Pin 고객사 저장
+    apiFetch('/api/v1/preferences/infra.pinned_customer_id', {
+      method: 'PATCH', body: { value: custSel.value },
+    }).catch(() => {});
+    localStorage.removeItem('infra.last_project_id');
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: null } }));
   });
-  _pinnedProjectCache = String(projectId);
-  await refreshPinnedBadge();
-}
 
-/** Pin 프로젝트 해제 */
-async function clearPinnedProject() {
-  await apiFetch('/api/v1/preferences/infra.pinned_project_id', {
-    method: 'PATCH',
-    body: { value: '' },
+  // 프로젝트 변경 시
+  projSel.addEventListener('change', () => {
+    _ctxProjectId = projSel.value ? Number(projSel.value) : null;
+    if (projSel.value) {
+      localStorage.setItem('infra.last_project_id', projSel.value);
+    } else {
+      localStorage.removeItem('infra.last_project_id');
+    }
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: _ctxProjectId } }));
   });
-  _pinnedProjectCache = null;
-  const badge = document.getElementById('pinned-project-badge');
-  if (badge) badge.style.display = 'none';
-}
 
-/** topbar Pin 뱃지 갱신 */
-async function refreshPinnedBadge() {
-  const badge = document.getElementById('pinned-project-badge');
-  if (!badge) return;
-  const pinnedId = await getPinnedProjectId();
-  if (!pinnedId) { badge.style.display = 'none'; return; }
-  try {
-    const p = await apiFetch(`/api/v1/projects/${pinnedId}`);
-    badge.textContent = '';
-    const icon = document.createElement('i');
-    icon.setAttribute('data-lucide', 'pin');
-    icon.className = 'icon-xs';
-    badge.appendChild(icon);
-    badge.appendChild(document.createTextNode(` ${p.project_code} \u2014 ${p.project_name}`));
-    badge.style.display = 'inline-flex';
-    badge.onclick = () => { window.location.href = `/projects/${pinnedId}`; };
-    if (window.lucide?.createIcons) window.lucide.createIcons();
-  } catch {
-    badge.style.display = 'none';
-    _pinnedProjectCache = null;
+  // 초기 로드
+  if (custSel.value) {
+    _ctxCustomerId = Number(custSel.value);
+    await loadProjects(custSel.value);
+    _ctxProjectId = projSel.value ? Number(projSel.value) : null;
   }
 }
+
+// Legacy compat — 기존 코드에서 참조할 수 있는 함수
+async function getPinnedProjectId() { return _ctxProjectId ? String(_ctxProjectId) : null; }
+async function getPinnedCustomerId() { return _ctxCustomerId ? String(_ctxCustomerId) : null; }
 
 // ── END 고객 피커 (필터링 + 신규 등록) ──────────────────────────────
 

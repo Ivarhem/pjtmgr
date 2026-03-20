@@ -11,7 +11,7 @@ from app.modules.infra.services.network_service import (
     delete_asset_ip,
     get_asset_ip,
     list_asset_ips,
-    list_project_ips,
+    list_customer_ips,
     update_asset_ip,
 )
 
@@ -47,15 +47,15 @@ def create_asset_ip_endpoint(
 
 
 @router.get(
-    "/api/v1/projects/{project_id}/ip-inventory",
+    "/api/v1/ip-inventory",
     response_model=list[AssetIPRead],
 )
-def list_project_ips_endpoint(
-    project_id: int,
+def list_customer_ips_endpoint(
+    customer_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetIPRead]:
-    return list_project_ips(db, project_id)
+    return list_customer_ips(db, customer_id)
 
 
 @router.get(
