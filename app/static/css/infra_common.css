@@ -62,3 +62,125 @@
   color: var(--text-muted, #64748b);
   font-size: 0.95rem;
 }
+
+/* ── Summary cards ── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.summary-card {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+}
+.card-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
+.card-value { font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem; }
+
+/* ── Phase timeline ── */
+.phase-timeline {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 0.5rem;
+}
+.phase-step { display: flex; align-items: center; gap: 0.25rem; }
+.phase-icon { font-size: 1rem; }
+.phase-label { font-size: 0.8rem; }
+.phase-connector { color: var(--text-muted); font-size: 0.7rem; }
+.phase-done .phase-icon { color: var(--success, #22c55e); }
+.phase-active .phase-icon { color: var(--primary, #3b82f6); }
+.phase-pending .phase-icon { color: var(--text-muted, #94a3b8); }
+
+/* Pin toggle button in grids/headers */
+.btn-pin {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+.btn-pin:hover { color: var(--primary, #3b82f6); }
+.btn-pin.pinned { color: var(--primary, #3b82f6); }
+
+/* ── Import wizard steps ── */
+.import-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 1.5rem;
+}
+.import-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--border-color, #e2e8f0);
+  color: var(--text-muted, #64748b);
+  transition: background 0.2s, color 0.2s;
+}
+.step-label {
+  font-size: 0.85rem;
+  color: var(--text-muted, #64748b);
+  transition: color 0.2s;
+}
+.import-step.active .step-num {
+  background: var(--primary, #3b82f6);
+  color: #fff;
+}
+.import-step.active .step-label {
+  color: var(--text-primary, #1e293b);
+  font-weight: 600;
+}
+.import-step.done .step-num {
+  background: var(--success, #22c55e);
+  color: #fff;
+}
+.import-step-line {
+  width: 40px;
+  height: 2px;
+  background: var(--border-color, #e2e8f0);
+}
+
+/* Import message boxes */
+.import-msg-box {
+  padding: 12px 16px;
+  border-radius: var(--control-radius, 6px);
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+.import-msg-box ul { margin: 4px 0 0 16px; padding: 0; }
+.import-msg-box li { margin-bottom: 2px; }
+.import-msg-warning {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+}
+.import-msg-error {
+  background: #fff5f5;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+}
+body.dark-mode .import-msg-warning { background: #422006; color: #fbbf24; border-color: #92400e; }
+body.dark-mode .import-msg-error { background: #450a0a; color: #fca5a5; border-color: #991b1b; }

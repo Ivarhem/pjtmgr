@@ -7,7 +7,31 @@ const STATUS_MAP = {
   completed: "완료",
 };
 
+let _currentPinnedId = null;
+
 const columnDefs = [
+  {
+    headerName: "",
+    width: 50,
+    cellRenderer: (params) => {
+      const btn = document.createElement("button");
+      btn.className = "btn-pin" + (String(params.data.id) === _currentPinnedId ? " pinned" : "");
+      const icon = document.createElement("i");
+      icon.setAttribute("data-lucide", "pin");
+      icon.className = "icon-sm";
+      btn.appendChild(icon);
+      btn.title = "프로젝트 고정";
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await setPinnedProject(params.data.id);
+        window.location.href = `/projects/${params.data.id}`;
+      });
+      if (window.lucide?.createIcons) setTimeout(() => window.lucide.createIcons(), 0);
+      return btn;
+    },
+    sortable: false,
+    filter: false,
+  },
   { field: "project_code", headerName: "프로젝트 코드", width: 150, sort: "asc" },
   { field: "project_name", headerName: "프로젝트명", flex: 1, minWidth: 200 },
   { field: "client_name", headerName: "고객사", width: 180 },
@@ -156,7 +180,18 @@ async function deleteProject(project) {
 }
 
 /* ── Events ── */
-document.addEventListener("DOMContentLoaded", initGrid);
+document.addEventListener("DOMContentLoaded", async () => {
+  // pin된 프로젝트가 있고, ?list=1 파라미터가 없으면 상세로 redirect
+  if (!new URLSearchParams(location.search).has("list")) {
+    const pinnedId = await getPinnedProjectId();
+    if (pinnedId) {
+      window.location.href = `/projects/${pinnedId}`;
+      return;
+    }
+  }
+  _currentPinnedId = await getPinnedProjectId();
+  initGrid();
+});
 document.getElementById("btn-add-project").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-project").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-project").addEventListener("click", saveProject);

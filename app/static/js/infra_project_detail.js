@@ -35,6 +35,14 @@ const PHASE_STATUS_MAP = {
   completed: "완료",
 };
 
+/* ── Pin 프로젝트 자동 설정 ── */
+async function autoPinProject() {
+  const currentPin = await getPinnedProjectId();
+  if (String(currentPin) !== String(PROJECT_ID)) {
+    await setPinnedProject(PROJECT_ID);
+  }
+}
+
 /* ── 프로젝트 기본 정보 ── */
 async function loadProjectInfo() {
   try {
@@ -746,6 +754,7 @@ async function linkContract() {
 
 /* ── Events ── */
 document.addEventListener("DOMContentLoaded", () => {
+  autoPinProject();
   initGrids();
   if (window.__ENABLED_MODULES__?.includes('accounting')) {
     initLinkedContracts();
@@ -759,4 +768,47 @@ document.getElementById("btn-save-phase").addEventListener("click", savePhase);
 document.getElementById("btn-add-deliverable").addEventListener("click", openCreateDeliverable);
 document.getElementById("btn-cancel-deliverable").addEventListener("click", () => deliverableModal.close());
 document.getElementById("btn-save-deliverable").addEventListener("click", saveDeliverable);
+
+// ── Asset Import (프로젝트 상세 내) ──
+document.getElementById("btn-asset-import")?.addEventListener("click", () => {
+  document.getElementById("asset-import-panel").classList.toggle("hidden");
+});
+document.getElementById("btn-asset-import-close")?.addEventListener("click", () => {
+  document.getElementById("asset-import-panel").classList.add("hidden");
+});
+document.getElementById("btn-asset-import-run")?.addEventListener("click", async () => {
+  const fileInput = document.getElementById("asset-import-file");
+  const file = fileInput?.files[0];
+  if (!file) { showToast("파일을 선택하세요.", "warning"); return; }
+  const dup = document.getElementById("asset-import-dup").value;
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("project_id", PROJECT_ID);
+  fd.append("on_duplicate", dup);
+  const btn = document.getElementById("btn-asset-import-run");
+  btn.disabled = true;
+  btn.textContent = "Import 중...";
+  const resultDiv = document.getElementById("asset-import-result");
+  resultDiv.textContent = "";
+  try {
+    const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      resultDiv.textContent = "오류: " + (data.detail || "Import 실패");
+      resultDiv.style.color = "var(--danger-color)";
+    } else {
+      resultDiv.textContent = "생성 " + data.created + "건, 건너뜀 " + data.skipped + "건";
+      resultDiv.style.color = "var(--success, #22c55e)";
+      // 자산 탭 새로고침
+      _tabLoaded["assets"] = false;
+      initAssetsTab();
+    }
+  } catch (e) {
+    resultDiv.textContent = "Import 실패: " + e.message;
+    resultDiv.style.color = "var(--danger-color)";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Import 실행";
+  }
+});
 

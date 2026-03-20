@@ -98,10 +98,15 @@ async function loadProjects() {
       modalSelect.appendChild(opt2);
     });
 
-    // Auto-select first project if available
-    if (projects.length > 0) {
-      filterSelect.value = projects[0].id;
-      currentProjectId = projects[0].id;
+    // Pin된 프로젝트 또는 첫 번째 프로젝트 자동 선택
+    const pinnedId = await getPinnedProjectId();
+    const targetId = pinnedId && projects.some(p => String(p.id) === pinnedId)
+      ? pinnedId
+      : (projects.length > 0 ? String(projects[0].id) : null);
+    if (targetId) {
+      filterSelect.value = targetId;
+      modalSelect.value = targetId;
+      currentProjectId = targetId;
       loadPortMaps();
     }
   } catch (err) {
@@ -289,5 +294,33 @@ document.getElementById("btn-save-portmap").addEventListener("click", savePortMa
 document.getElementById("filter-project").addEventListener("change", (e) => {
   currentProjectId = e.target.value ? Number(e.target.value) : null;
   loadPortMaps();
+});
+
+// ── 포트맵 Import ──
+document.getElementById("btn-portmap-import-toggle")?.addEventListener("click", () => {
+  document.getElementById("portmap-import-panel").classList.toggle("hidden");
+});
+document.getElementById("btn-portmap-import-close")?.addEventListener("click", () => {
+  document.getElementById("portmap-import-panel").classList.add("hidden");
+});
+document.getElementById("btn-portmap-import-run")?.addEventListener("click", async () => {
+  if (!currentProjectId) { showToast("먼저 프로젝트를 선택하세요.", "warning"); return; }
+  const file = document.getElementById("portmap-import-file").files[0];
+  if (!file) { showToast("파일을 선택하세요.", "warning"); return; }
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("project_id", currentProjectId);
+  fd.append("domain", "portmap");
+  const btn = document.getElementById("btn-portmap-import-run");
+  btn.disabled = true; btn.textContent = "Import 중...";
+  const r = document.getElementById("portmap-import-result");
+  r.textContent = "";
+  try {
+    const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) { r.textContent = "오류: " + (data.detail || "실패"); r.style.color = "var(--danger-color)"; }
+    else { r.textContent = "생성 " + data.created + "건"; r.style.color = "var(--success, #22c55e)"; loadPortMaps(); }
+  } catch (e) { r.textContent = "실패: " + e.message; r.style.color = "var(--danger-color)"; }
+  finally { btn.disabled = false; btn.textContent = "Import"; }
 });
 

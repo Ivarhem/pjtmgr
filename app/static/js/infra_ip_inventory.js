@@ -408,3 +408,50 @@ document.getElementById("btn-add-ip").addEventListener("click", openCreateIp);
 document.getElementById("btn-cancel-ip").addEventListener("click", () => ipModal.close());
 document.getElementById("btn-save-ip").addEventListener("click", saveIp);
 
+// ── IP대역 Import ──
+document.getElementById("btn-subnet-import-toggle")?.addEventListener("click", () => {
+  const panel = document.getElementById("subnet-import-panel");
+  panel.classList.toggle("hidden");
+  if (!panel.classList.contains("hidden")) _loadImportProjects("subnet-import-project");
+});
+document.getElementById("btn-subnet-import-close")?.addEventListener("click", () => {
+  document.getElementById("subnet-import-panel").classList.add("hidden");
+});
+document.getElementById("btn-subnet-import-run")?.addEventListener("click", async () => {
+  const projectId = document.getElementById("subnet-import-project").value;
+  const file = document.getElementById("subnet-import-file").files[0];
+  if (!projectId) { showToast("프로젝트를 선택하세요.", "warning"); return; }
+  if (!file) { showToast("파일을 선택하세요.", "warning"); return; }
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("project_id", projectId);
+  fd.append("domain", "subnet");
+  fd.append("on_duplicate", document.getElementById("subnet-import-dup").value);
+  const btn = document.getElementById("btn-subnet-import-run");
+  btn.disabled = true; btn.textContent = "Import 중...";
+  const r = document.getElementById("subnet-import-result");
+  r.textContent = "";
+  try {
+    const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) { r.textContent = "오류: " + (data.detail || "실패"); r.style.color = "var(--danger-color)"; }
+    else { r.textContent = "생성 " + data.created + "건, 건너뜀 " + data.skipped + "건"; r.style.color = "var(--success, #22c55e)"; loadSubnets(); }
+  } catch (e) { r.textContent = "실패: " + e.message; r.style.color = "var(--danger-color)"; }
+  finally { btn.disabled = false; btn.textContent = "Import"; }
+});
+
+async function _loadImportProjects(selectId) {
+  const sel = document.getElementById(selectId);
+  if (sel.options.length > 1) return;
+  try {
+    const projects = await apiFetch("/api/v1/projects");
+    const pinnedId = await getPinnedProjectId();
+    projects.forEach(p => {
+      const o = document.createElement("option");
+      o.value = p.id; o.textContent = p.project_code + " — " + p.project_name;
+      if (pinnedId && String(p.id) === pinnedId) o.selected = true;
+      sel.appendChild(o);
+    });
+  } catch (e) { showToast("프로젝트 로드 실패", "error"); }
+}
+

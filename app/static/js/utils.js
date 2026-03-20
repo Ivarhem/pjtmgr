@@ -52,9 +52,48 @@ function applyTermLabels() {
 
 // ── 공통 유틸리티 ────────────────────────────────────────────────
 
+/** API 호출 래퍼 — JSON 요청/응답 처리 및 에러 핸들링
+ * @param {string} url - API 엔드포인트 경로
+ * @param {Object} [opts] - fetch 옵션
+ * @param {string} [opts.method] - HTTP 메서드 (기본 GET)
+ * @param {Object} [opts.body] - 요청 바디 (자동 JSON.stringify)
+ * @returns {Promise<any>} 응답 JSON
+ */
+async function apiFetch(url, opts = {}) {
+  const fetchOpts = { method: opts.method || 'GET', headers: {} };
+  if (opts.body) {
+    fetchOpts.headers['Content-Type'] = 'application/json';
+    fetchOpts.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(url, fetchOpts);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `요청 실패 (${res.status})`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+/** 날짜 문자열 포맷 (YYYY-MM-DD)
+ * @param {string|null} v - ISO 날짜 문자열
+ * @returns {string} 포맷된 날짜 또는 빈 문자열
+ */
+function fmtDate(v) {
+  if (!v) return '';
+  return v.slice(0, 10);
+}
+
+/** 삭제 확인 대화상자
+ * @param {string} message - 확인 메시지
+ * @param {Function} onConfirm - 확인 시 실행할 콜백
+ */
+function confirmDelete(message, onConfirm) {
+  if (confirm(message)) onConfirm();
+}
+
 /** 토스트 알림 표시
  * @param {string} message - 표시할 메시지
- * @param {'success'|'error'|'info'} type - 토스트 유형
+ * @param {'success'|'error'|'info'|'warning'} type - 토스트 유형
  * @param {number} duration - 표시 시간(ms), 기본 3000
  */
 function showToast(message, type = 'success', duration = 3000) {
@@ -312,6 +351,71 @@ function initTextFilter(inputId, onEnterFn) {
       onEnterFn();
     }
   });
+}
+
+// ── Pin 프로젝트 ────────────────────────────────────────────────────
+
+let _pinnedProjectCache = undefined; // undefined = 미조회, null = 없음, string = ID
+
+/** Pin된 프로젝트 ID 조회 (캐시) */
+async function getPinnedProjectId() {
+  if (_pinnedProjectCache !== undefined) return _pinnedProjectCache;
+  try {
+    const res = await fetch('/api/v1/preferences/infra.pinned_project_id');
+    if (res.ok) {
+      const data = await res.json();
+      _pinnedProjectCache = data.value || null;
+    } else {
+      _pinnedProjectCache = null;
+    }
+  } catch {
+    _pinnedProjectCache = null;
+  }
+  return _pinnedProjectCache;
+}
+
+/** Pin 프로젝트 설정 */
+async function setPinnedProject(projectId) {
+  await apiFetch('/api/v1/preferences/infra.pinned_project_id', {
+    method: 'PATCH',
+    body: { value: String(projectId) },
+  });
+  _pinnedProjectCache = String(projectId);
+  await refreshPinnedBadge();
+}
+
+/** Pin 프로젝트 해제 */
+async function clearPinnedProject() {
+  await apiFetch('/api/v1/preferences/infra.pinned_project_id', {
+    method: 'PATCH',
+    body: { value: '' },
+  });
+  _pinnedProjectCache = null;
+  const badge = document.getElementById('pinned-project-badge');
+  if (badge) badge.style.display = 'none';
+}
+
+/** topbar Pin 뱃지 갱신 */
+async function refreshPinnedBadge() {
+  const badge = document.getElementById('pinned-project-badge');
+  if (!badge) return;
+  const pinnedId = await getPinnedProjectId();
+  if (!pinnedId) { badge.style.display = 'none'; return; }
+  try {
+    const p = await apiFetch(`/api/v1/projects/${pinnedId}`);
+    badge.textContent = '';
+    const icon = document.createElement('i');
+    icon.setAttribute('data-lucide', 'pin');
+    icon.className = 'icon-xs';
+    badge.appendChild(icon);
+    badge.appendChild(document.createTextNode(` ${p.project_code} \u2014 ${p.project_name}`));
+    badge.style.display = 'inline-flex';
+    badge.onclick = () => { window.location.href = `/projects/${pinnedId}`; };
+    if (window.lucide?.createIcons) window.lucide.createIcons();
+  } catch {
+    badge.style.display = 'none';
+    _pinnedProjectCache = null;
+  }
 }
 
 // ── END 고객 피커 (필터링 + 신규 등록) ──────────────────────────────

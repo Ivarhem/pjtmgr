@@ -229,6 +229,36 @@ body.mobile-nav-open .mobile-nav-toggle .icon-close { display: block; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
 .topbar-user { font-size: 13px; color: var(--text-color-secondary); }
 
+/* Pinned project badge (topbar) */
+.pinned-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-color, #3b82f6);
+  background: var(--bg-color, #fff);
+  border: 1px solid var(--primary-color, #3b82f6);
+  border-radius: 1rem;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.2s;
+}
+.pinned-badge:hover {
+  background: var(--primary-color, #3b82f6);
+  color: #fff;
+}
+body.dark-mode .pinned-badge {
+  background: var(--bg-color, #1e293b);
+}
+body.dark-mode .pinned-badge:hover {
+  background: var(--primary-color, #3b82f6);
+}
+
 .btn-logout {
   background: none;
   border: 1px solid var(--border-color);

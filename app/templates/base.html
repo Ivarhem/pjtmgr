@@ -58,6 +58,9 @@
     </div>
     {% endif %}
     <div class="topbar-right">
+      {% if "infra" in enabled_modules %}
+      <span id="pinned-project-badge" class="pinned-badge" style="display:none;" title="고정 프로젝트"></span>
+      {% endif %}
       <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
         <i data-lucide="sun" class="sun"></i>
         <i data-lucide="moon" class="moon"></i>
@@ -74,12 +77,9 @@
   <div class="nav-container">
     <nav class="subnav">
       <ul class="subnav-links">
-        {# --- 공통 (항상 표시) --- #}
-        <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
-
         {# --- 영업관리 (accounting 컨텍스트일 때만) --- #}
         {% if "accounting" in enabled_modules and mc == "accounting" %}
-        <li class="nav-group-header">영업관리</li>
+
         <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
         <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
         <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
@@ -88,39 +88,48 @@
 
         {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
         {% if "infra" in enabled_modules and mc == "infra" %}
-        <li class="nav-group-header">프로젝트관리</li>
+
         <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
         <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
         <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
         <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책<small class="subnav-sub">보안·운영 정책 관리</small></span></a></li>
+        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책 정의<small class="subnav-sub">전사 보안·운영 정책</small></span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용 현황<small class="subnav-sub">프로젝트별 정책 준수</small></span></a></li>
         <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판<small class="subnav-sub">프로젝트 현황 요약</small></span></a></li>
+
+        <li><a href="/inventory/assets"><i class="icon" data-lucide="search"></i><span>자산 검색<small class="subnav-sub">전체 프로젝트 자산 조회</small></span></a></li>
+
         {% endif %}
 
         {# --- 단일 모듈만 활성일 때: 해당 모듈 전체 표시 --- #}
         {% if "accounting" in enabled_modules and "infra" not in enabled_modules %}
-        <li class="nav-group-header">영업관리</li>
+
         <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
         <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
         <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
         <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
         {% endif %}
         {% if "infra" in enabled_modules and "accounting" not in enabled_modules %}
-        <li class="nav-group-header">프로젝트관리</li>
+
         <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 관리</small></span></a></li>
         <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비·자산 인벤토리</small></span></a></li>
         <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리<small class="subnav-sub">IP 대역·할당 관리</small></span></a></li>
         <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵<small class="subnav-sub">포트 연결 현황</small></span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책<small class="subnav-sub">보안·운영 정책 관리</small></span></a></li>
+        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책 정의<small class="subnav-sub">전사 보안·운영 정책</small></span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용 현황<small class="subnav-sub">프로젝트별 정책 준수</small></span></a></li>
         <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판<small class="subnav-sub">프로젝트 현황 요약</small></span></a></li>
+
+        <li><a href="/inventory/assets"><i class="icon" data-lucide="search"></i><span>자산 검색<small class="subnav-sub">전체 프로젝트 자산 조회</small></span></a></li>
+
         {% endif %}
 
         <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
         <li class="subnav-sep"></li>
 
         {# --- 관리 (항상 표시, 권한 체크는 JS) --- #}
-        <li class="nav-group-header admin-only admin-nav-item is-hidden">관리</li>
+
         <li class="admin-only admin-nav-item subnav-divider is-hidden"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정 등록·역할·권한 설정</small></span></a></li>
+        <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
         <li class="admin-only admin-nav-item is-hidden"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직명·사업유형·용어 설정</small></span></a></li>
       </ul>
     </nav>
@@ -182,7 +191,56 @@
         const suffix = brandEl.textContent.trim();
         brandEl.textContent = settings.org_name + ' ' + suffix;
       }
+
+      // Pin 프로젝트 뱃지 초기화 (infra 모듈 활성 시)
+      {% if "infra" in enabled_modules %}
+      if (me) refreshPinnedBadge();
+      {% endif %}
+
+      // 미제출 산출물 로그인 알림 (infra 모듈 활성 시, 세션당 1회)
+      {% if "infra" in enabled_modules %}
+      if (me && !sessionStorage.getItem('infra_notif_shown')) {
+        checkUnsubmittedDeliverables();
+      }
+      {% endif %}
     });
+
+    {% if "infra" in enabled_modules %}
+    async function checkUnsubmittedDeliverables() {
+      try {
+        const prefRes = await fetch('/api/v1/preferences/infra.notify_unsubmitted');
+        if (prefRes.ok) {
+          const pref = await prefRes.json();
+          if (pref.value === 'false') return;
+        }
+        const res = await fetch('/api/v1/infra-dashboard/unsubmitted');
+        if (!res.ok) return;
+        const items = await res.json();
+        if (items.length > 0) {
+          sessionStorage.setItem('infra_notif_shown', '1');
+          const toast = document.createElement('div');
+          toast.className = 'toast toast-warning';
+          const text = document.createTextNode(`미제출 산출물 ${items.length}건이 있습니다. `);
+          const link = document.createElement('a');
+          link.href = '/infra-dashboard';
+          link.textContent = '현황판에서 확인';
+          toast.appendChild(text);
+          toast.appendChild(link);
+          let container = document.querySelector('.toast-container');
+          if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+          }
+          container.appendChild(toast);
+          setTimeout(() => {
+            toast.classList.add('toast-out');
+            toast.addEventListener('animationend', () => toast.remove());
+          }, 6000);
+        }
+      } catch (_) { /* 알림 실패는 무시 */ }
+    }
+    {% endif %}
 
     async function doLogout() {
       await fetch('/api/v1/auth/logout', { method: 'POST' });

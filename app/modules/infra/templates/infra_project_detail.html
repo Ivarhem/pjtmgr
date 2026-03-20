@@ -14,7 +14,7 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <a href="/projects" class="text-secondary text-sm">&larr; 프로젝트 목록</a>
+    <a href="/projects?list=1" class="text-secondary text-sm">&larr; 프로젝트 목록</a>
     <h1 id="project-title">프로젝트 상세</h1>
   </div>
 </div>
@@ -99,7 +99,27 @@
 <div class="tab-content hidden" id="tab-assets">
   <div class="page-header">
     <h2>자산 목록</h2>
-    <a href="/assets" class="btn btn-secondary btn-sm">자산 관리 페이지 &rarr;</a>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-sm" id="btn-asset-import">Excel Import</button>
+      <a href="/assets" class="btn btn-secondary btn-sm">자산 관리 페이지 &rarr;</a>
+    </div>
+  </div>
+  <!-- Asset Import 영역 (토글) -->
+  <div id="asset-import-panel" class="card hidden" style="margin-bottom:12px; padding:16px;">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <label style="font-size:13px;">Excel 파일 (.xlsx)
+        <input type="file" id="asset-import-file" accept=".xlsx" style="margin-left:8px;">
+      </label>
+      <label style="font-size:13px;">중복 처리
+        <select id="asset-import-dup" style="margin-left:4px;">
+          <option value="skip">건너뛰기</option>
+          <option value="overwrite">덮어쓰기</option>
+        </select>
+      </label>
+      <button class="btn btn-primary btn-sm" id="btn-asset-import-run">Import 실행</button>
+      <button class="btn btn-sm" id="btn-asset-import-close">닫기</button>
+    </div>
+    <div id="asset-import-result" style="margin-top:8px;font-size:13px;"></div>
   </div>
   <div class="card">
     <div id="grid-tab-assets" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
