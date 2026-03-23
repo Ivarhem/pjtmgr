@@ -1,18 +1,28 @@
 {% extends "base.html" %}
 {% block title %}자산 인벤토리{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
 {% block content %}
+<div class="tab-nav">
+  <a href="/assets" class="tab-btn active">자산 목록</a>
+  <a href="/ip-inventory" class="tab-btn">IP 인벤토리</a>
+  <a href="/port-maps" class="tab-btn">포트맵</a>
+  <label class="chk-inline tab-nav-filter"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
+</div>
+
 <div class="page-header">
-  <h1>자산 인벤토리</h1>
+  <h1>자산 목록</h1>
   <div class="page-header-actions">
-    <label class="chk-inline"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
     <button class="btn btn-secondary" id="btn-import-asset">Import</button>
     <button class="btn btn-primary" id="btn-add-asset">자산 등록</button>
   </div>
 </div>
 
 <div class="card">
-  <div id="grid-assets" class="ag-theme-quartz" style="height: 480px; width: 100%;"></div>
+  <div id="grid-assets" class="ag-theme-quartz infra-grid infra-grid-480"></div>
 </div>
 
 <!-- 하단 상세 패널 -->

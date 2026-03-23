@@ -26,6 +26,7 @@
   {% block styles %}{% endblock %}
 </head>
 <body>
+  {% set mc = request.state.module_context %}
   <nav class="topbar">
     <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
       <i data-lucide="menu" class="icon-menu"></i>
@@ -33,9 +34,6 @@
     </button>
     <a href="/" class="nav-brand">
       <img src="/static/img/logo.svg" alt="Logo" class="nav-logo">
-      <span id="nav-brand-text">
-        {% if request.state.module_context == 'infra' %}프로젝트관리{% else %}영업관리 시스템{% endif %}
-      </span>
     </a>
     {% if "accounting" in enabled_modules and "infra" in enabled_modules %}
     <div class="module-dropdown" id="module-dropdown">
@@ -61,12 +59,28 @@
     <span class="topbar-sep"></span>
     <div class="ctx-selector">
       <label class="ctx-label">고객사</label>
-      <select id="ctx-customer"><option value="">선택</option></select>
+      <div class="ctx-combo" id="ctx-customer-combo">
+        <input type="text" id="ctx-customer" class="ctx-input" placeholder="고객사 검색" autocomplete="off">
+        <div class="ctx-dropdown is-hidden" id="ctx-customer-dropdown"></div>
+      </div>
     </div>
-    <div class="ctx-selector">
-      <label class="ctx-label">프로젝트</label>
-      <select id="ctx-project"><option value="">전체</option></select>
+    <div class="ctx-selector" id="ctx-project-display" style="display:none;">
+      <label class="ctx-label">진행중인 프로젝트</label>
+      <span class="ctx-project-text" id="ctx-project-text"></span>
+      <button class="ctx-project-clear" id="ctx-project-clear" title="프로젝트 선택 해제">&times;</button>
     </div>
+    <!-- 고객사 신규등록 모달 -->
+    <dialog id="ctx-modal-customer" class="modal modal-sm">
+      <h2>고객사 등록</h2>
+      <div class="form-grid">
+        <label class="full-width">고객사명 <input type="text" id="ctx-new-customer-name" placeholder="고객사명 입력" required></label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="ctx-btn-cust-cancel">취소</button>
+        <button type="button" class="btn btn-primary" id="ctx-btn-cust-submit">등록</button>
+      </div>
+    </dialog>
+    <!-- 프로젝트 등록은 프로젝트 목록 페이지에서 수행 -->
     {% endif %}
     <div class="topbar-right">
       <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
@@ -76,12 +90,17 @@
       <button class="theme-toggle" id="toggle-subnav-desc" title="도움말 표시/숨김">
         <i data-lucide="help-circle"></i>
       </button>
+      <a class="theme-toggle admin-only is-hidden" href="/users" title="사용자 관리">
+        <i data-lucide="user-cog"></i>
+      </a>
+      <a class="theme-toggle admin-only is-hidden" href="/system" title="시스템 관리">
+        <i data-lucide="settings"></i>
+      </a>
       <span class="topbar-user" id="topbar-user"></span>
       <button class="btn-logout" onclick="doLogout()">로그아웃</button>
     </div>
   </nav>
 
-  {% set mc = request.state.module_context %}
   <div class="nav-container">
     <nav class="subnav">
       <ul class="subnav-links">
@@ -99,13 +118,9 @@
 
         <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
         <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리</span></a></li>
-        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵</span></a></li>
-        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책정의</span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용현황</span></a></li>
-        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>담당자</span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책</span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>업체</span></a></li>
         <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
-        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판</span></a></li>
 
         {% endif %}
 
@@ -121,31 +136,31 @@
 
         <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
         <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>IP인벤토리</span></a></li>
-        <li><a href="/port-maps"><i class="icon" data-lucide="cable"></i><span>포트맵</span></a></li>
-        <li><a href="/policy-definitions"><i class="icon" data-lucide="shield-check"></i><span>정책정의</span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-alert"></i><span>적용현황</span></a></li>
-        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>담당자</span></a></li>
+        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책</span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>업체</span></a></li>
         <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
-        <li><a href="/infra-dashboard"><i class="icon" data-lucide="monitor-check"></i><span>현황판</span></a></li>
 
         {% endif %}
 
-        <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
         <li class="subnav-sep"></li>
 
-        {# --- 관리 (항상 표시, 권한 체크는 JS) --- #}
+        {# --- 공통 메뉴 (모듈 무관) --- #}
 
-        <li class="admin-only admin-nav-item subnav-divider is-hidden"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정 등록·역할·권한 설정</small></span></a></li>
         <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
-        <li class="admin-only admin-nav-item is-hidden"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직명·사업유형·용어 설정</small></span></a></li>
+        <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">HW 제품 사양·EOSL 관리</small></span></a></li>
+        <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
       </ul>
     </nav>
   </div>
   <script>
-    // Active link highlighting
-    document.querySelectorAll('.subnav-links a').forEach(a => {
-      if (a.getAttribute('href') === window.location.pathname) a.classList.add('active');
+    // Active link highlighting (with group mapping for tabbed pages)
+    const _navGroups = {
+      '/ip-inventory': '/assets', '/port-maps': '/assets',
+      '/policy-definitions': '/policies',
+    };
+    const _activePath = _navGroups[window.location.pathname] || window.location.pathname;
+    document.querySelectorAll('.subnav-links a, .topbar-right a').forEach(a => {
+      if (a.getAttribute('href') === _activePath) a.classList.add('active');
     });
 
     // Module dropdown toggle
@@ -195,9 +210,7 @@
         }
       }
       if (settings?.org_name) {
-        const brandEl = document.getElementById('nav-brand-text');
-        const suffix = brandEl.textContent.trim();
-        brandEl.textContent = settings.org_name + ' ' + suffix;
+        document.title = settings.org_name + ' ' + document.title;
       }
 
       // 고객사/프로젝트 셀렉터 초기화 (infra 모듈 활성 시)

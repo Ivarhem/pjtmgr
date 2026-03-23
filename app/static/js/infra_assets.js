@@ -63,8 +63,7 @@ async function loadAssets() {
   }
   let url = "/api/v1/assets?customer_id=" + cid;
   const pid = getCtxProjectId();
-  const chk = document.getElementById("chk-project-filter");
-  if (pid && chk && chk.checked) url += "&project_id=" + pid;
+  if (pid && isProjectFilterActive()) url += "&project_id=" + pid;
 
   try {
     const data = await apiFetch(url);
@@ -335,8 +334,8 @@ document.querySelectorAll(".detail-tabs .tab-btn").forEach(btn => {
   btn.addEventListener("click", () => renderDetailTab(btn.dataset.dtab));
 });
 
-// Project filter checkbox
-document.getElementById("chk-project-filter").addEventListener("change", loadAssets);
+// Global project filter checkbox
+initProjectFilterCheckbox(loadAssets);
 
 // Context selector change
 window.addEventListener("ctx-changed", () => {

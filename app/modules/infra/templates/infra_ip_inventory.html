@@ -1,7 +1,18 @@
 {% extends "base.html" %}
 {% block title %}IP 인벤토리{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
 {% block content %}
+<div class="tab-nav">
+  <a href="/assets" class="tab-btn">자산 목록</a>
+  <a href="/ip-inventory" class="tab-btn active">IP 인벤토리</a>
+  <a href="/port-maps" class="tab-btn">포트맵</a>
+  <label class="chk-inline tab-nav-filter"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
+</div>
+
 <div class="page-header">
   <h1>IP 인벤토리</h1>
   <div class="page-header-actions">
@@ -21,7 +32,7 @@
 
   <!-- 우측: 서브넷 상세 + IP 그리드 -->
   <div class="split-right">
-    <div id="subnet-detail-card" class="card mb-md hidden" style="padding:12px;">
+    <div id="subnet-detail-card" class="card mb-md hidden infra-subnet-detail">
       <div class="detail-header">
         <span id="subnet-detail-name" class="detail-title"></span>
         <div class="detail-header-actions">
@@ -35,7 +46,7 @@
     <div class="panel-header">
       <h3>IP 할당</h3>
     </div>
-    <div id="grid-ips" class="ag-theme-quartz" style="height:400px;"></div>
+    <div id="grid-ips" class="ag-theme-quartz infra-grid-preview"></div>
   </div>
 </div>
 

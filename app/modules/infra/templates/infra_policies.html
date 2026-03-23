@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block title %}정책 적용 현황 - 프로젝트관리{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
 {% block content %}
+<div class="tab-nav">
+  <a href="/policy-definitions" class="tab-btn">정책 정의</a>
+  <a href="/policies" class="tab-btn active">적용 현황</a>
+</div>
+
 <div class="page-header">
-  <h1>정책 적용 현황</h1>
+  <h1>적용 현황</h1>
   <button class="btn btn-primary" id="btn-add-assignment">적용 등록</button>
 </div>
 
@@ -26,7 +35,7 @@
 </div>
 
 <div class="card">
-  <div id="grid-assignments" class="ag-theme-quartz" style="height: 500px; width: 100%;"></div>
+  <div id="grid-assignments" class="ag-theme-quartz infra-grid infra-grid-500"></div>
 </div>
 
 <!-- 정책 적용 모달 -->

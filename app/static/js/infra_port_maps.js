@@ -30,7 +30,7 @@ const columnDefs = [
     headerName: "", width: 120, sortable: false, filter: false,
     cellRenderer: (params) => {
       const wrap = document.createElement("span");
-      wrap.className = "gap-sm"; wrap.style.display = "inline-flex";
+      wrap.className = "gap-sm infra-inline-flex";
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-xs btn-secondary"; btnEdit.textContent = "수정";
       btnEdit.addEventListener("click", () => openEditModal(params.data));
@@ -52,7 +52,7 @@ async function loadPortMaps() {
   if (!cid) { gridApi.setGridOption("rowData", []); return; }
   let url = "/api/v1/port-maps?customer_id=" + cid;
   const pid = getCtxProjectId();
-  if (pid) url += "&project_id=" + pid;
+  if (pid && isProjectFilterActive()) url += "&project_id=" + pid;
   try {
     const data = await apiFetch(url);
     gridApi.setGridOption("rowData", data);
@@ -177,4 +177,5 @@ document.addEventListener("DOMContentLoaded", initGrid);
 document.getElementById("btn-add-portmap").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-portmap").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-portmap").addEventListener("click", savePortMap);
+initProjectFilterCheckbox(loadPortMaps);
 window.addEventListener("ctx-changed", loadPortMaps);

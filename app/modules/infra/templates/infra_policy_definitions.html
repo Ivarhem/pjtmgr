@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% block title %}정책 정의 - 프로젝트관리{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
 {% block content %}
+<div class="tab-nav">
+  <a href="/policy-definitions" class="tab-btn active">정책 정의</a>
+  <a href="/policies" class="tab-btn">적용 현황</a>
+</div>
+
 <div class="page-header">
   <h1>정책 정의</h1>
   <button class="btn btn-primary" id="btn-add-policy">정책 등록</button>
 </div>
 
 <div class="card">
-  <div id="grid-policies" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+  <div id="grid-policies" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
 </div>
 
 <!-- 정책 정의 모달 -->

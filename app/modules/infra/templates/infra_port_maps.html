@@ -4,6 +4,7 @@
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+<link rel="stylesheet" href="/static/css/infra_common.css">
 {% endblock %}
 
 {% block head_scripts %}
@@ -11,38 +12,45 @@
 {% endblock %}
 
 {% block content %}
+<div class="tab-nav">
+  <a href="/assets" class="tab-btn">자산 목록</a>
+  <a href="/ip-inventory" class="tab-btn">IP 인벤토리</a>
+  <a href="/port-maps" class="tab-btn">포트맵</a>
+  <label class="chk-inline tab-nav-filter"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
+</div>
+
 <div class="page-header">
-  <h1>케이블 배선도</h1>
+  <h1>포트맵</h1>
   <div class="page-header-actions">
     <button class="btn btn-primary" id="btn-add-portmap">배선 등록</button>
   </div>
 </div>
-<div id="portmap-import-panel" class="card hidden" style="margin-bottom:12px; padding:16px;">
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-    <label style="font-size:13px;">Excel (.xlsx)
-      <input type="file" id="portmap-import-file" accept=".xlsx" style="margin-left:4px;">
+<div id="portmap-import-panel" class="card hidden infra-import-compact-panel">
+  <div class="infra-import-compact-row">
+    <label class="infra-compact-label">Excel (.xlsx)
+      <input type="file" id="portmap-import-file" accept=".xlsx" class="infra-compact-input">
     </label>
     <button class="btn btn-primary btn-sm" id="btn-portmap-import-run">Import</button>
     <button class="btn btn-sm" id="btn-portmap-import-close">닫기</button>
-    <span class="text-muted" style="font-size:12px;">※ 프로젝트 필터에서 선택한 프로젝트에 Import됩니다</span>
+    <span class="text-muted infra-compact-help">※ 프로젝트 필터에서 선택한 프로젝트에 Import됩니다</span>
   </div>
-  <div id="portmap-import-result" style="margin-top:8px;font-size:13px;"></div>
+  <div id="portmap-import-result" class="infra-import-result-text"></div>
 </div>
 
 <div class="card">
-  <div id="grid-portmaps" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+  <div id="grid-portmaps" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
 </div>
 
 <!-- 배선 등록/수정 모달 -->
 <dialog id="modal-portmap" class="modal modal-xl">
   <h2 id="modal-portmap-title">배선 등록</h2>
-  <form id="form-portmap" style="max-height:70vh; overflow-y:auto;">
+  <form id="form-portmap" class="infra-portmap-form">
     <input type="hidden" id="portmap-id">
 
     <!-- 공통 정보 -->
     <fieldset class="modal-group">
       <legend class="modal-group-title">공통 정보</legend>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="form-grid form-grid-3col">
         <label>
           순번
           <input type="number" id="portmap-seq" placeholder="1">
@@ -80,7 +88,7 @@
     <!-- Start (출발지) -->
     <fieldset class="modal-group">
       <legend class="modal-group-title">Start (출발지)</legend>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="form-grid form-grid-3col">
         <label>
           MID
           <input type="text" id="portmap-src-mid" placeholder="MID">
@@ -139,7 +147,7 @@
     <!-- End (목적지) -->
     <fieldset class="modal-group">
       <legend class="modal-group-title">End (목적지)</legend>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="form-grid form-grid-3col">
         <label>
           MID
           <input type="text" id="portmap-dst-mid" placeholder="MID">
@@ -198,7 +206,7 @@
     <!-- 케이블 정보 -->
     <fieldset class="modal-group">
       <legend class="modal-group-title">케이블 정보</legend>
-      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+      <div class="form-grid form-grid-4col">
         <label>
           케이블 종류
           <select id="portmap-cable-type">

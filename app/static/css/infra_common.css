@@ -1,5 +1,6 @@
 /* ── Infra Module Styles ── */
 
+
 /* Asset status badges */
 .badge-planned   { background: #e0e7ff; color: #3730a3; }
 .badge-active    { background: #dcfce7; color: #166534; }
@@ -26,32 +27,44 @@
 .badge-pending   { background: #fef3c7; color: #92400e; }
 .badge-submitted { background: #dcfce7; color: #166534; }
 
-/* ── Project detail tab navigation ── */
+/* ── Sub-navigation (page-level tabs, sidebar-like style) ── */
 .tab-nav {
   display: flex;
   gap: 0;
   border-bottom: 2px solid var(--border-color, #e2e8f0);
   margin-bottom: 1.5rem;
 }
+.tab-nav-filter {
+  margin-left: auto;
+  font-size: 12px;
+  padding-right: 4px;
+}
 
 .tab-btn {
-  padding: 0.75rem 1.25rem;
+  padding: 0 12px;
+  height: 40px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 13px;
   font-family: inherit;
-  color: var(--text-muted, #64748b);
-  border-bottom: 2px solid transparent;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 3px solid transparent;
   margin-bottom: -2px;
-  transition: color 0.2s, border-color 0.2s;
+  letter-spacing: -0.2px;
+  transition: color 0.2s, border-bottom-color 0.2s;
 }
 
-.tab-btn:hover { color: var(--text-primary, #1e293b); }
+.tab-btn:hover { color: var(--text-color); }
 .tab-btn.active {
-  color: var(--primary, #3b82f6);
-  border-bottom-color: var(--primary, #3b82f6);
+  color: var(--primary-color);
   font-weight: 600;
+  border-bottom-color: var(--primary-color);
 }
 
 .tab-content.hidden { display: none; }
@@ -330,3 +343,149 @@ body.dark-mode .import-msg-error { background: #450a0a; color: #fca5a5; border-c
   font-weight: 600;
   margin-bottom: 8px;
 }
+
+/* ── Grid height variants (supplement) ── */
+.infra-grid-480 { height: 480px; }
+.infra-grid-500 { height: 500px; }
+
+/* ── Portmap form ── */
+.infra-portmap-form { max-height: 70vh; overflow-y: auto; }
+.form-grid-3col { grid-template-columns: 1fr 1fr 1fr; }
+.form-grid-4col { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+/* ── Subnet detail card ── */
+.infra-subnet-detail { padding: 12px; }
+
+/* ── Product Catalog Layout ── */
+.catalog-layout {
+  display: flex;
+  gap: 0;
+  height: calc(100vh - 160px);
+}
+.catalog-list-panel {
+  width: 42%;
+  min-width: 250px;
+  max-width: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.catalog-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.catalog-toolbar .input-search {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-color);
+  font-size: 13px;
+}
+.catalog-toolbar .input-select {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-color);
+  font-size: 13px;
+  min-width: 120px;
+}
+.catalog-grid {
+  flex: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.catalog-splitter {
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+}
+.catalog-splitter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 32px;
+  background: var(--border-color);
+  border-radius: 2px;
+}
+.catalog-splitter:hover::after { background: var(--text-color-tertiary); height: 48px; }
+.catalog-detail-panel {
+  flex: 1;
+  min-width: 300px;
+  overflow-y: auto;
+  padding: 0 4px;
+}
+.catalog-detail-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-color-tertiary);
+}
+.catalog-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.catalog-detail-header h2 { margin: 0; font-size: 18px; }
+
+/* Catalog tabs */
+.catalog-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+.catalog-tab {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.catalog-tab:hover { color: var(--text-color); }
+.catalog-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.catalog-tab-panel { display: none; }
+.catalog-tab-panel.active { display: block; }
+
+/* Info grid (scoped to avoid overriding base .info-card styles) */
+.info-grid { display: flex; flex-direction: column; gap: 6px; }
+.info-grid .info-row { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border-color); font-size: 13px; }
+.info-label { width: 100px; flex-shrink: 0; color: var(--text-color-secondary); font-weight: 500; }
+.info-value { flex: 1; }
+.info-value a { color: var(--accent); }
+
+/* Catalog section header */
+.catalog-section-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+/* Sub-grid (interfaces) */
+.catalog-sub-grid {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+/* EOSL warning/danger cells */
+.cell-warn { color: #92400e; font-weight: 600; }
+.cell-danger { color: #dc3545; font-weight: 600; }

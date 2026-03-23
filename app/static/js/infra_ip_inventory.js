@@ -25,8 +25,7 @@ const ipColDefs = [
     headerName: "", width: 120, sortable: false, filter: false,
     cellRenderer: (params) => {
       const wrap = document.createElement("span");
-      wrap.className = "gap-sm";
-      wrap.style.display = "inline-flex";
+      wrap.className = "gap-sm infra-inline-flex";
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-xs btn-secondary";
       btnEdit.textContent = "수정";
@@ -343,6 +342,7 @@ async function deleteIp(ip) {
 
 /* ── Events ── */
 document.addEventListener("DOMContentLoaded", initPage);
+initProjectFilterCheckbox();
 document.getElementById("btn-add-subnet").addEventListener("click", openCreateSubnet);
 document.getElementById("btn-cancel-subnet").addEventListener("click", () => subnetModal.close());
 document.getElementById("btn-save-subnet").addEventListener("click", saveSubnet);

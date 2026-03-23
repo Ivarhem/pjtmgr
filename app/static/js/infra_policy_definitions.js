@@ -25,8 +25,7 @@ const policyColDefs = [
     width: 120,
     cellRenderer: (params) => {
       const span = document.createElement("span");
-      span.className = "gap-sm";
-      span.style.display = "inline-flex";
+      span.className = "gap-sm infra-inline-flex";
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-xs btn-secondary";
       btnEdit.textContent = "수정";
