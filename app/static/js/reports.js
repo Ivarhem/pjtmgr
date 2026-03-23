@@ -339,7 +339,7 @@ async function loadAr() {
 // ═══ 탭 4: 매입매출관리 (기존) ═══════════════════════════════════
 
 async function loadContractList() {
-  const res = await fetch('/api/v1/contract-periods');
+  const res = await fetch('/api/v1/ledger/periods');
   if (!res.ok) return;
   const data = await res.json();
   allContracts = data;

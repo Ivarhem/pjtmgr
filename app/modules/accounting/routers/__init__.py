@@ -4,7 +4,7 @@ from fastapi import APIRouter
 from app.core.auth.dependencies import require_module_access
 from app.modules.accounting.routers.contracts import router as contracts_router
 from app.modules.accounting.routers.contract_contacts import router as contract_contacts_router
-from app.modules.accounting.routers.contract_types import router as contract_types_router
+from app.modules.accounting.routers.contract_sales_details import router as contract_sales_details_router
 from app.modules.accounting.routers.dashboard import router as dashboard_router
 from app.modules.accounting.routers.excel import router as excel_router
 from app.modules.accounting.routers.forecasts import router as forecasts_router
@@ -18,7 +18,7 @@ api_router = APIRouter(dependencies=[require_module_access("accounting", "read")
 api_router.include_router(dashboard_router)
 api_router.include_router(contracts_router)
 api_router.include_router(contract_contacts_router)
-api_router.include_router(contract_types_router)
+api_router.include_router(contract_sales_details_router)
 api_router.include_router(forecasts_router)
 api_router.include_router(transaction_lines_router)
 api_router.include_router(receipts_router)
@@ -30,7 +30,7 @@ api_router.include_router(pages_router)
 # Re-export individual routers for backward compatibility
 from app.modules.accounting.routers import contracts  # noqa: E402, F811
 from app.modules.accounting.routers import contract_contacts  # noqa: E402, F811
-from app.modules.accounting.routers import contract_types  # noqa: E402, F811
+from app.modules.accounting.routers import contract_sales_details  # noqa: E402, F811
 from app.modules.accounting.routers import dashboard  # noqa: E402, F811
 from app.modules.accounting.routers import excel  # noqa: E402, F811
 from app.modules.accounting.routers import forecasts  # noqa: E402, F811
@@ -43,7 +43,7 @@ __all__ = [
     "api_router",
     "contracts",
     "contract_contacts",
-    "contract_types",
+    "contract_sales_details",
     "dashboard",
     "excel",
     "forecasts",

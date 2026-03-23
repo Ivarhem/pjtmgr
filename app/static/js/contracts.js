@@ -97,7 +97,7 @@ async function loadData() {
   }
 
   saveFilterState(FILTER_STATE_KEY);
-  const res = await fetch(`/api/v1/contract-periods?${params}`);
+  const res = await fetch(`/api/v1/ledger/periods?${params}`);
   const data = await res.json();
   gridApi.setGridOption('rowData', data);
   gridApi.onFilterChanged();

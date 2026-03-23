@@ -10,7 +10,7 @@ from app.core.config import (
     ENV,
 )
 from app.core.database import SessionLocal
-from app.modules.accounting.services.contract_type_config import seed_defaults as seed_contract_types
+from app.modules.common.services.contract_type_config import seed_defaults as seed_contract_types
 from app.modules.common.services.term_config import seed_defaults as seed_terms
 from app.modules.common.services.user import ensure_bootstrap_admin
 
