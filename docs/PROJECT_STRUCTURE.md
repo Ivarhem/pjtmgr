@@ -47,13 +47,17 @@ app/modules/common/
 │   ├── setting.py               # Setting (시스템 설정)
 │   ├── term_config.py           # TermConfig (UI 용어 설정)
 │   ├── audit_log.py             # AuditLog (감사 로그)
-│   └── project_contract_link.py # ProjectContractLink (프로젝트-계약 연결)
+│   ├── contract.py              # Contract (사업 원장 — 공통 사업 식별 단위)
+│   ├── contract_period.py       # ContractPeriod (계약단위 — 회계/인프라 공유)
+│   └── contract_type_config.py  # ContractTypeConfig (사업유형 설정)
 ├── schemas/
 │   ├── auth.py                  # 인증 관련 스키마
 │   ├── customer.py              # 거래처 스키마
 │   ├── customer_contact.py      # 거래처 담당자 스키마
 │   ├── customer_contact_role.py # 담당자 역할 스키마
-│   ├── project_contract_link.py # 프로젝트-계약 연결 스키마
+│   ├── contract.py              # 사업 스키마
+│   ├── contract_period.py       # 계약단위 스키마
+│   ├── contract_type_config.py  # 사업유형 스키마
 │   ├── role.py                  # 역할 스키마
 │   ├── setting.py               # 시스템 설정 스키마
 │   ├── term_config.py           # 용어 설정 스키마
@@ -62,7 +66,8 @@ app/modules/common/
 │   ├── user.py                  # 사용자 CRUD, CSV 일괄 등록
 │   ├── customer.py              # 거래처/담당자 CRUD
 │   ├── _customer_helpers.py     # 거래처 관련 헬퍼
-│   ├── project_contract_link.py # 프로젝트-계약 연결 CRUD
+│   ├── contract.py              # 사업/계약단위 CRUD
+│   ├── contract_type_config.py  # 사업유형 CRUD, 시드 데이터
 │   ├── setting.py               # 시스템 설정 CRUD
 │   ├── term_config.py           # 용어 설정 CRUD, 시드 데이터
 │   ├── user_preference.py       # 사용자 환경설정
@@ -72,7 +77,9 @@ app/modules/common/
 ├── routers/
 │   ├── users.py                 # /api/v1/users
 │   ├── customers.py             # /api/v1/customers
-│   ├── project_contract_links.py # /api/v1/project-contract-links
+│   ├── contracts.py             # /api/v1/contracts
+│   ├── contract_periods.py      # /api/v1/contract-periods
+│   ├── contract_types.py        # /api/v1/contract-types
 │   ├── settings.py              # /api/v1/settings
 │   ├── term_configs.py          # /api/v1/term-configs
 │   ├── health.py                # /api/v1/health
@@ -87,34 +94,30 @@ app/modules/common/
 ```text
 app/modules/accounting/
 ├── models/
-│   ├── contract.py              # Contract (사업 원장)
-│   ├── contract_period.py       # ContractPeriod (사업 기간/연도)
+│   ├── contract_sales_detail.py # ContractSalesDetail (영업 전용 확장 — ContractPeriod 1:1)
 │   ├── contract_contact.py      # ContractContact (Period별 담당자)
-│   ├── contract_type_config.py  # ContractTypeConfig (사업유형 설정)
 │   ├── monthly_forecast.py      # MonthlyForecast (월별 예상 매출/GP)
 │   ├── transaction_line.py      # TransactionLine (매출/매입 실적)
 │   ├── receipt.py               # Receipt (입금)
 │   └── receipt_match.py         # ReceiptMatch (입금 배분)
 ├── schemas/
-│   ├── contract.py              # 사업 스키마
+│   ├── contract_sales_detail.py # 영업 확장 스키마
 │   ├── contract_contact.py      # 사업 담당자 스키마
-│   ├── contract_type_config.py  # 사업유형 스키마
 │   ├── monthly_forecast.py      # Forecast 스키마
 │   ├── receipt.py               # 입금 스키마
 │   ├── receipt_match.py         # 입금 배분 스키마
 │   ├── report.py                # 보고서 스키마
 │   └── transaction_line.py      # 매출/매입 스키마
 ├── services/
-│   ├── contract.py              # 사업/Period CRUD, 소프트 삭제/복구
+│   ├── contract_sales_detail.py # 영업 확장 정보 CRUD
 │   ├── _contract_helpers.py     # 사업 관련 교차 도메인 헬퍼
 │   ├── contract_contact.py      # 사업 담당자 매핑
-│   ├── contract_type_config.py  # 사업유형 CRUD, 시드 데이터
 │   ├── monthly_forecast.py      # Forecast CRUD
 │   ├── transaction_line.py      # 매출/매입 실적 CRUD
 │   ├── receipt.py               # 입금 CRUD
 │   ├── receipt_match.py         # FIFO 자동 배분, 수동 배분
 │   ├── forecast_sync.py         # Forecast -> 실적 동기화
-│   ├── ledger.py                # 원장 뷰 (통합 조회)
+│   ├── ledger.py                # 원장 뷰 (통합 조회, /api/v1/ledger/periods)
 │   ├── metrics.py               # 공통 집계 엔진
 │   ├── dashboard.py             # 대시보드 집계
 │   ├── report.py                # 보고서 데이터 생성
@@ -122,9 +125,8 @@ app/modules/accounting/
 │   ├── importer.py              # Excel Import
 │   └── exporter.py              # Excel Export (영업관리 원장)
 ├── routers/
-│   ├── contracts.py             # /api/v1/contracts
+│   ├── contract_sales_details.py # /api/v1/contract-periods/{id}/sales-detail
 │   ├── contract_contacts.py     # /api/v1/contract-contacts
-│   ├── contract_types.py        # /api/v1/contract-types
 │   ├── forecasts.py             # /api/v1/.../forecasts
 │   ├── transaction_lines.py     # /api/v1/.../transaction-lines
 │   ├── receipts.py              # /api/v1/.../receipts
@@ -141,53 +143,62 @@ app/modules/accounting/
 ```text
 app/modules/infra/
 ├── models/
-│   ├── project.py               # Project (프로젝트)
-│   ├── project_phase.py         # ProjectPhase (프로젝트 단계)
-│   ├── project_deliverable.py   # ProjectDeliverable (산출물)
+│   ├── period_phase.py          # PeriodPhase (계약단위 단계)
+│   ├── period_deliverable.py    # PeriodDeliverable (산출물)
 │   ├── asset.py                 # Asset (기술 자산)
 │   ├── asset_ip.py              # AssetIP (자산 IP)
 │   ├── asset_contact.py         # AssetContact (자산 담당자 매핑)
 │   ├── asset_relation.py        # AssetRelation (자산 간 관계)
-│   ├── project_asset.py         # ProjectAsset (프로젝트-자산 N:M)
-│   ├── project_customer.py      # ProjectCustomer (프로젝트-업체 역할)
-│   ├── project_customer_contact.py # ProjectCustomerContact (프로젝트-담당자 역할)
+│   ├── period_asset.py          # PeriodAsset (계약단위-자산 N:M)
+│   ├── period_customer.py       # PeriodCustomer (계약단위-업체 역할)
+│   ├── period_customer_contact.py # PeriodCustomerContact (계약단위-담당자 역할)
 │   ├── ip_subnet.py             # IpSubnet (IP 대역)
 │   ├── port_map.py              # PortMap (포트맵)
 │   ├── policy_definition.py     # PolicyDefinition (정책 정의)
-│   └── policy_assignment.py     # PolicyAssignment (정책 적용 상태)
+│   ├── policy_assignment.py     # PolicyAssignment (정책 적용 상태)
+│   ├── product_catalog.py       # ProductCatalog (글로벌 제품 카탈로그)
+│   ├── hardware_spec.py         # HardwareSpec (제품 1:1 HW 스펙)
+│   ├── hardware_interface.py    # HardwareInterface (제품 1:N 인터페이스)
+│   └── asset_software.py        # AssetSoftware (자산 설치 SW)
 ├── schemas/
-│   ├── project.py               # 프로젝트 스키마
-│   ├── project_phase.py         # 단계 스키마
-│   ├── project_deliverable.py   # 산출물 스키마
+│   ├── period_phase.py          # 단계 스키마
+│   ├── period_deliverable.py    # 산출물 스키마
 │   ├── asset.py                 # 자산 스키마
 │   ├── asset_ip.py              # 자산 IP 스키마
 │   ├── asset_contact.py         # 자산 담당자 스키마
 │   ├── asset_relation.py        # 자산 관계 스키마
-│   ├── project_asset.py         # 프로젝트-자산 스키마
-│   ├── project_customer.py      # 프로젝트-업체 스키마
-│   ├── project_customer_contact.py # 프로젝트-담당자 스키마
+│   ├── period_asset.py          # 계약단위-자산 스키마
+│   ├── period_customer.py       # 계약단위-업체 스키마
+│   ├── period_customer_contact.py # 계약단위-담당자 스키마
 │   ├── infra_import.py          # Import 프리뷰/결과 스키마
 │   ├── ip_subnet.py             # IP 대역 스키마
 │   ├── port_map.py              # 포트맵 스키마
 │   ├── policy_definition.py     # 정책 정의 스키마
-│   └── policy_assignment.py     # 정책 적용 스키마
+│   ├── policy_assignment.py     # 정책 적용 스키마
+│   ├── product_catalog.py       # 제품 카탈로그 스키마
+│   ├── hardware_spec.py         # HW 스펙 스키마
+│   ├── hardware_interface.py    # HW 인터페이스 스키마
+│   └── asset_software.py        # 자산 SW 스키마
 ├── services/
-│   ├── project_service.py       # 프로젝트/산출물 CRUD
-│   ├── phase_service.py         # 프로젝트 단계 CRUD
+│   ├── period_service.py        # 계약단위/산출물 CRUD
+│   ├── phase_service.py         # 계약단위 단계 CRUD
 │   ├── asset_service.py         # 자산/자산IP/담당자 CRUD
 │   ├── network_service.py       # IP 대역 CRUD
 │   ├── policy_service.py        # 정책 정의/적용 CRUD
-│   ├── project_asset_service.py  # 프로젝트-자산 연결/해제
-│   ├── project_customer_service.py # 프로젝트-업체 CRUD
-│   ├── project_customer_contact_service.py # 프로젝트-담당자 CRUD
+│   ├── period_asset_service.py  # 계약단위-자산 연결/해제
+│   ├── period_customer_service.py # 계약단위-업체 CRUD
+│   ├── period_customer_contact_service.py # 계약단위-담당자 CRUD
 │   ├── asset_relation_service.py # 자산 관계 CRUD
 │   ├── infra_metrics.py         # 현황판 집계 서비스
-│   ├── infra_importer.py        # Excel Import (자산/IP/포트맵)
-│   └── infra_exporter.py        # Excel Export (프로젝트 단위 3시트)
+│   ├── _helpers.py              # 공유 헬퍼 (ensure_customer_exists, get_period_asset_ids)
+│   ├── infra_importer.py        # Excel Import (자산/IP/포트맵, 고객사 단위)
+│   ├── infra_exporter.py        # Excel Export (고객사 단위 3시트, 옵션 계약단위 필터)
+│   ├── product_catalog_service.py # 제품 카탈로그/스펙/인터페이스 CRUD
+│   ├── product_catalog_importer.py # 제품 카탈로그 Excel Import (SPEC/EOSL)
+│   └── asset_software_service.py # 자산 SW CRUD
 ├── routers/
-│   ├── projects.py              # /api/v1/projects
-│   ├── project_phases.py        # /api/v1/.../phases
-│   ├── project_deliverables.py  # /api/v1/.../deliverables
+│   ├── period_phases.py         # /api/v1/contract-periods/{id}/phases
+│   ├── period_deliverables.py   # /api/v1/contract-periods/{id}/deliverables
 │   ├── assets.py                # /api/v1/assets
 │   ├── asset_ips.py             # /api/v1/.../ips
 │   ├── asset_contacts.py        # /api/v1/.../contacts
@@ -195,16 +206,18 @@ app/modules/infra/
 │   ├── port_maps.py             # /api/v1/port-maps
 │   ├── policies.py              # /api/v1/policies
 │   ├── policy_assignments.py    # /api/v1/policy-assignments
-│   ├── project_assets.py        # /api/v1/project-assets
+│   ├── period_assets.py         # /api/v1/period-assets
 │   ├── asset_relations.py       # /api/v1/asset-relations
-│   ├── project_customers.py     # /api/v1/project-customers
-│   ├── project_customer_contacts.py # /api/v1/project-customer-contacts
+│   ├── period_customers.py      # /api/v1/period-customers
+│   ├── period_customer_contacts.py # /api/v1/period-customer-contacts
 │   ├── infra_dashboard.py       # /api/v1/infra-dashboard (집계 + 감사로그)
-│   ├── infra_excel.py           # /api/v1/infra-excel (Import/Export)
+│   ├── infra_excel.py           # /api/v1/infra-excel (Import/Export, spec/eosl 포함)
+│   ├── product_catalogs.py      # /api/v1/product-catalog
+│   ├── asset_softwares.py       # /api/v1/assets/{id}/software, /api/v1/asset-software/{id}
 │   └── pages.py                 # 인프라 HTML 페이지 렌더링
 └── templates/
-    ├── infra_projects.html      # 프로젝트 목록
-    ├── infra_project_detail.html # 프로젝트 상세 (탭 구조)
+    ├── infra_periods.html       # 계약단위 목록
+    ├── infra_period_detail.html # 계약단위 상세 (탭 구조)
     ├── infra_assets.html        # 자산 목록
     ├── infra_ip_inventory.html  # IP 대역 관리
     ├── infra_port_maps.html     # 포트맵
@@ -247,6 +260,7 @@ app/static/
 │   ├── infra_dashboard.js       # 인프라 현황판
 │   ├── infra_inventory_assets.js # 자산 횡단 검색
 │   ├── infra_import.js          # 자산 Excel Import
+│   ├── infra_product_catalog.js # 제품 카탈로그
 │   └── lucide.js                # 아이콘 라이브러리
 ├── css/
 │   ├── base.css                 # 전역 스타일, CSS 변수 (light/dark)
@@ -276,6 +290,7 @@ app/templates/                   # 공통 및 회계 템플릿
 ├── users.html                   # 사용자 관리
 ├── system.html                  # 시스템 설정
 ├── audit_logs.html              # 감사 로그 (placeholder)
+├── product_catalog.html         # 제품 카탈로그 (글로벌 리소스)
 └── {components}/
     └── _modal_add_contract.html # 사업 추가 모달
 ```
@@ -298,7 +313,7 @@ tests/
 │   ├── test_report_service.py
 │   └── test_importer.py
 ├── infra/
-│   ├── test_project_service.py
+│   ├── test_period_service.py
 │   ├── test_phase_service.py
 │   ├── test_asset_service.py
 │   ├── test_asset_contact_service.py
@@ -306,10 +321,11 @@ tests/
 │   ├── test_port_map_service.py
 │   ├── test_policy_service.py
 │   ├── test_infra_importer.py
-│   ├── test_project_asset_service.py
+│   ├── test_period_asset_service.py
 │   ├── test_asset_relation_service.py
-│   ├── test_project_customer_service.py
-│   └── test_project_customer_contact_service.py
+│   ├── test_period_customer_service.py
+│   ├── test_period_customer_contact_service.py
+│   └── test_customer_centric.py    # 고객사 scope CRUD, 계약단위 필터, Export E2E
 ├── test_database.py             # 스키마 정합성
 ├── test_startup.py              # bootstrap, lifespan
 ├── test_module_isolation.py     # accounting <-> infra import 금지 검증
@@ -326,7 +342,37 @@ alembic/
     ├── 0001_initial_modular_baseline.py  # 통합 모듈 초기 스키마
     ├── 0002_add_project_contract_link_and_audit_module.py
     ├── 0003_asset_restructure.py         # project_assets, asset_code, asset_relations
-    └── 0004_project_customer.py          # project_customers, project_customer_contacts
+    ├── 0004_project_customer.py          # project_customers, project_customer_contacts
+    ├── 0005_customer_centric_restructure.py # customer_id FK 추가, project_id FK 제거
+    ├── 0006_add_customer_code.py          # 고객사 코드 컬럼
+    ├── 0007_product_catalog.py            # product_catalog, hardware_specs, hardware_interfaces
+    ├── 0008_asset_hardware_model_and_software.py # asset.hardware_model_id FK, asset_software 테이블
+    ├── 0009_hardware_interface_capacity_type.py # hardware_interfaces capacity_type 컬럼
+    └── 0010_unified_business_model.py     # Contract/ContractPeriod → common, project_* → period_*, ContractSalesDetail
+```
+
+## 문서
+
+```text
+docs/
+├── DECISIONS.md                # 아키텍처 결정 기록 (추가 전용)
+├── KNOWN_ISSUES.md             # 알려진 제약, 임시 우회
+├── PROJECT_CONTEXT.md          # 프로젝트 배경, 사용자, 문제 정의
+├── PROJECT_STRUCTURE.md        # 이 파일 — 파일 단위 구조와 역할
+└── guidelines/
+    ├── backend.md              # 백엔드 코드 규칙, 예외 처리, 감사 로그
+    ├── frontend.md             # 프론트엔드 명명, CSS, 모달, UI/UX
+    ├── auth.md                 # 인증/권한/보안 규칙
+    ├── excel.md                # Excel Import/Export 규칙
+    ├── accounting.md           # 회계모듈 용어, 데이터 원칙
+    └── infra.md                # 인프라모듈 용어, 데이터 원칙
+```
+
+## 스크립트
+
+```text
+scripts/
+└── seed_catalog.py             # 제품 카탈로그 시드 데이터
 ```
 
 ## 루트 파일

@@ -31,7 +31,8 @@
 
 ## 권한
 
-- admin/user 2단계만 구현 (RBAC 전환 예정 — 마이그레이션 단계 5)
+- RBAC 기본 구현 완료 (Role 모델 + permissions JSONB + 기본 역할 4종 + require_module_access)
+- 풀 RBAC 확장(resource x action 조합)은 향후 구현 예정 (permissions.resources 플레이스홀더 존재)
 
 ## 발행일 휴일 조정
 

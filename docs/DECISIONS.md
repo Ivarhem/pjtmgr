@@ -251,3 +251,28 @@
 - 기존 projmgr/inframgr migration 모두 폐기, 통합 후 새 initial migration 생성
 - standalone 배포 시에도 모든 테이블(accounting 포함)이 생성됨 (스키마 수준 결합이지만 운영상 무해)
 - 단일 `alembic/versions/` 디렉토리에서 전체 스키마 관리
+
+## Product Catalog — 글로벌 리소스 설계
+
+### 이유
+
+- HW 제품(vendor+model)은 여러 고객사에서 공유되는 참조 데이터이므로 customer_id 없이 글로벌로 관리
+- Asset.hardware_model_id FK로 연결하되, 기존 vendor/model 텍스트 컬럼은 하위호환 유지
+- 장기적으로 HW스펙(size_unit)→랙배치, 인터페이스→포트맵 자동생성에 활용
+
+### 영향
+
+- product_catalog, hardware_specs, hardware_interfaces: 마이그레이션 0007
+- asset.hardware_model_id FK + asset_software: 마이그레이션 0008
+- ProductCatalog 삭제 시 자산 참조 guard (409)
+- SPEC/EOSL Excel Import는 customer_id 불필요 (글로벌 upsert)
+
+---
+
+### D-013: 사업/계약단위 통합 (2026-03-23)
+
+**결정:** Contract/ContractPeriod/ContractTypeConfig를 common 모듈로 이동. infra의 Project 테이블을 삭제하고 ContractPeriod를 인프라 작업 단위로 통합. 영업 전용 필드는 ContractSalesDetail 1:1 확장 테이블로 분리.
+
+**이유:** 동일 사업이 영업/인프라에 각각 등록되는 데이터 중복 해소, 모듈 간 import 규칙 준수, ProjectContractLink N:N 관계 제거.
+
+**영향:** infra의 `project_*` 테이블이 `period_*`로 리네이밍, FK가 `contract_period_id`로 변경. 원장 엔드포인트 `/api/v1/ledger/periods`로 이동. 영업 확장 정보는 `/api/v1/contract-periods/{id}/sales-detail` API로 분리.
