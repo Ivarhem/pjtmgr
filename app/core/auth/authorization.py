@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Query, Session
 
     from app.modules.common.models.user import User
-    from app.modules.accounting.models.contract import Contract
+    from app.modules.common.models.contract import Contract
 
 
 # ── 헬퍼: permissions 접근 ─────────────────────────────────────
@@ -133,7 +133,7 @@ def check_contract_access(db: "Session", contract_id: int, user: "User") -> None
     """단건 사업 접근 권한 확인. admin은 전체, user는 본인 담당만."""
     if has_full_contract_scope(user):
         return
-    from app.modules.accounting.models.contract import Contract
+    from app.modules.common.models.contract import Contract
 
     contract = (
         db.query(Contract.id)
@@ -151,7 +151,7 @@ def check_period_access(db: "Session", period_id: int, user: "User") -> None:
     """기간(period_id) 기반 사업 접근 권한 확인."""
     if has_full_contract_scope(user):
         return
-    from app.modules.accounting.models.contract_period import ContractPeriod
+    from app.modules.common.models.contract_period import ContractPeriod
 
     period = db.get(ContractPeriod, period_id)
     if not period:
@@ -196,7 +196,7 @@ def get_owner_filter(user: User) -> int | None:
 
 def list_accessible_contract_ids(db: "Session", user: "User") -> list[int]:
     """현재 사용자가 접근 가능한 사업 ID 목록."""
-    from app.modules.accounting.models.contract import Contract
+    from app.modules.common.models.contract import Contract
 
     q = db.query(Contract.id)
     q = apply_contract_scope(q, user)
@@ -205,8 +205,8 @@ def list_accessible_contract_ids(db: "Session", user: "User") -> list[int]:
 
 def _contract_visibility_clause(user: User):
     """Contract owner 또는 Period owner 기준의 가시 범위 조건."""
-    from app.modules.accounting.models.contract import Contract
-    from app.modules.accounting.models.contract_period import ContractPeriod
+    from app.modules.common.models.contract import Contract
+    from app.modules.common.models.contract_period import ContractPeriod
 
     return or_(
         Contract.owner_user_id == user.id,

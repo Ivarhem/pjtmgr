@@ -12,7 +12,6 @@ from app.modules.common.models import (  # noqa: F401
     CustomerContact,
     CustomerContactRole,
     LoginFailure,
-    ProjectContractLink,
     Role,
     Setting,
     TermConfig,
