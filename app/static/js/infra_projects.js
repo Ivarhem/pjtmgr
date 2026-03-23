@@ -18,13 +18,13 @@ const PHASE_STATUS_MAP = {
    ═══════════════════════════════════════════════════ */
 
 const columnDefs = [
-  { field: "contract_code", headerName: "사업코드", width: 150, sort: "asc" },
+  { field: "period_code", headerName: "기간코드", width: 160, sort: "asc" },
   {
     headerName: "사업명", flex: 1, minWidth: 200,
     valueGetter: (params) => {
       const d = params.data;
       if (!d) return '';
-      return d.contract_name + ' (' + d.period_label + ')';
+      return d.contract_name + ' (' + d.period_code + ')';
     },
   },
   {
@@ -127,7 +127,7 @@ function initListGrids() {
     onRowClicked: (e) => {
       const d = e.data;
       if (d && d.id && window.setCtxProject) {
-        window.setCtxProject(d.id, d.contract_code, d.contract_name + ' (' + d.period_label + ')');
+        window.setCtxProject(d.id, d.period_code, d.contract_name + ' (' + d.period_code + ')');
       }
     },
   });

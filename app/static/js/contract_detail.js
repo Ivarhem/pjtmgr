@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   await Promise.all([loadCustomers(), loadUsers()]);
   await loadAll();
-  loadLinkedProjects();
   setupModals();
   _initPillNav();
   // 날짜 텍스트 입력 blur 시 자동 정규화
@@ -3234,98 +3233,3 @@ document.getElementById('btn-match-cancel')?.addEventListener('click', () => {
   document.getElementById('modal-add-receipt-match')?.close();
 });
 
-// ── 연결된 프로젝트 (infra 모듈 활성 시) ──
-
-async function loadLinkedProjects() {
-  const container = document.getElementById('linked-projects-list');
-  if (!container) return; // infra 비활성
-  try {
-    const links = await apiFetch(`/api/v1/project-contract-links?contract_id=${contractId}`);
-    container.textContent = '';
-    if (!links || links.length === 0) {
-      const p = document.createElement('p');
-      p.className = 'text-muted infra-card-padding';
-      p.textContent = '연결된 프로젝트가 없습니다.';
-      container.appendChild(p);
-      return;
-    }
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    ['프로젝트 코드', '프로젝트명', '메모', ''].forEach(text => {
-      const th = document.createElement('th');
-      th.textContent = text;
-      headRow.appendChild(th);
-    });
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-    const tbody = document.createElement('tbody');
-    links.forEach(link => {
-      const tr = document.createElement('tr');
-      const tdCode = document.createElement('td');
-      const a = document.createElement('a');
-      a.href = '/projects/' + link.project_id;
-      a.textContent = link.project_code || link.project_id;
-      tdCode.appendChild(a);
-      const tdName = document.createElement('td');
-      tdName.textContent = link.project_name || '';
-      const tdNote = document.createElement('td');
-      tdNote.textContent = link.note || '';
-      const tdAction = document.createElement('td');
-      const btnUnlink = document.createElement('button');
-      btnUnlink.className = 'btn btn-secondary btn-compact btn-text-danger';
-      btnUnlink.textContent = '해제';
-      btnUnlink.addEventListener('click', () => unlinkProject(link.id));
-      tdAction.appendChild(btnUnlink);
-      tr.appendChild(tdCode);
-      tr.appendChild(tdName);
-      tr.appendChild(tdNote);
-      tr.appendChild(tdAction);
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    container.appendChild(table);
-  } catch (e) {
-    container.textContent = '';
-    const p = document.createElement('p');
-    p.className = 'text-muted infra-card-padding';
-    p.textContent = '프로젝트 연결 정보를 불러올 수 없습니다.';
-    container.appendChild(p);
-  }
-}
-
-async function unlinkProject(linkId) {
-  if (!confirm('프로젝트 연결을 해제하시겠습니까?')) return;
-  try {
-    await apiFetch(`/api/v1/project-contract-links/${linkId}`, { method: 'DELETE' });
-    showToast('프로젝트 연결이 해제되었습니다.');
-    await loadLinkedProjects();
-  } catch (e) {
-    showToast('연결 해제 실패: ' + e.message, 'error');
-  }
-}
-
-async function linkProjectPrompt() {
-  const projectCode = prompt('연결할 프로젝트 코드를 입력하세요:');
-  if (!projectCode) return;
-  // 프로젝트 검색
-  try {
-    const projects = await apiFetch('/api/v1/projects');
-    const match = projects.find(p => p.project_code === projectCode.trim());
-    if (!match) {
-      showToast('프로젝트를 찾을 수 없습니다: ' + projectCode, 'error');
-      return;
-    }
-    await apiFetch('/api/v1/project-contract-links', {
-      method: 'POST',
-      body: { project_id: match.id, contract_id: contractId },
-    });
-    showToast('프로젝트가 연결되었습니다.');
-    await loadLinkedProjects();
-  } catch (e) {
-    showToast('연결 실패: ' + e.message, 'error');
-  }
-}
-
-document.getElementById('btn-link-project')?.addEventListener('click', linkProjectPrompt);

@@ -37,6 +37,7 @@ def _period_list_dict(period: ContractPeriod, sales_detail: ContractSalesDetail 
         "status": contract.status,
         "period_year": period.period_year,
         "period_label": period.period_label,
+        "period_code": period.period_code,
         "stage": period.stage,
         "start_month": period.start_month,
         "end_month": period.end_month,

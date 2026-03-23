@@ -65,13 +65,13 @@ function autoPinProject() {
 async function loadProjectInfo() {
   try {
     const p = await apiFetch(`/api/v1/contract-periods/${PROJECT_ID}`);
-    document.getElementById("project-title").textContent = p.contract_name + ' (' + p.period_label + ')';
+    document.getElementById("project-title").textContent = p.contract_name + ' (' + p.period_code + ')';
 
     const info = document.getElementById("project-info");
     while (info.firstChild) info.removeChild(info.firstChild);
 
     const items = [
-      ["사업코드", p.contract_code],
+      ["기간코드", p.period_code],
       ["고객사", p.customer_name || "-"],
       ["진행단계", p.stage || "-"],
       ["시작월", p.start_month ? p.start_month.slice(0, 7) : "-"],
