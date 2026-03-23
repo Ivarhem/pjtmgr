@@ -5,23 +5,23 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class ProjectCustomerContactCreate(BaseModel):
-    project_customer_id: int
+class PeriodCustomerContactCreate(BaseModel):
+    period_customer_id: int
     contact_id: int
     project_role: str
     note: str | None = None
 
 
-class ProjectCustomerContactUpdate(BaseModel):
+class PeriodCustomerContactUpdate(BaseModel):
     project_role: str | None = None
     note: str | None = None
 
 
-class ProjectCustomerContactRead(BaseModel):
+class PeriodCustomerContactRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    project_customer_id: int
+    period_customer_id: int
     contact_id: int
     project_role: str
     note: str | None

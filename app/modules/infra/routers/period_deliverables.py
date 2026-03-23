@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
 from app.core.database import get_db
-from app.modules.infra.schemas.project_deliverable import (
-    ProjectDeliverableCreate,
-    ProjectDeliverableRead,
-    ProjectDeliverableUpdate,
+from app.modules.infra.schemas.period_deliverable import (
+    PeriodDeliverableCreate,
+    PeriodDeliverableRead,
+    PeriodDeliverableUpdate,
 )
 from app.modules.infra.services.phase_service import (
     create_deliverable,
@@ -19,63 +19,63 @@ from app.modules.infra.services.phase_service import (
 )
 
 
-router = APIRouter(tags=["infra-project-deliverables"])
+router = APIRouter(tags=["infra-period-deliverables"])
 
 
 @router.get(
-    "/api/v1/project-phases/{phase_id}/deliverables",
-    response_model=list[ProjectDeliverableRead],
+    "/api/v1/period-phases/{phase_id}/deliverables",
+    response_model=list[PeriodDeliverableRead],
 )
 def list_deliverables_endpoint(
     phase_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> list[ProjectDeliverableRead]:
+) -> list[PeriodDeliverableRead]:
     return list_deliverables(db, phase_id)
 
 
 @router.post(
-    "/api/v1/project-phases/{phase_id}/deliverables",
-    response_model=ProjectDeliverableRead,
+    "/api/v1/period-phases/{phase_id}/deliverables",
+    response_model=PeriodDeliverableRead,
     status_code=status.HTTP_201_CREATED,
 )
 def create_deliverable_endpoint(
     phase_id: int,
-    payload: ProjectDeliverableCreate,
+    payload: PeriodDeliverableCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> ProjectDeliverableRead:
-    payload.project_phase_id = phase_id
+) -> PeriodDeliverableRead:
+    payload.period_phase_id = phase_id
     return create_deliverable(db, payload, current_user)
 
 
 @router.get(
-    "/api/v1/project-deliverables/{deliverable_id}",
-    response_model=ProjectDeliverableRead,
+    "/api/v1/period-deliverables/{deliverable_id}",
+    response_model=PeriodDeliverableRead,
 )
 def get_deliverable_endpoint(
     deliverable_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> ProjectDeliverableRead:
+) -> PeriodDeliverableRead:
     return get_deliverable(db, deliverable_id)
 
 
 @router.patch(
-    "/api/v1/project-deliverables/{deliverable_id}",
-    response_model=ProjectDeliverableRead,
+    "/api/v1/period-deliverables/{deliverable_id}",
+    response_model=PeriodDeliverableRead,
 )
 def update_deliverable_endpoint(
     deliverable_id: int,
-    payload: ProjectDeliverableUpdate,
+    payload: PeriodDeliverableUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> ProjectDeliverableRead:
+) -> PeriodDeliverableRead:
     return update_deliverable(db, deliverable_id, payload, current_user)
 
 
 @router.delete(
-    "/api/v1/project-deliverables/{deliverable_id}",
+    "/api/v1/period-deliverables/{deliverable_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_deliverable_endpoint(

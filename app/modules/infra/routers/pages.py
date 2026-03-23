@@ -1,6 +1,6 @@
 """Infra module page routes (HTML template rendering)."""
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 router = APIRouter(tags=["infra-pages"])
 
@@ -10,19 +10,23 @@ def _templates(request: Request):
     return request.app.state.templates
 
 
-@router.get("/projects", response_class=HTMLResponse)
-def projects_page(request: Request) -> HTMLResponse:
+@router.get("/periods", response_class=HTMLResponse)
+def periods_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
         "infra_projects.html", {"request": request}
     )
 
 
-@router.get("/projects/{project_id}", response_class=HTMLResponse)
-def project_detail_page(request: Request, project_id: int) -> HTMLResponse:
-    return _templates(request).TemplateResponse(
-        "infra_project_detail.html",
-        {"request": request, "project_id": project_id},
-    )
+@router.get("/projects")
+def projects_redirect(request: Request) -> RedirectResponse:
+    """Legacy /projects URL redirects to /periods."""
+    return RedirectResponse("/periods", status_code=301)
+
+
+@router.get("/projects/{project_id}")
+def project_detail_redirect(request: Request, project_id: int) -> RedirectResponse:
+    """Legacy project detail redirects to /periods."""
+    return RedirectResponse("/periods", status_code=301)
 
 
 @router.get("/assets", response_class=HTMLResponse)
@@ -60,11 +64,10 @@ def policies_page(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/infra-dashboard", response_class=HTMLResponse)
-def infra_dashboard_page(request: Request) -> HTMLResponse:
-    return _templates(request).TemplateResponse(
-        "infra_dashboard.html", {"request": request}
-    )
+@router.get("/infra-dashboard")
+def infra_dashboard_page(request: Request) -> RedirectResponse:
+    """Dashboard merged into /periods page."""
+    return RedirectResponse("/periods", status_code=301)
 
 
 @router.get("/inventory/assets", response_class=HTMLResponse)

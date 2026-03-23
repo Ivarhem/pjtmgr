@@ -24,7 +24,7 @@ from app.modules.infra.schemas.policy_definition import (
 )
 from app.modules.infra.services._helpers import (
     ensure_customer_exists,
-    get_project_asset_ids,
+    get_period_asset_ids,
 )
 
 
@@ -109,7 +109,7 @@ def delete_policy(db: Session, policy_id: int, current_user) -> None:
 
 
 def list_assignments(
-    db: Session, customer_id: int, project_id: int | None = None
+    db: Session, customer_id: int, period_id: int | None = None
 ) -> list[PolicyAssignment]:
     ensure_customer_exists(db, customer_id)
     stmt = (
@@ -117,8 +117,8 @@ def list_assignments(
         .where(PolicyAssignment.customer_id == customer_id)
         .order_by(PolicyAssignment.id.asc())
     )
-    if project_id is not None:
-        asset_ids = get_project_asset_ids(db, project_id)
+    if period_id is not None:
+        asset_ids = get_period_asset_ids(db, period_id)
         stmt = stmt.where(PolicyAssignment.asset_id.in_(asset_ids))
     return list(db.scalars(stmt))
 

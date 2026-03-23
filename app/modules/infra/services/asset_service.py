@@ -13,7 +13,7 @@ from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_contact import AssetContact
 from app.modules.infra.schemas.asset import AssetCreate, AssetUpdate
-from app.modules.infra.services._helpers import ensure_customer_exists, get_project_asset_ids
+from app.modules.infra.services._helpers import ensure_customer_exists, get_period_asset_ids
 from app.modules.infra.schemas.asset_contact import (
     AssetContactCreate,
     AssetContactUpdate,
@@ -27,14 +27,14 @@ from app.modules.common.models.customer_contact import CustomerContact
 def list_assets(
     db: Session,
     customer_id: int,
-    project_id: int | None = None,
+    period_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
     q: str | None = None,
 ) -> list[Asset]:
     stmt = select(Asset).where(Asset.customer_id == customer_id)
-    if project_id is not None:
-        asset_ids = get_project_asset_ids(db, project_id)
+    if period_id is not None:
+        asset_ids = get_period_asset_ids(db, period_id)
         if not asset_ids:
             return []
         stmt = stmt.where(Asset.id.in_(asset_ids))
@@ -54,36 +54,36 @@ def list_assets(
     return list(db.scalars(stmt))
 
 
-def enrich_assets_with_project(db: Session, assets: list[Asset]) -> list[dict]:
-    """Attach project_code and project_name via ProjectAsset for inventory view."""
-    from app.modules.infra.models.project import Project
-    from app.modules.infra.models.project_asset import ProjectAsset
+def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
+    """Attach period_label via PeriodAsset for inventory view."""
+    from app.modules.common.models.contract_period import ContractPeriod
+    from app.modules.infra.models.period_asset import PeriodAsset
 
     if not assets:
         return []
 
     asset_ids = [a.id for a in assets]
-    # Load ProjectAsset links for these assets
+    # Load PeriodAsset links for these assets
     pa_rows = list(
         db.execute(
-            select(ProjectAsset.asset_id, ProjectAsset.project_id).where(
-                ProjectAsset.asset_id.in_(asset_ids)
+            select(PeriodAsset.asset_id, PeriodAsset.contract_period_id).where(
+                PeriodAsset.asset_id.in_(asset_ids)
             )
         )
     )
-    # Map asset_id -> first project_id (for display)
-    asset_project_map: dict[int, int] = {}
-    project_ids: set[int] = set()
+    # Map asset_id -> first contract_period_id (for display)
+    asset_period_map: dict[int, int] = {}
+    period_ids: set[int] = set()
     for row in pa_rows:
-        if row.asset_id not in asset_project_map:
-            asset_project_map[row.asset_id] = row.project_id
-        project_ids.add(row.project_id)
+        if row.asset_id not in asset_period_map:
+            asset_period_map[row.asset_id] = row.contract_period_id
+        period_ids.add(row.contract_period_id)
 
-    projects = {}
-    if project_ids:
-        projects = {
+    periods = {}
+    if period_ids:
+        periods = {
             p.id: p
-            for p in db.scalars(select(Project).where(Project.id.in_(project_ids)))
+            for p in db.scalars(select(ContractPeriod).where(ContractPeriod.id.in_(period_ids)))
         }
 
     result = []
@@ -91,10 +91,9 @@ def enrich_assets_with_project(db: Session, assets: list[Asset]) -> list[dict]:
         d = {c.key: getattr(a, c.key) for c in Asset.__table__.columns}
         d["created_at"] = a.created_at
         d["updated_at"] = a.updated_at
-        proj_id = asset_project_map.get(a.id)
-        proj = projects.get(proj_id) if proj_id else None
-        d["project_code"] = proj.project_code if proj else None
-        d["project_name"] = proj.project_name if proj else None
+        period_id = asset_period_map.get(a.id)
+        period = periods.get(period_id) if period_id else None
+        d["period_label"] = period.period_label if period else None
         result.append(d)
     return result
 
@@ -110,6 +109,8 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     _require_inventory_edit(current_user)
     ensure_customer_exists(db, payload.customer_id)
     _ensure_asset_name_unique(db, payload.customer_id, payload.asset_name)
+    if payload.hardware_model_id is not None:
+        _ensure_hardware_model_exists(db, payload.hardware_model_id)
 
     asset = Asset(**payload.model_dump())
     db.add(asset)
@@ -137,6 +138,9 @@ def update_asset(
 
     if target_customer_id != asset.customer_id or target_asset_name != asset.asset_name:
         _ensure_asset_name_unique(db, target_customer_id, target_asset_name, asset.id)
+
+    if "hardware_model_id" in changes and changes["hardware_model_id"] is not None:
+        _ensure_hardware_model_exists(db, changes["hardware_model_id"])
 
     for field, value in changes.items():
         setattr(asset, field, value)
@@ -230,6 +234,12 @@ def delete_asset_contact(db: Session, asset_contact_id: int, current_user) -> No
 def _ensure_asset_exists(db: Session, asset_id: int) -> None:
     if db.get(Asset, asset_id) is None:
         raise NotFoundError("Asset not found")
+
+
+def _ensure_hardware_model_exists(db: Session, product_id: int) -> None:
+    from app.modules.infra.models.product_catalog import ProductCatalog
+    if db.get(ProductCatalog, product_id) is None:
+        raise NotFoundError("Product catalog entry not found")
 
 
 def _ensure_contact_exists(db: Session, contact_id: int) -> None:

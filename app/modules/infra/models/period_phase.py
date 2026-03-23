@@ -7,11 +7,11 @@ from app.core.database import Base
 from app.core.base_model import TimestampMixin
 
 
-class ProjectPhase(TimestampMixin, Base):
-    __tablename__ = "project_phases"
+class PeriodPhase(TimestampMixin, Base):
+    __tablename__ = "period_phases"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    contract_period_id: Mapped[int] = mapped_column(ForeignKey("contract_periods.id"), index=True)
     phase_type: Mapped[str] = mapped_column(String(30))
     task_scope: Mapped[str | None] = mapped_column(Text, nullable=True)
     deliverables_note: Mapped[str | None] = mapped_column(Text, nullable=True)

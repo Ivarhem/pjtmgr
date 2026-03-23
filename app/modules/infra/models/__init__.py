@@ -1,6 +1,5 @@
-from app.modules.infra.models.project import Project
-from app.modules.infra.models.project_phase import ProjectPhase
-from app.modules.infra.models.project_deliverable import ProjectDeliverable
+from app.modules.infra.models.period_phase import PeriodPhase
+from app.modules.infra.models.period_deliverable import PeriodDeliverable
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.asset_ip import AssetIP
@@ -8,15 +7,18 @@ from app.modules.infra.models.port_map import PortMap
 from app.modules.infra.models.policy_definition import PolicyDefinition
 from app.modules.infra.models.policy_assignment import PolicyAssignment
 from app.modules.infra.models.asset_contact import AssetContact
+from app.modules.infra.models.asset_software import AssetSoftware
 from app.modules.infra.models.asset_relation import AssetRelation
-from app.modules.infra.models.project_asset import ProjectAsset
-from app.modules.infra.models.project_customer import ProjectCustomer
-from app.modules.infra.models.project_customer_contact import ProjectCustomerContact
+from app.modules.infra.models.period_asset import PeriodAsset
+from app.modules.infra.models.period_customer import PeriodCustomer
+from app.modules.infra.models.product_catalog import ProductCatalog
+from app.modules.infra.models.hardware_spec import HardwareSpec
+from app.modules.infra.models.hardware_interface import HardwareInterface
+from app.modules.infra.models.period_customer_contact import PeriodCustomerContact
 
 __all__ = [
-    "Project",
-    "ProjectPhase",
-    "ProjectDeliverable",
+    "PeriodPhase",
+    "PeriodDeliverable",
     "Asset",
     "IpSubnet",
     "AssetIP",
@@ -24,8 +26,12 @@ __all__ = [
     "PolicyDefinition",
     "PolicyAssignment",
     "AssetContact",
-    "ProjectAsset",
+    "AssetSoftware",
+    "PeriodAsset",
     "AssetRelation",
-    "ProjectCustomer",
-    "ProjectCustomerContact",
+    "PeriodCustomer",
+    "PeriodCustomerContact",
+    "ProductCatalog",
+    "HardwareSpec",
+    "HardwareInterface",
 ]

@@ -5,8 +5,8 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class ProjectDeliverableCreate(BaseModel):
-    project_phase_id: int
+class PeriodDeliverableCreate(BaseModel):
+    period_phase_id: int
     name: str
     description: str | None = None
     is_submitted: bool = False
@@ -14,7 +14,7 @@ class ProjectDeliverableCreate(BaseModel):
     note: str | None = None
 
 
-class ProjectDeliverableUpdate(BaseModel):
+class PeriodDeliverableUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     is_submitted: bool | None = None
@@ -22,11 +22,11 @@ class ProjectDeliverableUpdate(BaseModel):
     note: str | None = None
 
 
-class ProjectDeliverableRead(BaseModel):
+class PeriodDeliverableRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    project_phase_id: int
+    period_phase_id: int
     name: str
     description: str | None
     is_submitted: bool

@@ -17,6 +17,7 @@ class AssetCreate(BaseModel):
     location: str | None = None
     status: str = "planned"
     note: str | None = None
+    hardware_model_id: int | None = None
     # Equipment Spec
     center: str | None = None
     operation_type: str | None = None
@@ -65,6 +66,7 @@ class AssetUpdate(BaseModel):
     location: str | None = None
     status: str | None = None
     note: str | None = None
+    hardware_model_id: int | None = None
     # Equipment Spec
     center: str | None = None
     operation_type: str | None = None
@@ -116,6 +118,7 @@ class AssetRead(BaseModel):
     location: str | None
     status: str
     note: str | None
+    hardware_model_id: int | None = None
     # Equipment Spec
     center: str | None = None
     operation_type: str | None = None
@@ -151,7 +154,6 @@ class AssetRead(BaseModel):
     secondary_contact_name: str | None = None
     maintenance_vendor: str | None = None
     # Enriched fields (inventory view)
-    project_code: str | None = None
-    project_name: str | None = None
+    period_label: str | None = None
     created_at: datetime
     updated_at: datetime

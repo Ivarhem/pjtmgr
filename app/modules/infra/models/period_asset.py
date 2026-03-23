@@ -7,12 +7,12 @@ from app.core.base_model import TimestampMixin
 from app.core.database import Base
 
 
-class ProjectAsset(TimestampMixin, Base):
-    __tablename__ = "project_assets"
+class PeriodAsset(TimestampMixin, Base):
+    __tablename__ = "period_assets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    project_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("projects.id"), nullable=False, index=True
+    contract_period_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("contract_periods.id"), nullable=False, index=True
     )
     asset_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("assets.id"), nullable=False, index=True
@@ -20,4 +20,4 @@ class ProjectAsset(TimestampMixin, Base):
     role: Mapped[str | None] = mapped_column(String(100), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    __table_args__ = (UniqueConstraint("project_id", "asset_id"),)
+    __table_args__ = (UniqueConstraint("contract_period_id", "asset_id"),)

@@ -5,8 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class ProjectPhaseCreate(BaseModel):
-    project_id: int
+class PeriodPhaseCreate(BaseModel):
+    contract_period_id: int
     phase_type: str
     task_scope: str | None = None
     deliverables_note: str | None = None
@@ -16,7 +16,7 @@ class ProjectPhaseCreate(BaseModel):
     status: str = "not_started"
 
 
-class ProjectPhaseUpdate(BaseModel):
+class PeriodPhaseUpdate(BaseModel):
     phase_type: str | None = None
     task_scope: str | None = None
     deliverables_note: str | None = None
@@ -26,11 +26,11 @@ class ProjectPhaseUpdate(BaseModel):
     status: str | None = None
 
 
-class ProjectPhaseRead(BaseModel):
+class PeriodPhaseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    project_id: int
+    contract_period_id: int
     phase_type: str
     task_scope: str | None
     deliverables_note: str | None

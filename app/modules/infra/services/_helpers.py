@@ -6,15 +6,15 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
 from app.modules.common.models.customer import Customer
-from app.modules.infra.models.project_asset import ProjectAsset
+from app.modules.infra.models.period_asset import PeriodAsset
 
 
-def get_project_asset_ids(db: Session, project_id: int) -> set[int]:
-    """Return asset IDs linked to a project via ProjectAsset."""
+def get_period_asset_ids(db: Session, contract_period_id: int) -> set[int]:
+    """Return asset IDs linked to a contract period via PeriodAsset."""
     return set(
         db.scalars(
-            select(ProjectAsset.asset_id).where(
-                ProjectAsset.project_id == project_id
+            select(PeriodAsset.asset_id).where(
+                PeriodAsset.contract_period_id == contract_period_id
             )
         )
     )

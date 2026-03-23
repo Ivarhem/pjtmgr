@@ -14,12 +14,17 @@ from app.modules.common.models.customer import Customer
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
-from app.modules.infra.models.project_asset import ProjectAsset
+from app.modules.infra.models.period_asset import PeriodAsset
 
-# ── 헤더 / 필드 매핑 ──
+# -- 헤더 / 필드 매핑 --
 
 _INVENTORY_HEADERS = [
     ("Seq", None),
+    ("자산명", "asset_name"),
+    ("자산유형", "asset_type"),
+    ("상태", "status"),
+    ("환경", "environment"),
+    ("위치", "location"),
     ("센터", "center"),
     ("운영유형", "operation_type"),
     ("장비ID", "equipment_id"),
@@ -94,7 +99,7 @@ _PORTMAP_HEADERS = [
     ("비고", "note"),
 ]
 
-# ── 스타일 ──
+# -- 스타일 --
 
 _HEADER_FONT = Font(bold=True, size=10)
 _HEADER_FILL = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
@@ -120,28 +125,30 @@ def _auto_width(ws, headers: list[tuple[str, str | None]]) -> None:
         ws.column_dimensions[col_letter].width = min(max_len + 1, 40)
 
 
-# ── 메인 ──
+# -- 메인 --
 
 
-def export_project(db: Session, project_id: int) -> bytes:
-    """프로젝트의 고객사 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export."""
-    project = db.get(Project, project_id)
-    if project is None:
-        raise NotFoundError("Project not found")
-    customer_id = project.customer_id
+def export_customer(db: Session, customer_id: int, period_id: int | None = None) -> bytes:
+    """고객사 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export. period_id 지정 시 해당 기간 자산만 필터."""
+    if db.get(Customer, customer_id) is None:
+        raise NotFoundError("Customer not found")
+
+    # 기간 필터용 자산 ID 집합
+    period_asset_ids: set[int] | None = None
+    if period_id:
+        period_asset_ids = set(db.scalars(
+            select(PeriodAsset.asset_id).where(PeriodAsset.contract_period_id == period_id)
+        ))
 
     wb = openpyxl.Workbook()
 
     # Sheet 1: Inventory (Assets)
     ws_inv = wb.active
     ws_inv.title = "01. Inventory"
-    assets = list(
-        db.scalars(
-            select(Asset)
-            .where(Asset.customer_id == customer_id)
-            .order_by(Asset.id.asc())
-        )
-    )
+    stmt = select(Asset).where(Asset.customer_id == customer_id).order_by(Asset.id.asc())
+    if period_asset_ids is not None:
+        stmt = stmt.where(Asset.id.in_(period_asset_ids)) if period_asset_ids else stmt.where(Asset.id == -1)
+    assets = list(db.scalars(stmt))
     _write_header(ws_inv, _INVENTORY_HEADERS)
     for row_idx, asset in enumerate(assets, 2):
         for col_idx, (_, field) in enumerate(_INVENTORY_HEADERS, 1):

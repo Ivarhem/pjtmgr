@@ -9,13 +9,11 @@ from app.core.database import Base
 from app.core.base_model import TimestampMixin
 
 
-class ProjectDeliverable(TimestampMixin, Base):
-    __tablename__ = "project_deliverables"
+class PeriodDeliverable(TimestampMixin, Base):
+    __tablename__ = "period_deliverables"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_phase_id: Mapped[int] = mapped_column(
-        ForeignKey("project_phases.id"), index=True
-    )
+    period_phase_id: Mapped[int] = mapped_column(ForeignKey("period_phases.id"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_submitted: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -8,10 +8,10 @@ from app.core.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.modules.infra.services.infra_metrics import (
     get_non_compliant_assignments,
-    get_project_summary,
+    get_period_summary,
     get_unsubmitted_deliverables,
     list_audit_logs,
-    list_projects_summary,
+    list_periods_summary,
 )
 
 router = APIRouter(prefix="/api/v1/infra-dashboard", tags=["infra-dashboard"])
@@ -23,16 +23,16 @@ def dashboard_summary(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[dict]:
-    return list_projects_summary(db, customer_id=customer_id)
+    return list_periods_summary(db, customer_id=customer_id)
 
 
-@router.get("/project/{project_id}")
-def project_summary(
-    project_id: int,
+@router.get("/period/{contract_period_id}")
+def period_summary(
+    contract_period_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
-    return get_project_summary(db, project_id)
+    return get_period_summary(db, contract_period_id)
 
 
 @router.get("/unsubmitted")
@@ -55,10 +55,10 @@ def non_compliant_policies(
 
 @router.get("/audit-log")
 def audit_log_list(
-    project_id: int | None = Query(None),
+    contract_period_id: int | None = Query(None),
     limit: int = Query(100, le=500),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[dict]:
     """인프라 모듈 감사 로그 조회."""
-    return list_audit_logs(db, module="infra", project_id=project_id, limit=limit)
+    return list_audit_logs(db, module="infra", contract_period_id=contract_period_id, limit=limit)

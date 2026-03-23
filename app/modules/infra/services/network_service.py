@@ -20,7 +20,7 @@ from app.modules.infra.schemas.ip_subnet import IpSubnetCreate, IpSubnetUpdate
 from app.modules.infra.schemas.port_map import PortMapCreate, PortMapUpdate
 from app.modules.infra.services._helpers import (
     ensure_customer_exists,
-    get_project_asset_ids,
+    get_period_asset_ids,
 )
 
 
@@ -180,12 +180,12 @@ def delete_asset_ip(db: Session, ip_id: int, current_user) -> None:
 
 
 def list_port_maps(
-    db: Session, customer_id: int, project_id: int | None = None
+    db: Session, customer_id: int, period_id: int | None = None
 ) -> list[PortMap]:
     ensure_customer_exists(db, customer_id)
     stmt = select(PortMap).where(PortMap.customer_id == customer_id)
-    if project_id is not None:
-        asset_ids = get_project_asset_ids(db, project_id)
+    if period_id is not None:
+        asset_ids = get_period_asset_ids(db, period_id)
         stmt = stmt.where(
             or_(
                 PortMap.src_asset_id.in_(asset_ids),

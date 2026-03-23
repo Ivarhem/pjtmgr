@@ -16,6 +16,14 @@ from app.modules.infra.services.infra_importer import (
     parse_subnet_sheet,
     validate_xlsx,
 )
+from app.modules.infra.services.product_catalog_importer import (
+    build_eosl_template,
+    build_spec_template,
+    import_eosl,
+    import_spec,
+    parse_eosl_sheet,
+    parse_spec_sheet,
+)
 
 router = APIRouter(prefix="/api/v1/infra-excel", tags=["infra-excel"])
 
@@ -24,9 +32,11 @@ _XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 # ── 파싱 함수 / Import 함수 매핑 ──
 
 _DOMAIN_MAP = {
-    "inventory": {"parse": parse_inventory_sheet, "import": import_inventory, "has_dup": True},
-    "subnet": {"parse": parse_subnet_sheet, "import": import_subnets, "has_dup": True},
-    "portmap": {"parse": parse_portmap_sheet, "import": import_portmaps, "has_dup": False},
+    "inventory": {"parse": parse_inventory_sheet, "import": import_inventory, "has_dup": True, "needs_customer": True},
+    "subnet": {"parse": parse_subnet_sheet, "import": import_subnets, "has_dup": True, "needs_customer": True},
+    "portmap": {"parse": parse_portmap_sheet, "import": import_portmaps, "has_dup": False, "needs_customer": True},
+    "spec": {"parse": parse_spec_sheet, "import": import_spec, "has_dup": True, "needs_customer": False},
+    "eosl": {"parse": parse_eosl_sheet, "import": import_eosl, "has_dup": True, "needs_customer": False},
 }
 
 
@@ -43,7 +53,11 @@ async def import_preview(
     if domain not in _DOMAIN_MAP:
         raise ValidationError([f"지원하지 않는 도메인: {domain}"])
     content = await file.read()
-    result = _DOMAIN_MAP[domain]["parse"](content, customer_id)
+    cfg = _DOMAIN_MAP[domain]
+    if cfg["needs_customer"]:
+        result = cfg["parse"](content, customer_id)
+    else:
+        result = cfg["parse"](content)
     return {
         "valid": len(result["errors"]) == 0,
         "total": result["total"],
@@ -73,16 +87,25 @@ async def import_confirm(
     cfg = _DOMAIN_MAP[domain]
 
     # 재파싱
-    parsed = cfg["parse"](content, customer_id)
+    if cfg["needs_customer"]:
+        parsed = cfg["parse"](content, customer_id)
+    else:
+        parsed = cfg["parse"](content)
     if parsed["errors"]:
         raise ValidationError(parsed["errors"], details=parsed["error_details"])
 
     # DB 저장
     import_fn = cfg["import"]
-    if cfg["has_dup"]:
-        result = import_fn(db, customer_id, parsed["rows"], current_user, on_duplicate)
+    if cfg["needs_customer"]:
+        if cfg["has_dup"]:
+            result = import_fn(db, customer_id, parsed["rows"], current_user, on_duplicate)
+        else:
+            result = import_fn(db, customer_id, parsed["rows"], current_user)
     else:
-        result = import_fn(db, customer_id, parsed["rows"], current_user)
+        if cfg["has_dup"]:
+            result = import_fn(db, parsed["rows"], current_user, on_duplicate)
+        else:
+            result = import_fn(db, parsed["rows"], current_user)
 
     if result["errors"]:
         raise ValidationError(result["errors"], details=result["error_details"])
@@ -93,12 +116,12 @@ async def import_confirm(
 @router.get("/export")
 def export_customer_xlsx(
     customer_id: int = Query(...),
-    project_id: int | None = Query(default=None),
+    period_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> Response:
-    """고객사 단위 Excel Export (자산/IP대역/포트맵). 프로젝트 필터 옵션."""
-    content = export_customer(db, customer_id, project_id)
+    """고객사 단위 Excel Export (자산/IP대역/포트맵). 기간 필터 옵션."""
+    content = export_customer(db, customer_id, period_id)
     filename = f"customer_{customer_id}_export.xlsx"
     return Response(
         content=content,
@@ -115,7 +138,12 @@ def download_sample_template(
     """도메인별 Import 샘플 양식 다운로드."""
     if domain not in _DOMAIN_MAP:
         raise ValidationError([f"지원하지 않는 도메인: {domain}"])
-    content = build_sample_template(domain)
+    if domain == "spec":
+        content = build_spec_template()
+    elif domain == "eosl":
+        content = build_eosl_template()
+    else:
+        content = build_sample_template(domain)
     filename = f"import_template_{domain}.xlsx"
     return Response(
         content=content,

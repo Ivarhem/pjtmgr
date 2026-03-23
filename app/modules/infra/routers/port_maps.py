@@ -25,11 +25,11 @@ router = APIRouter(prefix="/api/v1/port-maps", tags=["infra-port-maps"])
 @router.get("", response_model=list[PortMapRead])
 def list_port_maps_endpoint(
     customer_id: int,
-    project_id: int | None = None,
+    period_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[PortMapRead]:
-    return list_port_maps(db, customer_id, project_id)
+    return list_port_maps(db, customer_id, period_id)
 
 
 @router.post(

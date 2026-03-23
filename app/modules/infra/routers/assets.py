@@ -9,7 +9,7 @@ from app.modules.infra.schemas.asset import AssetCreate, AssetRead, AssetUpdate
 from app.modules.infra.services.asset_service import (
     create_asset,
     delete_asset,
-    enrich_assets_with_project,
+    enrich_assets_with_period,
     get_asset,
     list_assets,
     update_asset,
@@ -22,29 +22,29 @@ router = APIRouter(prefix="/api/v1/assets", tags=["infra-assets"])
 @router.get("", response_model=list[AssetRead])
 def list_assets_endpoint(
     customer_id: int,
-    project_id: int | None = None,
+    period_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRead]:
-    return list_assets(db, customer_id, project_id, asset_type, status, q)
+    return list_assets(db, customer_id, period_id, asset_type, status, q)
 
 
 @router.get("/inventory", response_model=list[AssetRead])
 def list_assets_inventory(
     customer_id: int,
-    project_id: int | None = None,
+    period_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRead]:
-    """Customer-scoped asset inventory with project info enrichment."""
-    assets = list_assets(db, customer_id, project_id, asset_type, status, q)
-    return enrich_assets_with_project(db, assets)
+    """Customer-scoped asset inventory with period info enrichment."""
+    assets = list_assets(db, customer_id, period_id, asset_type, status, q)
+    return enrich_assets_with_period(db, assets)
 
 
 @router.post("", response_model=AssetRead, status_code=status.HTTP_201_CREATED)
