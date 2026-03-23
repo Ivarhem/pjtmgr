@@ -1,6 +1,6 @@
 """고객사 중심 구조 전환 E2E 테스트.
 
-customer_id scope 조회, 프로젝트 필터, PortMap nullable, Export 검증.
+customer_id scope 조회, 기간 필터, PortMap nullable, Export 검증.
 """
 from __future__ import annotations
 
@@ -10,28 +10,29 @@ import openpyxl
 import pytest
 
 from app.modules.common.models.audit_log import AuditLog
+from app.modules.common.models.contract import Contract
+from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.customer import Customer
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
 from app.modules.infra.models.policy_assignment import PolicyAssignment
-from app.modules.infra.models.project import Project
-from app.modules.infra.models.project_deliverable import ProjectDeliverable
-from app.modules.infra.models.project_phase import ProjectPhase
-from app.modules.infra.models.project_asset import ProjectAsset
+from app.modules.infra.models.period_deliverable import PeriodDeliverable
+from app.modules.infra.models.period_phase import PeriodPhase
+from app.modules.infra.models.period_asset import PeriodAsset
 from app.modules.infra.services.asset_service import list_assets, create_asset
 from app.modules.infra.services.infra_metrics import (
     get_non_compliant_assignments,
     get_unsubmitted_deliverables,
     list_audit_logs,
-    list_projects_summary,
+    list_periods_summary,
 )
 from app.modules.infra.services.network_service import list_subnets, list_port_maps
 from app.modules.infra.services.infra_exporter import export_customer
 from app.modules.infra.schemas.asset import AssetCreate
 
 
-# ── Helpers ──
+# -- Helpers --
 
 
 def _make_admin(db_session, admin_role_id: int):
@@ -52,12 +53,25 @@ def _make_customer(db_session, name: str = "고객사A") -> Customer:
     return c
 
 
-def _make_project(db_session, customer_id: int, code: str = "PRJ-001") -> Project:
-    p = Project(project_code=code, project_name=f"프로젝트 {code}", customer_id=customer_id)
-    db_session.add(p)
+def _make_period(db_session, customer_id: int, code: str = "PRD-001") -> ContractPeriod:
+    contract = Contract(
+        contract_name=f"사업 {code}",
+        contract_type="인프라",
+        end_customer_id=customer_id,
+    )
+    db_session.add(contract)
+    db_session.flush()
+    period = ContractPeriod(
+        contract_id=contract.id,
+        period_year=2025,
+        period_label=f"Y25-{code}",
+        stage="50%",
+        customer_id=customer_id,
+    )
+    db_session.add(period)
     db_session.commit()
-    db_session.refresh(p)
-    return p
+    db_session.refresh(period)
+    return period
 
 
 def _make_asset(db_session, customer_id: int, name: str, asset_type: str = "server") -> Asset:
@@ -68,13 +82,13 @@ def _make_asset(db_session, customer_id: int, name: str, asset_type: str = "serv
     return a
 
 
-def _link_project_asset(db_session, project_id: int, asset_id: int) -> None:
-    pa = ProjectAsset(project_id=project_id, asset_id=asset_id)
+def _link_period_asset(db_session, contract_period_id: int, asset_id: int) -> None:
+    pa = PeriodAsset(contract_period_id=contract_period_id, asset_id=asset_id)
     db_session.add(pa)
     db_session.commit()
 
 
-# ── customer scope 조회 테스트 ──
+# -- customer scope 조회 테스트 --
 
 
 def test_list_assets_by_customer(db_session, admin_role_id) -> None:
@@ -94,26 +108,26 @@ def test_list_assets_by_customer(db_session, admin_role_id) -> None:
     assert all(a.customer_id == cust_a.id for a in assets_a)
 
 
-def test_list_assets_with_project_filter(db_session, admin_role_id) -> None:
-    """프로젝트 필터 적용: ProjectAsset으로 연결된 자산만 반환."""
+def test_list_assets_with_period_filter(db_session, admin_role_id) -> None:
+    """기간 필터 적용: PeriodAsset으로 연결된 자산만 반환."""
     cust = _make_customer(db_session)
-    proj = _make_project(db_session, cust.id, "PRJ-FILTER")
+    period = _make_period(db_session, cust.id, "PRD-FILTER")
 
     a1 = _make_asset(db_session, cust.id, "LINKED-SVR")
     a2 = _make_asset(db_session, cust.id, "UNLINKED-SVR")
-    _link_project_asset(db_session, proj.id, a1.id)
+    _link_period_asset(db_session, period.id, a1.id)
 
-    # 프로젝트 필터 없이: 전체 2개
+    # 기간 필터 없이: 전체 2개
     all_assets = list_assets(db_session, customer_id=cust.id)
     assert len(all_assets) == 2
 
-    # 프로젝트 필터 적용: 연결된 1개만
-    filtered = list_assets(db_session, customer_id=cust.id, project_id=proj.id)
+    # 기간 필터 적용: 연결된 1개만
+    filtered = list_assets(db_session, customer_id=cust.id, period_id=period.id)
     assert len(filtered) == 1
     assert filtered[0].asset_name == "LINKED-SVR"
 
 
-# ── subnet scope 테스트 ──
+# -- subnet scope 테스트 --
 
 
 def test_list_subnets_by_customer(db_session, admin_role_id) -> None:
@@ -133,7 +147,7 @@ def test_list_subnets_by_customer(db_session, admin_role_id) -> None:
     assert len(subs_b) == 1
 
 
-# ── PortMap nullable 테스트 ──
+# -- PortMap nullable 테스트 --
 
 
 def test_portmap_nullable_assets(db_session, admin_role_id) -> None:
@@ -161,7 +175,7 @@ def test_portmap_nullable_assets(db_session, admin_role_id) -> None:
     assert ext[0].dst_asset_id is None
 
 
-# ── Export 테스트 ──
+# -- Export 테스트 --
 
 
 def test_export_customer_generates_xlsx(db_session, admin_role_id) -> None:
@@ -185,49 +199,49 @@ def test_export_customer_generates_xlsx(db_session, admin_role_id) -> None:
     assert len(data_rows) >= 1
 
 
-def test_export_customer_with_project_filter(db_session, admin_role_id) -> None:
-    """프로젝트 필터 적용 Export: 연결된 자산만 포함."""
+def test_export_customer_with_period_filter(db_session, admin_role_id) -> None:
+    """기간 필터 적용 Export: 연결된 자산만 포함."""
     cust = _make_customer(db_session, "FilterExportCust")
-    proj = _make_project(db_session, cust.id, "EXP-PROJ")
+    period = _make_period(db_session, cust.id, "EXP-PRD")
 
-    a1 = _make_asset(db_session, cust.id, "PROJ-ASSET")
+    a1 = _make_asset(db_session, cust.id, "PERIOD-ASSET")
     a2 = _make_asset(db_session, cust.id, "OTHER-ASSET")
-    _link_project_asset(db_session, proj.id, a1.id)
+    _link_period_asset(db_session, period.id, a1.id)
 
-    xlsx_bytes = export_customer(db_session, cust.id, project_id=proj.id)
+    xlsx_bytes = export_customer(db_session, cust.id, period_id=period.id)
     wb = openpyxl.load_workbook(BytesIO(xlsx_bytes))
     ws = wb["01. Inventory"]
 
     # 헤더 제외, 데이터 행만 확인
     data_rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if any(v for v in r)]
-    assert len(data_rows) == 1  # PROJ-ASSET만 포함
+    assert len(data_rows) == 1  # PERIOD-ASSET만 포함
 
 
 def test_dashboard_metrics_respect_customer_scope(db_session, admin_role_id) -> None:
     """현황판 집계 서비스는 customer_id 필터를 적용한다."""
     cust_a = _make_customer(db_session, "대시보드고객A")
     cust_b = _make_customer(db_session, "대시보드고객B")
-    proj_a = _make_project(db_session, cust_a.id, "DASH-A")
-    proj_b = _make_project(db_session, cust_b.id, "DASH-B")
+    period_a = _make_period(db_session, cust_a.id, "DASH-A")
+    period_b = _make_period(db_session, cust_b.id, "DASH-B")
 
-    phase_a = ProjectPhase(project_id=proj_a.id, phase_type="build", status="in_progress")
-    phase_b = ProjectPhase(project_id=proj_b.id, phase_type="test", status="in_progress")
+    phase_a = PeriodPhase(contract_period_id=period_a.id, phase_type="build", status="in_progress")
+    phase_b = PeriodPhase(contract_period_id=period_b.id, phase_type="test", status="in_progress")
     db_session.add_all([phase_a, phase_b])
     db_session.flush()
 
     db_session.add_all(
         [
-            ProjectDeliverable(project_phase_id=phase_a.id, name="A-산출물", is_submitted=False),
-            ProjectDeliverable(project_phase_id=phase_b.id, name="B-산출물", is_submitted=False),
+            PeriodDeliverable(period_phase_id=phase_a.id, name="A-산출물", is_submitted=False),
+            PeriodDeliverable(period_phase_id=phase_b.id, name="B-산출물", is_submitted=False),
         ]
     )
     db_session.commit()
 
-    summary = list_projects_summary(db_session, customer_id=cust_a.id)
+    summary = list_periods_summary(db_session, customer_id=cust_a.id)
     unsubmitted = get_unsubmitted_deliverables(db_session, customer_id=cust_a.id)
 
-    assert [row["project_code"] for row in summary] == ["DASH-A"]
-    assert [row["project_code"] for row in unsubmitted] == ["DASH-A"]
+    assert len(summary) == 1
+    assert len(unsubmitted) == 1
 
 
 def test_non_compliant_assignments_respect_customer_scope(db_session, admin_role_id) -> None:
@@ -258,10 +272,10 @@ def test_list_audit_logs_returns_enriched_user_name(db_session, admin_role_id) -
         AuditLog(
             user_id=admin.id,
             action="create",
-            entity_type="project",
+            entity_type="contract_period",
             entity_id=1,
             module="infra",
-            summary="프로젝트 생성",
+            summary="기간 생성",
         )
     )
     db_session.commit()

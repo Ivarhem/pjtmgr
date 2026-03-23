@@ -8,7 +8,6 @@ from app.modules.common.models.customer import Customer
 from app.modules.common.models.customer_contact import CustomerContact
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.asset_contact import AssetContactCreate, AssetContactUpdate
-from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.services.asset_service import (
     create_asset,
     create_asset_contact,
@@ -17,7 +16,6 @@ from app.modules.infra.services.asset_service import (
     list_asset_contacts,
     update_asset_contact,
 )
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin_user(db_session, admin_role_id: int):
@@ -31,16 +29,11 @@ def _make_admin_user(db_session, admin_role_id: int):
 
 
 def _setup(db, admin):
-    """Create customer, project, asset, and customer contact for tests."""
+    """Create customer, asset, and customer contact for tests."""
     customer = Customer(name="ABC Corp")
     db.add(customer)
     db.flush()
 
-    project = create_project(
-        db,
-        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
-        admin,
-    )
     asset = create_asset(
         db,
         AssetCreate(
@@ -56,12 +49,12 @@ def _setup(db, admin):
     db.commit()
     db.refresh(contact)
 
-    return project, asset, customer, contact
+    return asset, customer, contact
 
 
 def test_create_and_list_asset_contacts(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    _, asset, _, contact = _setup(db_session, admin)
+    asset, _, contact = _setup(db_session, admin)
 
     create_asset_contact(
         db_session,
@@ -78,7 +71,7 @@ def test_create_and_list_asset_contacts(db_session, admin_role_id) -> None:
 
 def test_create_asset_contact_rejects_duplicate(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    _, asset, _, contact = _setup(db_session, admin)
+    asset, _, contact = _setup(db_session, admin)
 
     create_asset_contact(
         db_session,
@@ -100,7 +93,7 @@ def test_create_asset_contact_rejects_duplicate(db_session, admin_role_id) -> No
 
 def test_same_contact_different_roles_allowed(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    _, asset, _, contact = _setup(db_session, admin)
+    asset, _, contact = _setup(db_session, admin)
 
     create_asset_contact(
         db_session,
@@ -123,7 +116,7 @@ def test_same_contact_different_roles_allowed(db_session, admin_role_id) -> None
 
 def test_update_asset_contact(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    _, asset, _, contact = _setup(db_session, admin)
+    asset, _, contact = _setup(db_session, admin)
 
     ac = create_asset_contact(
         db_session,
@@ -142,7 +135,7 @@ def test_update_asset_contact(db_session, admin_role_id) -> None:
 
 def test_delete_asset_contact(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    _, asset, _, contact = _setup(db_session, admin)
+    asset, _, contact = _setup(db_session, admin)
 
     ac = create_asset_contact(
         db_session,

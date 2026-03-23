@@ -7,7 +7,6 @@ from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.asset_relation import AssetRelationCreate, AssetRelationUpdate
-from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.services.asset_relation_service import (
     create_asset_relation,
     delete_asset_relation,
@@ -15,7 +14,6 @@ from app.modules.infra.services.asset_relation_service import (
     update_asset_relation,
 )
 from app.modules.infra.services.asset_service import create_asset
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin(db_session, admin_role_id: int):
@@ -38,7 +36,6 @@ def _make_customer(db_session):
 def test_create_and_list_relations(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    proj = create_project(db_session, ProjectCreate(project_code="REL-01", project_name="Rel Test", customer_id=customer.id), admin)
     svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R1", asset_type="server"), admin)
     db_obj = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="DB-R1", asset_type="server"), admin)
 
@@ -58,7 +55,6 @@ def test_create_and_list_relations(db_session, admin_role_id) -> None:
 def test_self_relation_rejected(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    proj = create_project(db_session, ProjectCreate(project_code="REL-02", project_name="Self Test", customer_id=customer.id), admin)
     svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R2", asset_type="server"), admin)
 
     with pytest.raises(BusinessRuleError):
@@ -68,7 +64,6 @@ def test_self_relation_rejected(db_session, admin_role_id) -> None:
 def test_delete_relation(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    proj = create_project(db_session, ProjectCreate(project_code="REL-03", project_name="Del Test", customer_id=customer.id), admin)
     svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R3", asset_type="server"), admin)
     fw = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="FW-R3", asset_type="security"), admin)
 
@@ -80,7 +75,6 @@ def test_delete_relation(db_session, admin_role_id) -> None:
 def test_update_relation(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    proj = create_project(db_session, ProjectCreate(project_code="REL-04", project_name="Upd Test", customer_id=customer.id), admin)
     svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R4", asset_type="server"), admin)
     app = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="APP-R4", asset_type="server"), admin)
 

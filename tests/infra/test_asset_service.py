@@ -6,14 +6,12 @@ import pytest
 from app.core.exceptions import DuplicateError, NotFoundError
 from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.asset import AssetCreate, AssetUpdate
-from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.services.asset_service import (
     create_asset,
     delete_asset,
     list_assets,
     update_asset,
 )
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin_user(db_session, admin_role_id: int):
@@ -36,11 +34,6 @@ def _make_customer(db_session):
 def test_create_and_list_assets(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = create_project(
-        db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id),
-        admin,
-    )
 
     create_asset(
         db_session,
@@ -68,11 +61,6 @@ def test_create_asset_rejects_duplicate_name_in_same_customer(
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = create_project(
-        db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id),
-        admin,
-    )
     payload = AssetCreate(
         customer_id=customer.id, asset_name="APP-01", asset_type="server"
     )
@@ -85,11 +73,6 @@ def test_create_asset_rejects_duplicate_name_in_same_customer(
 def test_update_and_delete_asset(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = create_project(
-        db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Inventory", customer_id=customer.id),
-        admin,
-    )
     asset = create_asset(
         db_session,
         AssetCreate(customer_id=customer.id, asset_name="APP-01", asset_type="server"),

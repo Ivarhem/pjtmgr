@@ -4,15 +4,16 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
+from app.modules.common.models.contract import Contract
+from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.customer import Customer
-from app.modules.infra.schemas.project import ProjectCreate
-from app.modules.infra.schemas.project_deliverable import (
-    ProjectDeliverableCreate,
-    ProjectDeliverableUpdate,
+from app.modules.infra.schemas.period_deliverable import (
+    PeriodDeliverableCreate,
+    PeriodDeliverableUpdate,
 )
-from app.modules.infra.schemas.project_phase import (
-    ProjectPhaseCreate,
-    ProjectPhaseUpdate,
+from app.modules.infra.schemas.period_phase import (
+    PeriodPhaseCreate,
+    PeriodPhaseUpdate,
 )
 from app.modules.infra.services.phase_service import (
     create_deliverable,
@@ -26,7 +27,6 @@ from app.modules.infra.services.phase_service import (
     update_deliverable,
     update_phase,
 )
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin_user(db_session, admin_role_id: int):
@@ -46,82 +46,96 @@ def _make_customer(db_session):
     return customer
 
 
-def _make_project(db_session, admin):
+def _make_period(db_session, admin) -> ContractPeriod:
+    """Create a Contract + ContractPeriod and return the period."""
     customer = _make_customer(db_session)
-    return create_project(
-        db_session,
-        ProjectCreate(project_code="PRJ-001", project_name="Test Project", customer_id=customer.id),
-        admin,
+    contract = Contract(
+        contract_name="Test Contract",
+        contract_type="인프라",
+        end_customer_id=customer.id,
     )
+    db_session.add(contract)
+    db_session.flush()
+    period = ContractPeriod(
+        contract_id=contract.id,
+        period_year=2025,
+        period_label="Y25",
+        stage="50%",
+        customer_id=customer.id,
+    )
+    db_session.add(period)
+    db_session.commit()
+    db_session.refresh(period)
+    return period
 
 
-# ── ProjectPhase tests ──
+# -- PeriodPhase tests --
 
 
 def test_create_and_list_phases(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
 
     create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
     create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="design"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="design"),
         admin,
     )
 
-    phases = list_phases(db_session, project.id)
+    phases = list_phases(db_session, period.id)
     assert len(phases) == 2
     assert phases[0].phase_type == "analysis"
     assert phases[1].phase_type == "design"
 
 
-def test_create_phase_requires_existing_project(db_session, admin_role_id) -> None:
+def test_create_phase_requires_existing_period(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     with pytest.raises(NotFoundError):
         create_phase(
             db_session,
-            ProjectPhaseCreate(project_id=9999, phase_type="analysis"),
+            PeriodPhaseCreate(contract_period_id=9999, phase_type="analysis"),
             admin,
         )
 
 
-def test_create_phase_rejects_duplicate_type_in_same_project(
+def test_create_phase_rejects_duplicate_type_in_same_period(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
 
     create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
 
     with pytest.raises(DuplicateError):
         create_phase(
             db_session,
-            ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+            PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
             admin,
         )
 
 
 def test_update_phase(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
     phase = create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
 
     updated = update_phase(
         db_session,
         phase.id,
-        ProjectPhaseUpdate(status="in_progress", task_scope="Full analysis"),
+        PeriodPhaseUpdate(status="in_progress", task_scope="Full analysis"),
         admin,
     )
 
@@ -131,15 +145,15 @@ def test_update_phase(db_session, admin_role_id) -> None:
 
 def test_delete_phase_blocked_with_deliverables(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
     phase = create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
     create_deliverable(
         db_session,
-        ProjectDeliverableCreate(project_phase_id=phase.id, name="Report"),
+        PeriodDeliverableCreate(period_phase_id=phase.id, name="Report"),
         admin,
     )
 
@@ -149,10 +163,10 @@ def test_delete_phase_blocked_with_deliverables(db_session, admin_role_id) -> No
 
 def test_delete_phase_without_deliverables(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
     phase = create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
 
@@ -162,29 +176,29 @@ def test_delete_phase_without_deliverables(db_session, admin_role_id) -> None:
         get_phase(db_session, phase.id)
 
 
-# ── ProjectDeliverable tests ──
+# -- PeriodDeliverable tests --
 
 
 def test_create_and_list_deliverables(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
     phase = create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
 
     create_deliverable(
         db_session,
-        ProjectDeliverableCreate(
-            project_phase_id=phase.id, name="Analysis Report"
+        PeriodDeliverableCreate(
+            period_phase_id=phase.id, name="Analysis Report"
         ),
         admin,
     )
     create_deliverable(
         db_session,
-        ProjectDeliverableCreate(
-            project_phase_id=phase.id, name="Requirements Doc"
+        PeriodDeliverableCreate(
+            period_phase_id=phase.id, name="Requirements Doc"
         ),
         admin,
     )
@@ -201,29 +215,29 @@ def test_create_deliverable_requires_existing_phase(
     with pytest.raises(NotFoundError):
         create_deliverable(
             db_session,
-            ProjectDeliverableCreate(project_phase_id=9999, name="Report"),
+            PeriodDeliverableCreate(period_phase_id=9999, name="Report"),
             admin,
         )
 
 
 def test_update_deliverable(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
     phase = create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
     deliverable = create_deliverable(
         db_session,
-        ProjectDeliverableCreate(project_phase_id=phase.id, name="Report"),
+        PeriodDeliverableCreate(period_phase_id=phase.id, name="Report"),
         admin,
     )
 
     updated = update_deliverable(
         db_session,
         deliverable.id,
-        ProjectDeliverableUpdate(is_submitted=True, note="Submitted to client"),
+        PeriodDeliverableUpdate(is_submitted=True, note="Submitted to client"),
         admin,
     )
 
@@ -233,15 +247,15 @@ def test_update_deliverable(db_session, admin_role_id) -> None:
 
 def test_delete_deliverable(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    project = _make_project(db_session, admin)
+    period = _make_period(db_session, admin)
     phase = create_phase(
         db_session,
-        ProjectPhaseCreate(project_id=project.id, phase_type="analysis"),
+        PeriodPhaseCreate(contract_period_id=period.id, phase_type="analysis"),
         admin,
     )
     deliverable = create_deliverable(
         db_session,
-        ProjectDeliverableCreate(project_phase_id=phase.id, name="Report"),
+        PeriodDeliverableCreate(period_phase_id=phase.id, name="Report"),
         admin,
     )
 

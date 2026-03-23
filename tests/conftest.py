@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.database import Base
 from app.modules.common.models import (  # noqa: F401
     AuditLog,
+    Contract,
+    ContractPeriod,
+    ContractTypeConfig,
     Customer,
     CustomerContact,
     CustomerContactRole,
@@ -19,10 +22,8 @@ from app.modules.common.models import (  # noqa: F401
     UserPreference,
 )
 from app.modules.accounting.models import (  # noqa: F401
-    Contract,
+    ContractSalesDetail,
     ContractContact,
-    ContractPeriod,
-    ContractTypeConfig,
     MonthlyForecast,
     Receipt,
     ReceiptMatch,
@@ -33,16 +34,19 @@ from app.modules.infra.models import (  # noqa: F401
     AssetContact,
     AssetIP,
     AssetRelation,
+    AssetSoftware,
+    HardwareInterface,
+    HardwareSpec,
     IpSubnet,
+    PeriodAsset,
+    PeriodCustomer,
+    PeriodCustomerContact,
+    PeriodDeliverable,
+    PeriodPhase,
     PolicyAssignment,
     PolicyDefinition,
     PortMap,
-    Project,
-    ProjectAsset,
-    ProjectCustomer,
-    ProjectCustomerContact,
-    ProjectDeliverable,
-    ProjectPhase,
+    ProductCatalog,
 )
 
 TEST_DATABASE_URL = os.getenv(

@@ -7,7 +7,6 @@ from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.port_map import PortMapCreate, PortMapUpdate
-from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.services.asset_service import create_asset
 from app.modules.infra.services.network_service import (
     create_port_map,
@@ -16,7 +15,6 @@ from app.modules.infra.services.network_service import (
     list_port_maps,
     update_port_map,
 )
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin_user(db_session, admin_role_id: int):
@@ -36,14 +34,6 @@ def _make_customer(db_session, name="테스트고객", bno="123-45-67890"):
     return customer
 
 
-def _make_project(db, admin, customer):
-    return create_project(
-        db,
-        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
-        admin,
-    )
-
-
 def _make_asset(db, customer_id: int, name: str, admin):
     return create_asset(
         db,
@@ -55,7 +45,6 @@ def _make_asset(db, customer_id: int, name: str, admin):
 def test_create_and_list_port_maps(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     src = _make_asset(db_session, customer.id, "WEB-01", admin)
     dst = _make_asset(db_session, customer.id, "DB-01", admin)
 
@@ -96,7 +85,6 @@ def test_create_port_map_with_nullable_assets(db_session, admin_role_id) -> None
     """External segment: src/dst asset not specified, only IPs."""
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
 
     pm = create_port_map(
         db_session,
@@ -121,12 +109,6 @@ def test_create_port_map_rejects_asset_from_other_customer(
     admin = _make_admin_user(db_session, admin_role_id)
     customer1 = _make_customer(db_session, name="고객1", bno="111-11-11111")
     customer2 = _make_customer(db_session, name="고객2", bno="222-22-22222")
-    project1 = _make_project(db_session, admin, customer1)
-    project2 = create_project(
-        db_session,
-        ProjectCreate(project_code="PRJ-002", project_name="Other", customer_id=customer2.id),
-        admin,
-    )
     asset_other = _make_asset(db_session, customer2.id, "SRV-OTHER", admin)
 
     with pytest.raises(BusinessRuleError):
@@ -144,7 +126,6 @@ def test_create_port_map_rejects_asset_from_other_customer(
 def test_update_port_map(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     pm = create_port_map(
         db_session,
         PortMapCreate(customer_id=customer.id, port=80, purpose="HTTP"),
@@ -166,7 +147,6 @@ def test_update_port_map(db_session, admin_role_id) -> None:
 def test_delete_port_map(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     pm = create_port_map(
         db_session,
         PortMapCreate(customer_id=customer.id, port=22, purpose="SSH"),

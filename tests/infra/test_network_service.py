@@ -8,7 +8,6 @@ from app.modules.common.models.customer import Customer
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.asset_ip import AssetIPCreate, AssetIPUpdate
 from app.modules.infra.schemas.ip_subnet import IpSubnetCreate, IpSubnetUpdate
-from app.modules.infra.schemas.project import ProjectCreate
 from app.modules.infra.services.asset_service import create_asset
 from app.modules.infra.services.network_service import (
     create_asset_ip,
@@ -22,7 +21,6 @@ from app.modules.infra.services.network_service import (
     update_asset_ip,
     update_subnet,
 )
-from app.modules.infra.services.project_service import create_project
 
 
 def _make_admin_user(db_session, admin_role_id: int):
@@ -42,14 +40,6 @@ def _make_customer(db_session, name="테스트고객", bno="123-45-67890"):
     return customer
 
 
-def _make_project(db, admin, customer):
-    return create_project(
-        db,
-        ProjectCreate(project_code="PRJ-001", project_name="Test", customer_id=customer.id),
-        admin,
-    )
-
-
 def _make_asset(db, customer_id: int, name: str, admin):
     return create_asset(
         db,
@@ -58,13 +48,12 @@ def _make_asset(db, customer_id: int, name: str, admin):
     )
 
 
-# ── IpSubnet tests ──
+# -- IpSubnet tests --
 
 
 def test_create_and_list_subnets(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
 
     create_subnet(
         db_session,
@@ -105,7 +94,6 @@ def test_create_subnet_requires_existing_customer(db_session, admin_role_id) -> 
 def test_update_subnet(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     subnet = create_subnet(
         db_session,
         IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
@@ -127,7 +115,6 @@ def test_update_subnet(db_session, admin_role_id) -> None:
 def test_delete_subnet_blocked_with_assigned_ips(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     subnet = create_subnet(
         db_session,
         IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
@@ -149,7 +136,6 @@ def test_delete_subnet_blocked_with_assigned_ips(db_session, admin_role_id) -> N
 def test_delete_subnet_without_ips(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     subnet = create_subnet(
         db_session,
         IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
@@ -162,13 +148,12 @@ def test_delete_subnet_without_ips(db_session, admin_role_id) -> None:
         get_subnet(db_session, subnet.id)
 
 
-# ── AssetIP tests ──
+# -- AssetIP tests --
 
 
 def test_create_and_list_asset_ips(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset = _make_asset(db_session, customer.id, "SRV-01", admin)
 
     create_asset_ip(
@@ -201,7 +186,6 @@ def test_create_asset_ip_requires_existing_asset(db_session, admin_role_id) -> N
 def test_create_asset_ip_with_subnet_reference(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset = _make_asset(db_session, customer.id, "SRV-01", admin)
     subnet = create_subnet(
         db_session,
@@ -225,7 +209,6 @@ def test_create_asset_ip_rejects_nonexistent_subnet(
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset = _make_asset(db_session, customer.id, "SRV-01", admin)
 
     with pytest.raises(NotFoundError):
@@ -243,7 +226,6 @@ def test_ip_duplicate_rejected_within_same_customer(
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset1 = _make_asset(db_session, customer.id, "SRV-01", admin)
     asset2 = _make_asset(db_session, customer.id, "SRV-02", admin)
 
@@ -265,12 +247,6 @@ def test_ip_duplicate_allowed_across_customers(db_session, admin_role_id) -> Non
     admin = _make_admin_user(db_session, admin_role_id)
     customer1 = _make_customer(db_session, name="고객1", bno="111-11-11111")
     customer2 = _make_customer(db_session, name="고객2", bno="222-22-22222")
-    project1 = _make_project(db_session, admin, customer1)
-    project2 = create_project(
-        db_session,
-        ProjectCreate(project_code="PRJ-002", project_name="Test2", customer_id=customer2.id),
-        admin,
-    )
     asset1 = _make_asset(db_session, customer1.id, "SRV-01", admin)
     asset2 = create_asset(
         db_session,
@@ -297,7 +273,6 @@ def test_ip_duplicate_allowed_across_customers(db_session, admin_role_id) -> Non
 def test_update_asset_ip(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset = _make_asset(db_session, customer.id, "SRV-01", admin)
     ip = create_asset_ip(
         db_session,
@@ -319,7 +294,6 @@ def test_update_asset_ip(db_session, admin_role_id) -> None:
 def test_update_asset_ip_rejects_duplicate_address(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset = _make_asset(db_session, customer.id, "SRV-01", admin)
     create_asset_ip(
         db_session,
@@ -341,7 +315,6 @@ def test_update_asset_ip_rejects_duplicate_address(db_session, admin_role_id) ->
 def test_delete_asset_ip(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     customer = _make_customer(db_session)
-    project = _make_project(db_session, admin, customer)
     asset = _make_asset(db_session, customer.id, "SRV-01", admin)
     ip = create_asset_ip(
         db_session,
