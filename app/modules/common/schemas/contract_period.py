@@ -52,6 +52,7 @@ class ContractPeriodRead(BaseModel):
     contract_id: int
     period_year: int
     period_label: str
+    period_code: str
     stage: str
     start_month: str | None = None
     end_month: str | None = None

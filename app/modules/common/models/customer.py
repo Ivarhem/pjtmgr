@@ -9,7 +9,7 @@ class Customer(TimestampMixin, Base):
     __tablename__ = "customers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    customer_code: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    customer_code: Mapped[str] = mapped_column(String(4), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     business_no: Mapped[str | None] = mapped_column(String(50))          # 사업자번호
     notes: Mapped[str | None] = mapped_column(Text)

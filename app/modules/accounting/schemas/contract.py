@@ -37,6 +37,7 @@ class ContractPeriodListRead(BaseModel):
     status: str
     period_year: int
     period_label: str
+    period_code: str
     stage: str
     expected_revenue_amount: int = 0  # was _total
     expected_gp_amount: int = 0       # was _total

@@ -9,7 +9,7 @@ class Contract(TimestampMixin, Base):
     __tablename__ = "contracts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    contract_code: Mapped[str | None] = mapped_column(String(50), unique=True)
+    contract_code: Mapped[str] = mapped_column(String(9), unique=True, nullable=False)
     contract_name: Mapped[str] = mapped_column(String(300), nullable=False)
     contract_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     end_customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))

@@ -13,6 +13,7 @@ class ContractPeriod(TimestampMixin, Base):
     contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), nullable=False, index=True)
     period_year: Mapped[int] = mapped_column(Integer, nullable=False)
     period_label: Mapped[str] = mapped_column(String(20), nullable=False)
+    period_code: Mapped[str] = mapped_column(String(14), unique=True, nullable=False)
     stage: Mapped[str] = mapped_column(String(50), nullable=False)
     start_month: Mapped[str | None] = mapped_column(String(10), index=True)
     end_month: Mapped[str | None] = mapped_column(String(10), index=True)

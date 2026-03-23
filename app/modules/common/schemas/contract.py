@@ -17,7 +17,6 @@ class ContractCreate(BaseModel):
 class ContractUpdate(BaseModel):
     contract_name: str | None = None
     contract_type: str | None = None
-    contract_code: str | None = None
     end_customer_id: int | None = None
     owner_user_id: int | None = None
     status: ContractStatus | None = None
