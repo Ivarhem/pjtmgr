@@ -210,3 +210,123 @@
 }
 body.dark-mode .import-msg-warning { background: #422006; color: #fbbf24; border-color: #92400e; }
 body.dark-mode .import-msg-error { background: #450a0a; color: #fca5a5; border-color: #991b1b; }
+
+.infra-grid { width: 100%; }
+.infra-grid-dashboard-main { height: 350px; }
+.infra-grid-dashboard-side { height: 280px; }
+.infra-grid-mid { height: 300px; }
+.infra-grid-linked-contracts { height: 200px; }
+.infra-grid-preview { height: 400px; }
+.infra-grid-tall { height: 600px; }
+
+.infra-inline-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.infra-inline-flex {
+  display: inline-flex;
+}
+
+.infra-inline-flex-tight {
+  display: flex;
+  gap: 4px;
+}
+
+.infra-import-help {
+  margin-bottom: 16px;
+}
+
+.infra-import-form {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.infra-import-input {
+  width: 100%;
+  max-width: 400px;
+}
+
+.infra-import-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.infra-import-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.infra-import-result-summary {
+  margin: 16px 0;
+}
+
+.infra-result-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+
+.infra-grid-row-error {
+  background: color-mix(in srgb, var(--danger-color) 8%, transparent);
+}
+
+.infra-text-danger {
+  color: var(--danger-color);
+}
+
+.infra-text-success {
+  color: var(--success-color);
+}
+
+.infra-import-compact-panel {
+  margin-bottom: 12px;
+  padding: 16px;
+}
+
+.infra-import-compact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.infra-compact-label {
+  font-size: 13px;
+}
+
+.infra-compact-select {
+  margin-left: 4px;
+}
+
+.infra-compact-input {
+  margin-left: 4px;
+}
+
+.infra-compact-input-wide {
+  margin-left: 8px;
+}
+
+.infra-compact-help {
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.infra-import-result-text {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.infra-card-padding {
+  padding: 1rem;
+}
+
+.infra-details-summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 8px;
+}

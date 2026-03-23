@@ -188,6 +188,7 @@
   - 회계: `acct_contract_detail.js`, `acct_dashboard.js`
   - 인프라: `infra_assets.js`, `infra_projects.js`
 - 기존 회계모듈 JS (접두사 없는 `contract_detail.js` 등)는 마이그레이션 시 `acct_*` 접두사로 변경
+  - 단, 런타임 E2E 검증 전까지는 기존 레거시 파일명을 유지할 수 있다. 새 파일 추가/분리 시에만 접두사 규칙을 강제한다.
 
 ### CSS
 
@@ -196,6 +197,7 @@
   - 회계: `acct_contract_detail.css`, `acct_dashboard.css`
   - 인프라: `infra_assets.css`, `infra_projects.css`
 - 기존 회계모듈 CSS (접두사 없는 `contract_detail.css` 등)는 마이그레이션 시 `acct_*` 접두사로 변경
+  - 단, 런타임 E2E 검증 전까지는 기존 레거시 파일명을 유지할 수 있다. 새 파일 추가/분리 시에만 접두사 규칙을 강제한다.
 
 ### 동적 네비게이션
 

@@ -3,6 +3,16 @@
 const PROJECT_ID = window.__PROJECT_ID__;
 let _PROJECT_CUSTOMER_ID = null;
 
+function setResultMessage(container, message, state) {
+  container.textContent = message;
+  container.classList.remove("infra-text-danger", "infra-text-success");
+  if (state === "error") {
+    container.classList.add("infra-text-danger");
+  } else if (state === "success") {
+    container.classList.add("infra-text-success");
+  }
+}
+
 // Resolve customer_id from the project
 (async () => {
   try {
@@ -115,8 +125,7 @@ const phaseColDefs = [
     width: 120,
     cellRenderer: (params) => {
       const wrap = document.createElement("span");
-      wrap.className = "gap-sm";
-      wrap.style.display = "inline-flex";
+      wrap.className = "gap-sm infra-inline-flex";
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-xs btn-secondary";
       btnEdit.textContent = "수정";
@@ -190,8 +199,7 @@ const deliverableColDefs = [
     width: 120,
     cellRenderer: (params) => {
       const wrap = document.createElement("span");
-      wrap.className = "gap-sm";
-      wrap.style.display = "inline-flex";
+      wrap.className = "gap-sm infra-inline-flex";
       const btnEdit = document.createElement("button");
       btnEdit.className = "btn btn-xs btn-secondary";
       btnEdit.textContent = "수정";
@@ -552,8 +560,7 @@ function initRelationsTab() {
       headerName: "", width: 80, sortable: false, filter: false,
       cellRenderer: params => {
         const wrap = document.createElement("span");
-        wrap.style.display = "flex";
-        wrap.style.gap = "4px";
+        wrap.className = "infra-inline-flex-tight";
 
         const btnEdit = document.createElement("button");
         btnEdit.className = "btn btn-sm";
@@ -1225,7 +1232,7 @@ document.getElementById("btn-save-deliverable").addEventListener("click", saveDe
 
 // ── Excel Export ──
 document.getElementById("btn-export-project")?.addEventListener("click", () => {
-  window.location.href = `/api/v1/infra-excel/export/${PROJECT_ID}`;
+  window.location.href = `/api/v1/infra-excel/export?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`;
 });
 
 // ── Asset Import (프로젝트 상세 내) ──
@@ -1242,7 +1249,7 @@ document.getElementById("btn-asset-import-run")?.addEventListener("click", async
   const dup = document.getElementById("asset-import-dup").value;
   const fd = new FormData();
   fd.append("file", file);
-  fd.append("project_id", PROJECT_ID);
+  fd.append("customer_id", _PROJECT_CUSTOMER_ID);
   fd.append("on_duplicate", dup);
   const btn = document.getElementById("btn-asset-import-run");
   btn.disabled = true;
@@ -1253,21 +1260,21 @@ document.getElementById("btn-asset-import-run")?.addEventListener("click", async
     const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) {
-      resultDiv.textContent = "오류: " + (data.detail || "Import 실패");
-      resultDiv.style.color = "var(--danger-color)";
+      setResultMessage(resultDiv, "오류: " + (data.detail || "Import 실패"), "error");
     } else {
-      resultDiv.textContent = "생성 " + data.created + "건, 건너뜀 " + data.skipped + "건";
-      resultDiv.style.color = "var(--success, #22c55e)";
+      setResultMessage(
+        resultDiv,
+        "생성 " + data.created + "건, 건너뜀 " + data.skipped + "건",
+        "success"
+      );
       // 자산 탭 새로고침
       _tabLoaded["assets"] = false;
       initAssetsTab();
     }
   } catch (e) {
-    resultDiv.textContent = "Import 실패: " + e.message;
-    resultDiv.style.color = "var(--danger-color)";
+    setResultMessage(resultDiv, "Import 실패: " + e.message, "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "Import 실행";
   }
 });
-

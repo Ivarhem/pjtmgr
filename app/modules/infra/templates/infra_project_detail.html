@@ -73,7 +73,7 @@
   </div>
 
   <div class="card mb-md">
-    <div id="grid-phases" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+    <div id="grid-phases" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
   </div>
 
   <!-- 산출물 관리 -->
@@ -83,7 +83,7 @@
   </div>
 
   <div class="card">
-    <div id="grid-deliverables" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+    <div id="grid-deliverables" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
   </div>
 
   <!-- 연결된 계약 (accounting 모듈 활성 시만) -->
@@ -93,7 +93,7 @@
     <button class="btn btn-primary btn-sm" id="btn-link-contract">계약 연결</button>
   </div>
   <div class="card" id="linked-contracts-section">
-    <div id="grid-linked-contracts" class="ag-theme-quartz" style="height: 200px; width: 100%;"></div>
+    <div id="grid-linked-contracts" class="ag-theme-quartz infra-grid infra-grid-linked-contracts"></div>
   </div>
   {% endif %}
 </div>
@@ -101,19 +101,19 @@
 <div class="tab-content hidden" id="tab-assets">
   <div class="page-header">
     <h2>자산 목록</h2>
-    <div style="display:flex;gap:8px;">
+    <div class="infra-inline-actions">
       <button class="btn btn-secondary btn-sm" id="btn-asset-import">Excel Import</button>
       <a href="/assets" class="btn btn-secondary btn-sm">자산 관리 페이지 &rarr;</a>
     </div>
   </div>
   <!-- Asset Import 영역 (토글) -->
-  <div id="asset-import-panel" class="card hidden" style="margin-bottom:12px; padding:16px;">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <label style="font-size:13px;">Excel 파일 (.xlsx)
-        <input type="file" id="asset-import-file" accept=".xlsx" style="margin-left:8px;">
+  <div id="asset-import-panel" class="card hidden infra-import-compact-panel">
+    <div class="infra-import-compact-row">
+      <label class="infra-compact-label">Excel 파일 (.xlsx)
+        <input type="file" id="asset-import-file" accept=".xlsx" class="infra-compact-input-wide">
       </label>
-      <label style="font-size:13px;">중복 처리
-        <select id="asset-import-dup" style="margin-left:4px;">
+      <label class="infra-compact-label">중복 처리
+        <select id="asset-import-dup" class="infra-compact-select">
           <option value="skip">건너뛰기</option>
           <option value="overwrite">덮어쓰기</option>
         </select>
@@ -121,10 +121,10 @@
       <button class="btn btn-primary btn-sm" id="btn-asset-import-run">Import 실행</button>
       <button class="btn btn-sm" id="btn-asset-import-close">닫기</button>
     </div>
-    <div id="asset-import-result" style="margin-top:8px;font-size:13px;"></div>
+    <div id="asset-import-result" class="infra-import-result-text"></div>
   </div>
   <div class="card">
-    <div id="grid-tab-assets" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+    <div id="grid-tab-assets" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
   </div>
 </div>
 
@@ -134,7 +134,7 @@
     <button class="btn btn-primary btn-sm" id="btn-add-relation">관계 등록</button>
   </div>
   <div class="card">
-    <div id="grid-tab-relations" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+    <div id="grid-tab-relations" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
   </div>
 </div>
 
@@ -179,13 +179,13 @@
     <a href="/ip-inventory" class="btn btn-secondary btn-sm">IP 인벤토리 페이지 &rarr;</a>
   </div>
   <div class="card mb-md">
-    <div id="grid-tab-subnets" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+    <div id="grid-tab-subnets" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
   </div>
   <div class="page-header">
     <h2>IP 할당</h2>
   </div>
   <div class="card">
-    <div id="grid-tab-ips" class="ag-theme-quartz" style="height: 300px; width: 100%;"></div>
+    <div id="grid-tab-ips" class="ag-theme-quartz infra-grid infra-grid-mid"></div>
   </div>
 </div>
 
@@ -195,7 +195,7 @@
     <a href="/port-maps" class="btn btn-secondary btn-sm">포트맵 관리 페이지 &rarr;</a>
   </div>
   <div class="card">
-    <div id="grid-tab-portmaps" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+    <div id="grid-tab-portmaps" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
   </div>
 </div>
 
@@ -205,7 +205,7 @@
     <a href="/policies" class="btn btn-secondary btn-sm">정책 관리 페이지 &rarr;</a>
   </div>
   <div class="card">
-    <div id="grid-tab-policies" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+    <div id="grid-tab-policies" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
   </div>
 </div>
 
@@ -216,14 +216,14 @@
     <button class="btn btn-primary btn-sm" id="btn-add-project-customer">업체 연결</button>
   </div>
   <div id="project-customers-list" class="project-customers-grid">
-    <p class="text-muted" style="padding:1rem;">로딩 중...</p>
+    <p class="text-muted infra-card-padding">로딩 중...</p>
   </div>
 
   <!-- 자산별 담당자 (기존) -->
   <details class="mt-md">
-    <summary class="text-secondary" style="cursor:pointer;font-weight:600;margin-bottom:8px;">자산별 담당자 (AssetContact)</summary>
+    <summary class="text-secondary infra-details-summary">자산별 담당자 (AssetContact)</summary>
     <div class="card">
-      <div id="grid-tab-contacts" class="ag-theme-quartz" style="height: 300px; width: 100%;"></div>
+      <div id="grid-tab-contacts" class="ag-theme-quartz infra-grid infra-grid-mid"></div>
     </div>
   </details>
 </div>
@@ -300,7 +300,7 @@
     <h2>변경이력</h2>
   </div>
   <div class="card">
-    <div id="grid-tab-history" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+    <div id="grid-tab-history" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
   </div>
 </div>
 
@@ -395,5 +395,3 @@
 <script src="/static/js/utils.js"></script>
 <script src="/static/js/infra_project_detail.js"></script>
 {% endblock %}
-
-

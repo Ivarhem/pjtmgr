@@ -9,13 +9,23 @@ from io import BytesIO
 import openpyxl
 import pytest
 
+from app.modules.common.models.audit_log import AuditLog
 from app.modules.common.models.customer import Customer
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
+from app.modules.infra.models.policy_assignment import PolicyAssignment
 from app.modules.infra.models.project import Project
+from app.modules.infra.models.project_deliverable import ProjectDeliverable
+from app.modules.infra.models.project_phase import ProjectPhase
 from app.modules.infra.models.project_asset import ProjectAsset
 from app.modules.infra.services.asset_service import list_assets, create_asset
+from app.modules.infra.services.infra_metrics import (
+    get_non_compliant_assignments,
+    get_unsubmitted_deliverables,
+    list_audit_logs,
+    list_projects_summary,
+)
 from app.modules.infra.services.network_service import list_subnets, list_port_maps
 from app.modules.infra.services.infra_exporter import export_customer
 from app.modules.infra.schemas.asset import AssetCreate
@@ -191,3 +201,72 @@ def test_export_customer_with_project_filter(db_session, admin_role_id) -> None:
     # 헤더 제외, 데이터 행만 확인
     data_rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if any(v for v in r)]
     assert len(data_rows) == 1  # PROJ-ASSET만 포함
+
+
+def test_dashboard_metrics_respect_customer_scope(db_session, admin_role_id) -> None:
+    """현황판 집계 서비스는 customer_id 필터를 적용한다."""
+    cust_a = _make_customer(db_session, "대시보드고객A")
+    cust_b = _make_customer(db_session, "대시보드고객B")
+    proj_a = _make_project(db_session, cust_a.id, "DASH-A")
+    proj_b = _make_project(db_session, cust_b.id, "DASH-B")
+
+    phase_a = ProjectPhase(project_id=proj_a.id, phase_type="build", status="in_progress")
+    phase_b = ProjectPhase(project_id=proj_b.id, phase_type="test", status="in_progress")
+    db_session.add_all([phase_a, phase_b])
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            ProjectDeliverable(project_phase_id=phase_a.id, name="A-산출물", is_submitted=False),
+            ProjectDeliverable(project_phase_id=phase_b.id, name="B-산출물", is_submitted=False),
+        ]
+    )
+    db_session.commit()
+
+    summary = list_projects_summary(db_session, customer_id=cust_a.id)
+    unsubmitted = get_unsubmitted_deliverables(db_session, customer_id=cust_a.id)
+
+    assert [row["project_code"] for row in summary] == ["DASH-A"]
+    assert [row["project_code"] for row in unsubmitted] == ["DASH-A"]
+
+
+def test_non_compliant_assignments_respect_customer_scope(db_session, admin_role_id) -> None:
+    """미준수 정책 목록은 customer_id 필터를 적용한다."""
+    cust_a = _make_customer(db_session, "정책고객A")
+    cust_b = _make_customer(db_session, "정책고객B")
+    asset_a = _make_asset(db_session, cust_a.id, "POL-A")
+    asset_b = _make_asset(db_session, cust_b.id, "POL-B")
+
+    db_session.add_all(
+        [
+            PolicyAssignment(customer_id=cust_a.id, asset_id=asset_a.id, status="non_compliant"),
+            PolicyAssignment(customer_id=cust_b.id, asset_id=asset_b.id, status="non_compliant"),
+        ]
+    )
+    db_session.commit()
+
+    rows = get_non_compliant_assignments(db_session, customer_id=cust_a.id)
+
+    assert len(rows) == 1
+    assert rows[0]["customer_id"] == cust_a.id
+
+
+def test_list_audit_logs_returns_enriched_user_name(db_session, admin_role_id) -> None:
+    """감사로그 조회는 service에서 사용자명 enrichment를 수행한다."""
+    admin = _make_admin(db_session, admin_role_id)
+    db_session.add(
+        AuditLog(
+            user_id=admin.id,
+            action="create",
+            entity_type="project",
+            entity_id=1,
+            module="infra",
+            summary="프로젝트 생성",
+        )
+    )
+    db_session.commit()
+
+    rows = list_audit_logs(db_session, module="infra")
+
+    assert len(rows) == 1
+    assert rows[0]["user_name"] == "CentricAdmin"

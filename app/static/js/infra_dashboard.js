@@ -45,7 +45,9 @@ async function loadDashboard() {
 
     const [summary, unsubmitted, nonCompliant] = await Promise.all([
       apiFetch(summaryUrl),
-      apiFetch("/api/v1/infra-dashboard/unsubmitted"),
+      apiFetch(cid
+        ? "/api/v1/infra-dashboard/unsubmitted?customer_id=" + cid
+        : "/api/v1/infra-dashboard/unsubmitted"),
       apiFetch(ncUrl),
     ]);
 
@@ -73,8 +75,11 @@ function renderPhaseSummary(projects) {
 function renderAlerts(unsubmitted) {
   const section = document.getElementById("alert-section");
   const list = document.getElementById("alert-list");
-  if (!unsubmitted || unsubmitted.length === 0) { section.style.display = "none"; return; }
-  section.style.display = "";
+  if (!unsubmitted || unsubmitted.length === 0) {
+    section.classList.add("is-hidden");
+    return;
+  }
+  section.classList.remove("is-hidden");
   document.getElementById("alert-title").textContent =
     "미제출 산출물 (" + unsubmitted.length + "건)";
   list.textContent = "";

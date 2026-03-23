@@ -70,7 +70,7 @@
 
     const fd = new FormData();
     fd.append('file', _selectedFile);
-    fd.append('project_id', projectId);
+    fd.append('customer_id', getCtxCustomerId());
 
     const btn = document.getElementById('btn-preview');
     btn.disabled = true;
@@ -155,7 +155,7 @@
         cellRenderer: p => {
           if (!p.value || p.value.length === 0) return '';
           const span = document.createElement('span');
-          span.style.color = 'var(--danger-color)';
+          span.className = 'infra-text-danger';
           span.textContent = p.value.join(', ');
           return span;
         },
@@ -172,11 +172,10 @@
         rowData: data.rows || [],
         defaultColDef: { sortable: true, resizable: true, filter: true },
         domLayout: 'normal',
-        getRowStyle: params => {
-          if (params.data && params.data.errors && params.data.errors.length > 0) {
-            return { background: 'color-mix(in srgb, var(--danger-color) 8%, transparent)' };
-          }
-          return null;
+        rowClassRules: {
+          'infra-grid-row-error': params => Boolean(
+            params.data && params.data.errors && params.data.errors.length > 0
+          ),
         },
       });
     }
@@ -192,7 +191,7 @@
 
     const fd = new FormData();
     fd.append('file', _selectedFile);
-    fd.append('project_id', projectId);
+    fd.append('customer_id', getCtxCustomerId());
     fd.append('on_duplicate', onDuplicate);
 
     const btn = document.getElementById('btn-confirm');
@@ -225,7 +224,7 @@
     summary.textContent = '';
 
     const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'display:flex; gap:24px; margin-bottom:12px;';
+    wrapper.className = 'infra-result-stats';
 
     const card1 = document.createElement('div');
     card1.className = 'stat-card';

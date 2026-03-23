@@ -52,7 +52,7 @@
 
 | 용어 | 설명 |
 | --- | --- |
-| 프로젝트 (Project) | 기술 인벤토리를 관리하는 최상위 단위 |
+| 프로젝트 (Project) | 고객사에 종속된 기술 프로젝트. customer_id NOT NULL |
 | 프로젝트 단계 (ProjectPhase) | 분석, 설계, 구축, 시험, 안정화 등 진행 단계 |
 | 산출물 (Deliverable) | 프로젝트 단계별 제출 대상 문서/결과물 |
 | 자산 (Asset) | 서버, 네트워크 장비, 보안 장비 등 기술 자산 |
@@ -60,7 +60,7 @@
 | IP 인벤토리 (AssetIP) | Asset에 연결된 IP 정보, IpSubnet 참조 가능 |
 | 포트맵 (PortMap) | 자산 간 통신 관계 |
 | 정책 정의 (PolicyDefinition) | 적용 기준이 되는 정책 원본 |
-| 정책 적용 상태 (PolicyAssignment) | 프로젝트/자산 단위 정책 준수 현황 |
+| 정책 적용 상태 (PolicyAssignment) | 고객사/자산 단위 정책 준수 현황 |
 | 자산 담당자 매핑 (AssetContact) | 특정 자산과 담당자(CustomerContact)의 역할 연결 |
 | 프로젝트-자산 연결 (ProjectAsset) | Asset↔Project N:M 연결. role, note 포함 |
 | 자산 관계 (AssetRelation) | 자산 간 관계(parent-child, cluster, ha-pair 등) |
@@ -222,14 +222,14 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 - `ProjectCustomerContact`로 프로젝트-담당자 역할(고객PM/수행PM/구축엔지니어 등)을 관리한다. `ProjectCustomer`에 종속(CASCADE 삭제).
 - Pin 고객사: `UserPreference`(key=`infra.pinned_customer_id`)로 사용자별 고정 고객사를 DB 저장. `infra.last_project_id`로 마지막 선택 프로젝트 기억. topbar 2단 셀렉터(고객사+프로젝트)로 컨텍스트 전환.
 - 정책은 반드시 `PolicyDefinition`과 `PolicyAssignment`로 분리한다.
-- IP 중복 검증은 최소한 프로젝트 범위 내에서 수행한다.
+- IP 중복 검증은 고객사 범위 내에서 수행한다.
 - 자산명은 고객사 내 unique를 기본 원칙으로 한다.
 - 상태값은 문자열 하드코딩 대신 enum으로 통일한다.
 - 포트맵은 자산 간 연결뿐 아니라 외부 구간 표현을 위해 `src_asset_id`, `dst_asset_id`를 nullable로 둘 수 있다.
 - 정책 적용 상태는 `not_checked`, `compliant`, `non_compliant`, `exception`, `not_applicable` 범위를 기본값으로 사용한다.
 - 연락처는 거래처에 소속되고, 자산에는 매핑(AssetContact)으로 연결한다.
 - 인프라 CRUD(프로젝트/자산/IP대역/포트맵/정책)는 `audit.log()`로 감사 로그를 기록한다.
-- Excel Export는 프로젝트 단위 3시트(Inventory/IP대역/Portmap)로 내보낸다.
+- Excel Import/Export는 고객사 단위로 수행한다. Export 시 옵션 프로젝트 필터로 해당 프로젝트 자산만 포함 가능. 3시트(Inventory/IP대역/Portmap) 구조.
 
 ### 공통
 
@@ -280,6 +280,7 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 
 1. 코드 변경 완료
 2. 관련 테스트 통과 (새 기능은 테스트 추가)
+   - 테스트가 로컬 환경 의존성 부족이나 실행 정책 때문에 막히면, 누락 의존성/차단 원인/미실행 범위를 작업 결과에 명시한다.
 3. 변경 유형을 식별하고 SS2 매핑 표의 필수 문서를 갱신 완료
 4. 해결된 KNOWN_ISSUES 항목이 있으면 삭제 완료
 5. 문서에 적은 경로/엔드포인트/권한/초기화 절차가 코드와 일치함을 확인

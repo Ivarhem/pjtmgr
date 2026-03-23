@@ -27,37 +27,37 @@
 <!-- Step 1: Upload -->
 <div class="card import-panel" id="step-upload">
   <h3>파일 업로드</h3>
-  <p class="text-muted" style="margin-bottom: 16px;">
+  <p class="text-muted infra-import-help">
     실무 템플릿(xlsx)의 <strong>01. Inventory</strong> 시트를 파싱합니다.
     Row 1-2는 그룹 헤더, Row 3은 컬럼 헤더, Row 4부터 데이터입니다.
   </p>
-  <div class="filter-bar" style="flex-direction: column; align-items: stretch; gap: 16px;">
+  <div class="filter-bar infra-import-form">
     <label>
       프로젝트 선택
-      <select id="import-project" style="width: 100%; max-width: 400px;">
+      <select id="import-project" class="infra-import-input">
         <option value="">-- 프로젝트를 선택하세요 --</option>
       </select>
     </label>
     <label>
       Excel 파일 (.xlsx)
-      <input type="file" id="import-file" accept=".xlsx" style="width: 100%; max-width: 400px;">
+      <input type="file" id="import-file" accept=".xlsx" class="infra-import-input">
     </label>
     <label>
       중복 처리
-      <select id="import-duplicate" style="width: 100%; max-width: 400px;">
+      <select id="import-duplicate" class="infra-import-input">
         <option value="skip">건너뛰기 (기존 자산 유지)</option>
         <option value="overwrite">덮어쓰기 (기존 자산 업데이트)</option>
       </select>
     </label>
   </div>
-  <div style="margin-top: 16px; display: flex; gap: 8px;">
+  <div class="infra-import-actions">
     <button class="btn btn-primary" id="btn-preview">미리보기</button>
   </div>
 </div>
 
 <!-- Step 2: Preview -->
 <div class="card import-panel hidden" id="step-preview">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+  <div class="infra-import-preview-header">
     <h3>파싱 결과 미리보기</h3>
     <div id="preview-summary" class="text-muted"></div>
   </div>
@@ -65,9 +65,9 @@
   <div id="preview-warnings" class="import-msg-box import-msg-warning hidden"></div>
   <div id="preview-errors" class="import-msg-box import-msg-error hidden"></div>
 
-  <div id="grid-preview" class="ag-theme-quartz" style="height: 400px; width: 100%;"></div>
+  <div id="grid-preview" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
 
-  <div style="margin-top: 16px; display: flex; gap: 8px;">
+  <div class="infra-import-actions">
     <button class="btn" id="btn-back-upload">이전</button>
     <button class="btn btn-primary" id="btn-confirm" disabled>Import 실행</button>
   </div>
@@ -76,8 +76,8 @@
 <!-- Step 3: Result -->
 <div class="card import-panel hidden" id="step-result">
   <h3>Import 완료</h3>
-  <div id="result-summary" style="margin: 16px 0;"></div>
-  <div style="display: flex; gap: 8px;">
+  <div id="result-summary" class="infra-import-result-summary"></div>
+  <div class="infra-import-actions">
     <button class="btn" id="btn-another">다른 파일 Import</button>
     <a class="btn btn-primary" id="btn-go-project" href="/projects">프로젝트 보기</a>
   </div>

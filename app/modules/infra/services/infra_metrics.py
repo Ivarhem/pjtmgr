@@ -4,6 +4,8 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.modules.common.models.audit_log import AuditLog
+from app.modules.common.models.user import User
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_ip import AssetIP
 from app.modules.infra.models.policy_assignment import PolicyAssignment
@@ -114,7 +116,7 @@ def get_policy_compliance_rate(db: Session, project_id: int) -> float:
     return round(compliant / denominator * 100, 1)
 
 
-def get_unsubmitted_deliverables(db: Session) -> list[dict]:
+def get_unsubmitted_deliverables(db: Session, customer_id: int | None = None) -> list[dict]:
     """Unsubmitted deliverables in in_progress phases."""
     stmt = (
         select(
@@ -134,6 +136,8 @@ def get_unsubmitted_deliverables(db: Session) -> list[dict]:
         )
         .order_by(Project.project_code, ProjectPhase.phase_type, ProjectDeliverable.name)
     )
+    if customer_id is not None:
+        stmt = stmt.where(Project.customer_id == customer_id)
     rows = db.execute(stmt).all()
     return [
         {
@@ -182,4 +186,44 @@ def get_non_compliant_assignments(db: Session, customer_id: int | None = None) -
             "checked_date": str(r.checked_date) if r.checked_date else None,
         }
         for r in rows
+    ]
+
+
+def list_audit_logs(
+    db: Session,
+    *,
+    module: str,
+    project_id: int | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """List audit logs with lightweight user-name enrichment."""
+    stmt = (
+        select(AuditLog)
+        .where(AuditLog.module == module)
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+    )
+    if project_id is not None:
+        stmt = stmt.where(AuditLog.entity_type == "project", AuditLog.entity_id == project_id)
+
+    logs = list(db.scalars(stmt))
+    user_ids = {log.user_id for log in logs if log.user_id}
+    users: dict[int, str] = {}
+    if user_ids:
+        users = {
+            user.id: user.name
+            for user in db.scalars(select(User).where(User.id.in_(user_ids)))
+        }
+
+    return [
+        {
+            "id": log.id,
+            "user_name": users.get(log.user_id, "-"),
+            "action": log.action,
+            "entity_type": log.entity_type,
+            "entity_id": log.entity_id,
+            "summary": log.summary,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        }
+        for log in logs
     ]

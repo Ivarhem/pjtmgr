@@ -31,7 +31,7 @@
 </div>
 
 <!-- 미제출 산출물 알림 -->
-<div class="card mb-md" id="alert-section" style="display:none;">
+<div class="card mb-md is-hidden" id="alert-section">
   <div class="card-body">
     <h3 class="text-warning" id="alert-title">미제출 산출물</h3>
     <ul id="alert-list" class="alert-list"></ul>
@@ -43,7 +43,7 @@
   <h2>프로젝트 요약</h2>
 </div>
 <div class="card mb-md">
-  <div id="grid-projects" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+  <div id="grid-projects" class="ag-theme-quartz infra-grid infra-grid-dashboard-main"></div>
 </div>
 
 <!-- 정책 미준수 Grid -->
@@ -51,7 +51,7 @@
   <h2>정책 미준수 항목</h2>
 </div>
 <div class="card">
-  <div id="grid-non-compliant" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+  <div id="grid-non-compliant" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
 </div>
 {% endblock %}
 
