@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
+from app.core.code_generator import next_customer_code
 
 if TYPE_CHECKING:
     from app.modules.common.models.user import User
@@ -210,7 +211,7 @@ def get_or_create_by_name(
     name = name.strip()
     obj = db.query(Customer).filter(Customer.name == name).first()
     if not obj:
-        obj = Customer(name=name, customer_code=_generate_customer_code(db))
+        obj = Customer(name=name, customer_code=next_customer_code(db))
         db.add(obj)
         db.flush()
 
@@ -261,7 +262,7 @@ def create_customer(db: Session, data: CustomerCreate) -> Customer:
     if existing:
         raise DuplicateError(f"동일한 거래처명이 이미 존재합니다: {data.name}")
     obj = Customer(**data.model_dump())
-    obj.customer_code = _generate_customer_code(db)
+    obj.customer_code = next_customer_code(db)
     db.add(obj)
     db.commit()
     db.refresh(obj)
@@ -290,6 +291,8 @@ def update_customer(db: Session, customer_id: int, data: CustomerUpdate) -> Cust
     if not obj:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
     updates = data.model_dump(exclude_unset=True)
+    if "customer_code" in updates:
+        raise BusinessRuleError("고객코드는 변경할 수 없습니다.")
     if "name" in updates and updates["name"] != obj.name:
         dup = db.query(Customer).filter(
             func.lower(Customer.name) == updates["name"].strip().lower(),
@@ -386,42 +389,6 @@ def delete_contact(db: Session, contact_id: int) -> None:
     db.commit()
 
 
-_BASE36_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-
-def _int_to_base36(n: int, width: int = 3) -> str:
-    """Convert integer to zero-padded base-36 string (0-9, A-Z)."""
-    if n < 0:
-        raise ValueError("Negative numbers not supported")
-    result = []
-    for _ in range(width):
-        result.append(_BASE36_CHARS[n % 36])
-        n //= 36
-    return "".join(reversed(result))
-
-
-def _base36_to_int(s: str) -> int:
-    """Convert base-36 string to integer."""
-    n = 0
-    for ch in s.upper():
-        n = n * 36 + _BASE36_CHARS.index(ch)
-    return n
-
-
-def _generate_customer_code(db: Session) -> str:
-    """Generate next customer code in C-000 ~ C-ZZZ (base-36, 46656 slots)."""
-    last = (
-        db.query(Customer.customer_code)
-        .filter(Customer.customer_code.like("C-%"))
-        .order_by(Customer.customer_code.desc())
-        .first()
-    )
-    if last and last[0]:
-        suffix = last[0][2:]  # strip "C-"
-        next_num = _base36_to_int(suffix) + 1
-    else:
-        next_num = 0
-    return f"C-{_int_to_base36(next_num)}"
 
 
 def _clear_default(

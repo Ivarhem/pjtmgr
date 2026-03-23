@@ -16,9 +16,11 @@ from app.core.auth.authorization import (
     check_contract_access,
     check_period_access,
 )
+from app.core.code_generator import next_contract_code, next_period_code, RESERVED_CUSTOMER_CODE
 from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.modules.common.models.contract import Contract
 from app.modules.common.models.contract_period import ContractPeriod
+from app.modules.common.models.customer import Customer
 from app.modules.common.schemas.contract import ContractCreate, ContractUpdate
 from app.modules.common.schemas.contract_period import (
     ContractPeriodCreate,
@@ -58,6 +60,7 @@ def _period_read_dict(period: ContractPeriod) -> dict:
         "contract_id": period.contract_id,
         "period_year": period.period_year,
         "period_label": period.period_label,
+        "period_code": period.period_code,
         "stage": period.stage,
         "start_month": period.start_month,
         "end_month": period.end_month,
@@ -107,6 +110,7 @@ def list_periods(
             "contract_type": p.contract.contract_type,
             "period_year": p.period_year,
             "period_label": p.period_label,
+            "period_code": p.period_code,
             "stage": p.stage,
             "description": p.description,
             "customer_id": p.customer_id or p.contract.end_customer_id,
@@ -139,6 +143,7 @@ def get_contract_periods(
             "id": p.id,
             "period_year": p.period_year,
             "period_label": p.period_label,
+            "period_code": p.period_code,
             "stage": p.stage,
             "start_month": p.start_month,
             "end_month": p.end_month,
@@ -191,7 +196,16 @@ def create_contract(db: Session, data: ContractCreate, *, created_by: int | None
     if data.contract_type not in valid:
         raise BusinessRuleError(f"유효하지 않은 사업유형: {data.contract_type}")
 
+    # contract_code 채번: {customer_code}-P{seq}
+    if data.end_customer_id:
+        customer = db.get(Customer, data.end_customer_id)
+        cust_code = customer.customer_code if customer else RESERVED_CUSTOMER_CODE
+    else:
+        cust_code = RESERVED_CUSTOMER_CODE
+    code = next_contract_code(db, cust_code)
+
     contract = Contract(
+        contract_code=code,
         contract_name=data.contract_name,
         contract_type=data.contract_type,
         end_customer_id=data.end_customer_id,
@@ -200,12 +214,6 @@ def create_contract(db: Session, data: ContractCreate, *, created_by: int | None
         notes=data.notes,
     )
     db.add(contract)
-    db.flush()
-
-    # contract_code 자동생성: {사업유형}-{현재연도}-{ID 4자리}
-    cur_year = datetime.date.today().year
-    contract.contract_code = f"{data.contract_type}-{cur_year}-{contract.id:04d}"
-
     db.commit()
     db.refresh(contract)
     return _contract_read_dict(contract)
@@ -319,6 +327,7 @@ def create_period(
     if contract.status == "cancelled":
         raise BusinessRuleError("삭제된 사업에는 Period를 추가할 수 없습니다.")
     label = data.period_label or _period_label(data.period_year)
+    period_code = next_period_code(db, contract.contract_code, data.period_year)
 
     # start_month > end_month 방지
     if data.start_month and data.end_month and data.start_month > data.end_month:
@@ -341,6 +350,7 @@ def create_period(
         contract_id=contract_id,
         period_year=data.period_year,
         period_label=label,
+        period_code=period_code,
         stage=data.stage,
         start_month=data.start_month,
         end_month=data.end_month,

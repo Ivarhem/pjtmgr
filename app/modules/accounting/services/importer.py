@@ -15,6 +15,7 @@ from app.modules.accounting.models.monthly_forecast import MonthlyForecast
 from app.modules.accounting.models.transaction_line import TransactionLine
 from app.modules.common.services.user import get_default_role_id
 from app.modules.common.services.customer import get_or_create_by_name as _get_or_create_customer_svc
+from app.core.code_generator import next_contract_code, next_period_code, RESERVED_CUSTOMER_CODE
 from app.core.exceptions import BusinessRuleError
 
 if TYPE_CHECKING:
@@ -414,7 +415,9 @@ def _import_data_inner(
             existing_period.expected_gp_total = _to_int(row.get("예상GP(원)", ""))
             period_map[_import_key(row)] = existing_period
         else:
+            cust_code = end_customer.customer_code if end_customer else RESERVED_CUSTOMER_CODE
             contract = Contract(
+                contract_code=next_contract_code(db, cust_code),
                 contract_name=contract_name,
                 contract_type=contract_type,
                 end_customer_id=end_customer.id,
@@ -425,12 +428,11 @@ def _import_data_inner(
             db.flush()
 
             year_suffix = str(year)[-2:]
-            contract.contract_code = f"{contract_type}-{year}-{contract.id:04d}"
-
             period = ContractPeriod(
                 contract_id=contract.id,
                 period_year=year,
                 period_label=f"Y{year_suffix}",
+                period_code=next_period_code(db, contract.contract_code, year),
                 stage=row["진행단계"].strip(),
                 expected_revenue_total=_to_int(row.get("예상매출(원)", "")),
                 expected_gp_total=_to_int(row.get("예상GP(원)", "")),
