@@ -46,10 +46,13 @@
 ├── 프로젝트-업체 연결 (고객사/수행사/유지보수사/통신사/벤더)
 │   └── 프로젝트-담당자 역할 매핑
 ├── Asset 등록 (N:M 프로젝트 연결, 자산 간 관계)
+│   ├── HW 모델 연결 (ProductCatalog → 스펙/인터페이스)
+│   ├── 설치 SW 관리 (AssetSoftware)
 │   ├── IP 인벤토리 연결
 │   ├── PortMap 연결
 │   ├── 정책 적용 상태 연결
 │   └── 담당자 연결
+├── 제품 카탈로그 (글로벌 HW 제품, SPEC/EOSL Excel Import)
 ├── 프로젝트 단위 Excel Export (자산/IP/포트맵 3시트)
 ├── 감사 로그 (CRUD 변경이력 기록 + 변경이력 탭)
 └── 현황판 (고객사 컨텍스트 기준 프로젝트별 자산/IP/정책/산출물 요약)
@@ -203,6 +206,8 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 | **기술 자산** | Asset CRUD, N:M 프로젝트 연결, 자산 간 관계, 횡단 검색 | infra |
 | **네트워크** | IP 인벤토리, 포트맵 CRUD, Excel Import | infra |
 | **정책** | 정책 정의, 프로젝트/자산별 적용 상태 | infra |
+| **제품 카탈로그** | 글로벌 HW 제품/스펙/인터페이스 관리, 자산 연결, SPEC/EOSL Excel Import | infra |
+| **자산 소프트웨어** | 자산별 설치/연동 SW 관리 | infra |
 | **인프라 공통** | Excel Export, 현황판, 감사 로그 연동, 변경이력 탭 | infra |
 
 ---
