@@ -363,94 +363,212 @@ function getCtxCustomerId() { return _ctxCustomerId; }
 /** 현재 선택된 프로젝트 ID (null = 전체) */
 function getCtxProjectId() { return _ctxProjectId; }
 
-/** topbar 고객사/프로젝트 셀렉터 초기화 */
+/** topbar 고객사/프로젝트 셀렉터 초기화 (자동완성 방식) */
 async function initContextSelectors() {
-  const custSel = document.getElementById('ctx-customer');
-  const projSel = document.getElementById('ctx-project');
-  if (!custSel || !projSel) return;
+  const custInput = document.getElementById('ctx-customer');
+  const custDrop = document.getElementById('ctx-customer-dropdown');
+  const projDisplay = document.getElementById('ctx-project-display');
+  const projText = document.getElementById('ctx-project-text');
+  const projClear = document.getElementById('ctx-project-clear');
+  if (!custInput) return;
 
-  // 고객사 목록 로드
-  const customers = await apiFetch('/api/v1/customers');
-  customers.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    opt.textContent = c.name;
-    custSel.appendChild(opt);
+  let allCustomers = [];
+  let allProjects = [];
+
+  // ── 드롭다운 헬퍼 (DOM API only, no innerHTML) ──
+  function renderDropdown(dropdown, items, onSelect, onNew) {
+    dropdown.textContent = '';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'ctx-option';
+      div.dataset.id = item.id || '';
+      if (item.code) {
+        const codeSpan = document.createElement('span');
+        codeSpan.className = 'ctx-option-code';
+        codeSpan.textContent = item.code;
+        div.appendChild(codeSpan);
+        div.appendChild(document.createTextNode(item.label));
+      } else {
+        div.textContent = item.label;
+      }
+      div.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        onSelect(item);
+        setElementHidden(dropdown, true);
+      });
+      dropdown.appendChild(div);
+    });
+    if (onNew) {
+      const newDiv = document.createElement('div');
+      newDiv.className = 'ctx-option-new';
+      newDiv.textContent = '+ 신규 등록';
+      newDiv.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        setElementHidden(dropdown, true);
+        onNew();
+      });
+      dropdown.appendChild(newDiv);
+    }
+    setElementHidden(dropdown, false);
+  }
+
+  function filterAndShow(input, dropdown, allItems, onSelect, onNew) {
+    const kw = input.value.trim().toLowerCase();
+    const filtered = kw
+      ? allItems.filter(i => i.label.toLowerCase().includes(kw) || (i.code && i.code.toLowerCase().includes(kw)))
+      : allItems;
+    renderDropdown(dropdown, filtered.slice(0, 30), onSelect, onNew);
+  }
+
+  // ── 고객사 ──
+  allCustomers = (await apiFetch('/api/v1/customers')).map(c => ({
+    id: c.id, code: c.customer_code, label: c.name,
+  }));
+
+  function selectCustomer(item) {
+    _ctxCustomerId = item ? item.id : null;
+    custInput.value = item ? item.label : '';
+    custInput.title = item ? (item.code + ' ' + item.label) : '';
+    _ctxProjectId = null;
+    _updateProjectDisplay(null);
+    // Pin 저장
+    apiFetch('/api/v1/preferences/infra.pinned_customer_id', {
+      method: 'PATCH', body: { value: item ? String(item.id) : '' },
+    }).catch(() => {});
+    localStorage.removeItem('infra.last_period_id');
+    loadPeriods(item ? item.id : null);
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: null } }));
+  }
+
+  // ── 고객사 신규등록 모달 ──
+  const custModal = document.getElementById('ctx-modal-customer');
+  function openNewCustomerModal() {
+    const nameInput = document.getElementById('ctx-new-customer-name');
+    nameInput.value = custInput.value.trim();
+    custModal.showModal();
+    nameInput.focus();
+  }
+  if (custModal) {
+    document.getElementById('ctx-btn-cust-cancel').addEventListener('click', () => custModal.close());
+    document.getElementById('ctx-btn-cust-submit').addEventListener('click', async () => {
+      const name = document.getElementById('ctx-new-customer-name').value.trim();
+      if (!name) { showToast('고객사명을 입력하세요.', 'warning'); return; }
+      try {
+        const created = await apiFetch('/api/v1/customers', { method: 'POST', body: { name } });
+        custModal.close();
+        const newItem = { id: created.id, code: created.customer_code, label: created.name };
+        allCustomers.push(newItem);
+        selectCustomer(newItem);
+        showToast('"' + name + '" 고객사가 등록되었습니다.');
+      } catch (err) { showToast(err.message || '등록에 실패했습니다.', 'error'); }
+    });
+  }
+
+  custInput.addEventListener('focus', () => filterAndShow(custInput, custDrop, allCustomers, selectCustomer, openNewCustomerModal));
+  custInput.addEventListener('input', () => filterAndShow(custInput, custDrop, allCustomers, selectCustomer, openNewCustomerModal));
+  custInput.addEventListener('blur', () => setTimeout(() => setElementHidden(custDrop, true), 150));
+  custInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setElementHidden(custDrop, true);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const first = custDrop.querySelector('.ctx-option');
+      if (first) first.focus();
+    }
   });
 
-  // 저장된 Pin 고객사 복원
-  try {
-    const prefRes = await fetch('/api/v1/preferences/infra.pinned_customer_id');
-    if (prefRes.ok) {
-      const pref = await prefRes.json();
-      if (pref.value) custSel.value = pref.value;
-    }
-  } catch { /* ignore */ }
-
-  // 저장된 마지막 프로젝트 복원
-  const savedProjId = localStorage.getItem('infra.last_project_id');
-
-  async function loadProjects(customerId) {
-    // Clear existing project options safely
-    while (projSel.options.length > 0) projSel.remove(0);
-    const defaultOpt = document.createElement('option');
-    defaultOpt.value = '';
-    defaultOpt.textContent = '전체';
-    projSel.appendChild(defaultOpt);
-
+  // ── 사업기간 (Period) ──
+  async function loadPeriods(customerId) {
+    allProjects = [];
     if (!customerId) return;
     try {
-      const projects = await apiFetch('/api/v1/projects?customer_id=' + customerId);
-      projects.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.project_code + ' \u2014 ' + p.project_name;
-        projSel.appendChild(opt);
-      });
-      // 저장된 프로젝트 복원
-      if (savedProjId) {
-        const exists = Array.from(projSel.options).some(o => o.value === savedProjId);
-        if (exists) projSel.value = savedProjId;
+      const periods = await apiFetch('/api/v1/contract-periods?customer_id=' + customerId);
+      allProjects = periods.map(p => ({
+        id: p.id, code: p.contract_code || '', label: p.contract_name + ' (' + p.period_label + ')',
+      }));
+      // 저장된 Period 복원
+      const savedPeriodId = localStorage.getItem('infra.last_period_id');
+      if (savedPeriodId) {
+        const saved = allProjects.find(p => String(p.id) === savedPeriodId);
+        if (saved) selectProject(saved);
       }
     } catch { /* ignore */ }
   }
 
-  // 고객사 변경 시
-  custSel.addEventListener('change', async () => {
-    _ctxCustomerId = custSel.value ? Number(custSel.value) : null;
-    _ctxProjectId = null;
-    projSel.value = '';
-    await loadProjects(custSel.value);
-    // Pin 고객사 저장
-    apiFetch('/api/v1/preferences/infra.pinned_customer_id', {
-      method: 'PATCH', body: { value: custSel.value },
-    }).catch(() => {});
-    localStorage.removeItem('infra.last_project_id');
-    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: null } }));
-  });
+  function _updateProjectDisplay(item) {
+    if (projDisplay) {
+      if (item) {
+        projText.textContent = item.label;
+        projDisplay.style.display = '';
+      } else {
+        projText.textContent = '';
+        projDisplay.style.display = 'none';
+      }
+    }
+  }
 
-  // 프로젝트 변경 시
-  projSel.addEventListener('change', () => {
-    _ctxProjectId = projSel.value ? Number(projSel.value) : null;
-    if (projSel.value) {
-      localStorage.setItem('infra.last_project_id', projSel.value);
+  function selectProject(item) {
+    _ctxProjectId = item ? item.id : null;
+    _updateProjectDisplay(item);
+    if (item && item.id) {
+      localStorage.setItem('infra.last_period_id', String(item.id));
     } else {
-      localStorage.removeItem('infra.last_project_id');
+      localStorage.removeItem('infra.last_period_id');
     }
     window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: _ctxProjectId } }));
-  });
-
-  // 초기 로드
-  if (custSel.value) {
-    _ctxCustomerId = Number(custSel.value);
-    await loadProjects(custSel.value);
-    _ctxProjectId = projSel.value ? Number(projSel.value) : null;
   }
+
+  /** 프로젝트 선택 해제 (전체 목록으로 복귀) */
+  window.resetCtxProject = function() { selectProject(null); };
+  /** 외부에서 프로젝트 선택 (프로젝트 목록 행 클릭 등) */
+  window.setCtxProject = function(id, code, label) {
+    selectProject(id ? { id, code: code || '', label: label || '' } : null);
+  };
+
+  // ── X 버튼: 프로젝트 선택 해제 ──
+  if (projClear) {
+    projClear.addEventListener('click', () => selectProject(null));
+  }
+
+  // ── 초기 복원 ──
+  try {
+    const prefRes = await fetch('/api/v1/preferences/infra.pinned_customer_id');
+    if (prefRes.ok) {
+      const pref = await prefRes.json();
+      if (pref.value) {
+        const saved = allCustomers.find(c => String(c.id) === String(pref.value));
+        if (saved) {
+          _ctxCustomerId = saved.id;
+          custInput.value = saved.label;
+          custInput.title = saved.code + ' ' + saved.label;
+          await loadProjects(saved.id);
+        }
+      }
+    }
+  } catch { /* ignore */ }
 }
 
 // Legacy compat — 기존 코드에서 참조할 수 있는 함수
 async function getPinnedProjectId() { return _ctxProjectId ? String(_ctxProjectId) : null; }
 async function getPinnedCustomerId() { return _ctxCustomerId ? String(_ctxCustomerId) : null; }
+
+// ── 글로벌 프로젝트 필터 (자산 탭 공유) ──────────────────────────────
+const _PROJECT_FILTER_KEY = "infra_project_filter";
+
+/** 프로젝트 필터 체크박스 초기화 (localStorage 연동) */
+function initProjectFilterCheckbox(onChangeCallback) {
+  const chk = document.getElementById("chk-project-filter");
+  if (!chk) return;
+  chk.checked = localStorage.getItem(_PROJECT_FILTER_KEY) === "1";
+  chk.addEventListener("change", () => {
+    localStorage.setItem(_PROJECT_FILTER_KEY, chk.checked ? "1" : "0");
+    if (onChangeCallback) onChangeCallback();
+  });
+}
+
+/** 프로젝트 필터가 활성 상태인지 반환 */
+function isProjectFilterActive() {
+  return localStorage.getItem(_PROJECT_FILTER_KEY) === "1";
+}
 
 // ── END 고객 피커 (필터링 + 신규 등록) ──────────────────────────────
 

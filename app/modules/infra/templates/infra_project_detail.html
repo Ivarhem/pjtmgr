@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}프로젝트 상세 - SI Project Inventory{% endblock %}
+{% block title %}사업기간 상세 - 프로젝트관리{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
@@ -14,17 +14,15 @@
 {% block content %}
 <div class="page-header">
   <div>
-    <a href="/projects?list=1" class="text-secondary text-sm">&larr; 프로젝트 목록</a>
-    <h1 id="project-title">프로젝트 상세</h1>
+    <a href="/projects?list=1" class="text-secondary text-sm">&larr; 사업기간 목록</a>
+    <h1 id="project-title">사업기간 상세</h1>
   </div>
   <button class="btn btn-secondary btn-sm" id="btn-export-project">Excel Export</button>
 </div>
 
-<!-- 프로젝트 기본 정보 -->
-<div class="card mb-md">
-  <div class="card-body" id="project-info">
-    <p class="text-secondary">로딩 중...</p>
-  </div>
+<!-- 사업기간 기본 정보 -->
+<div class="info-card" id="project-info">
+  <p class="text-secondary">로딩 중...</p>
 </div>
 
 <!-- Tab navigation -->
@@ -68,7 +66,7 @@
 
   <!-- 단계 관리 -->
   <div class="page-header mt-md">
-    <h1>프로젝트 단계</h1>
+    <h1>단계</h1>
     <button class="btn btn-primary" id="btn-add-phase">단계 등록</button>
   </div>
 
@@ -210,9 +208,9 @@
 </div>
 
 <div class="tab-content hidden" id="tab-contacts">
-  <!-- 프로젝트 업체 -->
+  <!-- 사업 업체 -->
   <div class="page-header">
-    <h2>프로젝트 업체</h2>
+    <h2>사업 업체</h2>
     <button class="btn btn-primary btn-sm" id="btn-add-project-customer">업체 연결</button>
   </div>
   <div id="project-customers-list" class="project-customers-grid">
@@ -393,5 +391,5 @@
 
 {% block scripts %}
 <script src="/static/js/utils.js"></script>
-<script src="/static/js/infra_project_detail.js"></script>
+<script src="/static/js/infra_project_detail.js?v=2"></script>
 {% endblock %}

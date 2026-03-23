@@ -13,11 +13,11 @@ function setResultMessage(container, message, state) {
   }
 }
 
-// Resolve customer_id from the project
+// Resolve customer_id from the period
 (async () => {
   try {
-    const proj = await apiFetch('/api/v1/projects/' + PROJECT_ID);
-    _PROJECT_CUSTOMER_ID = proj.customer_id;
+    const period = await apiFetch('/api/v1/contract-periods/' + PROJECT_ID);
+    _PROJECT_CUSTOMER_ID = period.customer_id;
   } catch { /* fallback in individual calls */ }
 })();
 
@@ -56,43 +56,41 @@ const PHASE_STATUS_MAP = {
   completed: "완료",
 };
 
-/* ── Pin 프로젝트 자동 설정 ── */
-async function autoPinProject() {
-  const currentPin = await getPinnedProjectId();
-  if (String(currentPin) !== String(PROJECT_ID)) {
-    await setPinnedProject(PROJECT_ID);
-  }
+/* ── Pin Period 자동 설정 ── */
+function autoPinProject() {
+  localStorage.setItem('infra.last_period_id', String(PROJECT_ID));
 }
 
-/* ── 프로젝트 기본 정보 ── */
+/* ── 사업기간 기본 정보 ── */
 async function loadProjectInfo() {
   try {
-    const p = await apiFetch(`/api/v1/projects/${PROJECT_ID}`);
-    document.getElementById("project-title").textContent =
-      p.project_code + " - " + p.project_name;
+    const p = await apiFetch(`/api/v1/contract-periods/${PROJECT_ID}`);
+    document.getElementById("project-title").textContent = p.contract_name + ' (' + p.period_label + ')';
 
     const info = document.getElementById("project-info");
     while (info.firstChild) info.removeChild(info.firstChild);
 
     const items = [
-      ["고객사", p.client_name],
-      ["상태", p.status],
-      ["시작일", fmtDate(p.start_date) || "-"],
-      ["종료일", fmtDate(p.end_date) || "-"],
+      ["사업코드", p.contract_code],
+      ["고객사", p.customer_name || "-"],
+      ["진행단계", p.stage || "-"],
+      ["시작월", p.start_month ? p.start_month.slice(0, 7) : "-"],
+      ["종료월", p.end_month ? p.end_month.slice(0, 7) : "-"],
       ["설명", p.description || "-"],
     ];
 
-    const dl = document.createElement("dl");
-    dl.className = "info-grid";
+    const row = document.createElement("div");
+    row.className = "info-row";
     items.forEach(([label, value]) => {
-      const dt = document.createElement("dt");
-      dt.textContent = label;
-      const dd = document.createElement("dd");
-      dd.textContent = value;
-      dl.appendChild(dt);
-      dl.appendChild(dd);
+      const span = document.createElement("span");
+      span.className = "info-item";
+      const b = document.createElement("b");
+      b.textContent = label;
+      span.appendChild(b);
+      span.appendChild(document.createTextNode(" " + (value || "-")));
+      row.appendChild(span);
     });
-    info.appendChild(dl);
+    info.appendChild(row);
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -148,7 +146,7 @@ let phases = [];
 
 async function loadPhases() {
   try {
-    phases = await apiFetch(`/api/v1/projects/${PROJECT_ID}/phases`);
+    phases = await apiFetch(`/api/v1/period-phases?contract_period_id=${PROJECT_ID}`);
     phaseGridApi.setGridOption("rowData", phases);
     populatePhaseDropdown();
     renderPhaseTimeline(phases);
@@ -223,7 +221,7 @@ async function loadDeliverables() {
   try {
     const allDeliverables = [];
     for (const ph of phases) {
-      const items = await apiFetch(`/api/v1/project-phases/${ph.id}/deliverables`);
+      const items = await apiFetch(`/api/v1/period-phases/${ph.id}/deliverables`);
       allDeliverables.push(...items);
     }
     deliverableGridApi.setGridOption("rowData", allDeliverables);
@@ -236,7 +234,7 @@ async function loadDeliverables() {
 /* ── 요약 카드 ── */
 async function loadSummaryCards(projectId) {
   try {
-    const assets = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${projectId}`);
+    const assets = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${projectId}`);
     document.getElementById('card-asset-count').textContent =
       Array.isArray(assets) ? `${assets.length} 대` : '-';
   } catch (e) {
@@ -244,7 +242,7 @@ async function loadSummaryCards(projectId) {
   }
 
   try {
-    const ips = await apiFetch(`/api/v1/asset-ips?project_id=${projectId}`);
+    const ips = await apiFetch(`/api/v1/asset-ips?contract_period_id=${projectId}`);
     document.getElementById('card-ip-count').textContent =
       Array.isArray(ips) ? `${ips.length} 개` : '-';
   } catch (e) {
@@ -370,7 +368,7 @@ function openEditPhase(phase) {
 async function savePhase() {
   const phaseId = document.getElementById("phase-id").value;
   const payload = {
-    project_id: PROJECT_ID,
+    contract_period_id: PROJECT_ID,
     phase_type: document.getElementById("phase-type").value,
     status: document.getElementById("phase-status").value,
     task_scope: document.getElementById("phase-task-scope").value || null,
@@ -380,10 +378,10 @@ async function savePhase() {
 
   try {
     if (phaseId) {
-      await apiFetch(`/api/v1/project-phases/${phaseId}`, { method: "PATCH", body: payload });
+      await apiFetch(`/api/v1/period-phases/${phaseId}`, { method: "PATCH", body: payload });
       showToast("단계가 수정되었습니다.");
     } else {
-      await apiFetch(`/api/v1/projects/${PROJECT_ID}/phases`, { method: "POST", body: payload });
+      await apiFetch(`/api/v1/period-phases`, { method: "POST", body: payload });
       showToast("단계가 등록되었습니다.");
     }
     phaseModal.close();
@@ -400,7 +398,7 @@ async function deletePhase(phase) {
     `"${label}" 단계를 삭제하시겠습니까?`,
     async () => {
       try {
-        await apiFetch(`/api/v1/project-phases/${phase.id}`, { method: "DELETE" });
+        await apiFetch(`/api/v1/period-phases/${phase.id}`, { method: "DELETE" });
         showToast("단계가 삭제되었습니다.");
         await loadPhases();
         loadDeliverables();
@@ -457,10 +455,10 @@ async function saveDeliverable() {
 
   try {
     if (delId) {
-      await apiFetch(`/api/v1/project-deliverables/${delId}`, { method: "PATCH", body: payload });
+      await apiFetch(`/api/v1/period-deliverables/${delId}`, { method: "PATCH", body: payload });
       showToast("산출물이 수정되었습니다.");
     } else {
-      await apiFetch(`/api/v1/project-phases/${phaseId}/deliverables`, { method: "POST", body: payload });
+      await apiFetch(`/api/v1/period-phases/${phaseId}/deliverables`, { method: "POST", body: payload });
       showToast("산출물이 등록되었습니다.");
     }
     deliverableModal.close();
@@ -475,7 +473,7 @@ async function deleteDeliverable(d) {
     `산출물 "${d.name}"을(를) 삭제하시겠습니까?`,
     async () => {
       try {
-        await apiFetch(`/api/v1/project-deliverables/${d.id}`, { method: "DELETE" });
+        await apiFetch(`/api/v1/period-deliverables/${d.id}`, { method: "DELETE" });
         showToast("산출물이 삭제되었습니다.");
         loadDeliverables();
       } catch (err) {
@@ -520,7 +518,7 @@ function initAssetsTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
+        const data = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -604,7 +602,7 @@ function initRelationsTab() {
 
 async function loadRelationAssets() {
   try {
-    _relationAssetsCache = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
+    _relationAssetsCache = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${PROJECT_ID}`);
   } catch (err) { _relationAssetsCache = []; }
 }
 
@@ -790,7 +788,7 @@ function initPortmapTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/port-maps?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
+        const data = await apiFetch(`/api/v1/port-maps?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -826,7 +824,7 @@ function initPolicyTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/policy-assignments?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
+        const data = await apiFetch(`/api/v1/policy-assignments?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -857,7 +855,7 @@ function initContactsTab() {
     enableCellTextSelection: true,
     onGridReady: async (params) => {
       try {
-        const data = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`);
+        const data = await apiFetch(`/api/v1/assets?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${PROJECT_ID}`);
         params.api.setGridOption("rowData", data);
       } catch (err) { showToast(err.message, "error"); }
     },
@@ -872,8 +870,8 @@ async function loadProjectCustomers() {
   const container = document.getElementById("project-customers-list");
   try {
     const [customers, contacts] = await Promise.all([
-      apiFetch(`/api/v1/project-customers?project_id=${PROJECT_ID}`),
-      apiFetch(`/api/v1/project-customer-contacts?project_id=${PROJECT_ID}`),
+      apiFetch(`/api/v1/period-customers?contract_period_id=${PROJECT_ID}`),
+      apiFetch(`/api/v1/period-customer-contacts?contract_period_id=${PROJECT_ID}`),
     ]);
     _pcCustomersCache = customers;
     _pcContactsCache = contacts;
@@ -1009,7 +1007,7 @@ async function openAddCustomerModal() {
 async function saveProjectCustomer() {
   const pcId = document.getElementById("pc-id").value;
   const payload = {
-    project_id: PROJECT_ID,
+    contract_period_id: PROJECT_ID,
     customer_id: Number(document.getElementById("pc-customer-id").value),
     role: document.getElementById("pc-role").value,
     scope_text: document.getElementById("pc-scope-text").value || null,
@@ -1018,10 +1016,10 @@ async function saveProjectCustomer() {
 
   try {
     if (pcId) {
-      await apiFetch(`/api/v1/project-customers/${pcId}`, { method: "PATCH", body: payload });
+      await apiFetch(`/api/v1/period-customers/${pcId}`, { method: "PATCH", body: payload });
       showToast("업체 정보가 수정되었습니다.");
     } else {
-      await apiFetch("/api/v1/project-customers", { method: "POST", body: payload });
+      await apiFetch("/api/v1/period-customers", { method: "POST", body: payload });
       showToast("업체가 연결되었습니다.");
     }
     pcModal.close();
@@ -1032,7 +1030,7 @@ async function saveProjectCustomer() {
 async function deleteProjectCustomer(pcId) {
   confirmDelete("업체 연결을 해제하시겠습니까? 소속 담당자 연결도 함께 삭제됩니다.", async () => {
     try {
-      await apiFetch(`/api/v1/project-customers/${pcId}`, { method: "DELETE" });
+      await apiFetch(`/api/v1/period-customers/${pcId}`, { method: "DELETE" });
       showToast("업체 연결이 해제되었습니다.");
       loadProjectCustomers();
     } catch (err) { showToast(err.message, "error"); }
@@ -1080,10 +1078,10 @@ async function saveProjectCustomerContact() {
 
   try {
     if (pccId) {
-      await apiFetch(`/api/v1/project-customer-contacts/${pccId}`, { method: "PATCH", body: payload });
+      await apiFetch(`/api/v1/period-customer-contacts/${pccId}`, { method: "PATCH", body: payload });
       showToast("담당자 정보가 수정되었습니다.");
     } else {
-      await apiFetch("/api/v1/project-customer-contacts", { method: "POST", body: payload });
+      await apiFetch("/api/v1/period-customer-contacts", { method: "POST", body: payload });
       showToast("담당자가 연결되었습니다.");
     }
     pccModal.close();
@@ -1094,7 +1092,7 @@ async function saveProjectCustomerContact() {
 async function deleteProjectCustomerContact(pccId) {
   confirmDelete("담당자 연결을 해제하시겠습니까?", async () => {
     try {
-      await apiFetch(`/api/v1/project-customer-contacts/${pccId}`, { method: "DELETE" });
+      await apiFetch(`/api/v1/period-customer-contacts/${pccId}`, { method: "DELETE" });
       showToast("담당자 연결이 해제되었습니다.");
       loadProjectCustomers();
     } catch (err) { showToast(err.message, "error"); }
@@ -1232,7 +1230,7 @@ document.getElementById("btn-save-deliverable").addEventListener("click", saveDe
 
 // ── Excel Export ──
 document.getElementById("btn-export-project")?.addEventListener("click", () => {
-  window.location.href = `/api/v1/infra-excel/export?customer_id=${_PROJECT_CUSTOMER_ID}&project_id=${PROJECT_ID}`;
+  window.location.href = `/api/v1/infra-excel/export?customer_id=${_PROJECT_CUSTOMER_ID}&contract_period_id=${PROJECT_ID}`;
 });
 
 // ── Asset Import (프로젝트 상세 내) ──
@@ -1276,5 +1274,15 @@ document.getElementById("btn-asset-import-run")?.addEventListener("click", async
   } finally {
     btn.disabled = false;
     btn.textContent = "Import 실행";
+  }
+});
+
+// ── 컨텍스트 변경 시 네비게이션 ──
+window.addEventListener("ctx-changed", (e) => {
+  const pid = e.detail?.projectId;
+  if (pid && pid !== PROJECT_ID) {
+    window.location.href = "/projects/" + pid;
+  } else if (!pid) {
+    window.location.href = "/projects";
   }
 });

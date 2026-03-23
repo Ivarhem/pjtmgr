@@ -218,9 +218,17 @@ async function loadAll() {
     return;
   }
 
-  const res = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`);
+  const [res, salesDetailRes] = await Promise.all([
+    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`),
+    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`),
+  ]);
   if (!res.ok) { document.getElementById('contract-title').textContent = '로딩 실패'; return; }
   periodData = await res.json();
+  // Merge sales-detail into periodData
+  if (salesDetailRes.ok) {
+    const sd = await salesDetailRes.json();
+    Object.assign(periodData, sd);
+  }
   contractId = periodData.contract_id;
 
   const [contractRes, periodsRes, forecastRes, ledgerRes, receiptsRes, allocRes] = await Promise.all([
@@ -447,8 +455,8 @@ function renderPeriodInfoSections() {
       ? `${fmtMonth(p.start_month)} ~ ${fmtMonth(p.end_month)}`
       : '-';
     // GP%
-    const rev = p.expected_revenue_total || 0;
-    const gp = p.expected_gp_total || 0;
+    const rev = p.expected_revenue_amount || 0;
+    const gp = p.expected_gp_amount || 0;
     const gpPct = rev ? (Math.round(gp / rev * 1000) / 10) : 0;
     const ownerName = p.owner_name || '-';
     const contactsId = `period-contacts-${p.id}`;
@@ -673,12 +681,19 @@ async function savePeriodInfo() {
   const startMonthEl = document.getElementById('edit-start-month');
   const endMonthEl = document.getElementById('edit-end-month');
 
+  // Common period fields
   const periodBody = {
     start_month: startMonthEl?.value ? startMonthEl.value + '-01' : null,
     end_month: endMonthEl?.value ? endMonthEl.value + '-01' : null,
     owner_user_id: ownerUserId,
     customer_id: custId,
     stage: stageEl ? stageEl.value : undefined,
+  };
+  const isPlannedEl = document.getElementById('edit-is-planned');
+  if (isPlannedEl) periodBody.is_planned = isPlannedEl.checked;
+
+  // Sales-detail fields (inspection/invoice)
+  const salesDetailBody = {
     inspection_day: isMA && inspDayEl?.value !== '' ? parseInt(inspDayEl.value) : null,
     inspection_date: !isMA && inspDateEl?.value ? _normalizeDate(inspDateEl.value) : null,
     invoice_month_offset: invMonthEl?.value !== '' ? parseInt(invMonthEl.value) : null,
@@ -686,16 +701,22 @@ async function savePeriodInfo() {
     invoice_day: invDayEl?.value ? parseInt(invDayEl.value) : null,
     invoice_holiday_adjust: invHolidayEl?.value || null,
   };
-  const isPlannedEl = document.getElementById('edit-is-planned');
-  if (isPlannedEl) periodBody.is_planned = isPlannedEl.checked;
 
-  const res = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`, {
-    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(periodBody),
-  });
-  if (!res.ok) { showToast('저장에 실패했습니다.', 'error'); return; }
+  const [res, sdRes] = await Promise.all([
+    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(periodBody),
+    }),
+    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(salesDetailBody),
+    }),
+  ]);
+  if (!res.ok || !sdRes.ok) { showToast('저장에 실패했습니다.', 'error'); return; }
 
-  periodData = await res.json();
+  const periodResult = await res.json();
+  const salesDetail = await sdRes.json();
+  periodData = { ...periodResult, ...salesDetail };
 
   // allPeriods 업데이트
   const idx = allPeriods.findIndex(p => p.id === CONTRACT_PERIOD_ID);
@@ -1207,8 +1228,8 @@ async function openEditExpected() {
   const period = periodData;
   const modal = document.getElementById('modal-edit-expected');
 
-  const totalSales = period.expected_revenue_total || 0;
-  const totalGp = period.expected_gp_total || 0;
+  const totalSales = period.expected_revenue_amount || 0;
+  const totalGp = period.expected_gp_amount || 0;
 
   const salesEl = document.getElementById('expected-sales-total');
   const pctEl = document.getElementById('expected-gp-pct');
@@ -1249,13 +1270,13 @@ async function applyEditExpected() {
     }
     const dist = _distributeAmounts(currentContract.contract_type, months, salesTotal, gpTotal);
 
-    // 1. Period expected 정보 업데이트
-    const patchRes = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`, {
+    // 1. Period expected 정보 업데이트 (sales-detail)
+    const patchRes = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        expected_revenue_total: salesTotal,
-        expected_gp_total: gpTotal,
+        expected_revenue_amount: salesTotal,
+        expected_gp_amount: gpTotal,
       }),
     });
     if (!patchRes.ok) {
@@ -1900,8 +1921,8 @@ async function _openAddPeriodModal() {
   }
 
   // ── 실적 (매출 / GP% / GP) ──
-  const prevSales = prev?.expected_revenue_total || 0;
-  const prevGp = prev?.expected_gp_total || 0;
+  const prevSales = prev?.expected_revenue_amount || 0;
+  const prevGp = prev?.expected_gp_amount || 0;
   document.getElementById('add-period-sales').value = prevSales || '';
   document.getElementById('add-period-sales-kr').textContent = formatKoreanAmount(prevSales);
 
@@ -2037,27 +2058,11 @@ async function submitAddPeriod() {
   const body = {
     period_year: year,
     stage,
-    expected_revenue_total: expectedSales,
-    expected_gp_total: expectedGp,
     start_month: startMonth ? startMonth + '-01' : null,
     end_month: endMonth ? endMonth + '-01' : null,
   };
   if (custId) body.customer_id = parseInt(custId);
   body.is_planned = document.getElementById('add-period-is-planned').checked;
-
-  // 검수/세금계산서 정보
-  const inspDay = document.getElementById('add-period-inspect-day').value;
-  const inspDate = document.getElementById('add-period-inspect-date').value;
-  if (inspDay !== '') body.inspection_day = parseInt(inspDay);
-  if (inspDate) body.inspection_date = _normalizeDate(inspDate);
-  const invMonth = document.getElementById('add-period-invoice-month').value;
-  const invDayType = document.getElementById('add-period-invoice-day-type').value;
-  const invDay = document.getElementById('add-period-invoice-day').value;
-  const invHoliday = document.getElementById('add-period-invoice-holiday').value;
-  if (invMonth !== '') body.invoice_month_offset = parseInt(invMonth);
-  if (invDayType) body.invoice_day_type = invDayType;
-  if (invDay) body.invoice_day = parseInt(invDay);
-  if (invHoliday) body.invoice_holiday_adjust = invHoliday;
 
   const res = await fetch(`/api/v1/contracts/${contractId}/periods`, {
     method: 'POST',
@@ -2070,6 +2075,32 @@ async function submitAddPeriod() {
     return;
   }
   const newPeriod = await res.json();
+
+  // Sales-detail fields (inspection/invoice/expected amounts)
+  const salesBody = {
+    expected_revenue_amount: expectedSales,
+    expected_gp_amount: expectedGp,
+  };
+  const inspDay = document.getElementById('add-period-inspect-day').value;
+  const inspDate = document.getElementById('add-period-inspect-date').value;
+  if (inspDay !== '') salesBody.inspection_day = parseInt(inspDay);
+  if (inspDate) salesBody.inspection_date = _normalizeDate(inspDate);
+  const invMonth = document.getElementById('add-period-invoice-month').value;
+  const invDayType = document.getElementById('add-period-invoice-day-type').value;
+  const invDay = document.getElementById('add-period-invoice-day').value;
+  const invHoliday = document.getElementById('add-period-invoice-holiday').value;
+  if (invMonth !== '') salesBody.invoice_month_offset = parseInt(invMonth);
+  if (invDayType) salesBody.invoice_day_type = invDayType;
+  if (invDay) salesBody.invoice_day = parseInt(invDay);
+  if (invHoliday) salesBody.invoice_holiday_adjust = invHoliday;
+
+  // Save sales-detail to the new period
+  await fetch(`/api/v1/contract-periods/${newPeriod.id}/sales-detail`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(salesBody),
+  }).catch(() => {});
+
   document.getElementById('modal-add-period').close();
   window.location.href = `/contracts/${newPeriod.id}`;
 }
@@ -3213,8 +3244,7 @@ async function loadLinkedProjects() {
     container.textContent = '';
     if (!links || links.length === 0) {
       const p = document.createElement('p');
-      p.className = 'text-muted';
-      p.style.padding = '1rem';
+      p.className = 'text-muted infra-card-padding';
       p.textContent = '연결된 프로젝트가 없습니다.';
       container.appendChild(p);
       return;
@@ -3259,8 +3289,7 @@ async function loadLinkedProjects() {
   } catch (e) {
     container.textContent = '';
     const p = document.createElement('p');
-    p.className = 'text-muted';
-    p.style.padding = '1rem';
+    p.className = 'text-muted infra-card-padding';
     p.textContent = '프로젝트 연결 정보를 불러올 수 없습니다.';
     container.appendChild(p);
   }
