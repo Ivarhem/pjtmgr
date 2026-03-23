@@ -17,8 +17,8 @@ class Receipt(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(String(300))
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
-    contract: Mapped["Contract"] = relationship(back_populates="receipts")
-    customer: Mapped["Customer | None"] = relationship(back_populates="receipts")
+    contract: Mapped["Contract"] = relationship(foreign_keys="[Receipt.contract_id]")
+    customer: Mapped["Customer | None"] = relationship(foreign_keys="[Receipt.customer_id]")
     matches: Mapped[list["ReceiptMatch"]] = relationship(
         back_populates="receipt", cascade="all, delete-orphan",
     )

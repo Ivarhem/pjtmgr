@@ -22,6 +22,6 @@ class ContractContact(TimestampMixin, Base):
     rank: Mapped[str] = mapped_column(String(10), nullable=False, default="정")  # 정 / 부
     notes: Mapped[str | None] = mapped_column(String(500))
 
-    contract_period: Mapped["ContractPeriod"] = relationship(back_populates="contract_contacts")
-    customer: Mapped["Customer"] = relationship(back_populates="contract_contacts")
-    customer_contact: Mapped["CustomerContact | None"] = relationship(back_populates="contract_contacts")
+    contract_period: Mapped["ContractPeriod"] = relationship(foreign_keys="[ContractContact.contract_period_id]")
+    customer: Mapped["Customer"] = relationship(foreign_keys="[ContractContact.customer_id]")
+    customer_contact: Mapped["CustomerContact | None"] = relationship(foreign_keys="[ContractContact.customer_contact_id]")

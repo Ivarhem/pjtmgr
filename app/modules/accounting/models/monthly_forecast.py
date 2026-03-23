@@ -20,4 +20,4 @@ class MonthlyForecast(TimestampMixin, Base):
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, index=True)  # 최신 버전 여부
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
-    contract_period: Mapped["ContractPeriod"] = relationship(back_populates="forecasts")
+    contract_period: Mapped["ContractPeriod"] = relationship(foreign_keys="[MonthlyForecast.contract_period_id]")

@@ -29,6 +29,4 @@ class CustomerContact(TimestampMixin, Base):
     roles: Mapped[list["CustomerContactRole"]] = relationship(
         back_populates="contact", cascade="all, delete-orphan", lazy="joined"
     )
-    contract_contacts: Mapped[list["ContractContact"]] = relationship(
-        back_populates="customer_contact"
-    )
+    # contract_contacts relationship은 accounting 모델에서 정의.

@@ -34,6 +34,12 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-관리자}
       ENABLED_MODULES: ${ENABLED_MODULES:-common,accounting,infra}
+      SKIP_LIFESPAN_ALEMBIC: "1"
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload --reload-dir /app/app"]
     ports:
       - "${APP_HOST_PORT:-9000}:9000"
     healthcheck:

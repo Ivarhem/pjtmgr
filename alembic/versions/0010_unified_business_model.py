@@ -45,43 +45,53 @@ def _unique_constraint_name(table: str, columns: list[str]) -> str | None:
     return None
 
 
+def _table_exists(table: str) -> bool:
+    bind = op.get_bind()
+    inspector = sa_inspect(bind)
+    return table in inspector.get_table_names()
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
     # ================================================================
+    # Early exit: 이미 마이그레이션이 완료된 상태 감지
+    # (dev 환경에서 create_all + 이전 실행으로 부분 적용된 경우)
+    # ================================================================
+    if not _table_exists("projects") and _table_exists("period_phases"):
+        # projects 테이블이 없고 period_phases가 있으면 이미 완료된 상태
+        return
+
+    # ================================================================
     # Step 1: Create contract_sales_details table
     # ================================================================
-    op.create_table(
-        "contract_sales_details",
-        sa.Column("id", sa.Integer(), autoincrement=True, primary_key=True),
-        sa.Column(
-            "contract_period_id",
-            sa.Integer(),
-            sa.ForeignKey("contract_periods.id"),
-            nullable=False,
-            unique=True,
-        ),
-        sa.Column("expected_revenue_amount", sa.Integer(), server_default=sa.text("0")),
-        sa.Column("expected_gp_amount", sa.Integer(), server_default=sa.text("0")),
-        sa.Column("inspection_day", sa.Integer(), nullable=True),
-        sa.Column("inspection_date", sa.Date(), nullable=True),
-        sa.Column("invoice_month_offset", sa.Integer(), nullable=True),
-        sa.Column("invoice_day_type", sa.String(20), nullable=True),
-        sa.Column("invoice_day", sa.Integer(), nullable=True),
-        sa.Column("invoice_holiday_adjust", sa.String(10), nullable=True),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
-    )
+    # Guard: dev 환경에서 Base.metadata.create_all()이 선행 실행될 수 있음
+    if _table_exists("contract_sales_details"):
+        # 테이블은 존재하지만 데이터가 없으면 create_all에 의한 빈 테이블 → 유지
+        # 데이터가 있으면 이전 마이그레이션 시도 잔존 → truncate
+        conn.execute(sa.text("TRUNCATE contract_sales_details"))
+    else:
+        op.create_table(
+            "contract_sales_details",
+            sa.Column("id", sa.Integer(), autoincrement=True, primary_key=True),
+            sa.Column(
+                "contract_period_id",
+                sa.Integer(),
+                sa.ForeignKey("contract_periods.id"),
+                nullable=False,
+                unique=True,
+            ),
+            sa.Column("expected_revenue_amount", sa.Integer(), server_default=sa.text("0")),
+            sa.Column("expected_gp_amount", sa.Integer(), server_default=sa.text("0")),
+            sa.Column("inspection_day", sa.Integer(), nullable=True),
+            sa.Column("inspection_date", sa.Date(), nullable=True),
+            sa.Column("invoice_month_offset", sa.Integer(), nullable=True),
+            sa.Column("invoice_day_type", sa.String(20), nullable=True),
+            sa.Column("invoice_day", sa.Integer(), nullable=True),
+            sa.Column("invoice_holiday_adjust", sa.String(10), nullable=True),
+            sa.Column("created_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
+        )
 
     # ================================================================
     # Step 2: Add description column to contract_periods
@@ -95,20 +105,22 @@ def upgrade() -> None:
     # ================================================================
     # Step 3: Copy sales fields from contract_periods to contract_sales_details
     # ================================================================
-    conn.execute(
-        sa.text(
-            """
-            INSERT INTO contract_sales_details
-                (contract_period_id, expected_revenue_amount, expected_gp_amount,
-                 inspection_day, inspection_date, invoice_month_offset,
-                 invoice_day_type, invoice_day, invoice_holiday_adjust)
-            SELECT id, expected_revenue_total, expected_gp_total,
-                   inspection_day, inspection_date, invoice_month_offset,
-                   invoice_day_type, invoice_day, invoice_holiday_adjust
-            FROM contract_periods
-            """
+    # Guard: only if old columns still exist (not already migrated)
+    if _column_exists("contract_periods", "expected_revenue_total"):
+        conn.execute(
+            sa.text(
+                """
+                INSERT INTO contract_sales_details
+                    (contract_period_id, expected_revenue_amount, expected_gp_amount,
+                     inspection_day, inspection_date, invoice_month_offset,
+                     invoice_day_type, invoice_day, invoice_holiday_adjust)
+                SELECT id, expected_revenue_total, expected_gp_total,
+                       inspection_day, inspection_date, invoice_month_offset,
+                       invoice_day_type, invoice_day, invoice_holiday_adjust
+                FROM contract_periods
+                """
+            )
         )
-    )
 
     # ================================================================
     # Step 4: Drop sales columns from contract_periods
@@ -145,9 +157,14 @@ def upgrade() -> None:
     # ================================================================
     # Step 6: Map project_id → contract_period_id for infra tables
     # ================================================================
+    # Guard: only if projects table still exists (not already migrated)
+    if not _table_exists("projects"):
+        # Already migrated in previous run — skip steps 6-8
+        pass
+    else:
 
-    # 6a: Create temp mapping table
-    conn.execute(
+        # 6a: Create temp mapping table
+        conn.execute(
         sa.text(
             """
             CREATE TEMP TABLE _project_period_map AS
@@ -340,14 +357,25 @@ def upgrade() -> None:
     # ================================================================
     # Step 7: Rename tables
     # ================================================================
-    op.rename_table("project_phases", "period_phases")
-    op.rename_table("project_deliverables", "period_deliverables")
-    op.rename_table("project_assets", "period_assets")
-    op.rename_table("project_customers", "period_customers")
-    op.rename_table("project_customer_contacts", "period_customer_contacts")
+    # Guard: dev 환경에서 create_all이 period_* 테이블을 이미 생성했을 수 있음
+    # 이 경우 빈 period_* 테이블을 DROP하고 project_* 테이블을 RENAME
+    rename_map = {
+        "project_phases": "period_phases",
+        "project_deliverables": "period_deliverables",
+        "project_assets": "period_assets",
+        "project_customers": "period_customers",
+        "project_customer_contacts": "period_customer_contacts",
+    }
+    for old_name, new_name in rename_map.items():
+        if _table_exists(new_name) and _table_exists(old_name):
+            # create_all이 만든 빈 테이블 → 삭제 후 rename
+            conn.execute(sa.text(f"DROP TABLE {new_name} CASCADE"))
+        if _table_exists(old_name):
+            op.rename_table(old_name, new_name)
 
     # Rename column: period_deliverables.project_phase_id → period_phase_id
-    op.alter_column("period_deliverables", "project_phase_id", new_column_name="period_phase_id")
+    if _column_exists("period_deliverables", "project_phase_id"):
+        op.alter_column("period_deliverables", "project_phase_id", new_column_name="period_phase_id")
 
     # Update FK for period_deliverables.period_phase_id
     old_fk = _constraint_name("period_deliverables", "period_phase_id", "fkey")
@@ -362,7 +390,8 @@ def upgrade() -> None:
     )
 
     # Rename column: period_customer_contacts.project_customer_id → period_customer_id
-    op.alter_column("period_customer_contacts", "project_customer_id", new_column_name="period_customer_id")
+    if _column_exists("period_customer_contacts", "project_customer_id"):
+        op.alter_column("period_customer_contacts", "project_customer_id", new_column_name="period_customer_id")
 
     # Update FK for period_customer_contacts.period_customer_id
     old_fk2 = _constraint_name("period_customer_contacts", "period_customer_id", "fkey")

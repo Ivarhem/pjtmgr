@@ -22,9 +22,5 @@ class Contract(TimestampMixin, Base):
     periods: Mapped[list["ContractPeriod"]] = relationship(
         back_populates="contract", cascade="all, delete-orphan", order_by="ContractPeriod.period_year"
     )
-    transaction_lines: Mapped[list["TransactionLine"]] = relationship(
-        back_populates="contract", cascade="all, delete-orphan"
-    )
-    receipts: Mapped[list["Receipt"]] = relationship(
-        back_populates="contract", cascade="all, delete-orphan"
-    )
+    # transaction_lines, receipts relationships는 accounting 모델 측에서
+    # backref로 정의한다 (common → accounting 역방향 의존 방지).

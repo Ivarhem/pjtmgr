@@ -23,8 +23,8 @@ class TransactionLine(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(String(300))
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
-    contract: Mapped["Contract"] = relationship(back_populates="transaction_lines")
-    customer: Mapped["Customer | None"] = relationship(back_populates="transaction_lines")
+    contract: Mapped["Contract"] = relationship(foreign_keys="[TransactionLine.contract_id]")
+    customer: Mapped["Customer | None"] = relationship(foreign_keys="[TransactionLine.customer_id]")
     receipt_matches: Mapped[list["ReceiptMatch"]] = relationship(
         back_populates="transaction_line", cascade="all, delete-orphan",
     )

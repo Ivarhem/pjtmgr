@@ -42,4 +42,7 @@ def prepare_database() -> None:
     """현재 환경에 맞게 스키마를 준비하고 레거시 마이그레이션을 적용한다."""
     if ENV == "dev":
         Base.metadata.create_all(bind=engine)
-    _apply_alembic()
+    # Docker 환경에서는 entrypoint의 `alembic upgrade head`가 이미 실행됨.
+    # 중복 실행 시 advisory lock 충돌 방지를 위해 SKIP_LIFESPAN_ALEMBIC 환경변수로 제어.
+    if not os.getenv("SKIP_LIFESPAN_ALEMBIC"):
+        _apply_alembic()
