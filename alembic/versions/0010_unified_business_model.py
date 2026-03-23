@@ -193,6 +193,16 @@ def upgrade() -> None:
         else:
             period_year = 2026
 
+        # Determine unique contract_code (append -MIG on collision)
+        code = project_code
+        if code:
+            existing = conn.execute(
+                sa.text("SELECT 1 FROM contracts WHERE contract_code = :code"),
+                {"code": code},
+            ).first()
+            if existing:
+                code = f"{code}-MIG"
+
         # Create a new contract
         result = conn.execute(
             sa.text(
@@ -204,7 +214,7 @@ def upgrade() -> None:
                 """
             ),
             {
-                "code": project_code,
+                "code": code,
                 "name": project_name or "Migrated Project",
                 "customer_id": customer_id,
             },
@@ -218,14 +228,14 @@ def upgrade() -> None:
                 INSERT INTO contract_periods (contract_id, period_year, period_label,
                                               stage, description, created_at, updated_at)
                 VALUES (:contract_id, :period_year, :period_label,
-                        'active', :description, now(), now())
+                        '50%%', :description, now(), now())
                 RETURNING id
                 """
             ),
             {
                 "contract_id": contract_id,
                 "period_year": period_year,
-                "period_label": str(period_year),
+                "period_label": f"Y{str(period_year)[-2:]}",
                 "description": description,
             },
         )
