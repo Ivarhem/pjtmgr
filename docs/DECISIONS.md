@@ -276,3 +276,13 @@
 **이유:** 동일 사업이 영업/인프라에 각각 등록되는 데이터 중복 해소, 모듈 간 import 규칙 준수, ProjectContractLink N:N 관계 제거.
 
 **영향:** infra의 `project_*` 테이블이 `period_*`로 리네이밍, FK가 `contract_period_id`로 변경. 원장 엔드포인트 `/api/v1/ledger/periods`로 이동. 영업 확장 정보는 `/api/v1/contract-periods/{id}/sales-detail` API로 분리.
+
+---
+
+### D-014: 계층적 코드 채번 체계 (2026-03-23)
+
+**결정:** 고객코드(C000)·사업코드(C000-P000)·기간코드(C000-P000-Y26A) 계층적 코드 체계 도입. base36 순번 사용, 고객코드 생성 후 불변. CXXX는 고객 미지정 사업 예약 코드. 채번 유틸리티를 `app/core/code_generator.py`에 집중.
+
+**이유:** 기존 코드(`SI-2026-0016`)가 고객·사업·기간 간 관계를 표현하지 못함. 코드만으로 소속 고객/사업 식별 가능해야 함.
+
+**영향:** customer_code `C-000`→`C000` 변환, contract_code 재채번, period_code 신규 컬럼 추가. 비가역 마이그레이션(0011). UNIQUE 제약 + 3회 retry로 동시성 처리.
