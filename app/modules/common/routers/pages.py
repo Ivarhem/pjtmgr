@@ -25,6 +25,11 @@ def system_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse("system.html", {"request": request})
 
 
+@router.get("/product-catalog", response_class=HTMLResponse)
+def product_catalog_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse("product_catalog.html", {"request": request})
+
+
 @router.get("/audit-logs", response_class=HTMLResponse)
 def audit_logs_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse("audit_logs.html", {"request": request})

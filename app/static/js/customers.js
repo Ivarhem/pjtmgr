@@ -16,6 +16,7 @@ let contractsData = null;  // 관련 사업 API 응답 캐시
 
 // ── 거래처 목록 그리드 (좌측) ──────────────────────────────────
 const listColDefs = [
+  { field: 'customer_code', headerName: '코드', width: 80, sort: 'asc' },
   { field: 'name', headerName: '거래처명', flex: 1, minWidth: 120,
     cellRenderer: (params) => {
       const d = params.data;

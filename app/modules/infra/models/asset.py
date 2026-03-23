@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 
 from sqlalchemy import Date, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.core.base_model import TimestampMixin
@@ -24,6 +24,11 @@ class Asset(TimestampMixin, Base):
     location: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="planned")
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Product Catalog 연동
+    hardware_model_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_catalog.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
     # Equipment Spec
     center: Mapped[str | None] = mapped_column(String(100), nullable=True)

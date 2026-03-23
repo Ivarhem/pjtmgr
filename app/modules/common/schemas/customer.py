@@ -24,6 +24,7 @@ class CustomerUpdate(BaseModel):
 
 class CustomerRead(BaseModel):
     id: int
+    customer_code: str
     name: str
     business_no: str | None
     notes: str | None
@@ -38,6 +39,7 @@ class CustomerRead(BaseModel):
 
 class CustomerListRead(BaseModel):
     id: int
+    customer_code: str
     name: str
     business_no: str | None
     notes: str | None
