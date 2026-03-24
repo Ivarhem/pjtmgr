@@ -1,8 +1,8 @@
 """계층적 코드 채번 유틸리티.
 
-코드 형식: C000-P000-Y26A
-- 고객코드: C + base36(3) 전역 순번
-- 사업코드: {고객코드}-P + base36(3) 고객 내 순번
+코드 형식: P000-B000-Y26A
+- 업체코드: P + base36(3) 전역 순번
+- 사업코드: {업체코드}-B + base36(3) 업체 내 순번
 - 기간코드: {사업코드}-Y + 연도(2) + A~Z 순번
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ from app.core.exceptions import BusinessRuleError
 _BASE36 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 _BASE36_MAP = {c: i for i, c in enumerate(_BASE36)}
 
-RESERVED_CUSTOMER_CODE = "CXXX"
+RESERVED_PARTNER_CODE = "PXXX"
 
 
 def int_to_base36(n: int, width: int = 3) -> str:
@@ -35,36 +35,36 @@ def base36_to_int(s: str) -> int:
     return n
 
 
-def next_customer_code(db: Session) -> str:
-    """전역 MAX customer_code 다음 번호. C000~CZZZ. CXXX 건너뜀."""
+def next_partner_code(db: Session) -> str:
+    """전역 MAX partner_code 다음 번호. P000~PZZZ. PXXX 건너뜀."""
     row = db.execute(
-        text("SELECT MAX(customer_code) FROM customers WHERE customer_code LIKE 'C%' AND customer_code != :reserved"),
-        {"reserved": RESERVED_CUSTOMER_CODE},
+        text("SELECT MAX(partner_code) FROM partners WHERE partner_code LIKE 'P%' AND partner_code != :reserved"),
+        {"reserved": RESERVED_PARTNER_CODE},
     ).scalar()
     if row:
-        n = base36_to_int(row[1:]) + 1  # 'C' prefix 제거
+        n = base36_to_int(row[1:]) + 1  # 'P' prefix 제거
     else:
         n = 0
-    # CXXX (base36 XXX = 44252) 건너뛰기
+    # PXXX (base36 XXX = 44252) 건너뛰기
     reserved_n = base36_to_int("XXX")
     if n == reserved_n:
         n += 1
-    return f"C{int_to_base36(n)}"
+    return f"P{int_to_base36(n)}"
 
 
-def next_contract_code(db: Session, customer_code: str) -> str:
-    """해당 고객의 MAX contract_code에서 P-부분 다음 번호."""
-    pattern = f"{customer_code}-P%"
+def next_business_code(db: Session, partner_code: str) -> str:
+    """해당 업체의 MAX contract_code에서 B-부분 다음 번호."""
+    pattern = f"{partner_code}-B%"
     row = db.execute(
         text("SELECT MAX(contract_code) FROM contracts WHERE contract_code LIKE :pattern"),
         {"pattern": pattern},
     ).scalar()
     if row:
-        p_part = row.split("-P")[-1]  # "000" ~ "ZZZ"
-        n = base36_to_int(p_part) + 1
+        b_part = row.split("-B")[-1]  # "000" ~ "ZZZ"
+        n = base36_to_int(b_part) + 1
     else:
         n = 0
-    return f"{customer_code}-P{int_to_base36(n)}"
+    return f"{partner_code}-B{int_to_base36(n)}"
 
 
 def next_period_code(db: Session, contract_code: str, period_year: int) -> str:
