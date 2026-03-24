@@ -486,6 +486,18 @@ body.dark-mode .import-msg-error { background: #450a0a; color: #fca5a5; border-c
   border-radius: 6px;
 }
 
+/* Alias tags in asset grid */
+.alias-tag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  background: #e0e7ff;
+  color: #3730a3;
+  vertical-align: middle;
+}
+body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
+
 /* EOSL warning/danger cells */
 .cell-warn { color: #92400e; font-weight: 600; }
 .cell-danger { color: #dc3545; font-weight: 600; }

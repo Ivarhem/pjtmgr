@@ -63,6 +63,31 @@ def list_assets(
     return list(db.scalars(stmt))
 
 
+def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
+    """Attach alias names to each asset for list display."""
+    from app.modules.infra.models.asset_alias import AssetAlias
+
+    if not assets:
+        return []
+
+    asset_ids = [a.id for a in assets]
+    alias_rows = list(db.execute(
+        select(AssetAlias.asset_id, AssetAlias.alias_name)
+        .where(AssetAlias.asset_id.in_(asset_ids))
+        .order_by(AssetAlias.is_primary.desc(), AssetAlias.alias_name)
+    ))
+    alias_map: dict[int, list[str]] = {}
+    for row in alias_rows:
+        alias_map.setdefault(row.asset_id, []).append(row.alias_name)
+
+    result = []
+    for asset in assets:
+        d = {c.key: getattr(asset, c.key) for c in Asset.__table__.columns}
+        d["aliases"] = alias_map.get(asset.id, [])
+        result.append(d)
+    return result
+
+
 def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
     """Attach period_label via PeriodAsset for inventory view."""
     from app.modules.common.models.contract_period import ContractPeriod

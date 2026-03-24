@@ -155,5 +155,6 @@ class AssetRead(BaseModel):
     maintenance_vendor: str | None = None
     # Enriched fields (inventory view)
     period_label: str | None = None
+    aliases: list[str] = []
     created_at: datetime
     updated_at: datetime

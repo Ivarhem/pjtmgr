@@ -15,7 +15,24 @@ const ASSET_STATUS_MAP = {
 
 const columnDefs = [
   { field: "asset_code", headerName: "코드", width: 120, sort: "asc" },
-  { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180 },
+  {
+    field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180,
+    cellRenderer: (params) => {
+      const wrapper = document.createElement("span");
+      wrapper.textContent = params.value;
+      const aliases = params.data.aliases;
+      if (aliases && aliases.length) {
+        aliases.forEach(a => {
+          const tag = document.createElement("span");
+          tag.textContent = a;
+          tag.className = "alias-tag";
+          tag.style.cssText = "margin-left:6px;padding:1px 6px;font-size:11px;border-radius:3px;background:#e0e7ff;color:#3730a3";
+          wrapper.appendChild(tag);
+        });
+      }
+      return wrapper;
+    },
+  },
   {
     field: "asset_type",
     headerName: "유형",

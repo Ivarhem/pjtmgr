@@ -9,6 +9,7 @@ from app.modules.infra.schemas.asset import AssetCreate, AssetRead, AssetUpdate
 from app.modules.infra.services.asset_service import (
     create_asset,
     delete_asset,
+    enrich_assets_with_aliases,
     enrich_assets_with_period,
     get_asset,
     list_assets,
@@ -29,7 +30,8 @@ def list_assets_endpoint(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRead]:
-    return list_assets(db, partner_id, period_id, asset_type, status, q)
+    assets = list_assets(db, partner_id, period_id, asset_type, status, q)
+    return enrich_assets_with_aliases(db, assets)
 
 
 @router.get("/inventory", response_model=list[AssetRead])
