@@ -20,14 +20,14 @@ from app.modules.common.services import contract_service as svc
 router = APIRouter(prefix="/api/v1", tags=["contracts"])
 
 
-# ── Contract-Period 목록 (customer_id 필터 지원) ─────────────────────────
+# ── Contract-Period 목록 (partner_id 필터 지원) ─────────────────────────
 @router.get("/contract-periods")
 def list_contract_periods(
-    customer_id: int | None = None,
+    partner_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    return svc.list_periods(db, customer_id=customer_id)
+    return svc.list_periods(db, customer_id=partner_id)
 
 
 # ── Contract CRUD ─────────────────────────────────────────────────

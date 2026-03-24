@@ -10,9 +10,9 @@ def _templates(request: Request):
     return request.app.state.templates
 
 
-@router.get("/customers", response_class=HTMLResponse)
-def customers_page(request: Request) -> HTMLResponse:
-    return _templates(request).TemplateResponse("customers.html", {"request": request})
+@router.get("/partners", response_class=HTMLResponse)
+def partners_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse("partners.html", {"request": request})
 
 
 @router.get("/users", response_class=HTMLResponse)

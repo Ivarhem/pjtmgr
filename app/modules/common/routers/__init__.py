@@ -3,7 +3,7 @@ from fastapi import APIRouter
 
 from app.modules.common.routers.contracts import router as contracts_router
 from app.modules.common.routers.contract_types import router as contract_types_router
-from app.modules.common.routers.customers import router as customers_router
+from app.modules.common.routers.partners import router as partners_router
 from app.modules.common.routers.health import router as health_router
 from app.modules.common.routers.settings import router as settings_router
 from app.modules.common.routers.term_configs import router as term_configs_router
@@ -14,7 +14,7 @@ from app.modules.common.routers.roles import router as roles_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
-api_router.include_router(customers_router)
+api_router.include_router(partners_router)
 api_router.include_router(users_router)
 api_router.include_router(settings_router)
 api_router.include_router(term_configs_router)
@@ -27,7 +27,7 @@ api_router.include_router(contract_types_router)
 # Re-export individual routers for backward compatibility
 from app.modules.common.routers import contracts  # noqa: E402, F811
 from app.modules.common.routers import contract_types  # noqa: E402, F811
-from app.modules.common.routers import customers  # noqa: E402, F811
+from app.modules.common.routers import partners  # noqa: E402, F811
 from app.modules.common.routers import health  # noqa: E402, F811
 from app.modules.common.routers import settings  # noqa: E402, F811
 from app.modules.common.routers import term_configs  # noqa: E402, F811
@@ -39,7 +39,7 @@ __all__ = [
     "api_router",
     "contract_types",
     "contracts",
-    "customers",
+    "partners",
     "health",
     "roles",
     "settings",
