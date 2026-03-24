@@ -15,6 +15,7 @@ from app.modules.infra.models.product_catalog import ProductCatalog
 from app.modules.infra.models.hardware_spec import HardwareSpec
 from app.modules.infra.models.hardware_interface import HardwareInterface
 from app.modules.infra.models.period_partner_contact import PeriodPartnerContact
+from app.modules.infra.models.asset_alias import AssetAlias
 
 __all__ = [
     "PeriodPhase",
@@ -34,4 +35,5 @@ __all__ = [
     "ProductCatalog",
     "HardwareSpec",
     "HardwareInterface",
+    "AssetAlias",
 ]

@@ -25,6 +25,7 @@ from app.modules.infra.routers.period_partner_contacts import (
 from app.modules.infra.routers.infra_dashboard import router as infra_dashboard_router
 from app.modules.infra.routers.product_catalogs import router as product_catalog_router
 from app.modules.infra.routers.infra_excel import router as infra_excel_router
+from app.modules.infra.routers.asset_aliases import router as asset_aliases_router
 from app.modules.infra.routers.pages import router as pages_router
 
 api_router = APIRouter(dependencies=[require_module_access("infra", "read")])
@@ -45,6 +46,7 @@ api_router.include_router(period_partner_contacts_router)
 api_router.include_router(infra_dashboard_router)
 api_router.include_router(product_catalog_router)
 api_router.include_router(infra_excel_router)
+api_router.include_router(asset_aliases_router)
 api_router.include_router(pages_router)
 
 __all__ = ["api_router"]
