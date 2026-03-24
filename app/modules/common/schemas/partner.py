@@ -1,53 +1,53 @@
 from pydantic import BaseModel
-from app.modules.common.schemas.customer_contact import CustomerContactRead
+from app.modules.common.schemas.partner_contact import PartnerContactRead
 
 
-class CustomerCreate(BaseModel):
+class PartnerCreate(BaseModel):
     name: str
     business_no: str | None = None
     notes: str | None = None
-    customer_type: str | None = None
+    partner_type: str | None = None
     phone: str | None = None
     address: str | None = None
     note: str | None = None
 
 
-class CustomerUpdate(BaseModel):
+class PartnerUpdate(BaseModel):
     name: str | None = None
     business_no: str | None = None
     notes: str | None = None
-    customer_type: str | None = None
+    partner_type: str | None = None
     phone: str | None = None
     address: str | None = None
     note: str | None = None
 
 
-class CustomerRead(BaseModel):
+class PartnerRead(BaseModel):
     id: int
-    customer_code: str
+    partner_code: str
     name: str
     business_no: str | None
     notes: str | None
-    customer_type: str | None = None
+    partner_type: str | None = None
     phone: str | None = None
     address: str | None = None
     note: str | None = None
-    contacts: list[CustomerContactRead] = []
+    contacts: list[PartnerContactRead] = []
 
     model_config = {"from_attributes": True}
 
 
-class CustomerListRead(BaseModel):
+class PartnerListRead(BaseModel):
     id: int
-    customer_code: str
+    partner_code: str
     name: str
     business_no: str | None
     notes: str | None
-    customer_type: str | None = None
+    partner_type: str | None = None
     phone: str | None = None
     address: str | None = None
     note: str | None = None
-    contacts: list[CustomerContactRead] = []
+    contacts: list[PartnerContactRead] = []
     active_count: int = 0
     total_revenue: int = 0
 

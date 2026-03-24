@@ -15,7 +15,7 @@ class ContractPeriodCreate(BaseModel):
     end_month: str | None = None
     description: str | None = None
     owner_user_id: int | None = None
-    customer_id: int | None = None
+    partner_id: int | None = None
     is_planned: bool = True
     notes: str | None = None
 
@@ -35,7 +35,7 @@ class ContractPeriodUpdate(BaseModel):
     end_month: str | None = None
     description: str | None = None
     owner_user_id: int | None = None
-    customer_id: int | None = None
+    partner_id: int | None = None
     is_completed: bool | None = None
     notes: str | None = None
 
@@ -59,8 +59,8 @@ class ContractPeriodRead(BaseModel):
     description: str | None = None
     owner_user_id: int | None = None
     owner_name: str | None = None
-    customer_id: int | None = None
-    customer_name: str | None = None
+    partner_id: int | None = None
+    partner_name: str | None = None
     is_completed: bool = False
     is_planned: bool = True
     notes: str | None = None

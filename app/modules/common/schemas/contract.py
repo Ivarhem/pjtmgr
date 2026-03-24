@@ -8,7 +8,7 @@ ContractStatus = Literal["active", "closed", "cancelled"]
 class ContractCreate(BaseModel):
     contract_name: str
     contract_type: str
-    end_customer_id: int | None = None
+    end_partner_id: int | None = None
     owner_user_id: int | None = None
     status: ContractStatus = "active"
     notes: str | None = None
@@ -17,7 +17,7 @@ class ContractCreate(BaseModel):
 class ContractUpdate(BaseModel):
     contract_name: str | None = None
     contract_type: str | None = None
-    end_customer_id: int | None = None
+    end_partner_id: int | None = None
     owner_user_id: int | None = None
     status: ContractStatus | None = None
     notes: str | None = None
@@ -28,8 +28,8 @@ class ContractRead(BaseModel):
     contract_code: str | None
     contract_name: str
     contract_type: str
-    end_customer_id: int | None
-    end_customer_name: str | None = None
+    end_partner_id: int | None
+    end_partner_name: str | None = None
     owner_user_id: int | None
     owner_name: str | None = None
     status: str

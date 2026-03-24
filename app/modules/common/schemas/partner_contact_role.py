@@ -5,12 +5,12 @@ RoleType = Literal["영업", "세금계산서", "업무"]
 VALID_ROLE_TYPES = {"영업", "세금계산서", "업무"}
 
 
-class CustomerContactRoleCreate(BaseModel):
+class PartnerContactRoleCreate(BaseModel):
     role_type: RoleType
     is_default: bool = False
 
 
-class CustomerContactRoleRead(BaseModel):
+class PartnerContactRoleRead(BaseModel):
     id: int
     role_type: str
     is_default: bool
