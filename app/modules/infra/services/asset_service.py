@@ -106,17 +106,37 @@ def get_asset(db: Session, asset_id: int) -> Asset:
 
 
 def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
+    from sqlalchemy.exc import IntegrityError
+    from app.modules.common.services.asset_type_code import get_valid_type_keys
+
     _require_inventory_edit(current_user)
     ensure_partner_exists(db, payload.partner_id)
     _ensure_asset_name_unique(db, payload.partner_id, payload.asset_name)
+
+    # 유형 검증
+    valid_keys = get_valid_type_keys(db)
+    if payload.asset_type not in valid_keys:
+        raise NotFoundError(f"유효하지 않은 자산유형: {payload.asset_type}")
+
     if payload.hardware_model_id is not None:
         _ensure_hardware_model_exists(db, payload.hardware_model_id)
 
     data = payload.model_dump()
-    if not data.get("asset_code"):
-        data["asset_code"] = _generate_asset_code(db, payload.partner_id)
-    asset = Asset(**data)
-    db.add(asset)
+    data.pop("asset_code", None)  # 사용자 입력 무시
+
+    # 코드 자동 생성 (동시성 충돌 시 최대 3회 재시도)
+    for attempt in range(3):
+        data["asset_code"] = _generate_asset_code(db, payload.partner_id, payload.asset_type)
+        asset = Asset(**data)
+        db.add(asset)
+        try:
+            db.flush()
+            break
+        except IntegrityError:
+            db.rollback()
+            if attempt == 2:
+                raise
+
     audit.log(
         db, user_id=current_user.id, action="create", entity_type="asset",
         entity_id=None, summary=f"자산 생성: {asset.asset_name}", module="infra",
@@ -132,6 +152,11 @@ def update_asset(
     _require_inventory_edit(current_user)
     asset = get_asset(db, asset_id)
     changes = payload.model_dump(exclude_unset=True)
+
+    if "asset_type" in changes and changes["asset_type"] != asset.asset_type:
+        raise PermissionDeniedError("자산 유형은 변경할 수 없습니다.")
+    changes.pop("asset_type", None)
+    changes.pop("asset_code", None)  # 코드 수동 변경 차단
 
     target_partner_id = changes.get("partner_id", asset.partner_id)
     target_asset_name = changes.get("asset_name", asset.asset_name)
@@ -287,26 +312,42 @@ def _ensure_asset_contact_unique(
     raise DuplicateError("This contact-role mapping already exists for the asset")
 
 
-def _generate_asset_code(db: Session, partner_id: int) -> str:
-    """Generate next asset code like P000-A001 for the given partner."""
+_BASE36_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def _to_base36(num: int, width: int = 4) -> str:
+    if num == 0:
+        return "0" * width
+    result = ""
+    while num:
+        result = _BASE36_CHARS[num % 36] + result
+        num //= 36
+    return result.zfill(width)
+
+
+def _generate_asset_code(db: Session, partner_id: int, type_key: str) -> str:
+    """Generate asset code: {partner_code}-{type_code}-{base36 4자리}."""
     from app.modules.common.models.partner import Partner
+    from app.modules.common.services.asset_type_code import get_code_for_type_key
 
     partner = db.get(Partner, partner_id)
-    prefix = partner.partner_code if partner else "X000"
-    # Find the max existing sequence number for this partner
+    partner_code = partner.partner_code if partner else "X000"
+    type_code = get_code_for_type_key(db, type_key)
+    prefix = f"{partner_code}-{type_code}-"
+
     max_code = db.scalar(
         select(func.max(Asset.asset_code))
         .where(Asset.partner_id == partner_id)
-        .where(Asset.asset_code.like(f"{prefix}-A%"))
+        .where(Asset.asset_code.like(f"{prefix}%"))
     )
+
     if max_code:
-        try:
-            seq = int(max_code.rsplit("-A", 1)[1]) + 1
-        except (ValueError, IndexError):
-            seq = 1
+        suffix = max_code[len(prefix):]
+        next_seq = int(suffix, 36) + 1
     else:
-        seq = 1
-    return f"{prefix}-A{seq:03d}"
+        next_seq = 0
+
+    return prefix + _to_base36(next_seq)
 
 
 def _require_inventory_edit(current_user) -> None:
