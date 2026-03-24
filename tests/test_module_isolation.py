@@ -54,9 +54,9 @@ _KNOWN_VIOLATION_FILES: set[str] = {
     "app/core/startup/bootstrap.py",
     # common -> accounting cross-deps (Task 5: dependency inversion)
     "app/modules/common/routers/users.py",
-    "app/modules/common/services/customer.py",
+    "app/modules/common/services/partner.py",
     "app/modules/common/services/user.py",
-    "app/modules/common/services/_customer_helpers.py",
+    "app/modules/common/services/_partner_helpers.py",
 }
 
 # These are always allowed (standard lib, third-party, or top-level app)
@@ -190,7 +190,7 @@ def test_core_modules_importable() -> None:
         "app.core.auth.password",
         "app.core.auth.middleware",
         "app.modules.common.schemas.user",
-        "app.modules.common.schemas.customer",
+        "app.modules.common.schemas.partner",
         "app.modules.accounting.schemas.contract",
         "app.modules.accounting.schemas.report",
     ]

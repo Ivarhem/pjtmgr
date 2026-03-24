@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_period import ContractPeriod
 from app.modules.accounting.models.contract_type_config import ContractTypeConfig
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.accounting.models.monthly_forecast import MonthlyForecast
 from app.modules.accounting.models.receipt import Receipt
 from app.modules.accounting.models.receipt_match import ReceiptMatch
@@ -17,13 +17,13 @@ from app.modules.accounting.services.metrics import build_filter
 
 def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
     owner = User(name="영업", login_id="sales-report", role_id=user_role_id, department="영업1팀")
-    end_customer = Customer(name="엔드고객")
-    billing_customer = Customer(name="매출처")
+    end_partner = Partner(name="엔드고객")
+    billing_partner = Partner(name="매출처")
     db_session.add_all(
         [
             owner,
-            end_customer,
-            billing_customer,
+            end_partner,
+            billing_partner,
             ContractTypeConfig(code="MA", label="MA", sort_order=1, is_active=True),
         ]
     )
@@ -34,7 +34,7 @@ def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
         contract_type="MA",
         contract_code="MA-2026-0001",
         owner_user_id=owner.id,
-        end_customer_id=end_customer.id,
+        end_partner_id=end_partner.id,
         status="active",
     )
     db_session.add(contract)
@@ -49,7 +49,7 @@ def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
         start_month="2026-01-01",
         end_month="2026-12-01",
         owner_user_id=owner.id,
-        customer_id=billing_customer.id,
+        partner_id=billing_partner.id,
     )
     db_session.add(period)
     db_session.flush()
@@ -69,7 +69,7 @@ def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
                 contract_id=contract.id,
                 revenue_month="2026-01-01",
                 line_type="revenue",
-                customer_id=billing_customer.id,
+                partner_id=billing_partner.id,
                 supply_amount=100,
                 status=STATUS_CONFIRMED,
                 created_by=owner.id,
@@ -78,7 +78,7 @@ def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
                 contract_id=contract.id,
                 revenue_month="2026-01-01",
                 line_type="cost",
-                customer_id=billing_customer.id,
+                partner_id=billing_partner.id,
                 supply_amount=30,
                 status=STATUS_CONFIRMED,
                 created_by=owner.id,
@@ -89,7 +89,7 @@ def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
 
     january_receipt = Receipt(
         contract_id=contract.id,
-        customer_id=billing_customer.id,
+        partner_id=billing_partner.id,
         receipt_date="2026-01-15",
         revenue_month="2026-01-01",
         amount=100,
@@ -97,7 +97,7 @@ def _seed_report_data(db_session, user_role_id) -> dict[str, int]:
     )
     february_receipt = Receipt(
         contract_id=contract.id,
-        customer_id=billing_customer.id,
+        partner_id=billing_partner.id,
         receipt_date="2026-02-10",
         revenue_month="2026-02-01",
         amount=30,
@@ -174,7 +174,7 @@ def test_summary_forecast_vs_actual_and_receivables_use_expected_totals(db_sessi
             "contract_type": "MA",
             "owner_name": "영업",
             "department": "영업1팀",
-            "end_customer_name": "엔드고객",
+            "end_partner_name": "엔드고객",
             "stage": "70%",
             "forecast_revenue": 120,
             "actual_revenue": 100,

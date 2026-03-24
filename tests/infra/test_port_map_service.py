@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import BusinessRuleError, NotFoundError
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.port_map import PortMapCreate, PortMapUpdate
 from app.modules.infra.services.asset_service import create_asset
@@ -27,31 +27,31 @@ def _make_admin_user(db_session, admin_role_id: int):
     return user
 
 
-def _make_customer(db_session, name="테스트고객", bno="123-45-67890"):
-    customer = Customer(name=name, business_no=bno)
-    db_session.add(customer)
+def _make_partner(db_session, name="테스트고객", bno="123-45-67890"):
+    partner = Partner(name=name, business_no=bno)
+    db_session.add(partner)
     db_session.flush()
-    return customer
+    return partner
 
 
-def _make_asset(db, customer_id: int, name: str, admin):
+def _make_asset(db, partner_id: int, name: str, admin):
     return create_asset(
         db,
-        AssetCreate(customer_id=customer_id, asset_name=name, asset_type="server"),
+        AssetCreate(partner_id=partner_id, asset_name=name, asset_type="server"),
         admin,
     )
 
 
 def test_create_and_list_port_maps(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    src = _make_asset(db_session, customer.id, "WEB-01", admin)
-    dst = _make_asset(db_session, customer.id, "DB-01", admin)
+    partner = _make_partner(db_session)
+    src = _make_asset(db_session, partner.id, "WEB-01", admin)
+    dst = _make_asset(db_session, partner.id, "DB-01", admin)
 
     create_port_map(
         db_session,
         PortMapCreate(
-            customer_id=customer.id,
+            partner_id=partner.id,
             src_asset_id=src.id,
             src_ip="10.10.1.10",
             dst_asset_id=dst.id,
@@ -63,20 +63,20 @@ def test_create_and_list_port_maps(db_session, admin_role_id) -> None:
         admin,
     )
 
-    maps = list_port_maps(db_session, customer_id=customer.id)
+    maps = list_port_maps(db_session, partner_id=partner.id)
     assert len(maps) == 1
     assert maps[0].port == 5432
     assert maps[0].purpose == "PostgreSQL"
 
 
-def test_create_port_map_requires_existing_customer(
+def test_create_port_map_requires_existing_partner(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     with pytest.raises(NotFoundError):
         create_port_map(
             db_session,
-            PortMapCreate(customer_id=9999, port=443),
+            PortMapCreate(partner_id=9999, port=443),
             admin,
         )
 
@@ -84,12 +84,12 @@ def test_create_port_map_requires_existing_customer(
 def test_create_port_map_with_nullable_assets(db_session, admin_role_id) -> None:
     """External segment: src/dst asset not specified, only IPs."""
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     pm = create_port_map(
         db_session,
         PortMapCreate(
-            customer_id=customer.id,
+            partner_id=partner.id,
             src_ip="203.0.113.1",
             dst_ip="10.10.1.10",
             port=443,
@@ -103,19 +103,19 @@ def test_create_port_map_with_nullable_assets(db_session, admin_role_id) -> None
     assert pm.src_ip == "203.0.113.1"
 
 
-def test_create_port_map_rejects_asset_from_other_customer(
+def test_create_port_map_rejects_asset_from_other_partner(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer1 = _make_customer(db_session, name="고객1", bno="111-11-11111")
-    customer2 = _make_customer(db_session, name="고객2", bno="222-22-22222")
-    asset_other = _make_asset(db_session, customer2.id, "SRV-OTHER", admin)
+    partner1 = _make_partner(db_session, name="고객1", bno="111-11-11111")
+    partner2 = _make_partner(db_session, name="고객2", bno="222-22-22222")
+    asset_other = _make_asset(db_session, partner2.id, "SRV-OTHER", admin)
 
     with pytest.raises(BusinessRuleError):
         create_port_map(
             db_session,
             PortMapCreate(
-                customer_id=customer1.id,
+                partner_id=partner1.id,
                 src_asset_id=asset_other.id,
                 port=80,
             ),
@@ -125,10 +125,10 @@ def test_create_port_map_rejects_asset_from_other_customer(
 
 def test_update_port_map(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
     pm = create_port_map(
         db_session,
-        PortMapCreate(customer_id=customer.id, port=80, purpose="HTTP"),
+        PortMapCreate(partner_id=partner.id, port=80, purpose="HTTP"),
         admin,
     )
 
@@ -146,10 +146,10 @@ def test_update_port_map(db_session, admin_role_id) -> None:
 
 def test_delete_port_map(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
     pm = create_port_map(
         db_session,
-        PortMapCreate(customer_id=customer.id, port=22, purpose="SSH"),
+        PortMapCreate(partner_id=partner.id, port=22, purpose="SSH"),
         admin,
     )
 

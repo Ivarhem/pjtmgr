@@ -3,7 +3,7 @@ import pytest
 from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_period import ContractPeriod
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.accounting.models.receipt import Receipt
 from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
 from app.modules.common.models.user import User
@@ -14,8 +14,8 @@ from app.modules.accounting.services import receipt_match as receipt_match_servi
 def _seed_contract_graph(db_session, user_role_id):
     owner_a = User(name="소유자A", login_id="owner_a", role_id=user_role_id)
     owner_b = User(name="소유자B", login_id="owner_b", role_id=user_role_id)
-    customer = Customer(name="거래처")
-    db_session.add_all([owner_a, owner_b, customer])
+    partner = Partner(name="거래처")
+    db_session.add_all([owner_a, owner_b, partner])
     db_session.flush()
 
     contract_a = Contract(
@@ -23,7 +23,7 @@ def _seed_contract_graph(db_session, user_role_id):
         contract_type="MA",
         contract_code="MA-2026-0001",
         owner_user_id=owner_a.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     contract_b = Contract(
@@ -31,7 +31,7 @@ def _seed_contract_graph(db_session, user_role_id):
         contract_type="MA",
         contract_code="MA-2026-0002",
         owner_user_id=owner_b.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     db_session.add_all([contract_a, contract_b])
@@ -61,7 +61,7 @@ def _seed_contract_graph(db_session, user_role_id):
 
     receipt = Receipt(
         contract_id=contract_a.id,
-        customer_id=customer.id,
+        partner_id=partner.id,
         receipt_date="2026-01-15",
         revenue_month="2026-01-01",
         amount=100,
@@ -71,7 +71,7 @@ def _seed_contract_graph(db_session, user_role_id):
         contract_id=contract_a.id,
         revenue_month="2026-01-01",
         line_type="revenue",
-        customer_id=customer.id,
+        partner_id=partner.id,
         supply_amount=100,
         status=STATUS_CONFIRMED,
         created_by=owner_a.id,
@@ -80,7 +80,7 @@ def _seed_contract_graph(db_session, user_role_id):
         contract_id=contract_b.id,
         revenue_month="2026-01-01",
         line_type="revenue",
-        customer_id=customer.id,
+        partner_id=partner.id,
         supply_amount=100,
         status=STATUS_CONFIRMED,
         created_by=owner_b.id,

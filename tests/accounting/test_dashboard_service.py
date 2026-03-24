@@ -1,6 +1,6 @@
 from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_period import ContractPeriod
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.accounting.models.monthly_forecast import MonthlyForecast
 from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
 from app.modules.common.models.user import User
@@ -9,8 +9,8 @@ from app.modules.accounting.services import dashboard as dashboard_service
 
 def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, user_role_id) -> None:
     owner = User(name="담당", login_id="owner", role_id=user_role_id)
-    customer = Customer(name="고객사")
-    db_session.add_all([owner, customer])
+    partner = Partner(name="고객사")
+    db_session.add_all([owner, partner])
     db_session.flush()
 
     planned_contract = Contract(
@@ -18,7 +18,7 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, 
         contract_type="MA",
         contract_code="MA-2026-0001",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     unplanned_contract = Contract(
@@ -26,7 +26,7 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, 
         contract_type="MA",
         contract_code="MA-2026-0002",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     lost_contract = Contract(
@@ -34,7 +34,7 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, 
         contract_type="MA",
         contract_code="MA-2026-0003",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     db_session.add_all([planned_contract, unplanned_contract, lost_contract])
@@ -88,7 +88,7 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, 
                 contract_id=planned_contract.id,
                 revenue_month="2026-01-01",
                 line_type="revenue",
-                customer_id=customer.id,
+                partner_id=partner.id,
                 supply_amount=80,
                 status=STATUS_CONFIRMED,
                 created_by=owner.id,
@@ -97,7 +97,7 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, 
                 contract_id=unplanned_contract.id,
                 revenue_month="2026-01-01",
                 line_type="revenue",
-                customer_id=customer.id,
+                partner_id=partner.id,
                 supply_amount=30,
                 status=STATUS_CONFIRMED,
                 created_by=owner.id,
@@ -131,8 +131,8 @@ def test_target_vs_actual_splits_planned_unplanned_and_lost_revenue(db_session, 
 
 def test_dashboard_summary_regroups_monthly_trend_by_quarter(db_session, user_role_id) -> None:
     owner = User(name="담당2", login_id="owner2", role_id=user_role_id)
-    customer = Customer(name="고객사2")
-    db_session.add_all([owner, customer])
+    partner = Partner(name="고객사2")
+    db_session.add_all([owner, partner])
     db_session.flush()
 
     contract = Contract(
@@ -140,7 +140,7 @@ def test_dashboard_summary_regroups_monthly_trend_by_quarter(db_session, user_ro
         contract_type="MA",
         contract_code="MA-2026-0004",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     db_session.add(contract)
@@ -167,7 +167,7 @@ def test_dashboard_summary_regroups_monthly_trend_by_quarter(db_session, user_ro
                 contract_id=contract.id,
                 revenue_month="2026-01-01",
                 line_type="revenue",
-                customer_id=customer.id,
+                partner_id=partner.id,
                 supply_amount=90,
                 status=STATUS_CONFIRMED,
                 created_by=owner.id,
@@ -176,7 +176,7 @@ def test_dashboard_summary_regroups_monthly_trend_by_quarter(db_session, user_ro
                 contract_id=contract.id,
                 revenue_month="2026-04-01",
                 line_type="revenue",
-                customer_id=customer.id,
+                partner_id=partner.id,
                 supply_amount=180,
                 status=STATUS_CONFIRMED,
                 created_by=owner.id,

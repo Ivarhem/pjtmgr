@@ -9,7 +9,7 @@ from app.core.exceptions import (
     NotFoundError,
     PermissionDeniedError,
 )
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.policy_assignment import (
     PolicyAssignmentCreate,
@@ -54,11 +54,11 @@ def _make_regular_user(db_session, user_role_id: int):
     return user
 
 
-def _make_customer(db_session):
-    customer = Customer(name="테스트고객", business_no="123-45-67890")
-    db_session.add(customer)
+def _make_partner(db_session):
+    partner = Partner(name="테스트고객", business_no="123-45-67890")
+    db_session.add(partner)
     db_session.flush()
-    return customer
+    return partner
 
 
 # -- PolicyDefinition tests --
@@ -146,7 +146,7 @@ def test_update_policy(db_session, admin_role_id) -> None:
 
 def test_delete_policy_blocked_with_assignments(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     policy = create_policy(
         db_session,
@@ -158,7 +158,7 @@ def test_delete_policy_blocked_with_assignments(db_session, admin_role_id) -> No
     create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            customer_id=customer.id, policy_definition_id=policy.id
+            partner_id=partner.id, policy_definition_id=policy.id
         ),
         admin,
     )
@@ -189,7 +189,7 @@ def test_delete_policy_without_assignments(db_session, admin_role_id) -> None:
 
 def test_create_and_list_assignments(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     policy = create_policy(
         db_session,
@@ -202,24 +202,24 @@ def test_create_and_list_assignments(db_session, admin_role_id) -> None:
     create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            customer_id=customer.id, policy_definition_id=policy.id
+            partner_id=partner.id, policy_definition_id=policy.id
         ),
         admin,
     )
 
-    assignments = list_assignments(db_session, customer_id=customer.id)
+    assignments = list_assignments(db_session, partner_id=partner.id)
     assert len(assignments) == 1
     assert assignments[0].status == "not_checked"
 
 
 def test_create_assignment_with_asset(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     asset = create_asset(
         db_session,
         AssetCreate(
-            customer_id=customer.id, asset_name="SRV-01", asset_type="server"
+            partner_id=partner.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
@@ -234,7 +234,7 @@ def test_create_assignment_with_asset(db_session, admin_role_id) -> None:
     assignment = create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            customer_id=customer.id,
+            partner_id=partner.id,
             asset_id=asset.id,
             policy_definition_id=policy.id,
         ),
@@ -244,19 +244,19 @@ def test_create_assignment_with_asset(db_session, admin_role_id) -> None:
     assert assignment.asset_id == asset.id
 
 
-def test_create_assignment_rejects_asset_from_other_customer(
+def test_create_assignment_rejects_asset_from_other_partner(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer1 = _make_customer(db_session)
-    customer2 = Customer(name="다른고객", business_no="999-99-99999")
-    db_session.add(customer2)
+    partner1 = _make_partner(db_session)
+    partner2 = Partner(name="다른고객", business_no="999-99-99999")
+    db_session.add(partner2)
     db_session.flush()
 
     asset = create_asset(
         db_session,
         AssetCreate(
-            customer_id=customer2.id, asset_name="SRV-01", asset_type="server"
+            partner_id=partner2.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
@@ -272,7 +272,7 @@ def test_create_assignment_rejects_asset_from_other_customer(
         create_assignment(
             db_session,
             PolicyAssignmentCreate(
-                customer_id=customer1.id,
+                partner_id=partner1.id,
                 asset_id=asset.id,
                 policy_definition_id=policy.id,
             ),
@@ -282,7 +282,7 @@ def test_create_assignment_rejects_asset_from_other_customer(
 
 def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     policy = create_policy(
         db_session,
@@ -295,7 +295,7 @@ def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
     create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            customer_id=customer.id, policy_definition_id=policy.id
+            partner_id=partner.id, policy_definition_id=policy.id
         ),
         admin,
     )
@@ -304,7 +304,7 @@ def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
         create_assignment(
             db_session,
             PolicyAssignmentCreate(
-                customer_id=customer.id, policy_definition_id=policy.id
+                partner_id=partner.id, policy_definition_id=policy.id
             ),
             admin,
         )
@@ -312,7 +312,7 @@ def test_create_assignment_rejects_duplicate(db_session, admin_role_id) -> None:
 
 def test_update_assignment(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     policy = create_policy(
         db_session,
@@ -324,7 +324,7 @@ def test_update_assignment(db_session, admin_role_id) -> None:
     assignment = create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            customer_id=customer.id, policy_definition_id=policy.id
+            partner_id=partner.id, policy_definition_id=policy.id
         ),
         admin,
     )
@@ -344,7 +344,7 @@ def test_update_assignment(db_session, admin_role_id) -> None:
 
 def test_delete_assignment(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     policy = create_policy(
         db_session,
@@ -356,7 +356,7 @@ def test_delete_assignment(db_session, admin_role_id) -> None:
     assignment = create_assignment(
         db_session,
         PolicyAssignmentCreate(
-            customer_id=customer.id, policy_definition_id=policy.id
+            partner_id=partner.id, policy_definition_id=policy.id
         ),
         admin,
     )

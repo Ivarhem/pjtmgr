@@ -6,7 +6,7 @@ import pytest
 from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
 from app.modules.common.models.contract import Contract
 from app.modules.common.models.contract_period import ContractPeriod
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.schemas.period_deliverable import (
     PeriodDeliverableCreate,
     PeriodDeliverableUpdate,
@@ -39,20 +39,20 @@ def _make_admin_user(db_session, admin_role_id: int):
     return user
 
 
-def _make_customer(db_session):
-    customer = Customer(name="테스트고객", business_no="123-45-67890")
-    db_session.add(customer)
+def _make_partner(db_session):
+    partner = Partner(name="테스트고객", business_no="123-45-67890")
+    db_session.add(partner)
     db_session.flush()
-    return customer
+    return partner
 
 
 def _make_period(db_session, admin) -> ContractPeriod:
     """Create a Contract + ContractPeriod and return the period."""
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
     contract = Contract(
         contract_name="Test Contract",
         contract_type="인프라",
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
     )
     db_session.add(contract)
     db_session.flush()
@@ -61,7 +61,7 @@ def _make_period(db_session, admin) -> ContractPeriod:
         period_year=2025,
         period_label="Y25",
         stage="50%",
-        customer_id=customer.id,
+        partner_id=partner.id,
     )
     db_session.add(period)
     db_session.commit()

@@ -4,8 +4,8 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import DuplicateError, NotFoundError
-from app.modules.common.models.customer import Customer
-from app.modules.common.models.customer_contact import CustomerContact
+from app.modules.common.models.partner import Partner
+from app.modules.common.models.partner_contact import PartnerContact
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.asset_contact import AssetContactCreate, AssetContactUpdate
 from app.modules.infra.services.asset_service import (
@@ -29,27 +29,27 @@ def _make_admin_user(db_session, admin_role_id: int):
 
 
 def _setup(db, admin):
-    """Create customer, asset, and customer contact for tests."""
-    customer = Customer(name="ABC Corp")
-    db.add(customer)
+    """Create partner, asset, and partner contact for tests."""
+    partner = Partner(name="ABC Corp")
+    db.add(partner)
     db.flush()
 
     asset = create_asset(
         db,
         AssetCreate(
-            customer_id=customer.id, asset_name="SRV-01", asset_type="server"
+            partner_id=partner.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
 
-    contact = CustomerContact(
-        customer_id=customer.id, name="홍길동", contact_type=""
+    contact = PartnerContact(
+        partner_id=partner.id, name="홍길동", contact_type=""
     )
     db.add(contact)
     db.commit()
     db.refresh(contact)
 
-    return asset, customer, contact
+    return asset, partner, contact
 
 
 def test_create_and_list_asset_contacts(db_session, admin_role_id) -> None:

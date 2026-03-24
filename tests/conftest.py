@@ -11,9 +11,9 @@ from app.modules.common.models import (  # noqa: F401
     Contract,
     ContractPeriod,
     ContractTypeConfig,
-    Customer,
-    CustomerContact,
-    CustomerContactRole,
+    Partner,
+    PartnerContact,
+    PartnerContactRole,
     LoginFailure,
     Role,
     Setting,
@@ -39,8 +39,8 @@ from app.modules.infra.models import (  # noqa: F401
     HardwareSpec,
     IpSubnet,
     PeriodAsset,
-    PeriodCustomer,
-    PeriodCustomerContact,
+    PeriodPartner,
+    PeriodPartnerContact,
     PeriodDeliverable,
     PeriodPhase,
     PolicyAssignment,
@@ -118,10 +118,10 @@ def admin_role_id(seed_roles: dict[str, int]) -> int:
 
 
 @pytest.fixture
-def sample_customer(db_session: Session) -> Customer:
-    """테스트용 고객사 생성."""
-    customer = Customer(name="테스트고객사")
-    db_session.add(customer)
+def sample_partner(db_session: Session) -> Partner:
+    """테스트용 거래처 생성."""
+    partner = Partner(name="테스트고객사")
+    db_session.add(partner)
     db_session.commit()
-    db_session.refresh(customer)
-    return customer
+    db_session.refresh(partner)
+    return partner

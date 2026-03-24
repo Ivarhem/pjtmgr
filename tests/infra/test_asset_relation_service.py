@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import BusinessRuleError, NotFoundError
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.asset_relation import AssetRelationCreate, AssetRelationUpdate
 from app.modules.infra.services.asset_relation_service import (
@@ -26,18 +26,18 @@ def _make_admin(db_session, admin_role_id: int):
     return user
 
 
-def _make_customer(db_session):
-    customer = Customer(name="테스트고객", business_no="123-45-67890")
-    db_session.add(customer)
+def _make_partner(db_session):
+    partner = Partner(name="테스트고객", business_no="123-45-67890")
+    db_session.add(partner)
     db_session.flush()
-    return customer
+    return partner
 
 
 def test_create_and_list_relations(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R1", asset_type="server"), admin)
-    db_obj = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="DB-R1", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    svr = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-R1", asset_type="server"), admin)
+    db_obj = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="DB-R1", asset_type="server"), admin)
 
     rel = create_asset_relation(db_session, AssetRelationCreate(src_asset_id=svr.id, dst_asset_id=db_obj.id, relation_type="HOSTS"), admin)
     assert rel.relation_type == "HOSTS"
@@ -54,8 +54,8 @@ def test_create_and_list_relations(db_session, admin_role_id) -> None:
 
 def test_self_relation_rejected(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R2", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    svr = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-R2", asset_type="server"), admin)
 
     with pytest.raises(BusinessRuleError):
         create_asset_relation(db_session, AssetRelationCreate(src_asset_id=svr.id, dst_asset_id=svr.id, relation_type="HOSTS"), admin)
@@ -63,9 +63,9 @@ def test_self_relation_rejected(db_session, admin_role_id) -> None:
 
 def test_delete_relation(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R3", asset_type="server"), admin)
-    fw = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="FW-R3", asset_type="security"), admin)
+    partner = _make_partner(db_session)
+    svr = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-R3", asset_type="server"), admin)
+    fw = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="FW-R3", asset_type="security"), admin)
 
     rel = create_asset_relation(db_session, AssetRelationCreate(src_asset_id=fw.id, dst_asset_id=svr.id, relation_type="PROTECTS"), admin)
     delete_asset_relation(db_session, rel.id, admin)
@@ -74,9 +74,9 @@ def test_delete_relation(db_session, admin_role_id) -> None:
 
 def test_update_relation(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    svr = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-R4", asset_type="server"), admin)
-    app = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="APP-R4", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    svr = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-R4", asset_type="server"), admin)
+    app = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="APP-R4", asset_type="server"), admin)
 
     rel = create_asset_relation(db_session, AssetRelationCreate(src_asset_id=svr.id, dst_asset_id=app.id, relation_type="HOSTS"), admin)
     updated = update_asset_relation(db_session, rel.id, AssetRelationUpdate(relation_type="DEPENDS_ON"), admin)

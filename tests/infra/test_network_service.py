@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.asset_ip import AssetIPCreate, AssetIPUpdate
 from app.modules.infra.schemas.ip_subnet import IpSubnetCreate, IpSubnetUpdate
@@ -33,17 +33,17 @@ def _make_admin_user(db_session, admin_role_id: int):
     return user
 
 
-def _make_customer(db_session, name="테스트고객", bno="123-45-67890"):
-    customer = Customer(name=name, business_no=bno)
-    db_session.add(customer)
+def _make_partner(db_session, name="테스트고객", bno="123-45-67890"):
+    partner = Partner(name=name, business_no=bno)
+    db_session.add(partner)
     db_session.flush()
-    return customer
+    return partner
 
 
-def _make_asset(db, customer_id: int, name: str, admin):
+def _make_asset(db, partner_id: int, name: str, admin):
     return create_asset(
         db,
-        AssetCreate(customer_id=customer_id, asset_name=name, asset_type="server"),
+        AssetCreate(partner_id=partner_id, asset_name=name, asset_type="server"),
         admin,
     )
 
@@ -53,12 +53,12 @@ def _make_asset(db, customer_id: int, name: str, admin):
 
 def test_create_and_list_subnets(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
 
     create_subnet(
         db_session,
         IpSubnetCreate(
-            customer_id=customer.id,
+            partner_id=partner.id,
             name="서비스망-A",
             subnet="10.10.1.0/24",
             role="service",
@@ -69,7 +69,7 @@ def test_create_and_list_subnets(db_session, admin_role_id) -> None:
     create_subnet(
         db_session,
         IpSubnetCreate(
-            customer_id=customer.id,
+            partner_id=partner.id,
             name="관리망-A",
             subnet="10.10.2.0/24",
             role="management",
@@ -77,26 +77,26 @@ def test_create_and_list_subnets(db_session, admin_role_id) -> None:
         admin,
     )
 
-    subnets = list_subnets(db_session, customer_id=customer.id)
+    subnets = list_subnets(db_session, partner_id=partner.id)
     assert len(subnets) == 2
 
 
-def test_create_subnet_requires_existing_customer(db_session, admin_role_id) -> None:
+def test_create_subnet_requires_existing_partner(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     with pytest.raises(NotFoundError):
         create_subnet(
             db_session,
-            IpSubnetCreate(customer_id=9999, name="test", subnet="10.0.0.0/24"),
+            IpSubnetCreate(partner_id=9999, name="test", subnet="10.0.0.0/24"),
             admin,
         )
 
 
 def test_update_subnet(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
     subnet = create_subnet(
         db_session,
-        IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
+        IpSubnetCreate(partner_id=partner.id, name="서비스망", subnet="10.10.1.0/24"),
         admin,
     )
 
@@ -114,13 +114,13 @@ def test_update_subnet(db_session, admin_role_id) -> None:
 
 def test_delete_subnet_blocked_with_assigned_ips(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
     subnet = create_subnet(
         db_session,
-        IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
+        IpSubnetCreate(partner_id=partner.id, name="서비스망", subnet="10.10.1.0/24"),
         admin,
     )
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
     create_asset_ip(
         db_session,
         AssetIPCreate(
@@ -135,10 +135,10 @@ def test_delete_subnet_blocked_with_assigned_ips(db_session, admin_role_id) -> N
 
 def test_delete_subnet_without_ips(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
+    partner = _make_partner(db_session)
     subnet = create_subnet(
         db_session,
-        IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
+        IpSubnetCreate(partner_id=partner.id, name="서비스망", subnet="10.10.1.0/24"),
         admin,
     )
 
@@ -153,8 +153,8 @@ def test_delete_subnet_without_ips(db_session, admin_role_id) -> None:
 
 def test_create_and_list_asset_ips(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    partner = _make_partner(db_session)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
 
     create_asset_ip(
         db_session,
@@ -185,11 +185,11 @@ def test_create_asset_ip_requires_existing_asset(db_session, admin_role_id) -> N
 
 def test_create_asset_ip_with_subnet_reference(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    partner = _make_partner(db_session)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
     subnet = create_subnet(
         db_session,
-        IpSubnetCreate(customer_id=customer.id, name="서비스망", subnet="10.10.1.0/24"),
+        IpSubnetCreate(partner_id=partner.id, name="서비스망", subnet="10.10.1.0/24"),
         admin,
     )
 
@@ -208,8 +208,8 @@ def test_create_asset_ip_rejects_nonexistent_subnet(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    partner = _make_partner(db_session)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
 
     with pytest.raises(NotFoundError):
         create_asset_ip(
@@ -221,13 +221,13 @@ def test_create_asset_ip_rejects_nonexistent_subnet(
         )
 
 
-def test_ip_duplicate_rejected_within_same_customer(
+def test_ip_duplicate_rejected_within_same_partner(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset1 = _make_asset(db_session, customer.id, "SRV-01", admin)
-    asset2 = _make_asset(db_session, customer.id, "SRV-02", admin)
+    partner = _make_partner(db_session)
+    asset1 = _make_asset(db_session, partner.id, "SRV-01", admin)
+    asset2 = _make_asset(db_session, partner.id, "SRV-02", admin)
 
     create_asset_ip(
         db_session,
@@ -243,15 +243,15 @@ def test_ip_duplicate_rejected_within_same_customer(
         )
 
 
-def test_ip_duplicate_allowed_across_customers(db_session, admin_role_id) -> None:
+def test_ip_duplicate_allowed_across_partners(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer1 = _make_customer(db_session, name="고객1", bno="111-11-11111")
-    customer2 = _make_customer(db_session, name="고객2", bno="222-22-22222")
-    asset1 = _make_asset(db_session, customer1.id, "SRV-01", admin)
+    partner1 = _make_partner(db_session, name="고객1", bno="111-11-11111")
+    partner2 = _make_partner(db_session, name="고객2", bno="222-22-22222")
+    asset1 = _make_asset(db_session, partner1.id, "SRV-01", admin)
     asset2 = create_asset(
         db_session,
         AssetCreate(
-            customer_id=customer2.id, asset_name="SRV-01", asset_type="server"
+            partner_id=partner2.id, asset_name="SRV-01", asset_type="server"
         ),
         admin,
     )
@@ -272,8 +272,8 @@ def test_ip_duplicate_allowed_across_customers(db_session, admin_role_id) -> Non
 
 def test_update_asset_ip(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    partner = _make_partner(db_session)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
     ip = create_asset_ip(
         db_session,
         AssetIPCreate(asset_id=asset.id, ip_address="10.10.1.10"),
@@ -293,8 +293,8 @@ def test_update_asset_ip(db_session, admin_role_id) -> None:
 
 def test_update_asset_ip_rejects_duplicate_address(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    partner = _make_partner(db_session)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
     create_asset_ip(
         db_session,
         AssetIPCreate(asset_id=asset.id, ip_address="10.10.1.10"),
@@ -314,8 +314,8 @@ def test_update_asset_ip_rejects_duplicate_address(db_session, admin_role_id) ->
 
 def test_delete_asset_ip(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    asset = _make_asset(db_session, customer.id, "SRV-01", admin)
+    partner = _make_partner(db_session)
+    asset = _make_asset(db_session, partner.id, "SRV-01", admin)
     ip = create_asset_ip(
         db_session,
         AssetIPCreate(asset_id=asset.id, ip_address="10.10.1.10"),

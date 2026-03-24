@@ -37,7 +37,7 @@ _ACCOUNTING_ROUTES = {
 
 # Common route paths (always present when common is enabled)
 _COMMON_ROUTES = {
-    "/api/v1/customers",
+    "/api/v1/partners",
     "/api/v1/users",
     "/api/v1/settings",
 }
@@ -56,7 +56,7 @@ _CORE_PAGE_ROUTES = {
 
 # Common page routes
 _COMMON_PAGE_ROUTES = {
-    "/customers",
+    "/partners",
     "/users",
     "/system",
     "/audit-logs",

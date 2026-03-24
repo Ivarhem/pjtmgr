@@ -6,7 +6,7 @@ import pytest
 from app.core.exceptions import DuplicateError, NotFoundError
 from app.modules.common.models.contract import Contract
 from app.modules.common.models.contract_period import ContractPeriod
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.schemas.asset import AssetCreate
 from app.modules.infra.schemas.period_asset import PeriodAssetCreate, PeriodAssetUpdate
 from app.modules.infra.services.period_asset_service import (
@@ -29,18 +29,18 @@ def _make_admin(db_session, admin_role_id: int):
     return user
 
 
-def _make_customer(db_session):
-    customer = Customer(name="테스트고객", business_no="123-45-67890")
-    db_session.add(customer)
+def _make_partner(db_session):
+    partner = Partner(name="테스트고객", business_no="123-45-67890")
+    db_session.add(partner)
     db_session.flush()
-    return customer
+    return partner
 
 
-def _make_period(db_session, customer_id: int, code: str = "PA") -> ContractPeriod:
+def _make_period(db_session, partner_id: int, code: str = "PA") -> ContractPeriod:
     contract = Contract(
         contract_name=f"{code} Contract",
         contract_type="인프라",
-        end_customer_id=customer_id,
+        end_partner_id=partner_id,
     )
     db_session.add(contract)
     db_session.flush()
@@ -49,7 +49,7 @@ def _make_period(db_session, customer_id: int, code: str = "PA") -> ContractPeri
         period_year=2025,
         period_label="Y25",
         stage="50%",
-        customer_id=customer_id,
+        partner_id=partner_id,
     )
     db_session.add(period)
     db_session.commit()
@@ -59,9 +59,9 @@ def _make_period(db_session, customer_id: int, code: str = "PA") -> ContractPeri
 
 def test_link_and_list(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    period = _make_period(db_session, customer.id, "PA-01")
-    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-01", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    period = _make_period(db_session, partner.id, "PA-01")
+    asset = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-01", asset_type="server"), admin)
 
     pa = create_period_asset(db_session, PeriodAssetCreate(contract_period_id=period.id, asset_id=asset.id, role="primary"), admin)
     assert pa.contract_period_id == period.id
@@ -77,9 +77,9 @@ def test_link_and_list(db_session, admin_role_id) -> None:
 
 def test_duplicate_link_rejected(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    period = _make_period(db_session, customer.id, "PA-02")
-    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-02", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    period = _make_period(db_session, partner.id, "PA-02")
+    asset = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-02", asset_type="server"), admin)
 
     create_period_asset(db_session, PeriodAssetCreate(contract_period_id=period.id, asset_id=asset.id), admin)
     with pytest.raises(DuplicateError):
@@ -88,9 +88,9 @@ def test_duplicate_link_rejected(db_session, admin_role_id) -> None:
 
 def test_unlink(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    period = _make_period(db_session, customer.id, "PA-03")
-    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-03", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    period = _make_period(db_session, partner.id, "PA-03")
+    asset = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-03", asset_type="server"), admin)
 
     pa = create_period_asset(db_session, PeriodAssetCreate(contract_period_id=period.id, asset_id=asset.id), admin)
     delete_period_asset(db_session, pa.id, admin)
@@ -99,9 +99,9 @@ def test_unlink(db_session, admin_role_id) -> None:
 
 def test_update_role(db_session, admin_role_id) -> None:
     admin = _make_admin(db_session, admin_role_id)
-    customer = _make_customer(db_session)
-    period = _make_period(db_session, customer.id, "PA-04")
-    asset = create_asset(db_session, AssetCreate(customer_id=customer.id, asset_name="SVR-04", asset_type="server"), admin)
+    partner = _make_partner(db_session)
+    period = _make_period(db_session, partner.id, "PA-04")
+    asset = create_asset(db_session, AssetCreate(partner_id=partner.id, asset_name="SVR-04", asset_type="server"), admin)
 
     pa = create_period_asset(db_session, PeriodAssetCreate(contract_period_id=period.id, asset_id=asset.id), admin)
     updated = update_period_asset(db_session, pa.id, PeriodAssetUpdate(role="backup"), admin)

@@ -1,6 +1,6 @@
 from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_type_config import ContractTypeConfig
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.accounting.models.contract_period import ContractPeriod
 from app.modules.accounting.models.receipt import Receipt
 from app.modules.accounting.models.transaction_line import STATUS_CONFIRMED, TransactionLine
@@ -33,8 +33,8 @@ def _seed_contract_type(db_session) -> None:
 def test_create_contract_applies_defaults_and_created_by(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
     owner = User(name="홍길동", login_id="hong", role_id=user_role_id)
-    customer = Customer(name="고객사")
-    db_session.add_all([owner, customer])
+    partner = Partner(name="고객사")
+    db_session.add_all([owner, partner])
     db_session.commit()
 
     result = contract_service.create_contract(
@@ -42,7 +42,7 @@ def test_create_contract_applies_defaults_and_created_by(db_session, user_role_i
         ContractCreate(
             contract_name="테스트 사업",
             contract_type="MA",
-            end_customer_id=customer.id,
+            end_partner_id=partner.id,
         ),
         created_by=owner.id,
     )
@@ -59,9 +59,9 @@ def test_create_contract_applies_defaults_and_created_by(db_session, user_role_i
 def test_create_period_inherits_contract_fields(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
     owner = User(name="영업", login_id="sales", role_id=user_role_id)
-    end_customer = Customer(name="엔드고객")
-    billing_customer = Customer(name="매출처")
-    db_session.add_all([owner, end_customer, billing_customer])
+    end_partner = Partner(name="엔드고객")
+    billing_partner = Partner(name="매출처")
+    db_session.add_all([owner, end_partner, billing_partner])
     db_session.commit()
 
     contract = Contract(
@@ -69,7 +69,7 @@ def test_create_period_inherits_contract_fields(db_session, user_role_id) -> Non
         contract_type="MA",
         contract_code="MA-2026-0001",
         owner_user_id=owner.id,
-        end_customer_id=end_customer.id,
+        end_partner_id=end_partner.id,
         inspection_day=10,
         invoice_month_offset=1,
         invoice_day_type="특정일",
@@ -84,12 +84,12 @@ def test_create_period_inherits_contract_fields(db_session, user_role_id) -> Non
         ContractPeriodCreate(
             period_year=2026,
             stage="70%",
-            customer_id=billing_customer.id,
+            partner_id=billing_partner.id,
         ),
     )
 
     assert period["owner_user_id"] == owner.id
-    assert period["customer_id"] == billing_customer.id
+    assert period["partner_id"] == billing_partner.id
     assert period["inspection_day"] == 10
     assert period["invoice_month_offset"] == 1
     assert period["invoice_day_type"] == "특정일"
@@ -99,8 +99,8 @@ def test_create_period_inherits_contract_fields(db_session, user_role_id) -> Non
 def test_completed_period_blocks_transaction_line_create_and_move(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
     owner = User(name="영업", login_id="sales2", role_id=user_role_id)
-    customer = Customer(name="고객사")
-    db_session.add_all([owner, customer])
+    partner = Partner(name="고객사")
+    db_session.add_all([owner, partner])
     db_session.commit()
 
     contract = Contract(
@@ -108,7 +108,7 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session, us
         contract_type="MA",
         contract_code="MA-2026-0002",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     db_session.add(contract)
@@ -143,7 +143,7 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session, us
             TransactionLineCreate(
                 revenue_month="2026-06-01",
                 line_type="revenue",
-                customer_id=customer.id,
+                partner_id=partner.id,
                 supply_amount=1000,
                 status="확정",
             ),
@@ -157,7 +157,7 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session, us
         contract_id=contract.id,
         revenue_month="2027-01-01",
         line_type="revenue",
-        customer_id=customer.id,
+        partner_id=partner.id,
         supply_amount=2000,
         status=STATUS_CONFIRMED,
         created_by=owner.id,
@@ -179,8 +179,8 @@ def test_completed_period_blocks_transaction_line_create_and_move(db_session, us
 def test_completed_period_blocks_receipt_create_update_delete(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
     owner = User(name="수금담당", login_id="receipt_owner", role_id=user_role_id)
-    customer = Customer(name="매출처")
-    db_session.add_all([owner, customer])
+    partner = Partner(name="매출처")
+    db_session.add_all([owner, partner])
     db_session.commit()
 
     contract = Contract(
@@ -188,7 +188,7 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session, user_r
         contract_type="MA",
         contract_code="MA-2026-0003",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     db_session.add(contract)
@@ -221,7 +221,7 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session, user_r
             db_session,
             contract.id,
             ReceiptCreate(
-                customer_id=customer.id,
+                partner_id=partner.id,
                 receipt_date="2026-03-15",
                 revenue_month="2026-03-01",
                 amount=3000,
@@ -234,7 +234,7 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session, user_r
 
     receipt = Receipt(
         contract_id=contract.id,
-        customer_id=customer.id,
+        partner_id=partner.id,
         receipt_date="2027-02-15",
         revenue_month="2027-02-01",
         amount=5000,
@@ -266,8 +266,8 @@ def test_completed_period_blocks_receipt_create_update_delete(db_session, user_r
 def test_auto_match_receipt_is_isolated_to_same_period_range(db_session, user_role_id) -> None:
     _seed_contract_type(db_session)
     owner = User(name="배분담당", login_id="matcher", role_id=user_role_id)
-    customer = Customer(name="매출처")
-    db_session.add_all([owner, customer])
+    partner = Partner(name="매출처")
+    db_session.add_all([owner, partner])
     db_session.commit()
 
     contract = Contract(
@@ -275,7 +275,7 @@ def test_auto_match_receipt_is_isolated_to_same_period_range(db_session, user_ro
         contract_type="MA",
         contract_code="MA-2026-0004",
         owner_user_id=owner.id,
-        end_customer_id=customer.id,
+        end_partner_id=partner.id,
         status="active",
     )
     db_session.add(contract)
@@ -307,7 +307,7 @@ def test_auto_match_receipt_is_isolated_to_same_period_range(db_session, user_ro
         contract_id=contract.id,
         revenue_month="2026-05-01",
         line_type="revenue",
-        customer_id=customer.id,
+        partner_id=partner.id,
         supply_amount=100,
         status=STATUS_CONFIRMED,
         created_by=owner.id,
@@ -316,14 +316,14 @@ def test_auto_match_receipt_is_isolated_to_same_period_range(db_session, user_ro
         contract_id=contract.id,
         revenue_month="2027-08-01",
         line_type="revenue",
-        customer_id=customer.id,
+        partner_id=partner.id,
         supply_amount=100,
         status=STATUS_CONFIRMED,
         created_by=owner.id,
     )
     receipt = Receipt(
         contract_id=contract.id,
-        customer_id=customer.id,
+        partner_id=partner.id,
         receipt_date="2026-05-20",
         revenue_month="2026-05-01",
         amount=150,

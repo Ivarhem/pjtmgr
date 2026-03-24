@@ -136,38 +136,38 @@ class TestContractPeriodCRUD:
         updated = get_contract(db_session, contract["id"])
         assert updated["status"] == "cancelled"
 
-    def test_list_periods_by_customer_id(self, db_session, admin_role_id):
-        """list_periods(customer_id=X) 필터링 확인."""
-        from app.modules.common.models.customer import Customer
+    def test_list_periods_by_partner_id(self, db_session, admin_role_id):
+        """list_periods(partner_id=X) 필터링 확인."""
+        from app.modules.common.models.partner import Partner
         from app.modules.common.services.contract_service import (
             create_contract,
             create_period,
             list_periods,
         )
 
-        cust_a = Customer(name="PeriodCustA")
-        cust_b = Customer(name="PeriodCustB")
+        cust_a = Partner(name="PeriodCustA")
+        cust_b = Partner(name="PeriodCustB")
         db_session.add_all([cust_a, cust_b])
         db_session.commit()
 
         c1 = create_contract(
             db_session,
-            ContractCreate(contract_name="A사업", contract_type="인프라", end_customer_id=cust_a.id),
+            ContractCreate(contract_name="A사업", contract_type="인프라", end_partner_id=cust_a.id),
         )
         c2 = create_contract(
             db_session,
-            ContractCreate(contract_name="B사업", contract_type="인프라", end_customer_id=cust_b.id),
+            ContractCreate(contract_name="B사업", contract_type="인프라", end_partner_id=cust_b.id),
         )
 
         create_period(
             db_session, c1["id"],
-            ContractPeriodCreate(period_year=2025, customer_id=cust_a.id),
+            ContractPeriodCreate(period_year=2025, partner_id=cust_a.id),
         )
         create_period(
             db_session, c2["id"],
-            ContractPeriodCreate(period_year=2025, customer_id=cust_b.id),
+            ContractPeriodCreate(period_year=2025, partner_id=cust_b.id),
         )
 
-        periods_a = list_periods(db_session, customer_id=cust_a.id)
+        periods_a = list_periods(db_session, partner_id=cust_a.id)
         assert len(periods_a) == 1
-        assert periods_a[0]["customer_id"] == cust_a.id
+        assert periods_a[0]["partner_id"] == cust_a.id

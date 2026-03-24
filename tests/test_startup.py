@@ -117,7 +117,7 @@ def test_receipt_service_checks_access_in_service_layer(db_session, user_role_id
             db_session,
             contract.id,
             ReceiptCreate(
-                customer_id=None,
+                partner_id=None,
                 receipt_date="2026-03-01",
                 revenue_month="2026-03-01",
                 amount=1000,

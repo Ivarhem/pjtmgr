@@ -3,10 +3,10 @@ from unittest.mock import MagicMock
 from app.core.code_generator import (
     int_to_base36,
     base36_to_int,
-    next_customer_code,
-    next_contract_code,
+    next_partner_code,
+    next_business_code,
     next_period_code,
-    RESERVED_CUSTOMER_CODE,
+    RESERVED_PARTNER_CODE,
 )
 
 
@@ -38,9 +38,9 @@ class TestBase36:
         assert int_to_base36(25, width=1) == "P"
 
 
-class TestNextCustomerCode:
+class TestNextPartnerCode:
     def _mock_db(self, last_code: str | None):
-        """MAX(customer_code) 쿼리 결과를 모킹."""
+        """MAX(partner_code) 쿼리 결과를 모킹."""
         db = MagicMock()
         row = MagicMock()
         row.__getitem__ = lambda self, idx: last_code
@@ -48,39 +48,39 @@ class TestNextCustomerCode:
         query.scalar.return_value = last_code
         return db
 
-    def test_first_customer(self):
+    def test_first_partner(self):
         db = self._mock_db(None)
-        assert next_customer_code(db) == "C000"
+        assert next_partner_code(db) == "P000"
 
     def test_increment(self):
-        db = self._mock_db("C001")
-        assert next_customer_code(db) == "C002"
+        db = self._mock_db("P001")
+        assert next_partner_code(db) == "P002"
 
     def test_skip_reserved(self):
-        """CXXX(=C + base36 'XXX')에 도달하면 건너뛴다."""
-        db = self._mock_db("CXXW")
-        code = next_customer_code(db)
+        """PXXX(=P + base36 'XXX')에 도달하면 건너뛴다."""
+        db = self._mock_db("PXXW")
+        code = next_partner_code(db)
         # XXW(=44251) → XXX(=44252, reserved) → XXY(=44253)
-        assert code == "CXXY"
+        assert code == "PXXY"
 
 
-class TestNextContractCode:
+class TestNextBusinessCode:
     def _mock_db(self, last_code: str | None):
         db = MagicMock()
         db.execute.return_value.scalar.return_value = last_code
         return db
 
-    def test_first_contract(self):
+    def test_first_business(self):
         db = self._mock_db(None)
-        assert next_contract_code(db, "C000") == "C000-P000"
+        assert next_business_code(db, "P000") == "P000-B000"
 
     def test_increment(self):
-        db = self._mock_db("C000-P002")
-        assert next_contract_code(db, "C000") == "C000-P003"
+        db = self._mock_db("P000-B002")
+        assert next_business_code(db, "P000") == "P000-B003"
 
-    def test_null_customer(self):
+    def test_null_partner(self):
         db = self._mock_db(None)
-        assert next_contract_code(db, RESERVED_CUSTOMER_CODE) == "CXXX-P000"
+        assert next_business_code(db, RESERVED_PARTNER_CODE) == "PXXX-B000"
 
 
 class TestNextPeriodCode:
@@ -91,13 +91,13 @@ class TestNextPeriodCode:
 
     def test_first_period(self):
         db = self._mock_db(None)
-        assert next_period_code(db, "C000-P000", 2026) == "C000-P000-Y26A"
+        assert next_period_code(db, "P000-B000", 2026) == "P000-B000-Y26A"
 
     def test_increment(self):
-        db = self._mock_db("C000-P000-Y26A")
-        assert next_period_code(db, "C000-P000", 2026) == "C000-P000-Y26B"
+        db = self._mock_db("P000-B000-Y26A")
+        assert next_period_code(db, "P000-B000", 2026) == "P000-B000-Y26B"
 
     def test_slot_exhausted(self):
-        db = self._mock_db("C000-P000-Y26Z")
+        db = self._mock_db("P000-B000-Y26Z")
         with pytest.raises(Exception, match="최대 26개"):
-            next_period_code(db, "C000-P000", 2026)
+            next_period_code(db, "P000-B000", 2026)
