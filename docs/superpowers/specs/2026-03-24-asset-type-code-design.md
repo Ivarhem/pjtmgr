@@ -64,12 +64,27 @@
 ### 3.2 순번 결정 로직
 
 ```python
+_BASE36_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+def to_base36(num: int, width: int = 4) -> str:
+    """Convert integer to zero-padded uppercase base36 string."""
+    if num == 0:
+        return "0" * width
+    result = ""
+    while num:
+        result = _BASE36_CHARS[num % 36] + result
+        num //= 36
+    return result.zfill(width)
+
+
 def _generate_asset_code(db, partner_id, type_key):
     partner_code = get_partner_code(db, partner_id)  # e.g. "P000"
     type_code = get_type_code(db, type_key)           # e.g. "SEC"
     prefix = f"{partner_code}-{type_code}-"
 
     # DB에서 해당 prefix의 max asset_code 조회
+    # NOTE: zero-padded base36 대문자의 lexicographic MAX = numeric MAX
+    # (ASCII 순서 0x30-0x39, 0x41-0x5A에서 '9' < 'A' 이므로 정합)
     max_code = db.scalar(
         select(func.max(Asset.asset_code))
         .where(Asset.partner_id == partner_id)
@@ -85,17 +100,23 @@ def _generate_asset_code(db, partner_id, type_key):
     return prefix + to_base36(next_seq, width=4)
 ```
 
+**동시성 처리:** `asset_code` 컬럼에 UNIQUE 제약이 있으므로, 동시 등록 시 IntegrityError가 발생할 수 있다. `create_asset`에서 IntegrityError 발생 시 최대 3회 재시도(retry loop)하여 다음 순번으로 재생성한다.
+
+**헬퍼 위치:** `to_base36` 함수는 `asset_service.py` 내부에 배치한다.
+
 ### 3.3 규칙
 
 - **자동 전용:** 사용자가 코드를 직접 입력할 수 없음. 등록 모달에 코드 입력 필드 없음.
 - **유형 변경 차단:** 자산 수정 시 `asset_type` 변경 불가. 코드 불변성 보장.
 - **유형 삭제 차단:** 해당 유형의 자산이 1건이라도 있으면 삭제 불가 (is_active=false만 허용).
+- **유형 검증:** `create_asset` 시 `payload.asset_type`이 `asset_type_codes`에 존재하는 활성 type_key인지 검증. 없으면 400 에러.
 
 ### 3.4 기존 자산 코드 마이그레이션
 
-- Alembic migration에서 기존 `asset_code`가 null인 자산에 일괄 부여
-- 기존 `asset_type` 값 → `asset_type_codes.type_key` 매핑으로 코드 결정
-- 순서: `Asset.id` ASC (등록 순)
+- Alembic migration에서 **모든 자산**의 `asset_code`를 새 형식으로 재생성 (기존 구형 코드 `P000-A001`도 교체)
+- 기존 `asset_type` 값 → `asset_type_codes.type_key` 매핑으로 유형 코드 결정
+- `asset_type` 값이 시드에 없는 경우 (예: importer의 `"etc"` fallback): migration에서 `"other"`로 매핑
+- 순서: `Asset.id` ASC (등록 순), 유형별 순번은 0000부터 시작
 
 ---
 
@@ -121,9 +142,9 @@ class AssetTypeCodeRead(BaseModel):
     is_active: bool
 
 class AssetTypeCodeCreate(BaseModel):
-    type_key: str        # 영문 소문자+숫자+언더스코어
-    code: str            # 영문 대문자 3자리
-    label: str
+    type_key: str = Field(pattern=r'^[a-z][a-z0-9_]{0,29}$')  # 영문 소문자 시작, 소문자+숫자+언더스코어, 1~30자
+    code: str = Field(pattern=r'^[A-Z]{3}$')                    # 영문 대문자 정확히 3자리
+    label: str = Field(min_length=1, max_length=50)
     sort_order: int = 0
 
 class AssetTypeCodeUpdate(BaseModel):
@@ -184,6 +205,7 @@ async function loadAssetTypeCodes() {
     return _assetTypeCodesCache;
 }
 
+// system.js에서 자산유형 CRUD 성공 후 반드시 호출
 function invalidateAssetTypeCodesCache() {
     _assetTypeCodesCache = null;
 }
