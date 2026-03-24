@@ -11,6 +11,7 @@ from app.core.config import (
 )
 from app.core.database import SessionLocal
 from app.modules.common.services.contract_type_config import seed_defaults as seed_contract_types
+from app.modules.common.services.asset_type_code import seed_defaults as seed_asset_type_codes
 from app.modules.common.services.term_config import seed_defaults as seed_terms
 from app.modules.common.services.user import ensure_bootstrap_admin
 
@@ -85,6 +86,7 @@ def initialize_reference_data() -> None:
         seed_system_roles(db)
 
         seed_contract_types(db)
+        seed_asset_type_codes(db)
         seed_terms(db)
 
         admin_role_id = get_admin_role_id(db)
