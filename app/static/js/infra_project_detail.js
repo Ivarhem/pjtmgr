@@ -13,11 +13,21 @@ function setResultMessage(container, message, state) {
   }
 }
 
-// Resolve partner_id from the period
+// Resolve partner_id from the period + set topbar context
 (async () => {
   try {
     const period = await apiFetch('/api/v1/contract-periods/' + PROJECT_ID);
     _PROJECT_PARTNER_ID = period.partner_id;
+
+    // Wait for context selectors to initialize, then set project context
+    function applyCtx() {
+      if (window.setCtxProject) {
+        window.setCtxProject(period.id, period.period_code, period.contract_name);
+      } else {
+        setTimeout(applyCtx, 100);
+      }
+    }
+    applyCtx();
   } catch { /* fallback in individual calls */ }
 })();
 
@@ -1281,8 +1291,8 @@ document.getElementById("btn-asset-import-run")?.addEventListener("click", async
 window.addEventListener("ctx-changed", (e) => {
   const pid = e.detail?.projectId;
   if (pid && pid !== PROJECT_ID) {
-    window.location.href = "/projects/" + pid;
+    window.location.href = "/periods/" + pid;
   } else if (!pid) {
-    window.location.href = "/projects";
+    window.location.href = "/periods";
   }
 });
