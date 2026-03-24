@@ -2,12 +2,16 @@
 
 let catalogGridApi, ifaceGridApi;
 let currentProductId = null;
+let _currentProductIsPlaceholder = false;
 
 /* ── 목록 그리드 ── */
 
 const catalogColDefs = [
   { field: "vendor", headerName: "제조사", width: 120, sort: "asc" },
   { field: "name", headerName: "모델명", flex: 1, minWidth: 160 },
+  { field: "asset_type_key", headerName: "자산 유형", width: 110,
+    valueFormatter: (p) => getAssetTypeLabel(p.value) || "-",
+  },
   { field: "category", headerName: "분류", width: 100 },
   { field: "product_type", headerName: "유형", width: 90 },
   {
@@ -84,6 +88,15 @@ async function selectProduct(product) {
 
   try {
     const detail = await apiFetch(`/api/v1/product-catalog/${product.id}`);
+    _currentProductIsPlaceholder = !!detail.is_placeholder;
+    const btnDel = document.getElementById("btn-delete-product");
+    if (_currentProductIsPlaceholder) {
+      btnDel.disabled = true;
+      btnDel.title = "Placeholder 제품은 삭제할 수 없습니다";
+    } else {
+      btnDel.disabled = false;
+      btnDel.title = "";
+    }
     renderDetail(detail);
   } catch (err) {
     showToast(err.message, "error");
@@ -120,6 +133,7 @@ function renderDetail(d) {
   infoGrid.replaceChildren();
   infoGrid.appendChild(_infoRow("제조사", d.vendor));
   infoGrid.appendChild(_infoRow("모델명", d.name));
+  infoGrid.appendChild(_infoRow("자산 유형", getAssetTypeLabel(d.asset_type_key) || "-"));
   infoGrid.appendChild(_infoRow("제품유형", d.product_type));
   infoGrid.appendChild(_infoRow("분류", d.category));
   infoGrid.appendChild(_infoRow("참조 URL", d.reference_url || "-"));
@@ -222,6 +236,7 @@ function openCreateProduct() {
   document.getElementById("product-vendor").value = "";
   document.getElementById("product-name").value = "";
   document.getElementById("product-type").value = "hardware";
+  document.getElementById("product-asset-type").value = "";
   document.getElementById("product-category").value = "";
   document.getElementById("product-reference-url").value = "";
   document.getElementById("modal-product-title").textContent = "제품 등록";
@@ -236,6 +251,7 @@ function openEditProduct() {
     document.getElementById("product-vendor").value = d.vendor;
     document.getElementById("product-name").value = d.name;
     document.getElementById("product-type").value = d.product_type;
+    document.getElementById("product-asset-type").value = d.asset_type_key || "";
     document.getElementById("product-category").value = d.category;
     document.getElementById("product-reference-url").value = d.reference_url || "";
     document.getElementById("modal-product-title").textContent = "제품 수정";
@@ -250,6 +266,7 @@ async function saveProduct() {
     vendor: document.getElementById("product-vendor").value,
     name: document.getElementById("product-name").value,
     product_type: document.getElementById("product-type").value,
+    asset_type_key: document.getElementById("product-asset-type").value || null,
     category: document.getElementById("product-category").value,
     reference_url: document.getElementById("product-reference-url").value || null,
   };
@@ -273,12 +290,18 @@ async function saveProduct() {
 
 async function deleteProduct() {
   if (!currentProductId) return;
+  // placeholder 제품은 삭제 불가 (백엔드에서도 403 차단)
+  if (_currentProductIsPlaceholder) {
+    showToast("Placeholder 제품은 삭제할 수 없습니다.", "error");
+    return;
+  }
   const title = document.getElementById("detail-title").textContent;
   confirmDelete(`"${title}"을(를) 삭제하시겠습니까?`, async () => {
     try {
       await apiFetch(`/api/v1/product-catalog/${currentProductId}`, { method: "DELETE" });
       showToast("제품이 삭제되었습니다.");
       currentProductId = null;
+      _currentProductIsPlaceholder = false;
       document.getElementById("detail-content").classList.add("is-hidden");
       document.getElementById("detail-empty").classList.remove("is-hidden");
       await loadCatalog();
@@ -427,7 +450,22 @@ function initSplitter() {
 
 /* ── Init ── */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadAssetTypeCodes();
+  // 자산 유형 드롭다운 세팅 (선택사항이므로 빈 옵션 추가)
+  const atSel = document.getElementById("product-asset-type");
+  atSel.textContent = "";
+  const emptyOpt = document.createElement("option");
+  emptyOpt.value = "";
+  emptyOpt.textContent = "-- 선택 --";
+  atSel.appendChild(emptyOpt);
+  const atCodes = await loadAssetTypeCodes();
+  atCodes.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.type_key;
+    opt.textContent = t.label;
+    atSel.appendChild(opt);
+  });
   initCatalogGrid();
   initIfaceGrid();
   initTabs();
