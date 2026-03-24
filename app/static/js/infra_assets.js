@@ -63,7 +63,13 @@ async function loadAssets() {
   }
   let url = "/api/v1/assets?partner_id=" + cid;
   const pid = getCtxProjectId();
-  if (pid && isProjectFilterActive()) url += "&project_id=" + pid;
+  if (pid && isProjectFilterActive()) url += "&period_id=" + pid;
+  const typeFilter = document.getElementById("filter-type").value;
+  const statusFilter = document.getElementById("filter-status").value;
+  const q = document.getElementById("filter-search").value.trim();
+  if (typeFilter) url += "&asset_type=" + typeFilter;
+  if (statusFilter) url += "&status=" + statusFilter;
+  if (q) url += "&q=" + encodeURIComponent(q);
 
   try {
     const data = await apiFetch(url);
@@ -334,6 +340,11 @@ document.getElementById("btn-close-detail").addEventListener("click", closeDetai
 document.querySelectorAll(".detail-tabs .tab-btn").forEach(btn => {
   btn.addEventListener("click", () => renderDetailTab(btn.dataset.dtab));
 });
+
+// Search & filter
+document.getElementById("filter-type").addEventListener("change", loadAssets);
+document.getElementById("filter-status").addEventListener("change", loadAssets);
+initTextFilter("filter-search", loadAssets);
 
 // Global project filter checkbox
 initProjectFilterCheckbox(loadAssets);

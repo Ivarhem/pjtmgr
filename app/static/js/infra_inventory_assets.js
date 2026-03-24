@@ -79,7 +79,7 @@ async function loadInventory() {
   const status = document.getElementById("filter-status").value;
   const q = document.getElementById("filter-search").value.trim();
 
-  if (projectId) params.set("project_id", projectId);
+  if (projectId) params.set("period_id", projectId);
   if (assetType) params.set("asset_type", assetType);
   if (status) params.set("status", status);
   if (q) params.set("q", q);

@@ -52,7 +52,7 @@ async function loadPortMaps() {
   if (!cid) { gridApi.setGridOption("rowData", []); return; }
   let url = "/api/v1/port-maps?partner_id=" + cid;
   const pid = getCtxProjectId();
-  if (pid && isProjectFilterActive()) url += "&project_id=" + pid;
+  if (pid && isProjectFilterActive()) url += "&period_id=" + pid;
   try {
     const data = await apiFetch(url);
     gridApi.setGridOption("rowData", data);

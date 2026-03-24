@@ -21,6 +21,30 @@
   </div>
 </div>
 
+<div class="filter-bar">
+  <label>검색
+    <input type="text" id="filter-search" placeholder="자산명, 호스트명, IP, 장비ID">
+  </label>
+  <label>유형
+    <select id="filter-type">
+      <option value="">전체</option>
+      <option value="server">서버</option>
+      <option value="network">네트워크</option>
+      <option value="security">보안장비</option>
+      <option value="storage">스토리지</option>
+      <option value="other">기타</option>
+    </select>
+  </label>
+  <label>상태
+    <select id="filter-status">
+      <option value="">전체</option>
+      <option value="active">운영중</option>
+      <option value="planned">계획</option>
+      <option value="decommissioned">폐기</option>
+    </select>
+  </label>
+</div>
+
 <div class="card">
   <div id="grid-assets" class="ag-theme-quartz infra-grid infra-grid-480"></div>
 </div>

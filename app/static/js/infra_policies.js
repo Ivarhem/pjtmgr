@@ -48,7 +48,7 @@ async function loadAssignments() {
   if (!cid) { assignGridApi.setGridOption("rowData", []); return; }
   let url = "/api/v1/policy-assignments?partner_id=" + cid;
   const pid = getCtxProjectId();
-  if (pid) url += "&project_id=" + pid;
+  if (pid) url += "&period_id=" + pid;
   const statusFilter = document.getElementById("filter-status").value;
   try {
     let data = await apiFetch(url);
