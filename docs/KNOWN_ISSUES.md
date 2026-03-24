@@ -34,6 +34,13 @@
 - RBAC 기본 구현 완료 (Role 모델 + permissions JSONB + 기본 역할 4종 + require_module_access)
 - 풀 RBAC 확장(resource x action 조합)은 향후 구현 예정 (permissions.resources 플레이스홀더 존재)
 
+## 참여업체-자산 연결 (TODO)
+
+- 현재 참여업체(`/contacts`) 페이지는 프로젝트-업체 연결(PeriodPartner)과 담당자 매핑만 지원
+- "이 업체가 어떤 자산을 담당하는지" 직접 연결 기능 미구현
+- 설계 방향: `PeriodPartnerAsset(period_partner_id, asset_id, role)` 테이블 신설하여 업체-자산 명시적 연결
+- 별도 스펙 작성 후 구현 예정
+
 ## 정책 기능 (TODO)
 
 - 정책 정의/적용 UI를 메뉴에서 제거함 (DB 테이블, 모델, API 라우터는 유지)
