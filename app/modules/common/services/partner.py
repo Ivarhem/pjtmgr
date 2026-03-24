@@ -101,14 +101,14 @@ def _enrich_partners_with_summary(db: Session, partners: list[Partner]) -> list[
     # 2) partner_id별 매출 합계 (TransactionLine에서 해당 partner가 매출처인 것)
     rev_q = (
         db.query(
-            TransactionLine.customer_id,
+            TransactionLine.partner_id,
             func.sum(TransactionLine.supply_amount),
         )
         .filter(
-            TransactionLine.customer_id.in_(partner_ids),
+            TransactionLine.partner_id.in_(partner_ids),
             TransactionLine.line_type == "revenue",
         )
-        .group_by(TransactionLine.customer_id)
+        .group_by(TransactionLine.partner_id)
         .all()
     )
     rev_map = {cid: total or 0 for cid, total in rev_q}
@@ -173,23 +173,23 @@ def _collect_partner_ids(db: Session, contract_ids: list[int]) -> set[int]:
     )
     partner_ids.update(
         cid
-        for cid, in db.query(TransactionLine.customer_id)
-        .filter(TransactionLine.contract_id.in_(contract_ids), TransactionLine.customer_id.isnot(None))
+        for cid, in db.query(TransactionLine.partner_id)
+        .filter(TransactionLine.contract_id.in_(contract_ids), TransactionLine.partner_id.isnot(None))
         .distinct()
         .all()
     )
     partner_ids.update(
         cid
-        for cid, in db.query(Receipt.customer_id)
-        .filter(Receipt.contract_id.in_(contract_ids), Receipt.customer_id.isnot(None))
+        for cid, in db.query(Receipt.partner_id)
+        .filter(Receipt.contract_id.in_(contract_ids), Receipt.partner_id.isnot(None))
         .distinct()
         .all()
     )
     partner_ids.update(
         cid
-        for cid, in db.query(ContractContact.customer_id)
+        for cid, in db.query(ContractContact.partner_id)
         .join(ContractContact.contract_period)
-        .filter(ContractPeriod.contract_id.in_(contract_ids), ContractContact.customer_id.isnot(None))
+        .filter(ContractPeriod.contract_id.in_(contract_ids), ContractContact.partner_id.isnot(None))
         .distinct()
         .all()
     )
@@ -276,10 +276,10 @@ def delete_partner(db: Session, partner_id: int) -> None:
     # 참조 데이터가 있으면 삭제 불가
     if obj.contracts:
         raise BusinessRuleError("END 고객으로 등록된 사업이 있어 삭제할 수 없습니다.")
-    transaction_line_count = db.query(TransactionLine).filter(TransactionLine.customer_id == partner_id).count()
+    transaction_line_count = db.query(TransactionLine).filter(TransactionLine.partner_id == partner_id).count()
     if transaction_line_count > 0:
         raise BusinessRuleError("매출/매입 실적이 있어 삭제할 수 없습니다.")
-    receipt_count = db.query(Receipt).filter(Receipt.customer_id == partner_id).count()
+    receipt_count = db.query(Receipt).filter(Receipt.partner_id == partner_id).count()
     if receipt_count > 0:
         raise BusinessRuleError("입금 내역이 있어 삭제할 수 없습니다.")
     db.delete(obj)
