@@ -13,22 +13,24 @@
 
 ---
 
-## 현재 상태 (2026-03-24 브라우저 확인)
+## 현재 상태 (2026-03-24 최종)
 
-| 페이지 | 상태 | 주요 이슈 |
+| 페이지 | 상태 | 비고 |
 | --- | --- | --- |
-| 프로젝트 목록 `/periods` | 동작 | AG Grid + CRUD 정상 |
-| 자산 목록 `/assets` | 부분 동작 | 등록 모달 있음, 목록 표시 안 됨 (partner_id 연동 의심), 상세 보기/수정/삭제 미동작, 검색 미구현 |
-| IP 인벤토리 `/ip-inventory` | 부분 동작 | 서브넷 목록 "전체 (0)" (데이터 있으나 미표시), IP 할당 CRUD 미검증 |
-| 포트맵 `/port-maps` | 부분 동작 | Import UI 있음, 배선 등록 모달 미확인, 데이터 없음 |
-| 업체 `/contacts` | 부분 동작 | "프로젝트를 선택하세요" — 프로젝트 미선택 시 빈 화면 |
-| 이력 `/audit-history` | 동작 | audit 로그 정상 표시 |
-| 배치도 | 미구현 | 신규 기능 |
-| Alias | 미구현 | 신규 기능 |
+| 프로젝트 목록 `/periods` | **동작** | AG Grid + CRUD 정상 |
+| 자산 목록 `/assets` | **동작** | 간소화 모달(4필드) + 카탈로그 연동 + 상세 패널 10탭 + 인라인 편집 + alias 태그 + 검색(alias/code 통합) |
+| IP 인벤토리 `/ip-inventory` | 부분 동작 | 서브넷 목록 미표시, IP 할당 CRUD 미검증 → **Phase 3** |
+| 포트맵 `/port-maps` | 부분 동작 | Import UI 있음, 배선 등록 미확인 → **Phase 4** |
+| 업체 `/contacts` | 부분 동작 | 프로젝트 미선택 시 빈 화면 → **Phase 6** |
+| 이력 `/audit-history` | **동작** | audit 로그 정상 |
+| 배치도 | 미구현 | → **Phase 5** |
+| 카탈로그 `/product-catalog` | **동작** | 자산 유형 컬럼/드롭다운 추가, placeholder 7개 시드 |
 
-**공통 이슈:**
-- `_termLabelsCache has already been declared` 콘솔 에러 (utils.js 이중 로드)
-- topbar 고객사/프로젝트 셀렉터 ↔ 각 페이지 데이터 로딩 연동이 불안정
+**완료된 Phase:**
+- Phase 1: 자산 기본 CRUD ✅
+- Phase 2: 자산 부속 정보 (5탭 CRUD + Alias) ✅
+- 자산유형 코드 체계 ✅
+- 자산 등록 간소화 + 카탈로그 연동 ✅
 
 ---
 
