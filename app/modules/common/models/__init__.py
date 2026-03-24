@@ -12,6 +12,7 @@ from app.modules.common.models.audit_log import AuditLog
 from app.modules.common.models.contract import Contract
 from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.contract_type_config import ContractTypeConfig
+from app.modules.common.models.asset_type_code import AssetTypeCode
 
 __all__ = [
     "TimestampMixin",
@@ -28,4 +29,5 @@ __all__ = [
     "Contract",
     "ContractPeriod",
     "ContractTypeConfig",
+    "AssetTypeCode",
 ]
