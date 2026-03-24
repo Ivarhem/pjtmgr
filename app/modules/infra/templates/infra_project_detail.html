@@ -211,9 +211,9 @@
   <!-- 사업 업체 -->
   <div class="page-header">
     <h2>사업 업체</h2>
-    <button class="btn btn-primary btn-sm" id="btn-add-project-customer">업체 연결</button>
+    <button class="btn btn-primary btn-sm" id="btn-add-project-partner">업체 연결</button>
   </div>
-  <div id="project-customers-list" class="project-customers-grid">
+  <div id="project-partners-list" class="project-partners-grid">
     <p class="text-muted infra-card-padding">로딩 중...</p>
   </div>
 
@@ -227,13 +227,13 @@
 </div>
 
 <!-- 업체 연결 모달 -->
-<dialog id="modal-project-customer" class="modal">
+<dialog id="modal-project-partner" class="modal">
   <h2 id="modal-pc-title">업체 연결</h2>
   <form class="form-grid">
     <input type="hidden" id="pc-id">
     <label>
       거래처
-      <select id="pc-customer-id" required></select>
+      <select id="pc-partner-id" required></select>
     </label>
     <label>
       역할
@@ -261,11 +261,11 @@
 </dialog>
 
 <!-- 담당자 연결 모달 -->
-<dialog id="modal-project-customer-contact" class="modal">
+<dialog id="modal-project-partner-contact" class="modal">
   <h2 id="modal-pcc-title">담당자 연결</h2>
   <form class="form-grid">
     <input type="hidden" id="pcc-id">
-    <input type="hidden" id="pcc-project-customer-id">
+    <input type="hidden" id="pcc-project-partner-id">
     <label>
       담당자
       <select id="pcc-contact-id" required></select>

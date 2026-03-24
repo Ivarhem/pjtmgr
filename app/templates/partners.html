@@ -1,31 +1,31 @@
 {% extends "base.html" %}
 {% block title %}거래처 관리{% endblock %}
-{% block styles %}<link rel="stylesheet" href="/static/css/customers.css">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/static/css/partners.css">{% endblock %}
 {% block content %}
 <div class="page-header">
   <h1>거래처 관리</h1>
   <div class="header-actions">
     <button id="btn-add" class="btn btn-primary">+ 신규 등록</button>
-    <button id="btn-delete-customer" class="btn btn-danger">삭제</button>
+    <button id="btn-delete-partner" class="btn btn-danger">삭제</button>
   </div>
 </div>
 
 <p class="data-note">※ 거래처(매출처=고객사 / 매입처=공급사)를 통합 관리합니다. 좌측 목록에서 거래처를 클릭하면 우측에 요약 정보가 표시됩니다. 상세 실적 분석은 대시보드의 거래처 필터를 활용하세요.</p>
 
-<div class="customers-layout">
+<div class="partners-layout">
   <!-- 좌측: 거래처 목록 -->
   <div class="cust-list-panel">
     <div class="cust-list-toolbar">
       <div class="tag-input-wrap">
-        <div class="tag-list" id="customer-tag-list"></div>
-        <input type="text" id="customer-tag-input" placeholder="거래처명 검색 (Enter)" class="tag-input-field">
+        <div class="tag-list" id="partner-tag-list"></div>
+        <input type="text" id="partner-tag-input" placeholder="거래처명 검색 (Enter)" class="tag-input-field">
       </div>
       <label class="view-toggle">
-        <input type="checkbox" id="chk-my-customers">
+        <input type="checkbox" id="chk-my-partners">
         <span class="view-toggle-label">내 거래처만</span>
       </label>
     </div>
-    <div id="grid-customers" class="ag-theme-quartz cust-list-grid"></div>
+    <div id="grid-partners" class="ag-theme-quartz cust-list-grid"></div>
   </div>
 
   <!-- 스플리터 -->
@@ -120,7 +120,7 @@
 <dialog id="modal-add" class="modal modal-sm">
   <h2>거래처 등록</h2>
   <div class="form-grid">
-    <label class="full-width">거래처명 <input type="text" id="new-customer-name" placeholder="거래처명 입력" required></label>
+    <label class="full-width">거래처명 <input type="text" id="new-partner-name" placeholder="거래처명 입력" required></label>
   </div>
   <div class="modal-actions">
     <button type="button" id="btn-cancel" class="btn btn-secondary">취소</button>
@@ -180,5 +180,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/customers.js"></script>
+<script src="/static/js/partners.js"></script>
 {% endblock %}

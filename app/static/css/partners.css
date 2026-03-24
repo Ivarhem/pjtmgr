@@ -1,5 +1,5 @@
 /* 거래처 관리 — 좌우 분할 레이아웃 */
-.customers-layout {
+.partners-layout {
   display: flex;
   gap: 0;
   height: calc(100vh - 140px);

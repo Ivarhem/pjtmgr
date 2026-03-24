@@ -59,9 +59,9 @@
     <span class="topbar-sep"></span>
     <div class="ctx-selector">
       <label class="ctx-label">고객사</label>
-      <div class="ctx-combo" id="ctx-customer-combo">
-        <input type="text" id="ctx-customer" class="ctx-input" placeholder="고객사 검색" autocomplete="off">
-        <div class="ctx-dropdown is-hidden" id="ctx-customer-dropdown"></div>
+      <div class="ctx-combo" id="ctx-partner-combo">
+        <input type="text" id="ctx-partner" class="ctx-input" placeholder="고객사 검색" autocomplete="off">
+        <div class="ctx-dropdown is-hidden" id="ctx-partner-dropdown"></div>
       </div>
     </div>
     <div class="ctx-selector" id="ctx-project-display" style="display:none;">
@@ -70,10 +70,10 @@
       <button class="ctx-project-clear" id="ctx-project-clear" title="프로젝트 선택 해제">&times;</button>
     </div>
     <!-- 고객사 신규등록 모달 -->
-    <dialog id="ctx-modal-customer" class="modal modal-sm">
+    <dialog id="ctx-modal-partner" class="modal modal-sm">
       <h2>고객사 등록</h2>
       <div class="form-grid">
-        <label class="full-width">고객사명 <input type="text" id="ctx-new-customer-name" placeholder="고객사명 입력" required></label>
+        <label class="full-width">고객사명 <input type="text" id="ctx-new-partner-name" placeholder="고객사명 입력" required></label>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" id="ctx-btn-cust-cancel">취소</button>
@@ -146,7 +146,7 @@
 
         {# --- 공통 메뉴 (모듈 무관) --- #}
 
-        <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
+        <li><a href="/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
         <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">HW 제품 사양·EOSL 관리</small></span></a></li>
         <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
       </ul>
