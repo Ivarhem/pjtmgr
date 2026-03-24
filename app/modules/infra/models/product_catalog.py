@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import Date, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -24,3 +24,8 @@ class ProductCatalog(TimestampMixin, Base):
     eosl_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     eosl_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reference_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    asset_type_key: Mapped[str | None] = mapped_column(
+        String(30), ForeignKey("asset_type_codes.type_key", ondelete="SET NULL"),
+        nullable=True, index=True,
+    )
+    is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False)
