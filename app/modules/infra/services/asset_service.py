@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
@@ -112,7 +112,10 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     if payload.hardware_model_id is not None:
         _ensure_hardware_model_exists(db, payload.hardware_model_id)
 
-    asset = Asset(**payload.model_dump())
+    data = payload.model_dump()
+    if not data.get("asset_code"):
+        data["asset_code"] = _generate_asset_code(db, payload.partner_id)
+    asset = Asset(**data)
     db.add(asset)
     audit.log(
         db, user_id=current_user.id, action="create", entity_type="asset",
@@ -282,6 +285,28 @@ def _ensure_asset_contact_unique(
     if asset_contact_id is not None and existing.id == asset_contact_id:
         return
     raise DuplicateError("This contact-role mapping already exists for the asset")
+
+
+def _generate_asset_code(db: Session, partner_id: int) -> str:
+    """Generate next asset code like P000-A001 for the given partner."""
+    from app.modules.common.models.partner import Partner
+
+    partner = db.get(Partner, partner_id)
+    prefix = partner.partner_code if partner else "X000"
+    # Find the max existing sequence number for this partner
+    max_code = db.scalar(
+        select(func.max(Asset.asset_code))
+        .where(Asset.partner_id == partner_id)
+        .where(Asset.asset_code.like(f"{prefix}-A%"))
+    )
+    if max_code:
+        try:
+            seq = int(max_code.rsplit("-A", 1)[1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    else:
+        seq = 1
+    return f"{prefix}-A{seq:03d}"
 
 
 def _require_inventory_edit(current_user) -> None:

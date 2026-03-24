@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자산 페이지 레이아웃 비교</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+  h2 { font-size: 15px; color: #ccc; margin-bottom: 12px; }
+
+  .options { display: flex; flex-direction: column; gap: 20px; }
+  .option {
+    background: #1a1d27; border-radius: 12px; border: 2px solid #2a2d3a;
+    cursor: pointer; transition: all 0.2s; overflow: hidden;
+  }
+  .option:hover { border-color: #3a3d5a; }
+  .option.selected { border-color: #5b8def; }
+  .option-header {
+    display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+    border-bottom: 1px solid #252836;
+  }
+  .option-letter {
+    width: 32px; height: 32px; border-radius: 8px; background: #252836;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: #5b8def; flex-shrink: 0;
+  }
+  .option.selected .option-letter { background: #5b8def; color: #fff; }
+  .option-title { font-size: 14px; font-weight: 600; }
+  .option-desc { font-size: 12px; color: #888; margin-top: 2px; }
+  .option-body { padding: 16px 20px; }
+
+  /* 목업 공통 */
+  .mockup { background: #12141c; border-radius: 8px; overflow: hidden; font-size: 11px; }
+  .mock-toolbar {
+    background: #1a1d27; padding: 6px 10px; display: flex; align-items: center;
+    gap: 8px; border-bottom: 1px solid #252836; font-size: 11px; color: #888;
+  }
+  .mock-btn { background: #252836; border: 1px solid #3a3d4a; border-radius: 4px; padding: 3px 8px; color: #ccc; font-size: 10px; }
+  .mock-btn-primary { background: #5b8def; border-color: #5b8def; color: #fff; }
+  .mock-search { background: #252836; border: 1px solid #3a3d4a; border-radius: 4px; padding: 3px 8px; color: #888; font-size: 10px; width: 140px; }
+  .mock-checkbox { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #888; }
+
+  /* 그리드 행 */
+  .mock-grid { width: 100%; }
+  .mock-grid-header {
+    display: grid; padding: 6px 10px; background: #1a1d27;
+    font-size: 10px; color: #666; font-weight: 600; border-bottom: 1px solid #252836;
+  }
+  .mock-grid-row {
+    display: grid; padding: 6px 10px; border-bottom: 1px solid #1a1d27;
+    font-size: 11px; transition: background 0.1s;
+  }
+  .mock-grid-row:hover { background: #1a1d27; }
+  .mock-grid-row.active { background: #1e2540; border-left: 3px solid #5b8def; }
+
+  /* 상세 패널 */
+  .detail-panel { background: #1a1d27; border-radius: 8px; padding: 12px; }
+  .detail-section { margin-bottom: 12px; }
+  .detail-section-title { font-size: 11px; color: #5b8def; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+  .detail-item { display: flex; gap: 6px; font-size: 11px; padding: 2px 0; }
+  .detail-label { color: #666; min-width: 60px; flex-shrink: 0; }
+  .detail-value { color: #ccc; }
+
+  /* 탭 */
+  .mock-tabs { display: flex; gap: 0; border-bottom: 1px solid #252836; }
+  .mock-tab { padding: 6px 12px; font-size: 11px; color: #666; border-bottom: 2px solid transparent; }
+  .mock-tab.active { color: #5b8def; border-bottom-color: #5b8def; }
+
+  /* 레이아웃 */
+  .split-h { display: flex; gap: 12px; }
+  .split-h .left { flex-shrink: 0; }
+  .split-h .right { flex: 1; min-width: 0; }
+  .split-v { display: flex; flex-direction: column; gap: 8px; }
+
+  /* 뱃지 */
+  .badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; }
+  .badge-server { background: #1e3a5f; color: #5b8def; }
+  .badge-network { background: #1e4a3a; color: #4ecdc4; }
+  .badge-active { background: #1e3a1e; color: #4ecd5e; }
+  .badge-planned { background: #3a3a1e; color: #cdc44e; }
+
+  .pros-cons { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; }
+  .pros, .cons { flex: 1; }
+  .pros h4 { color: #4ecd5e; font-size: 11px; margin-bottom: 4px; }
+  .cons h4 { color: #e74c3c; font-size: 11px; margin-bottom: 4px; }
+  .pros li, .cons li { color: #888; margin-left: 14px; margin-bottom: 2px; }
+
+  .recommend { background: rgba(91,141,239,0.1); border: 1px solid rgba(91,141,239,0.3); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 11px; color: #5b8def; }
+</style>
+</head>
+<body>
+
+<h1>자산 페이지 레이아웃</h1>
+<p class="subtitle">각 방식을 클릭하여 선택하세요. 고객사 전체 자산을 효율적으로 조회/관리하는 구조를 정합니다.</p>
+
+<div class="options">
+
+  <!-- 방안 A: 좌우 분할 (IP 인벤토리와 동일 패턴) -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="option-header">
+      <div class="option-letter">A</div>
+      <div>
+        <div class="option-title">좌우 분할 — IP 인벤토리와 동일 패턴</div>
+        <div class="option-desc">왼쪽 자산 목록 + 오른쪽 상세 패널 (그룹별 탭)</div>
+      </div>
+    </div>
+    <div class="option-body">
+      <div class="mockup">
+        <div class="mock-toolbar">
+          <span style="color:#ccc;font-weight:600;">자산</span>
+          <div style="flex:1;"></div>
+          <input class="mock-search" placeholder="자산명/호스트 검색">
+          <div class="mock-checkbox"><span style="font-size:12px;">&#9744;</span> 선택 프로젝트만</div>
+          <span class="mock-btn">Import</span>
+          <span class="mock-btn mock-btn-primary">+ 등록</span>
+        </div>
+        <div class="split-h" style="min-height:260px;">
+          <div class="left" style="width:320px; border-right:1px solid #252836;">
+            <div class="mock-grid">
+              <div class="mock-grid-header" style="grid-template-columns: 140px 70px 70px;">
+                <span>자산명</span><span>유형</span><span>상태</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 140px 70px 70px;">
+                <span>srv-web-01</span><span class="badge badge-server">서버</span><span class="badge badge-active">운영</span>
+              </div>
+              <div class="mock-grid-row active" style="grid-template-columns: 140px 70px 70px;">
+                <span>sw-core-01</span><span class="badge badge-network">네트워크</span><span class="badge badge-active">운영</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 140px 70px 70px;">
+                <span>fw-edge-01</span><span class="badge badge-network">보안</span><span class="badge badge-planned">계획</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 140px 70px 70px;">
+                <span>srv-db-01</span><span class="badge badge-server">서버</span><span class="badge badge-active">운영</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 140px 70px 70px;">
+                <span>srv-app-01</span><span class="badge badge-server">서버</span><span class="badge badge-active">운영</span>
+              </div>
+            </div>
+          </div>
+          <div class="right" style="padding:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:13px;font-weight:600;color:#fff;">sw-core-01</span>
+              <div style="display:flex;gap:4px;">
+                <span class="mock-btn">수정</span>
+                <span class="mock-btn" style="color:#e74c3c;">삭제</span>
+              </div>
+            </div>
+            <div class="mock-tabs">
+              <div class="mock-tab active">기본 정보</div>
+              <div class="mock-tab">설치 위치</div>
+              <div class="mock-tab">네트워크</div>
+              <div class="mock-tab">HW 사양</div>
+              <div class="mock-tab">자산 관리</div>
+              <div class="mock-tab">관계</div>
+            </div>
+            <div style="padding:10px 0;">
+              <div class="detail-grid">
+                <div class="detail-item"><span class="detail-label">자산코드</span><span class="detail-value">AST-0042</span></div>
+                <div class="detail-item"><span class="detail-label">유형</span><span class="detail-value">네트워크</span></div>
+                <div class="detail-item"><span class="detail-label">벤더</span><span class="detail-value">Cisco</span></div>
+                <div class="detail-item"><span class="detail-label">모델</span><span class="detail-value">C9300-48T</span></div>
+                <div class="detail-item"><span class="detail-label">역할</span><span class="detail-value">Core Switch</span></div>
+                <div class="detail-item"><span class="detail-label">환경</span><span class="detail-value">운영</span></div>
+                <div class="detail-item"><span class="detail-label">호스트명</span><span class="detail-value">sw-core-01</span></div>
+                <div class="detail-item"><span class="detail-label">서비스IP</span><span class="detail-value">10.0.1.1</span></div>
+                <div class="detail-item"><span class="detail-label">관리IP</span><span class="detail-value">10.0.2.1</span></div>
+                <div class="detail-item"><span class="detail-label">클러스터</span><span class="detail-value">CORE-HA</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>IP 인벤토리와 동일 UX — 학습 비용 낮음</li>
+          <li>목록 보면서 상세 확인 가능 (컨텍스트 유지)</li>
+          <li>탭으로 40개 필드를 그룹별 정리</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>목록 영역이 좁아 컬럼 3-4개만 표시</li>
+          <li>화면이 작을 때 상세 패널이 좁아질 수 있음</li>
+        </ul></div>
+      </div>
+      <div class="recommend">추천: IP 인벤토리와 패턴 통일, 가장 자연스러운 흐름</div>
+    </div>
+  </div>
+
+  <!-- 방안 B: 그리드 + 하단 확장 -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="option-header">
+      <div class="option-letter">B</div>
+      <div>
+        <div class="option-title">전체 그리드 + 하단 확장 패널</div>
+        <div class="option-desc">그리드가 전체 너비 사용, 행 선택 시 아래에 상세 펼침</div>
+      </div>
+    </div>
+    <div class="option-body">
+      <div class="mockup">
+        <div class="mock-toolbar">
+          <span style="color:#ccc;font-weight:600;">자산</span>
+          <div style="flex:1;"></div>
+          <input class="mock-search" placeholder="자산명/호스트 검색">
+          <div class="mock-checkbox"><span style="font-size:12px;">&#9744;</span> 선택 프로젝트만</div>
+          <span class="mock-btn">Import</span>
+          <span class="mock-btn mock-btn-primary">+ 등록</span>
+        </div>
+        <div class="mock-grid">
+          <div class="mock-grid-header" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px 1fr;">
+            <span>자산명</span><span>유형</span><span>벤더</span><span>모델</span><span>호스트명</span><span>서비스IP</span><span>상태</span><span>비고</span>
+          </div>
+          <div class="mock-grid-row" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px 1fr;">
+            <span>srv-web-01</span><span class="badge badge-server">서버</span><span>Dell</span><span>R750</span><span>web01</span><span>10.0.1.2</span><span class="badge badge-active">운영</span><span></span>
+          </div>
+          <div class="mock-grid-row active" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px 1fr;">
+            <span>sw-core-01</span><span class="badge badge-network">네트워크</span><span>Cisco</span><span>C9300</span><span>core01</span><span>10.0.1.1</span><span class="badge badge-active">운영</span><span></span>
+          </div>
+          <div class="mock-grid-row" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px 1fr;">
+            <span>fw-edge-01</span><span class="badge badge-network">보안</span><span>Palo Alto</span><span>PA-850</span><span>edge01</span><span>10.0.3.1</span><span class="badge badge-planned">계획</span><span></span>
+          </div>
+        </div>
+        <div style="border-top:2px solid #5b8def; padding:12px; background:#1a1d27;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:13px;font-weight:600;color:#fff;">sw-core-01 상세</span>
+            <div style="display:flex;gap:4px;">
+              <span class="mock-btn">수정</span>
+              <span class="mock-btn" style="color:#e74c3c;">삭제</span>
+            </div>
+          </div>
+          <div class="mock-tabs">
+            <div class="mock-tab active">기본 정보</div>
+            <div class="mock-tab">설치 위치</div>
+            <div class="mock-tab">네트워크</div>
+            <div class="mock-tab">HW 사양</div>
+            <div class="mock-tab">자산 관리</div>
+            <div class="mock-tab">관계</div>
+          </div>
+          <div style="padding:8px 0;">
+            <div class="detail-grid">
+              <div class="detail-item"><span class="detail-label">자산코드</span><span class="detail-value">AST-0042</span></div>
+              <div class="detail-item"><span class="detail-label">유형</span><span class="detail-value">네트워크</span></div>
+              <div class="detail-item"><span class="detail-label">벤더</span><span class="detail-value">Cisco</span></div>
+              <div class="detail-item"><span class="detail-label">모델</span><span class="detail-value">C9300-48T</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>그리드가 전체 너비 — 컬럼 7-8개 표시 가능</li>
+          <li>목록에서 바로 주요 정보 비교 가능</li>
+          <li>상세 필요 없을 때 그리드만으로 충분</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>상세 펼치면 그리드 영역이 줄어듦</li>
+          <li>목록과 상세를 동시에 보기 불편할 수 있음</li>
+          <li>IP 인벤토리와 패턴이 달라짐</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 방안 C: 그리드 + 슬라이드 오버 -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="option-header">
+      <div class="option-letter">C</div>
+      <div>
+        <div class="option-title">전체 그리드 + 우측 슬라이드 패널</div>
+        <div class="option-desc">그리드 전체 너비 유지, 행 클릭 시 오른쪽에서 상세 패널 슬라이드</div>
+      </div>
+    </div>
+    <div class="option-body">
+      <div class="mockup" style="position:relative;">
+        <div class="mock-toolbar">
+          <span style="color:#ccc;font-weight:600;">자산</span>
+          <div style="flex:1;"></div>
+          <input class="mock-search" placeholder="자산명/호스트 검색">
+          <div class="mock-checkbox"><span style="font-size:12px;">&#9744;</span> 선택 프로젝트만</div>
+          <span class="mock-btn">Import</span>
+          <span class="mock-btn mock-btn-primary">+ 등록</span>
+        </div>
+        <div style="display:flex;">
+          <div style="flex:1;">
+            <div class="mock-grid">
+              <div class="mock-grid-header" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px;">
+                <span>자산명</span><span>유형</span><span>벤더</span><span>모델</span><span>호스트명</span><span>서비스IP</span><span>상태</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px;">
+                <span>srv-web-01</span><span class="badge badge-server">서버</span><span>Dell</span><span>R750</span><span>web01</span><span>10.0.1.2</span><span class="badge badge-active">운영</span>
+              </div>
+              <div class="mock-grid-row active" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px;">
+                <span>sw-core-01</span><span class="badge badge-network">네트워크</span><span>Cisco</span><span>C9300</span><span>core01</span><span>10.0.1.1</span><span class="badge badge-active">운영</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px;">
+                <span>fw-edge-01</span><span class="badge badge-network">보안</span><span>Palo Alto</span><span>PA-850</span><span>edge01</span><span>10.0.3.1</span><span class="badge badge-planned">계획</span>
+              </div>
+              <div class="mock-grid-row" style="grid-template-columns: 120px 70px 90px 90px 100px 80px 80px;">
+                <span>srv-db-01</span><span class="badge badge-server">서버</span><span>Dell</span><span>R750</span><span>db01</span><span>10.0.1.4</span><span class="badge badge-active">운영</span>
+              </div>
+            </div>
+          </div>
+          <div style="width:280px; background:#1a1d27; border-left:2px solid #5b8def; padding:10px; min-height:200px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:12px;font-weight:600;color:#fff;">sw-core-01</span>
+              <span style="cursor:pointer;color:#666;font-size:14px;">✕</span>
+            </div>
+            <div class="mock-tabs" style="font-size:10px;">
+              <div class="mock-tab active" style="font-size:10px;padding:4px 8px;">기본</div>
+              <div class="mock-tab" style="font-size:10px;padding:4px 8px;">위치</div>
+              <div class="mock-tab" style="font-size:10px;padding:4px 8px;">네트워크</div>
+              <div class="mock-tab" style="font-size:10px;padding:4px 8px;">HW</div>
+              <div class="mock-tab" style="font-size:10px;padding:4px 8px;">관리</div>
+            </div>
+            <div style="padding:6px 0; font-size:10px;">
+              <div class="detail-item"><span class="detail-label">자산코드</span><span class="detail-value">AST-0042</span></div>
+              <div class="detail-item"><span class="detail-label">유형</span><span class="detail-value">네트워크</span></div>
+              <div class="detail-item"><span class="detail-label">벤더</span><span class="detail-value">Cisco</span></div>
+              <div class="detail-item"><span class="detail-label">모델</span><span class="detail-value">C9300-48T</span></div>
+              <div class="detail-item"><span class="detail-label">역할</span><span class="detail-value">Core Switch</span></div>
+              <div class="detail-item"><span class="detail-label">호스트명</span><span class="detail-value">sw-core-01</span></div>
+              <div class="detail-item"><span class="detail-label">서비스IP</span><span class="detail-value">10.0.1.1</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>그리드 전체 너비 유지 (닫혀있을 때)</li>
+          <li>상세가 오버레이처럼 열림 — 그리드 스크롤 유지</li>
+          <li>필요할 때만 열고 닫을 수 있음</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>슬라이드 패널이 좁아 탭 내 정보량 제한</li>
+          <li>구현 복잡도 약간 높음 (애니메이션, 오버레이)</li>
+          <li>IP 인벤토리와 패턴이 달라짐</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleSelect(el) {
+  document.querySelectorAll('.option').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  try {
+    fetch('/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'click', choice: el.dataset.choice, text: el.querySelector('.option-title').textContent, timestamp: Math.floor(Date.now() / 1000) }),
+    });
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

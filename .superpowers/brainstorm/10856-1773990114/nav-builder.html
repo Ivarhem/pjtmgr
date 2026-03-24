@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인프라 메뉴 구조 설계</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 6px; color: #fff; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 20px; }
+  .layout { display: flex; gap: 20px; height: calc(100vh - 120px); }
+  .preview-panel { width: 260px; flex-shrink: 0; }
+  .preview-panel h3 { font-size: 13px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .sidebar-preview { background: #1a1d27; border-radius: 12px; padding: 12px; min-height: 500px; border: 1px solid #2a2d3a; }
+  .context-selector { background: #252836; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid #3a3d4a; font-size: 13px; color: #ccc; }
+  .context-selector .label { font-size: 10px; color: #666; display: block; }
+  .context-selector select { background: #1a1d27; color: #fff; border: 1px solid #3a3d4a; border-radius: 4px; padding: 2px 6px; font-size: 12px; width: 100%; margin-top: 2px; }
+  .menu-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: grab; user-select: none; font-size: 13px; transition: background 0.15s; margin-bottom: 2px; }
+  .menu-item:hover { background: #252836; }
+  .menu-item.dragging { opacity: 0.4; }
+  .menu-item .grip { color: #444; font-size: 10px; cursor: grab; flex-shrink: 0; }
+  .menu-item .mi-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+  .menu-item .mi-label { flex: 1; }
+  .menu-item .mi-sub { font-size: 10px; color: #666; display: block; }
+  .menu-item .mi-remove { color: #555; cursor: pointer; font-size: 14px; visibility: hidden; }
+  .menu-item:hover .mi-remove { visibility: visible; }
+  .menu-item .mi-remove:hover { color: #e74c3c; }
+  .drop-zone { border: 2px dashed transparent; border-radius: 8px; min-height: 4px; transition: all 0.2s; }
+  .drop-zone.active { border-color: #5b8def; background: rgba(91,141,239,0.08); min-height: 40px; }
+  .menu-divider { border-top: 1px solid #2a2d3a; margin: 8px 12px; }
+  .config-panel { flex: 1; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+  .config-card { background: #1a1d27; border-radius: 12px; padding: 16px; border: 1px solid #2a2d3a; }
+  .config-card h4 { font-size: 14px; margin-bottom: 12px; color: #fff; }
+  .scope-options { display: flex; flex-direction: column; gap: 6px; }
+  .scope-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #252836; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
+  .scope-opt:hover { border-color: #3a3d5a; }
+  .scope-opt.selected { border-color: #5b8def; background: rgba(91,141,239,0.1); }
+  .scope-opt .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #555; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .scope-opt.selected .dot { border-color: #5b8def; }
+  .scope-opt.selected .dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #5b8def; }
+  .scope-opt .opt-title { font-size: 13px; font-weight: 500; }
+  .scope-opt .opt-desc { font-size: 11px; color: #888; margin-top: 2px; }
+  .available-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .avail-item { background: #252836; border: 1px solid #3a3d4a; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: grab; user-select: none; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .avail-item:hover { border-color: #5b8def; background: rgba(91,141,239,0.1); }
+  .avail-item.in-use { opacity: 0.3; cursor: default; pointer-events: none; }
+  .result-box { background: #252836; border-radius: 8px; padding: 12px; font-family: monospace; font-size: 12px; color: #aaa; white-space: pre-wrap; max-height: 200px; overflow-y: auto; margin-top: 8px; border: 1px solid #2a2d3a; }
+  .btn { background: #5b8def; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer; font-weight: 500; }
+  .btn:hover { background: #4a7cde; }
+  .btn-outline { background: transparent; border: 1px solid #3a3d4a; color: #ccc; }
+  .btn-outline:hover { border-color: #5b8def; color: #fff; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; }
+  .scope-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #252836; }
+  .scope-row-label { flex: 1; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .scope-btn { font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer; border: none; background: transparent; color: #888; }
+  .scope-btn.active { background: #252836; color: #5b8def; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<h1>인프라 메뉴 구조 설계</h1>
+<p class="subtitle">드래그앤드랍으로 메뉴를 재배치하고, 각 메뉴의 조회 범위(scope)를 설정하세요. 완료 후 "확정" 버튼을 누르면 결과가 기록됩니다.</p>
+
+<div class="layout">
+  <div class="preview-panel">
+    <h3>사이드바 미리보기</h3>
+    <div class="sidebar-preview" id="sidebar-preview">
+      <div class="context-selector" id="ctx-customer">
+        <span class="label">고객사</span>
+        <select><option>OO공사</option><option>△△은행</option><option>□□통신</option></select>
+      </div>
+      <div class="context-selector" id="ctx-project">
+        <span class="label">프로젝트</span>
+        <select><option>전체</option><option>PRJ-001 네트워크 구축</option><option>PRJ-002 보안 강화</option></select>
+      </div>
+      <div class="menu-divider"></div>
+      <div id="menu-container"></div>
+    </div>
+  </div>
+
+  <div class="config-panel">
+    <div class="config-card">
+      <h4>1. 컨텍스트 셀렉터 구조</h4>
+      <div class="scope-options" id="ctx-options"></div>
+    </div>
+    <div class="config-card">
+      <h4>2. 메뉴별 조회 범위</h4>
+      <p style="font-size:12px;color:#888;margin-bottom:12px;">각 메뉴가 어느 범위를 조회하는지 설정합니다.</p>
+      <div id="scope-config"></div>
+    </div>
+    <div class="config-card">
+      <h4>3. 추가 가능한 메뉴 (클릭 또는 드래그하여 추가)</h4>
+      <div class="available-items" id="available-items"></div>
+    </div>
+    <div class="config-card">
+      <h4>4. 결과</h4>
+      <div class="actions">
+        <button class="btn" onclick="submitResult()">이 구성으로 확정</button>
+        <button class="btn btn-outline" onclick="resetAll()">초기화</button>
+      </div>
+      <div class="result-box" id="result-box">메뉴를 편집한 후 "확정" 버튼을 누르세요.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var ALL_MENU_ITEMS = [
+  { id: 'projects',    icon: '\u{1F4C2}', label: '프로젝트',     sub: '프로젝트 목록/상세',     scope: 'customer', defaultOn: true },
+  { id: 'assets',      icon: '\u{1F5A5}', label: '자산',         sub: '장비/자산 인벤토리',     scope: 'customer', defaultOn: true },
+  { id: 'ip',          icon: '\u{1F310}', label: 'IP 인벤토리',  sub: 'IP 대역/할당 관리',      scope: 'customer', defaultOn: true },
+  { id: 'portmap',     icon: '\u{1F50C}', label: '포트맵',       sub: '포트 연결 현황',         scope: 'customer', defaultOn: true },
+  { id: 'policy-def',  icon: '\u{1F4CB}', label: '정책 정의',    sub: '전사 보안/운영 정책',    scope: 'global',   defaultOn: true },
+  { id: 'policy-asgn', icon: '\u{1F6E1}', label: '적용 현황',    sub: '정책 준수 상태',         scope: 'customer', defaultOn: true },
+  { id: 'contacts',    icon: '\u{1F464}', label: '담당자/업체',   sub: '거래처/담당자 관리',     scope: 'customer', defaultOn: true },
+  { id: 'dashboard',   icon: '\u{1F4CA}', label: '현황판',       sub: '프로젝트 현황 요약',     scope: 'customer', defaultOn: true },
+  { id: 'search',      icon: '\u{1F50D}', label: '자산 검색',    sub: '전체 프로젝트 자산 조회', scope: 'global',   defaultOn: false },
+  { id: 'relations',   icon: '\u{1F517}', label: '자산 관계',    sub: '자산 간 연결 관계',      scope: 'customer', defaultOn: false },
+  { id: 'history',     icon: '\u{1F4DD}', label: '변경이력',     sub: '감사 로그 조회',          scope: 'customer', defaultOn: false },
+  { id: 'import',      icon: '\u{1F4E5}', label: 'Excel Import', sub: 'Excel 일괄 가져오기',    scope: 'project',  defaultOn: false },
+];
+
+var CTX_OPTIONS = [
+  { id: 'both',          title: '고객사 + 프로젝트 (2단 셀렉터)', desc: '고객사 선택 \u2192 해당 고객사의 프로젝트 필터. "전체" 선택 시 고객사 내 전체 조회' },
+  { id: 'customer-only', title: '고객사만 (1단 셀렉터)',           desc: '고객사 선택 후 각 페이지에서 프로젝트별 필터링' },
+  { id: 'project-first', title: '프로젝트 우선 (현재 방식 개선)',  desc: '프로젝트 선택 시 고객사 자동 결정. Pin 프로젝트 유지' },
+];
+
+var SCOPE_LABELS = { global: '전역', customer: '고객사', project: '프로젝트' };
+var SCOPE_ICONS  = { global: '\u{1F30D}', customer: '\u{1F3E2}', project: '\u{1F4C1}' };
+
+var activeMenu = [];
+var selectedCtx = 'both';
+var dragItem = null;
+var dragSource = null;
+
+function init() {
+  activeMenu = ALL_MENU_ITEMS.filter(function(m) { return m.defaultOn; }).map(function(m) {
+    return { id: m.id, icon: m.icon, label: m.label, sub: m.sub, scope: m.scope };
+  });
+  selectedCtx = 'both';
+  render();
+}
+
+function render() {
+  renderCtxOptions();
+  renderSidebar();
+  renderScopeConfig();
+  renderAvailableItems();
+  updateCtxVisibility();
+}
+
+function renderCtxOptions() {
+  var c = document.getElementById('ctx-options');
+  while (c.firstChild) c.removeChild(c.firstChild);
+
+  CTX_OPTIONS.forEach(function(opt) {
+    var el = document.createElement('div');
+    el.className = 'scope-opt' + (selectedCtx === opt.id ? ' selected' : '');
+    el.dataset.ctx = opt.id;
+
+    var dot = document.createElement('div');
+    dot.className = 'dot';
+    el.appendChild(dot);
+
+    var textWrap = document.createElement('div');
+    var title = document.createElement('div');
+    title.className = 'opt-title';
+    title.textContent = opt.title;
+    var desc = document.createElement('div');
+    desc.className = 'opt-desc';
+    desc.textContent = opt.desc;
+    textWrap.appendChild(title);
+    textWrap.appendChild(desc);
+    el.appendChild(textWrap);
+
+    el.addEventListener('click', function() {
+      selectedCtx = opt.id;
+      render();
+    });
+    c.appendChild(el);
+  });
+}
+
+function renderSidebar() {
+  var container = document.getElementById('menu-container');
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  activeMenu.forEach(function(item, idx) {
+    var dz = document.createElement('div');
+    dz.className = 'drop-zone';
+    dz.dataset.index = idx;
+    dz.addEventListener('dragover', handleDragOver);
+    dz.addEventListener('dragleave', handleDragLeave);
+    dz.addEventListener('drop', handleDrop);
+    container.appendChild(dz);
+
+    var el = document.createElement('div');
+    el.className = 'menu-item';
+    el.draggable = true;
+    el.dataset.id = item.id;
+    el.dataset.index = idx;
+
+    var grip = document.createElement('span');
+    grip.className = 'grip';
+    grip.textContent = '\u2807\u2807';
+    el.appendChild(grip);
+
+    var icon = document.createElement('span');
+    icon.className = 'mi-icon';
+    icon.textContent = item.icon;
+    el.appendChild(icon);
+
+    var labelWrap = document.createElement('span');
+    labelWrap.className = 'mi-label';
+    labelWrap.appendChild(document.createTextNode(item.label));
+    var subSpan = document.createElement('span');
+    subSpan.className = 'mi-sub';
+    subSpan.textContent = SCOPE_ICONS[item.scope] + ' ' + SCOPE_LABELS[item.scope] + ' 범위';
+    labelWrap.appendChild(subSpan);
+    el.appendChild(labelWrap);
+
+    var removeBtn = document.createElement('span');
+    removeBtn.className = 'mi-remove';
+    removeBtn.title = '제거';
+    removeBtn.textContent = '\u2715';
+    removeBtn.addEventListener('click', function() {
+      activeMenu = activeMenu.filter(function(m) { return m.id !== item.id; });
+      render();
+    });
+    el.appendChild(removeBtn);
+
+    el.addEventListener('dragstart', function() { dragItem = item; dragSource = 'sidebar'; el.classList.add('dragging'); });
+    el.addEventListener('dragend', function() { el.classList.remove('dragging'); clearDropZones(); });
+
+    container.appendChild(el);
+  });
+
+  var lastDz = document.createElement('div');
+  lastDz.className = 'drop-zone';
+  lastDz.dataset.index = activeMenu.length;
+  lastDz.addEventListener('dragover', handleDragOver);
+  lastDz.addEventListener('dragleave', handleDragLeave);
+  lastDz.addEventListener('drop', handleDrop);
+  container.appendChild(lastDz);
+}
+
+function renderScopeConfig() {
+  var c = document.getElementById('scope-config');
+  while (c.firstChild) c.removeChild(c.firstChild);
+
+  activeMenu.forEach(function(item) {
+    var row = document.createElement('div');
+    row.className = 'scope-row';
+
+    var label = document.createElement('div');
+    label.className = 'scope-row-label';
+    label.textContent = item.icon + ' ' + item.label;
+    row.appendChild(label);
+
+    ['global', 'customer', 'project'].forEach(function(s) {
+      var btn = document.createElement('button');
+      btn.className = 'scope-btn' + (item.scope === s ? ' active' : '');
+      btn.textContent = SCOPE_LABELS[s];
+      btn.addEventListener('click', function() {
+        item.scope = s;
+        render();
+      });
+      row.appendChild(btn);
+    });
+
+    c.appendChild(row);
+  });
+}
+
+function renderAvailableItems() {
+  var c = document.getElementById('available-items');
+  while (c.firstChild) c.removeChild(c.firstChild);
+
+  var activeIds = {};
+  activeMenu.forEach(function(m) { activeIds[m.id] = true; });
+
+  ALL_MENU_ITEMS.forEach(function(item) {
+    var inUse = !!activeIds[item.id];
+    var el = document.createElement('div');
+    el.className = 'avail-item' + (inUse ? ' in-use' : '');
+    el.draggable = !inUse;
+    el.textContent = item.icon + ' ' + item.label;
+
+    if (!inUse) {
+      el.addEventListener('dragstart', function() {
+        dragItem = { id: item.id, icon: item.icon, label: item.label, sub: item.sub, scope: item.scope };
+        dragSource = 'pool';
+      });
+      el.addEventListener('click', function() {
+        activeMenu.push({ id: item.id, icon: item.icon, label: item.label, sub: item.sub, scope: item.scope });
+        render();
+      });
+    }
+    c.appendChild(el);
+  });
+}
+
+function updateCtxVisibility() {
+  var custEl = document.getElementById('ctx-customer');
+  var projEl = document.getElementById('ctx-project');
+  if (selectedCtx === 'customer-only') {
+    custEl.style.display = '';
+    projEl.style.display = 'none';
+  } else if (selectedCtx === 'project-first') {
+    custEl.style.display = 'none';
+    projEl.style.display = '';
+  } else {
+    custEl.style.display = '';
+    projEl.style.display = '';
+  }
+}
+
+function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('active'); }
+function handleDragLeave(e) { e.currentTarget.classList.remove('active'); }
+
+function handleDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('active');
+  var targetIdx = parseInt(e.currentTarget.dataset.index);
+
+  if (dragSource === 'sidebar' && dragItem) {
+    var oldIdx = -1;
+    for (var i = 0; i < activeMenu.length; i++) {
+      if (activeMenu[i].id === dragItem.id) { oldIdx = i; break; }
+    }
+    if (oldIdx === -1) return;
+    var moved = activeMenu.splice(oldIdx, 1)[0];
+    var insertIdx = targetIdx > oldIdx ? targetIdx - 1 : targetIdx;
+    activeMenu.splice(insertIdx, 0, moved);
+  } else if (dragSource === 'pool' && dragItem) {
+    var exists = false;
+    for (var j = 0; j < activeMenu.length; j++) {
+      if (activeMenu[j].id === dragItem.id) { exists = true; break; }
+    }
+    if (!exists) {
+      activeMenu.splice(targetIdx, 0, dragItem);
+    }
+  }
+
+  dragItem = null;
+  dragSource = null;
+  render();
+}
+
+function clearDropZones() {
+  document.querySelectorAll('.drop-zone').forEach(function(dz) { dz.classList.remove('active'); });
+}
+
+function submitResult() {
+  var result = {
+    contextSelector: selectedCtx,
+    menuItems: activeMenu.map(function(m, i) {
+      return { order: i + 1, id: m.id, label: m.label, scope: m.scope };
+    }),
+  };
+
+  var box = document.getElementById('result-box');
+  box.textContent = JSON.stringify(result, null, 2);
+  box.style.borderColor = '#5b8def';
+
+  // Send event
+  try {
+    fetch('/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'click', choice: 'submit', text: JSON.stringify(result), timestamp: Math.floor(Date.now() / 1000) }),
+    });
+  } catch(e) {}
+}
+
+function resetAll() {
+  init();
+}
+
+init();
+</script>
+</body>
+</html>

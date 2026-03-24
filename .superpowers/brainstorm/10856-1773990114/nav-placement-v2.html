@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>topbar 배치 확인</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .browser-mock { background: #12141c; border-radius: 8px; overflow: hidden; border: 1px solid #252836; margin-bottom: 20px; }
+
+  .mock-topbar {
+    background: #1a1d27; height: 44px; display: flex; align-items: center;
+    padding: 0 16px; border-bottom: 1px solid #252836; gap: 10px;
+  }
+  .mock-logo { font-size: 14px; font-weight: 700; color: #5b8def; white-space: nowrap; }
+
+  .mock-ctx-group { display: flex; align-items: center; gap: 4px; }
+  .mock-ctx-label { color: #555; font-size: 10px; white-space: nowrap; }
+  .mock-ctx-select {
+    background: #252836; border: 1px solid #3a3d4a; border-radius: 4px;
+    padding: 4px 8px; font-size: 12px; color: #ccc;
+  }
+  .mock-sep { width: 1px; height: 20px; background: #3a3d4a; }
+
+  .mock-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .mock-module-sw {
+    font-size: 11px; color: #888; background: #252836; padding: 4px 10px;
+    border-radius: 4px; border: 1px solid #3a3d4a; white-space: nowrap;
+  }
+
+  .mock-subnav {
+    background: #1e2130; height: 42px; display: flex; align-items: center;
+    padding: 0 16px; border-bottom: 1px solid #252836;
+  }
+  .mock-nav-item {
+    padding: 0 14px; height: 42px; display: flex; align-items: center;
+    font-size: 12px; color: #888; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .mock-nav-item.active { color: #5b8def; border-bottom-color: #5b8def; font-weight: 600; }
+
+  .mock-content {
+    min-height: 200px; padding: 20px; display: flex; align-items: center;
+    justify-content: center; color: #333; font-size: 12px;
+  }
+
+  .label-section { margin-top: 24px; margin-bottom: 16px; }
+  .label-section h2 { font-size: 15px; color: #ccc; margin-bottom: 4px; }
+  .label-section p { font-size: 12px; color: #666; }
+
+  .compare { display: flex; gap: 16px; margin-top: 20px; }
+  .compare-item { flex: 1; }
+  .compare-label { font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .note-box {
+    background: #1a1d27; border-radius: 8px; padding: 14px; margin-top: 16px;
+    border: 1px solid #2a2d3a; font-size: 12px; color: #aaa; line-height: 1.6;
+  }
+  .note-box strong { color: #ccc; }
+</style>
+</head>
+<body>
+
+<h1>topbar 배치 — 최종 확인</h1>
+<p class="subtitle">제목 오른쪽에 셀렉터, 우측 끝에 모듈 전환 배치</p>
+
+<div class="label-section">
+  <h2>인프라 모듈 (프로젝트관리)</h2>
+  <p>고객사/프로젝트 셀렉터가 제목 옆에 위치하여 현재 작업 컨텍스트를 즉시 파악</p>
+</div>
+
+<div class="browser-mock">
+  <div class="mock-topbar">
+    <span class="mock-logo">프로젝트관리</span>
+    <div class="mock-sep"></div>
+    <div class="mock-ctx-group">
+      <span class="mock-ctx-label">고객사</span>
+      <select class="mock-ctx-select"><option>OO공사</option><option>△△은행</option></select>
+    </div>
+    <div class="mock-ctx-group">
+      <span class="mock-ctx-label">프로젝트</span>
+      <select class="mock-ctx-select" style="min-width:150px;"><option>전체</option><option>PRJ-001 네트워크 구축</option><option>PRJ-002 보안 강화</option></select>
+    </div>
+    <div class="mock-topbar-right">
+      <span class="mock-module-sw">영업관리 전환</span>
+      <div class="mock-sep"></div>
+      <span style="font-size:12px;">admin</span>
+      <span style="font-size:11px;color:#666;cursor:pointer;">로그아웃</span>
+    </div>
+  </div>
+  <div class="mock-subnav">
+    <div class="mock-nav-item">프로젝트</div>
+    <div class="mock-nav-item active">자산</div>
+    <div class="mock-nav-item">IP인벤토리</div>
+    <div class="mock-nav-item">포트맵</div>
+    <div class="mock-nav-item">정책정의</div>
+    <div class="mock-nav-item">적용현황</div>
+    <div class="mock-nav-item">담당자</div>
+    <div class="mock-nav-item">이력</div>
+    <div class="mock-nav-item">현황판</div>
+  </div>
+  <div class="mock-content">(자산 목록 영역)</div>
+</div>
+
+<div class="label-section">
+  <h2>비교: 영업관리 모듈 (변경 없음)</h2>
+  <p>영업관리는 고객사 셀렉터 불필요 — 제목만 표시, 모듈 전환 버튼은 동일 위치</p>
+</div>
+
+<div class="browser-mock">
+  <div class="mock-topbar">
+    <span class="mock-logo">영업관리</span>
+    <div class="mock-topbar-right">
+      <span class="mock-module-sw">프로젝트관리 전환</span>
+      <div class="mock-sep"></div>
+      <span style="font-size:12px;">admin</span>
+      <span style="font-size:11px;color:#666;cursor:pointer;">로그아웃</span>
+    </div>
+  </div>
+  <div class="mock-subnav">
+    <div class="mock-nav-item">내 사업</div>
+    <div class="mock-nav-item active">사업 관리</div>
+    <div class="mock-nav-item">대시보드</div>
+    <div class="mock-nav-item">보고서</div>
+  </div>
+  <div class="mock-content">(사업 목록 영역)</div>
+</div>
+
+<div class="note-box">
+  <strong>배치 원칙:</strong><br>
+  - <strong>좌측</strong>: 모듈 제목 + 컨텍스트 셀렉터 (인프라만) — "어디서 작업하는가"<br>
+  - <strong>우측</strong>: 모듈 전환 + 사용자 — 모듈 공통 영역<br>
+  - <strong>subnav</strong>: 페이지 메뉴만 — 양쪽 모듈 동일 패턴<br>
+  - 영업관리에는 셀렉터 없이 제목만 표시 — topbar 좌측이 깔끔하게 유지
+</div>
+
+</body>
+</html>
