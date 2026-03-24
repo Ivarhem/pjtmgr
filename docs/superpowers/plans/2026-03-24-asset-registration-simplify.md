@@ -466,7 +466,7 @@ feat(infra): simplify asset registration modal to 4 fields with catalog search
 - Modify: `app/static/js/infra_assets.js`
 - Modify: `app/modules/infra/templates/infra_assets.html`
 
-- [ ] **Step 1: "수정" 버튼 → 현재 탭 편집 모드 전환**
+- [x] **Step 1: "수정" 버튼 → 현재 탭 편집 모드 전환**
 
 상세 패널 헤더의 "수정" 버튼 클릭 시:
 - 현재 활성 탭의 read-only `detail-grid`를 `form` 요소로 교체
@@ -475,7 +475,7 @@ feat(infra): simplify asset registration modal to 4 fields with catalog search
 
 기본 정보 탭 편집 시에는 카탈로그 제품 변경 드롭다운도 포함 (동일 유형만 검색).
 
-- [ ] **Step 2: 탭별 저장 → PATCH API 호출**
+- [x] **Step 2: 탭별 저장 → PATCH API 호출**
 
 ```javascript
 async function saveDetailEdit(tab) {

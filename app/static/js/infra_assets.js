@@ -61,6 +61,10 @@ const columnDefs = [
 
 let gridApi;
 let _selectedAsset = null;
+let _editMode = false;
+let _currentTab = "basic";
+
+const NUMERIC_FIELDS = ["size_unit", "lc_count", "ha_count", "utp_count", "power_count", "year_acquired"];
 
 /* ── Data loading ── */
 
@@ -150,6 +154,9 @@ function showAssetDetail(asset) {
 }
 
 function renderDetailTab(tab) {
+  _currentTab = tab;
+  if (_editMode) _editMode = false;
+
   const container = document.getElementById("detail-content");
   while (container.firstChild) container.removeChild(container.firstChild);
 
@@ -562,6 +569,145 @@ async function deleteAlias(alias) {
   });
 }
 
+/* ── Inline edit mode ── */
+
+function enterEditMode(tab) {
+  _editMode = true;
+  const container = document.getElementById("detail-content");
+  while (container.firstChild) container.removeChild(container.firstChild);
+
+  const fields = DETAIL_TABS[tab];
+  if (!fields) return;
+
+  const form = document.createElement("form");
+  form.id = "detail-edit-form";
+  form.addEventListener("submit", (e) => e.preventDefault());
+
+  const grid = document.createElement("div");
+  grid.className = "detail-grid";
+
+  fields.forEach(([label, key]) => {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    grid.appendChild(dt);
+
+    const dd = document.createElement("dd");
+    const currentVal = _selectedAsset[key];
+
+    if (key === "asset_type") {
+      // Read-only: 유형 변경 금지
+      const span = document.createElement("span");
+      span.textContent = currentVal != null ? getAssetTypeLabel(currentVal) : "—";
+      span.style.color = "var(--text-color-secondary)";
+      dd.appendChild(span);
+    } else if (key === "status") {
+      const sel = document.createElement("select");
+      sel.dataset.field = key;
+      sel.className = "edit-input";
+      Object.entries(ASSET_STATUS_MAP).forEach(([val, lbl]) => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = lbl;
+        if (val === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      dd.appendChild(sel);
+    } else if (key === "environment") {
+      const sel = document.createElement("select");
+      sel.dataset.field = key;
+      sel.className = "edit-input";
+      // 빈 옵션
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "—";
+      sel.appendChild(empty);
+      Object.entries(ENV_MAP).forEach(([val, lbl]) => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = lbl;
+        if (val === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      dd.appendChild(sel);
+    } else {
+      const input = document.createElement("input");
+      input.dataset.field = key;
+      input.className = "edit-input";
+      if (NUMERIC_FIELDS.includes(key)) {
+        input.type = "number";
+        input.value = currentVal != null ? currentVal : "";
+      } else {
+        input.type = "text";
+        input.value = currentVal != null ? String(currentVal) : "";
+      }
+      dd.appendChild(input);
+    }
+    grid.appendChild(dd);
+  });
+
+  form.appendChild(grid);
+
+  // 저장/취소 버튼
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "btn btn-sm btn-secondary";
+  cancelBtn.textContent = "취소";
+  cancelBtn.addEventListener("click", exitEditMode);
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "btn btn-sm btn-primary";
+  saveBtn.textContent = "저장";
+  saveBtn.addEventListener("click", () => saveDetailEdit(tab));
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(saveBtn);
+  form.appendChild(actions);
+
+  container.appendChild(form);
+}
+
+function exitEditMode() {
+  _editMode = false;
+  renderDetailTab(_currentTab);
+}
+
+async function saveDetailEdit(tab) {
+  const form = document.getElementById("detail-edit-form");
+  if (!form) return;
+  const fields = DETAIL_TABS[tab];
+  const changes = {};
+  fields.forEach(([label, key]) => {
+    const input = form.querySelector('[data-field="' + key + '"]');
+    if (!input) return;
+    const val = input.value.trim();
+    const original = _selectedAsset[key];
+    if (NUMERIC_FIELDS.includes(key)) {
+      const numVal = val === "" ? null : Number(val);
+      if (numVal !== original) changes[key] = numVal;
+    } else {
+      const strVal = val || null;
+      if (strVal !== original) changes[key] = strVal;
+    }
+  });
+  if (Object.keys(changes).length === 0) {
+    exitEditMode();
+    return;
+  }
+  try {
+    const updated = await apiFetch("/api/v1/assets/" + _selectedAsset.id, { method: "PATCH", body: changes });
+    Object.assign(_selectedAsset, updated);
+    showToast("수정되었습니다.");
+    exitEditMode();
+    loadAssets();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
 function closeDetail() {
   document.getElementById("asset-detail-panel").classList.add("hidden");
   _selectedAsset = null;
@@ -771,7 +917,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-asset").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-asset").addEventListener("click", saveAsset);
-document.getElementById("btn-edit-asset").addEventListener("click", () => showToast("상세 패널에서 수정하세요."));
+document.getElementById("btn-edit-asset").addEventListener("click", () => {
+  if (!_selectedAsset) return;
+  const editableTabs = ["basic", "location", "network", "hw", "mgmt"];
+  if (!editableTabs.includes(_currentTab)) {
+    showToast("이 탭은 개별 항목을 추가/수정하세요.", "info");
+    return;
+  }
+  if (_editMode) { exitEditMode(); return; }
+  enterEditMode(_currentTab);
+});
 document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
 
 // 카탈로그 검색

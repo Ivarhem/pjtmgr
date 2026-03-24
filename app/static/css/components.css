@@ -471,6 +471,19 @@ body.dark-mode .toast { box-shadow: var(--modal-shadow); }
 .detail-grid dt { font-size: 11px; color: var(--text-color-tertiary); margin: 0; padding: 2px 0 0; }
 .detail-grid dd { font-size: 13px; margin: 0 0 6px; padding: 0; }
 
+/* ── Inline edit inputs in detail grid ── */
+.detail-grid .edit-input {
+  width: 100%; box-sizing: border-box;
+  font-size: 13px; padding: 3px 6px;
+  border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--bg-primary); color: var(--text-color);
+}
+.detail-grid .edit-input:focus {
+  outline: none; border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+.detail-grid select.edit-input { cursor: pointer; }
+
 /* ── Split layout (좌우 분할) ── */
 .split-layout { display: flex; gap: 16px; min-height: 500px; }
 .split-left { width: 280px; flex-shrink: 0; }
