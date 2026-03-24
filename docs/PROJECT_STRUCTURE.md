@@ -41,9 +41,9 @@ app/modules/common/
 │   ├── user_preference.py       # UserPreference (사용자 설정)
 │   ├── login_failure.py         # LoginFailure (로그인 실패 기록)
 │   ├── role.py                  # Role (RBAC 역할, permissions JSON)
-│   ├── customer.py              # Customer (거래처)
-│   ├── customer_contact.py      # CustomerContact (거래처 담당자)
-│   ├── customer_contact_role.py # CustomerContactRole (담당자 역할)
+│   ├── partner.py               # Partner (업체)
+│   ├── partner_contact.py       # PartnerContact (업체 담당자)
+│   ├── partner_contact_role.py  # PartnerContactRole (담당자 역할)
 │   ├── setting.py               # Setting (시스템 설정)
 │   ├── term_config.py           # TermConfig (UI 용어 설정)
 │   ├── audit_log.py             # AuditLog (감사 로그)
@@ -52,9 +52,9 @@ app/modules/common/
 │   └── contract_type_config.py  # ContractTypeConfig (사업유형 설정)
 ├── schemas/
 │   ├── auth.py                  # 인증 관련 스키마
-│   ├── customer.py              # 거래처 스키마
-│   ├── customer_contact.py      # 거래처 담당자 스키마
-│   ├── customer_contact_role.py # 담당자 역할 스키마
+│   ├── partner.py               # 업체 스키마
+│   ├── partner_contact.py       # 업체 담당자 스키마
+│   ├── partner_contact_role.py  # 담당자 역할 스키마
 │   ├── contract.py              # 사업 스키마
 │   ├── contract_period.py       # 계약단위 스키마
 │   ├── contract_type_config.py  # 사업유형 스키마
@@ -64,8 +64,8 @@ app/modules/common/
 │   └── user.py                  # 사용자 스키마
 ├── services/
 │   ├── user.py                  # 사용자 CRUD, CSV 일괄 등록
-│   ├── customer.py              # 거래처/담당자 CRUD
-│   ├── _customer_helpers.py     # 거래처 관련 헬퍼
+│   ├── partner.py               # 업체/담당자 CRUD
+│   ├── _partner_helpers.py      # 업체 관련 헬퍼
 │   ├── contract.py              # 사업/계약단위 CRUD
 │   ├── contract_type_config.py  # 사업유형 CRUD, 시드 데이터
 │   ├── setting.py               # 시스템 설정 CRUD
@@ -76,7 +76,7 @@ app/modules/common/
 │   └── audit.py                 # 감사 로그 유틸
 ├── routers/
 │   ├── users.py                 # /api/v1/users
-│   ├── customers.py             # /api/v1/customers
+│   ├── partners.py              # /api/v1/partners
 │   ├── contracts.py             # /api/v1/contracts
 │   ├── contract_periods.py      # /api/v1/contract-periods
 │   ├── contract_types.py        # /api/v1/contract-types
@@ -150,8 +150,8 @@ app/modules/infra/
 │   ├── asset_contact.py         # AssetContact (자산 담당자 매핑)
 │   ├── asset_relation.py        # AssetRelation (자산 간 관계)
 │   ├── period_asset.py          # PeriodAsset (계약단위-자산 N:M)
-│   ├── period_customer.py       # PeriodCustomer (계약단위-업체 역할)
-│   ├── period_customer_contact.py # PeriodCustomerContact (계약단위-담당자 역할)
+│   ├── period_partner.py        # PeriodPartner (계약단위-업체 역할)
+│   ├── period_partner_contact.py # PeriodPartnerContact (계약단위-담당자 역할)
 │   ├── ip_subnet.py             # IpSubnet (IP 대역)
 │   ├── port_map.py              # PortMap (포트맵)
 │   ├── policy_definition.py     # PolicyDefinition (정책 정의)
@@ -168,8 +168,8 @@ app/modules/infra/
 │   ├── asset_contact.py         # 자산 담당자 스키마
 │   ├── asset_relation.py        # 자산 관계 스키마
 │   ├── period_asset.py          # 계약단위-자산 스키마
-│   ├── period_customer.py       # 계약단위-업체 스키마
-│   ├── period_customer_contact.py # 계약단위-담당자 스키마
+│   ├── period_partner.py        # 계약단위-업체 스키마
+│   ├── period_partner_contact.py # 계약단위-담당자 스키마
 │   ├── infra_import.py          # Import 프리뷰/결과 스키마
 │   ├── ip_subnet.py             # IP 대역 스키마
 │   ├── port_map.py              # 포트맵 스키마
@@ -186,13 +186,13 @@ app/modules/infra/
 │   ├── network_service.py       # IP 대역 CRUD
 │   ├── policy_service.py        # 정책 정의/적용 CRUD
 │   ├── period_asset_service.py  # 계약단위-자산 연결/해제
-│   ├── period_customer_service.py # 계약단위-업체 CRUD
-│   ├── period_customer_contact_service.py # 계약단위-담당자 CRUD
+│   ├── period_partner_service.py # 계약단위-업체 CRUD
+│   ├── period_partner_contact_service.py # 계약단위-담당자 CRUD
 │   ├── asset_relation_service.py # 자산 관계 CRUD
 │   ├── infra_metrics.py         # 현황판 집계 서비스
-│   ├── _helpers.py              # 공유 헬퍼 (ensure_customer_exists, get_period_asset_ids)
-│   ├── infra_importer.py        # Excel Import (자산/IP/포트맵, 고객사 단위)
-│   ├── infra_exporter.py        # Excel Export (고객사 단위 3시트, 옵션 계약단위 필터)
+│   ├── _helpers.py              # 공유 헬퍼 (ensure_partner_exists, get_period_asset_ids)
+│   ├── infra_importer.py        # Excel Import (자산/IP/포트맵, 업체 단위)
+│   ├── infra_exporter.py        # Excel Export (업체 단위 3시트, 옵션 계약단위 필터)
 │   ├── product_catalog_service.py # 제품 카탈로그/스펙/인터페이스 CRUD
 │   ├── product_catalog_importer.py # 제품 카탈로그 Excel Import (SPEC/EOSL)
 │   └── asset_software_service.py # 자산 SW CRUD
@@ -208,8 +208,8 @@ app/modules/infra/
 │   ├── policy_assignments.py    # /api/v1/policy-assignments
 │   ├── period_assets.py         # /api/v1/period-assets
 │   ├── asset_relations.py       # /api/v1/asset-relations
-│   ├── period_customers.py      # /api/v1/period-customers
-│   ├── period_customer_contacts.py # /api/v1/period-customer-contacts
+│   ├── period_partners.py       # /api/v1/period-partners
+│   ├── period_partner_contacts.py # /api/v1/period-partner-contacts
 │   ├── infra_dashboard.py       # /api/v1/infra-dashboard (집계 + 감사로그)
 │   ├── infra_excel.py           # /api/v1/infra-excel (Import/Export, spec/eosl 포함)
 │   ├── product_catalogs.py      # /api/v1/product-catalog
@@ -245,7 +245,7 @@ app/static/
 │   ├── contracts.js             # 사업 목록
 │   ├── contract_detail.js       # 사업 상세
 │   ├── my_contracts.js          # 내 사업
-│   ├── customers.js             # 거래처
+│   ├── partners.js              # 업체
 │   ├── dashboard.js             # 대시보드
 │   ├── reports.js               # 보고서
 │   ├── users.js                 # 사용자 관리
@@ -266,7 +266,7 @@ app/static/
 │   ├── base.css                 # 전역 스타일, CSS 변수 (light/dark)
 │   ├── components.css           # 재사용 컴포넌트
 │   ├── contract_detail.css      # 사업 상세
-│   ├── customers.css            # 거래처
+│   ├── partners.css             # 업체
 │   ├── dashboard.css            # 대시보드
 │   ├── reports.css              # 보고서
 │   ├── system.css               # 시스템 설정
@@ -285,7 +285,7 @@ app/templates/                   # 공통 및 회계 템플릿
 ├── contracts.html               # 사업 목록
 ├── contract_detail.html         # 사업 상세
 ├── my_contracts.html            # 내 사업
-├── customers.html               # 거래처
+├── partners.html                # 업체
 ├── reports.html                 # 보고서
 ├── users.html                   # 사용자 관리
 ├── system.html                  # 시스템 설정
@@ -302,7 +302,7 @@ tests/
 ├── conftest.py                  # DB 세션 (PostgreSQL), 기본 유저/역할 fixture
 ├── common/
 │   ├── test_auth_service.py
-│   └── test_customer_service.py
+│   └── test_partner_service.py
 ├── accounting/
 │   ├── test_contract_schema.py
 │   ├── test_contract_service.py
@@ -323,9 +323,9 @@ tests/
 │   ├── test_infra_importer.py
 │   ├── test_period_asset_service.py
 │   ├── test_asset_relation_service.py
-│   ├── test_period_customer_service.py
-│   ├── test_period_customer_contact_service.py
-│   └── test_customer_centric.py    # 고객사 scope CRUD, 계약단위 필터, Export E2E
+│   ├── test_period_partner_service.py
+│   ├── test_period_partner_contact_service.py
+│   └── test_partner_centric.py     # 업체 scope CRUD, 계약단위 필터, Export E2E
 ├── test_database.py             # 스키마 정합성
 ├── test_startup.py              # bootstrap, lifespan
 ├── test_module_isolation.py     # accounting <-> infra import 금지 검증
@@ -343,8 +343,8 @@ alembic/
     ├── 0002_add_project_contract_link_and_audit_module.py
     ├── 0003_asset_restructure.py         # project_assets, asset_code, asset_relations
     ├── 0004_project_customer.py          # project_customers, project_customer_contacts
-    ├── 0005_customer_centric_restructure.py # customer_id FK 추가, project_id FK 제거
-    ├── 0006_add_customer_code.py          # 고객사 코드 컬럼
+    ├── 0005_customer_centric_restructure.py # partner_id FK 추가, project_id FK 제거
+    ├── 0006_add_customer_code.py          # 업체 코드 컬럼
     ├── 0007_product_catalog.py            # product_catalog, hardware_specs, hardware_interfaces
     ├── 0008_asset_hardware_model_and_software.py # asset.hardware_model_id FK, asset_software 테이블
     ├── 0009_hardware_interface_capacity_type.py # hardware_interfaces capacity_type 컬럼

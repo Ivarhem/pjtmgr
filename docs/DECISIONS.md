@@ -141,7 +141,7 @@
 ### 이유
 
 - projmgr(회계)와 inframgr(인프라) 두 프로젝트가 기술 스택, 아키텍처 패턴, 코드 규칙이 거의 동일
-- 공통 도메인(사용자, 거래처, 인증) 중복 제거 필요
+- 공통 도메인(사용자, 업체, 인증) 중복 제거 필요
 - 마이크로서비스 대신 단일 코드베이스 선택: 오프라인 배포 단순성, 개발 효율, 리포 하나/테스트 한 번
 - 모듈 격리는 코드 규칙 + lint로 충분한 규모
 
@@ -164,7 +164,7 @@
 ### 영향
 
 - `app/core/`: 모듈 독립 인프라 (app_factory, config, database, exceptions, auth, startup)
-- `app/modules/common/`: 항상 활성 (User, Customer, Setting 등)
+- `app/modules/common/`: 항상 활성 (User, Partner, Setting 등)
 - `app/modules/accounting/`: 회계 도메인 (Contract, Transaction, Receipt 등)
 - `app/modules/infra/`: 인프라 도메인 (Project, Asset, IP, Policy 등)
 - import 규칙: `core <- common <- {accounting, infra}`, `accounting <-> infra` 금지
@@ -189,19 +189,19 @@
 
 ---
 
-## Partner -> Customer 통합
+## ~~Partner -> Customer 통합~~ (폐기 — D-015에서 Customer → Partner로 재리네이밍)
 
 ### 이유
 
-- inframgr의 Partner/Contact와 projmgr의 Customer/CustomerContact가 동일 개념
-- 공통모듈에서 통합 관리하여 중복 제거
+- ~~inframgr의 Partner/Contact와 projmgr의 Customer/CustomerContact가 동일 개념~~
+- ~~공통모듈에서 통합 관리하여 중복 제거~~
 
 ### 영향
 
-- Customer 모델에 `customer_type`, `phone`, `address`, `note` 필드 추가
-- CustomerContact에 `department`, `title`, `emergency_phone`, `note` 필드 추가
-- Partner.project_id FK 제거 (common -> infra 의존성 위반)
-- inframgr의 `external_id`, `external_source` 필드 제거 (sync_service 제거)
+- ~~Customer 모델에 `customer_type`, `phone`, `address`, `note` 필드 추가~~
+- ~~CustomerContact에 `department`, `title`, `emergency_phone`, `note` 필드 추가~~
+- ~~Partner.project_id FK 제거 (common -> infra 의존성 위반)~~
+- ~~inframgr의 `external_id`, `external_source` 필드 제거 (sync_service 제거)~~
 
 ---
 
@@ -256,7 +256,7 @@
 
 ### 이유
 
-- HW 제품(vendor+model)은 여러 고객사에서 공유되는 참조 데이터이므로 customer_id 없이 글로벌로 관리
+- HW 제품(vendor+model)은 여러 업체에서 공유되는 참조 데이터이므로 partner_id 없이 글로벌로 관리
 - Asset.hardware_model_id FK로 연결하되, 기존 vendor/model 텍스트 컬럼은 하위호환 유지
 - 장기적으로 HW스펙(size_unit)→랙배치, 인터페이스→포트맵 자동생성에 활용
 
@@ -265,7 +265,7 @@
 - product_catalog, hardware_specs, hardware_interfaces: 마이그레이션 0007
 - asset.hardware_model_id FK + asset_software: 마이그레이션 0008
 - ProductCatalog 삭제 시 자산 참조 guard (409)
-- SPEC/EOSL Excel Import는 customer_id 불필요 (글로벌 upsert)
+- SPEC/EOSL Excel Import는 partner_id 불필요 (글로벌 upsert)
 
 ---
 
@@ -286,3 +286,17 @@
 **이유:** 기존 코드(`SI-2026-0016`)가 고객·사업·기간 간 관계를 표현하지 못함. 코드만으로 소속 고객/사업 식별 가능해야 함.
 
 **영향:** customer_code `C-000`→`C000` 변환, contract_code 재채번, period_code 신규 컬럼 추가. 비가역 마이그레이션(0011). UNIQUE 제약 + 3회 retry로 동시성 처리.
+
+---
+
+### D-015: Customer → Partner 리네이밍 (2026-03-24)
+
+**결정:** Customer(거래처) 모델을 Partner(업체)로 리네이밍한다.
+
+**이유:**
+
+- "Customer"는 고객사만을 의미하지만, 실제로는 수행사/유지보수사/통신사/벤더 등 다양한 업체 유형을 포괄한다.
+- Partner는 사업 관계의 모든 참여자를 포함하는 중립적 용어.
+- partner_type으로 CUSTOMER/IMPLEMENTER/MAINTAINER/CARRIER/VENDOR/ETC 구분.
+
+**영향:** DB 테이블/컬럼 rename (migration 0012), 코드 prefix C→P(업체), P→B(사업), ~90 파일 수정.

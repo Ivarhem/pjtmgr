@@ -15,7 +15,7 @@
 
 | 모듈 | 설명 | 상태 |
 | ---- | ---- | ---- |
-| **공통 (common)** | 사용자, 거래처, 인증, 시스템 설정 | 구현 완료 |
+| **공통 (common)** | 사용자, 업체, 인증, 시스템 설정 | 구현 완료 |
 | **회계 (accounting)** | 사업 원장, 매입매출 실적, 입금/배분, 대시보드, 보고서, Excel | 구현 완료 |
 | **인프라 (infra)** | 프로젝트, 자산, IP 인벤토리, 포트맵, 정책, 현황판, Excel Import/Export | 구현 완료 |
 
@@ -27,7 +27,7 @@
 
 ```text
 사업 원장 (마스터)
-├── 사업 기본정보 (사업유형, 담당, 거래처, 진행단계 등)
+├── 사업 기본정보 (사업유형, 담당, 업체, 진행단계 등)
 ├── 사업기간 (ContractPeriod: Y25, Y26 등 연도 단위)
 ├── Forecast (ContractPeriod별 월별 예상 매출/GP)
 ├── TransactionLine (매출/매입 실적 라인)
@@ -144,7 +144,7 @@ ENABLED_MODULES=common,infra              # 현장 standalone (인프라만)
 ENABLED_MODULES=common,accounting         # 영업 전용
 ```
 
-- `common` 모듈은 항상 활성 (사용자, 거래처, 인증 등 기반 기능)
+- `common` 모듈은 항상 활성 (사용자, 업체, 인증 등 기반 기능)
 - 비활성 모듈의 테이블은 DB에 존재하되 라우터가 등록되지 않아 접근 불가
 
 ### 초기 설정
@@ -164,7 +164,7 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 [FastAPI 서버] ── [사내 네트워크 전용, 외부 차단]
   ├─ app/core/           # 앱 팩토리, 설정, DB, 예외, 인증, startup
   ├─ app/modules/
-  │   ├─ common/         # 사용자, 거래처, 설정, 감사로그
+  │   ├─ common/         # 사용자, 업체, 설정, 감사로그
   │   ├─ accounting/     # 사업, 매출/매입, 입금, 대시보드, 보고서
   │   └─ infra/          # 프로젝트, 자산, IP, 포트맵, 정책, Excel, 현황판
   └─ Alembic (단일 migration 체인)
@@ -199,7 +199,7 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 | ---- | -------- | ---- |
 | **사업 관리** | 사업/기간 CRUD, 담당자 매핑, 검수일/발행일 규칙 | accounting |
 | **Forecast / 실적 / 입금** | 월별 Forecast, 실적 원장, 입금과 배분, 미수금/선수금 계산 | accounting |
-| **거래처 / 사용자** | 거래처와 담당자 관리, 사용자 관리, 권한 범위, CSV 일괄 등록 | common |
+| **업체 / 사용자** | 업체와 담당자 관리, 사용자 관리, 권한 범위, CSV 일괄 등록 | common |
 | **Excel / 보고** | 3단계 Import, 대시보드/보고서 조회, Excel Export | accounting |
 | **시스템** | 전역 예외 처리, 설정 관리, 감사 로그 인프라 | common |
 | **프로젝트 관리** | 프로젝트 CRUD, 단계, 산출물, Pin 프로젝트, 업체/담당자 연결 | infra |

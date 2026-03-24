@@ -15,7 +15,7 @@
 | 실주 | stage 값. 수주 실패 건. 매출 목표 집계 시 손실 매출로 분류 |
 | 계약기간 (ContractPeriod) | 계약 주기 단위 버전. 달력 연도가 아닌 계약 시작 연도 기준 |
 | 담당자 (ContractContact) | Period별 영업/세금계산서 담당자. ContractPeriod 레벨에 귀속 |
-| 매출처 (Period.customer) | ContractPeriod별 매출처. 미지정 시 Contract.end_customer 사용 |
+| 매출처 (Period.partner) | ContractPeriod별 매출처. 미지정 시 Contract.end_partner 사용 |
 | 입금 매칭 (ReceiptMatch) | Receipt를 매출 라인(TransactionLine)에 매핑. FIFO 자동(귀속기간 내) + 수동 |
 | 선수금 | 입금 배분 합계 > 매출 확정 합계일 때의 초과 금액 (AR 음수) |
 | GP | Gross Profit = 매출 합계 - 매입 합계 |

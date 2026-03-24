@@ -102,5 +102,5 @@ def require_module_access(module: str, min_level: str = "read"):
 - 새 공개 엔드포인트를 추가하면 이유, 보호 범위, 관련 UI 흐름을 이 문서에 함께 기록한다.
 - Excel Import는 관리자 전용 (`require_admin` 의존성 적용)
 - Receipt, TransactionLine, ReceiptMatch처럼 계약 하위 리소스를 조합하는 작업은 입력된 ID들이 같은 계약 범위에 속하는지도 함께 검증한다.
-- 금액, 거래처 정보 등 민감 데이터를 로그에 출력하지 않는다.
+- 금액, 업체 정보 등 민감 데이터를 로그에 출력하지 않는다.
 - SQL 인젝션 방지: ORM을 통한 쿼리만 허용, raw SQL 사용 시 파라미터 바인딩 필수.

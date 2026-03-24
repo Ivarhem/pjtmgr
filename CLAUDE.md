@@ -34,8 +34,8 @@
 
 | 용어 | 설명 |
 | --- | --- |
-| 거래처 (Customer) | 고객사, 공급사, 유지보수사, 통신사 등. 회계/인프라 모듈이 공유 |
-| 거래처 담당자 (CustomerContact) | 거래처 소속 담당자 |
+| 업체 (Partner) | 고객사, 수행사, 유지보수사, 통신사, 벤더 등. 회계/인프라 모듈이 공유 |
+| 업체 담당자 (PartnerContact) | 업체 소속 담당자 |
 | 역할 (Role) | RBAC 역할. permissions JSON으로 모듈별 접근 수준 관리 |
 
 > 모듈별 용어는 `docs/guidelines/accounting.md`, `docs/guidelines/infra.md` 참조.

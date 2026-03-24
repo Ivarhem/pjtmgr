@@ -10,7 +10,7 @@
 | ------ | ---- | --- |
 | 모델/스키마/서비스 | 단수 snake_case | `contract.py`, `transaction_line.py`, `asset.py` |
 | 서비스 내부 헬퍼 | `_` 접두사 + snake_case | `_contract_helpers.py` |
-| 라우터 | 복수 snake_case | `contracts.py`, `customers.py`, `assets.py` |
+| 라우터 | 복수 snake_case | `contracts.py`, `partners.py`, `assets.py` |
 
 ## 모듈별 파일 배치
 
@@ -65,8 +65,8 @@ accounting <-> infra   절대 금지
 
 | 개념 | 표준 용어 (DB/API) | 비고 |
 | ---- | ----------------- | ---- |
-| 거래처 | `customer` | `counterparty`, `company`, `partner` 사용 금지 |
-| END 고객사 | `end_customer` | Contract에 직접 연결된 최종 고객 |
+| 업체 | `partner` | `counterparty`, `company`, `customer` 사용 금지 |
+| END 고객사 | `end_partner` | Contract에 직접 연결된 최종 고객 |
 | 금액 필드 접미사 | `_amount` | `_total` 사용 금지. `expected_revenue_total`, `expected_gp_total`은 레거시 |
 | 월 | `_month` (YYYY-MM-01) | `forecast_month`, `revenue_month` |
 | 구분 (매출/매입) | `line_type` (revenue/cost) | DB 영문, UI 한글 |
