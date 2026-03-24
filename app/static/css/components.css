@@ -1,3 +1,5 @@
+.hidden { display: none !important; }
+
 .filter-bar {
   display: flex;
   align-items: center;

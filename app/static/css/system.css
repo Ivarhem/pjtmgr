@@ -1,6 +1,9 @@
 /* ═══ 시스템 관리 스타일 ════════════════════════════════════════ */
 /* 대시보드(dash-section, dash-table) 디자인 패턴을 따름 */
 
+/* 탭 컨텐츠 표시/숨김 */
+.hidden { display: none !important; }
+
 /* ── 섹션 카드 ─────────────────────────────────────────────── */
 .sys-section {
   background: var(--surface-color);

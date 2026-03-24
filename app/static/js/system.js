@@ -1,25 +1,22 @@
-// ── 탭 전환 ──
-document.querySelectorAll('#system-tabs .tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#system-tabs .tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    ['tab-common', 'tab-accounting', 'tab-infra'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.classList.toggle('hidden', id !== 'tab-' + btn.dataset.tab);
-    });
-    history.replaceState(null, '', '#' + btn.dataset.tab);
-  });
-});
-// URL hash로 초기 탭
-(function() {
-  const initTab = location.hash.slice(1) || 'common';
-  const initBtn = document.querySelector('#system-tabs .tab-btn[data-tab="' + initTab + '"]');
-  if (initBtn) initBtn.click();
-})();
-
 let editingCode = null; // null = 추가 모드, 문자열 = 수정 모드
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // ── 탭 전환 ──
+  document.querySelectorAll('#system-tabs .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#system-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['tab-common', 'tab-accounting', 'tab-infra'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === 'tab-' + btn.dataset.tab) ? '' : 'none';
+      });
+      history.replaceState(null, '', '#' + btn.dataset.tab);
+    });
+  });
+  // URL hash로 초기 탭
+  const initTab = location.hash.slice(1) || 'common';
+  const initBtn = document.querySelector('#system-tabs .tab-btn[data-tab="' + initTab + '"]');
+  if (initBtn) initBtn.click();
   // ── 기본 설정 ─────────────────────────────────────────────────
   const res = await fetch('/api/v1/settings');
   const data = await res.json();
