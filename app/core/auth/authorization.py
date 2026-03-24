@@ -69,7 +69,7 @@ def can_delete_contract(user: User) -> bool:
     return _is_admin(user)
 
 
-def can_delete_customer(user: User) -> bool:
+def can_delete_partner(user: User) -> bool:
     return _is_admin(user)
 
 
@@ -224,7 +224,7 @@ def get_permissions(user: User) -> dict[str, bool]:
     """
     return {
         "can_delete_contract": can_delete_contract(user),
-        "can_delete_customer": can_delete_customer(user),
+        "can_delete_partner": can_delete_partner(user),
         "can_manage_users": can_manage_users(user),
         "can_manage_settings": can_manage_settings(user),
         "can_delete_transaction_line": can_delete_transaction_line(user),

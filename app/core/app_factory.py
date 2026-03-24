@@ -181,7 +181,7 @@ class ModuleContextMiddleware:
     """Set request.state.module_context based on URL path + cookie fallback.
 
     Module-specific pages set the cookie to persist context across
-    common pages (customers, audit-logs, users, etc.).
+    common pages (partners, audit-logs, users, etc.).
     """
 
     COOKIE_NAME = "module_context"
