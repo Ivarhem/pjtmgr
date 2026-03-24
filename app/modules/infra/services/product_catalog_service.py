@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
@@ -47,7 +47,9 @@ def list_products(
         stmt = stmt.where(ProductCatalog.category == category)
     if q:
         like = f"%{q}%"
-        stmt = stmt.where(ProductCatalog.name.ilike(like))
+        stmt = stmt.where(
+            or_(ProductCatalog.name.ilike(like), ProductCatalog.vendor.ilike(like))
+        )
     return list(db.scalars(stmt))
 
 
@@ -82,6 +84,8 @@ def create_product(
 ) -> ProductCatalog:
     _require_edit(current_user)
     _ensure_vendor_name_unique(db, payload.vendor, payload.name)
+    if payload.asset_type_key:
+        _validate_asset_type_key(db, payload.asset_type_key)
 
     product = ProductCatalog(**payload.model_dump())
     db.add(product)
@@ -106,6 +110,8 @@ def update_product(
     new_name = changes.get("name", product.name)
     if new_vendor != product.vendor or new_name != product.name:
         _ensure_vendor_name_unique(db, new_vendor, new_name, product_id)
+    if "asset_type_key" in changes and changes["asset_type_key"]:
+        _validate_asset_type_key(db, changes["asset_type_key"])
 
     for field, value in changes.items():
         setattr(product, field, value)
@@ -124,6 +130,10 @@ def delete_product(db: Session, product_id: int, current_user: User) -> None:
     _require_edit(current_user)
     product = get_product(db, product_id)
 
+    if product.is_placeholder:
+        raise BusinessRuleError(
+            "시스템 placeholder 항목은 삭제할 수 없습니다.", status_code=403
+        )
     _guard_asset_references(db, product_id)
 
     audit.log(
@@ -251,6 +261,14 @@ def _guard_asset_references(db: Session, product_id: int) -> None:
 def _require_edit(current_user: User) -> None:
     if not can_edit_inventory(current_user):
         raise PermissionDeniedError("Inventory edit permission required")
+
+
+def _validate_asset_type_key(db: Session, asset_type_key: str) -> None:
+    from app.modules.common.services.asset_type_code import get_valid_type_keys
+
+    valid = get_valid_type_keys(db)
+    if asset_type_key not in valid:
+        raise NotFoundError(f"유효하지 않은 자산유형: {asset_type_key}")
 
 
 def _ensure_vendor_name_unique(

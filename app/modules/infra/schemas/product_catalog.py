@@ -17,6 +17,7 @@ class ProductCatalogCreate(BaseModel):
     eosl_date: date | None = None
     eosl_note: str | None = None
     reference_url: str | None = None
+    asset_type_key: str | None = None
 
 
 class ProductCatalogUpdate(BaseModel):
@@ -28,6 +29,7 @@ class ProductCatalogUpdate(BaseModel):
     eosl_date: date | None = None
     eosl_note: str | None = None
     reference_url: str | None = None
+    asset_type_key: str | None = None
 
 
 class ProductCatalogRead(BaseModel):
@@ -42,6 +44,8 @@ class ProductCatalogRead(BaseModel):
     eosl_date: date | None
     eosl_note: str | None
     reference_url: str | None
+    asset_type_key: str | None
+    is_placeholder: bool
     created_at: datetime
     updated_at: datetime
 
