@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class IpSubnetCreate(BaseModel):
-    customer_id: int
+    partner_id: int
     name: str
     subnet: str
     role: str = "service"
@@ -44,7 +44,7 @@ class IpSubnetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    customer_id: int
+    partner_id: int
     name: str
     subnet: str
     role: str

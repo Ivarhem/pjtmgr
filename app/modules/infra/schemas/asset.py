@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AssetCreate(BaseModel):
-    customer_id: int
+    partner_id: int
     asset_code: str | None = None
     asset_name: str
     asset_type: str
@@ -55,7 +55,7 @@ class AssetCreate(BaseModel):
 
 
 class AssetUpdate(BaseModel):
-    customer_id: int | None = None
+    partner_id: int | None = None
     asset_code: str | None = None
     asset_name: str | None = None
     asset_type: str | None = None
@@ -107,7 +107,7 @@ class AssetRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    customer_id: int
+    partner_id: int
     asset_code: str | None = None
     asset_name: str
     asset_type: str

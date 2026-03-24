@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class PortMapCreate(BaseModel):
-    customer_id: int
+    partner_id: int
     src_asset_id: int | None = None
     src_ip: str | None = None
     dst_asset_id: int | None = None
@@ -116,7 +116,7 @@ class PortMapRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    customer_id: int
+    partner_id: int
     src_asset_id: int | None
     src_ip: str | None
     dst_asset_id: int | None
