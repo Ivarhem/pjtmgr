@@ -59,18 +59,18 @@ let gridApi;
 let _listInitialized = false;
 
 async function loadPeriods() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { gridApi.setGridOption("rowData", []); return; }
   try {
-    const data = await apiFetch("/api/v1/contract-periods?customer_id=" + cid);
+    const data = await apiFetch("/api/v1/contract-periods?partner_id=" + cid);
     gridApi.setGridOption("rowData", data);
   } catch (err) { showToast(err.message, "error"); }
 }
 
 async function loadDashboard() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   try {
-    const qs = cid ? "?customer_id=" + cid : "";
+    const qs = cid ? "?partner_id=" + cid : "";
     const [summary, unsubmitted] = await Promise.all([
       apiFetch("/api/v1/infra-dashboard/summary" + qs),
       apiFetch("/api/v1/infra-dashboard/unsubmitted" + qs),
@@ -262,9 +262,9 @@ async function loadPeriodInfo(periodId) {
 }
 
 async function loadSummaryCards(periodId) {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   try {
-    const assets = await apiFetch("/api/v1/assets?customer_id=" + cid + "&contract_period_id=" + periodId);
+    const assets = await apiFetch("/api/v1/assets?partner_id=" + cid + "&contract_period_id=" + periodId);
     document.getElementById("card-asset-count").textContent =
       Array.isArray(assets) ? assets.length + " 대" : "-";
   } catch { document.getElementById("card-asset-count").textContent = "-"; }
@@ -516,7 +516,7 @@ function resetForm() {
 }
 
 function openCreateModal() {
-  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetForm();
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById("start-date").value = today;
@@ -540,7 +540,7 @@ function openEditModal(period) {
 }
 
 async function savePeriod() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const periodId = document.getElementById("project-id").value;
   const payload = {
@@ -554,7 +554,7 @@ async function savePeriod() {
       await apiFetch("/api/v1/contract-periods/" + periodId, { method: "PATCH", body: payload });
       showToast("사업기간이 수정되었습니다.");
     } else {
-      payload.customer_id = cid;
+      payload.partner_id = cid;
       await apiFetch("/api/v1/contract-periods", { method: "POST", body: payload });
       showToast("사업기간이 등록되었습니다.");
     }

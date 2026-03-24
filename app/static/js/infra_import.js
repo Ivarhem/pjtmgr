@@ -70,7 +70,7 @@
 
     const fd = new FormData();
     fd.append('file', _selectedFile);
-    fd.append('customer_id', getCtxCustomerId());
+    fd.append('partner_id', getCtxPartnerId());
 
     const btn = document.getElementById('btn-preview');
     btn.disabled = true;
@@ -191,7 +191,7 @@
 
     const fd = new FormData();
     fd.append('file', _selectedFile);
-    fd.append('customer_id', getCtxCustomerId());
+    fd.append('partner_id', getCtxPartnerId());
     fd.append('on_duplicate', onDuplicate);
 
     const btn = document.getElementById('btn-confirm');

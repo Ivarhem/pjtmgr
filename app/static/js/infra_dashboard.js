@@ -24,7 +24,7 @@ const projectColDefs = [
 ];
 
 const ncColDefs = [
-  { field: "customer_name", headerName: "고객사", width: 130 },
+  { field: "partner_name", headerName: "고객사", width: 130 },
   { field: "asset_id", headerName: "자산 ID", width: 90 },
   { field: "checked_by", headerName: "확인자", width: 120 },
   { field: "checked_date", headerName: "확인일", width: 110, valueFormatter: p => fmtDate(p.value) },
@@ -34,19 +34,19 @@ const ncColDefs = [
 let projectGridApi, ncGridApi;
 
 async function loadDashboard() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   try {
     const summaryUrl = cid
-      ? "/api/v1/infra-dashboard/summary?customer_id=" + cid
+      ? "/api/v1/infra-dashboard/summary?partner_id=" + cid
       : "/api/v1/infra-dashboard/summary";
     const ncUrl = cid
-      ? "/api/v1/infra-dashboard/non-compliant?customer_id=" + cid
+      ? "/api/v1/infra-dashboard/non-compliant?partner_id=" + cid
       : "/api/v1/infra-dashboard/non-compliant";
 
     const [summary, unsubmitted, nonCompliant] = await Promise.all([
       apiFetch(summaryUrl),
       apiFetch(cid
-        ? "/api/v1/infra-dashboard/unsubmitted?customer_id=" + cid
+        ? "/api/v1/infra-dashboard/unsubmitted?partner_id=" + cid
         : "/api/v1/infra-dashboard/unsubmitted"),
       apiFetch(ncUrl),
     ]);

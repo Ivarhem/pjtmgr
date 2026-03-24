@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const gridOptions = buildContractGridOptions({
     columnDefs,
     backPath: '/contracts',
-    customerInputId: 'filter-customer-text',
+    partnerInputId: 'filter-partner-text',
     nameInputId: 'filter-name-text',
     onColChange: () => saveColState(gridApi, COL_STATE_KEY),
   });
@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const me = await fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null);
   currentMe = me;
   await initDropdownFilters(me);
-  loadCustomerDatalist();
-  initEndCustomerPicker();
+  loadPartnerDatalist();
+  initEndPartnerPicker();
 
   const el = document.getElementById('grid-contracts');
   gridApi = agGrid.createGrid(el, gridOptions);
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initColChooser(gridApi, columnDefs, COL_STATE_KEY, () => saveColState(gridApi, COL_STATE_KEY));
 
   // 텍스트 필터: Enter 시 즉시 필터 적용
-  initTextFilter('filter-customer-text', () => { loadData(); });
+  initTextFilter('filter-partner-text', () => { loadData(); });
   initTextFilter('filter-name-text', () => { loadData(); });
   document.getElementById('btn-filter').addEventListener('click', () => { loadData(); });
   document.getElementById('btn-filter-reset').addEventListener('click', () => {

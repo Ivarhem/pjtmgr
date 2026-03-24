@@ -355,24 +355,24 @@ function initTextFilter(inputId, onEnterFn) {
 
 // ── 고객사/프로젝트 컨텍스트 셀렉터 ──────────────────────────────────
 
-let _ctxCustomerId = null;
+let _ctxPartnerId = null;
 let _ctxProjectId = null;
 
 /** 현재 선택된 고객사 ID */
-function getCtxCustomerId() { return _ctxCustomerId; }
+function getCtxPartnerId() { return _ctxPartnerId; }
 /** 현재 선택된 프로젝트 ID (null = 전체) */
 function getCtxProjectId() { return _ctxProjectId; }
 
 /** topbar 고객사/프로젝트 셀렉터 초기화 (자동완성 방식) */
 async function initContextSelectors() {
-  const custInput = document.getElementById('ctx-customer');
-  const custDrop = document.getElementById('ctx-customer-dropdown');
+  const custInput = document.getElementById('ctx-partner');
+  const custDrop = document.getElementById('ctx-partner-dropdown');
   const projDisplay = document.getElementById('ctx-project-display');
   const projText = document.getElementById('ctx-project-text');
   const projClear = document.getElementById('ctx-project-clear');
   if (!custInput) return;
 
-  let allCustomers = [];
+  let allPartners = [];
   let allProjects = [];
 
   // ── 드롭다운 헬퍼 (DOM API only, no innerHTML) ──
@@ -421,29 +421,29 @@ async function initContextSelectors() {
   }
 
   // ── 고객사 ──
-  allCustomers = (await apiFetch('/api/v1/customers')).map(c => ({
-    id: c.id, code: c.customer_code, label: c.name,
+  allPartners = (await apiFetch('/api/v1/partners')).map(c => ({
+    id: c.id, code: c.partner_code, label: c.name,
   }));
 
-  function selectCustomer(item) {
-    _ctxCustomerId = item ? item.id : null;
+  function selectPartner(item) {
+    _ctxPartnerId = item ? item.id : null;
     custInput.value = item ? item.label : '';
     custInput.title = item ? (item.code + ' ' + item.label) : '';
     _ctxProjectId = null;
     _updateProjectDisplay(null);
     // Pin 저장
-    apiFetch('/api/v1/preferences/infra.pinned_customer_id', {
+    apiFetch('/api/v1/preferences/infra.pinned_partner_id', {
       method: 'PATCH', body: { value: item ? String(item.id) : '' },
     }).catch(() => {});
     localStorage.removeItem('infra.last_period_id');
     loadPeriods(item ? item.id : null);
-    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: null } }));
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: null } }));
   }
 
   // ── 고객사 신규등록 모달 ──
-  const custModal = document.getElementById('ctx-modal-customer');
-  function openNewCustomerModal() {
-    const nameInput = document.getElementById('ctx-new-customer-name');
+  const custModal = document.getElementById('ctx-modal-partner');
+  function openNewPartnerModal() {
+    const nameInput = document.getElementById('ctx-new-partner-name');
     nameInput.value = custInput.value.trim();
     custModal.showModal();
     nameInput.focus();
@@ -451,21 +451,21 @@ async function initContextSelectors() {
   if (custModal) {
     document.getElementById('ctx-btn-cust-cancel').addEventListener('click', () => custModal.close());
     document.getElementById('ctx-btn-cust-submit').addEventListener('click', async () => {
-      const name = document.getElementById('ctx-new-customer-name').value.trim();
+      const name = document.getElementById('ctx-new-partner-name').value.trim();
       if (!name) { showToast('고객사명을 입력하세요.', 'warning'); return; }
       try {
-        const created = await apiFetch('/api/v1/customers', { method: 'POST', body: { name } });
+        const created = await apiFetch('/api/v1/partners', { method: 'POST', body: { name } });
         custModal.close();
-        const newItem = { id: created.id, code: created.customer_code, label: created.name };
-        allCustomers.push(newItem);
-        selectCustomer(newItem);
+        const newItem = { id: created.id, code: created.partner_code, label: created.name };
+        allPartners.push(newItem);
+        selectPartner(newItem);
         showToast('"' + name + '" 고객사가 등록되었습니다.');
       } catch (err) { showToast(err.message || '등록에 실패했습니다.', 'error'); }
     });
   }
 
-  custInput.addEventListener('focus', () => filterAndShow(custInput, custDrop, allCustomers, selectCustomer, openNewCustomerModal));
-  custInput.addEventListener('input', () => filterAndShow(custInput, custDrop, allCustomers, selectCustomer, openNewCustomerModal));
+  custInput.addEventListener('focus', () => filterAndShow(custInput, custDrop, allPartners, selectPartner, openNewPartnerModal));
+  custInput.addEventListener('input', () => filterAndShow(custInput, custDrop, allPartners, selectPartner, openNewPartnerModal));
   custInput.addEventListener('blur', () => setTimeout(() => setElementHidden(custDrop, true), 150));
   custInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') setElementHidden(custDrop, true);
@@ -477,11 +477,11 @@ async function initContextSelectors() {
   });
 
   // ── 사업기간 (Period) ──
-  async function loadPeriods(customerId) {
+  async function loadPeriods(partnerId) {
     allProjects = [];
-    if (!customerId) return;
+    if (!partnerId) return;
     try {
-      const periods = await apiFetch('/api/v1/contract-periods?customer_id=' + customerId);
+      const periods = await apiFetch('/api/v1/contract-periods?partner_id=' + partnerId);
       allProjects = periods.map(p => ({
         id: p.id, code: p.contract_code || '', label: p.contract_name + ' (' + p.period_label + ')',
       }));
@@ -514,7 +514,7 @@ async function initContextSelectors() {
     } else {
       localStorage.removeItem('infra.last_period_id');
     }
-    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { customerId: _ctxCustomerId, projectId: _ctxProjectId } }));
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: _ctxProjectId } }));
   }
 
   /** 프로젝트 선택 해제 (전체 목록으로 복귀) */
@@ -531,13 +531,13 @@ async function initContextSelectors() {
 
   // ── 초기 복원 ──
   try {
-    const prefRes = await fetch('/api/v1/preferences/infra.pinned_customer_id');
+    const prefRes = await fetch('/api/v1/preferences/infra.pinned_partner_id');
     if (prefRes.ok) {
       const pref = await prefRes.json();
       if (pref.value) {
-        const saved = allCustomers.find(c => String(c.id) === String(pref.value));
+        const saved = allPartners.find(c => String(c.id) === String(pref.value));
         if (saved) {
-          _ctxCustomerId = saved.id;
+          _ctxPartnerId = saved.id;
           custInput.value = saved.label;
           custInput.title = saved.code + ' ' + saved.label;
           await loadProjects(saved.id);
@@ -549,7 +549,7 @@ async function initContextSelectors() {
 
 // Legacy compat — 기존 코드에서 참조할 수 있는 함수
 async function getPinnedProjectId() { return _ctxProjectId ? String(_ctxProjectId) : null; }
-async function getPinnedCustomerId() { return _ctxCustomerId ? String(_ctxCustomerId) : null; }
+async function getPinnedPartnerId() { return _ctxPartnerId ? String(_ctxPartnerId) : null; }
 
 // ── 글로벌 프로젝트 필터 (자산 탭 공유) ──────────────────────────────
 const _PROJECT_FILTER_KEY = "infra_project_filter";
@@ -572,20 +572,20 @@ function isProjectFilterActive() {
 
 // ── END 고객 피커 (필터링 + 신규 등록) ──────────────────────────────
 
-let _pickerCustomers = [];
+let _pickerPartners = [];
 
 /** 거래처 목록을 가져와 캐시 */
-async function _loadPickerCustomers() {
-  const res = await fetch('/api/v1/customers');
-  _pickerCustomers = res.ok ? await res.json() : [];
-  return _pickerCustomers;
+async function _loadPickerPartners() {
+  const res = await fetch('/api/v1/partners');
+  _pickerPartners = res.ok ? await res.json() : [];
+  return _pickerPartners;
 }
 
 /** 유사 거래처 검색 */
-function _findSimilarCustomers(keyword) {
+function _findSimilarPartners(keyword) {
   if (!keyword || keyword.length < 2) return [];
   const kw = keyword.toLowerCase().replace(/\s/g, '');
-  return _pickerCustomers.filter(c => {
+  return _pickerPartners.filter(c => {
     const cn = c.name.toLowerCase().replace(/\s/g, '');
     if (cn === kw) return false;
     if (cn.includes(kw) || kw.includes(cn)) return true;
@@ -598,14 +598,14 @@ function _findSimilarCustomers(keyword) {
 function _renderPickerDropdown(input, dropdown, hiddenInput) {
   const keyword = input.value.trim().toLowerCase();
   const filtered = keyword
-    ? _pickerCustomers.filter(c => c.name.toLowerCase().includes(keyword))
-    : _pickerCustomers;
+    ? _pickerPartners.filter(c => c.name.toLowerCase().includes(keyword))
+    : _pickerPartners;
   const limited = filtered.slice(0, 50);
 
   let html = `<div class="cp-new">+ 신규 거래처 등록</div>`;
 
-  if (keyword && !_pickerCustomers.find(c => c.name.toLowerCase() === keyword)) {
-    const similar = _findSimilarCustomers(input.value.trim());
+  if (keyword && !_pickerPartners.find(c => c.name.toLowerCase() === keyword)) {
+    const similar = _findSimilarPartners(input.value.trim());
     if (similar.length) {
       html += `<div class="cp-similar">⚠ 유사 거래처: ${similar.map(c => `<b>${c.name}</b>`).join(', ')}</div>`;
     }
@@ -635,33 +635,33 @@ function _renderPickerDropdown(input, dropdown, hiddenInput) {
   if (newBtn) {
     newBtn.addEventListener('click', () => {
       setElementHidden(dropdown, true);
-      _openNewCustomerFromAdd(input.value.trim());
+      _openNewPartnerFromAdd(input.value.trim());
     });
   }
 }
 
 /** 거래처 선택 시 사업명 자동 기입 (비어있을 때만) */
-function _prefillContractName(customerName) {
+function _prefillContractName(partnerName) {
   const nameInput = document.getElementById('add-contract-name');
   if (nameInput && !nameInput.value.trim()) {
-    nameInput.value = customerName;
+    nameInput.value = partnerName;
   }
 }
 
 /** 신규 거래처 등록 모달 열기 */
-function _openNewCustomerFromAdd(prefill) {
+function _openNewPartnerFromAdd(prefill) {
   document.getElementById('new-cust-name-from-add').value = prefill || '';
-  document.getElementById('modal-new-customer-from-add').showModal();
+  document.getElementById('modal-new-partner-from-add').showModal();
 }
 
 /** 사업 등록 모달용 거래처 피커 초기화 */
-function initEndCustomerPicker() {
-  const input = document.getElementById('add-end-customer');
-  const dropdown = document.getElementById('add-end-customer-dropdown');
-  const hiddenInput = document.getElementById('add-end-customer-id');
+function initEndPartnerPicker() {
+  const input = document.getElementById('add-end-partner');
+  const dropdown = document.getElementById('add-end-partner-dropdown');
+  const hiddenInput = document.getElementById('add-end-partner-id');
   if (!input || !dropdown || !hiddenInput) return;
 
-  _loadPickerCustomers();
+  _loadPickerPartners();
 
   input.addEventListener('input', () => {
     hiddenInput.value = '';
@@ -679,7 +679,7 @@ function initEndCustomerPicker() {
     if (e.key === 'Escape') setElementHidden(dropdown, true);
     if (e.key === 'Enter') {
       e.preventDefault();
-      const match = _pickerCustomers.find(c => c.name === input.value.trim());
+      const match = _pickerPartners.find(c => c.name === input.value.trim());
       if (match) {
         hiddenInput.value = match.id;
         setElementHidden(dropdown, true);
@@ -696,20 +696,20 @@ function initEndCustomerPicker() {
 
   // 신규 거래처 등록 모달 이벤트
   document.getElementById('btn-new-cust-cancel-add')?.addEventListener('click', () => {
-    document.getElementById('modal-new-customer-from-add').close();
+    document.getElementById('modal-new-partner-from-add').close();
   });
   document.getElementById('btn-new-cust-submit-add')?.addEventListener('click', async () => {
     const name = document.getElementById('new-cust-name-from-add').value.trim();
     if (!name) { alert('거래처명을 입력하세요.'); return; }
-    const res = await fetch('/api/v1/customers', {
+    const res = await fetch('/api/v1/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     if (res.ok) {
       const created = await res.json();
-      document.getElementById('modal-new-customer-from-add').close();
-      await _loadPickerCustomers();
+      document.getElementById('modal-new-partner-from-add').close();
+      await _loadPickerPartners();
       input.value = created.name;
       hiddenInput.value = created.id;
       _prefillContractName(created.name);
@@ -734,16 +734,16 @@ function openContractModal(contract = null) {
   const contractIdInput = document.getElementById('add-contract-id');
 
   form.reset();
-  document.getElementById('add-end-customer-id').value = '';
-  document.getElementById('add-end-customer').value = '';
+  document.getElementById('add-end-partner-id').value = '';
+  document.getElementById('add-end-partner').value = '';
   if (contract) {
     title.textContent = '사업정보 수정';
     submitBtn.textContent = '저장';
     contractIdInput.value = contract.id;
     document.getElementById('add-contract-name').value = contract.contract_name || '';
     document.getElementById('add-contract-type').value = contract.contract_type || 'MA';
-    document.getElementById('add-end-customer').value = contract.end_customer_name || '';
-    document.getElementById('add-end-customer-id').value = contract.end_customer_id || '';
+    document.getElementById('add-end-partner').value = contract.end_partner_name || '';
+    document.getElementById('add-end-partner-id').value = contract.end_partner_id || '';
   } else {
     title.textContent = '사업 등록';
     submitBtn.textContent = '등록';
@@ -753,13 +753,13 @@ function openContractModal(contract = null) {
 }
 
 /** END 고객 이름 → ID 변환 (없으면 자동 생성) */
-async function _resolveEndCustomerId(name) {
+async function _resolveEndPartnerId(name) {
   if (!name) return null;
-  const custRes = await fetch('/api/v1/customers');
+  const custRes = await fetch('/api/v1/partners');
   const custs = custRes.ok ? await custRes.json() : [];
   let cust = custs.find(c => c.name === name);
   if (!cust) {
-    const createRes = await fetch('/api/v1/customers', {
+    const createRes = await fetch('/api/v1/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
@@ -779,22 +779,22 @@ async function submitContractModal(loadDataFn, onUpdated) {
   const contractId = document.getElementById('add-contract-id').value;
   const contractName = (fd.get('contract_name') || '').trim();
   const contractType = fd.get('contract_type');
-  const endCustomerName = document.getElementById('add-end-customer').value.trim();
-  const endCustomerIdRaw = document.getElementById('add-end-customer-id').value;
+  const endPartnerName = document.getElementById('add-end-partner').value.trim();
+  const endPartnerIdRaw = document.getElementById('add-end-partner-id').value;
 
   if (!contractName) { showToast('사업명을 입력하세요.', 'error'); return; }
 
   // 거래처는 반드시 목록에서 선택해야 함
-  let endCustomerId = endCustomerIdRaw ? parseInt(endCustomerIdRaw, 10) : null;
-  if (endCustomerName && !endCustomerId) {
+  let endPartnerId = endPartnerIdRaw ? parseInt(endPartnerIdRaw, 10) : null;
+  if (endPartnerName && !endPartnerId) {
     showToast('고객사를 목록에서 선택하세요.', 'error');
-    document.getElementById('add-end-customer').focus();
+    document.getElementById('add-end-partner').focus();
     return;
   }
 
   if (contractId) {
     // 수정 모드
-    const body = { contract_name: contractName, contract_type: contractType, end_customer_id: endCustomerId };
+    const body = { contract_name: contractName, contract_type: contractType, end_partner_id: endPartnerId };
     const res = await fetch(`/api/v1/contracts/${contractId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -811,7 +811,7 @@ async function submitContractModal(loadDataFn, onUpdated) {
     }
   } else {
     // 신규 등록
-    const body = { contract_name: contractName, contract_type: contractType, end_customer_id: endCustomerId };
+    const body = { contract_name: contractName, contract_type: contractType, end_partner_id: endPartnerId };
     const res = await fetch('/api/v1/contracts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -889,7 +889,7 @@ function buildContractPeriodColumns(opts = {}) {
     { headerName: '', width: 40, checkboxSelection: true, headerCheckboxSelection: true,
       pinned: 'left', sortable: false, resizable: false },
     { field: 'period_year', headerName: getTermLabel('period_year', '귀속연도'), width: 82, pinned: 'left' },
-    { field: 'end_customer_name', headerName: getTermLabel('customer', '고객'), width: 140 },
+    { field: 'end_partner_name', headerName: getTermLabel('customer', '고객'), width: 140 },
     { field: 'contract_code', headerName: '사업코드', width: 120 },
     { field: 'contract_type', headerName: '사업유형', width: 80 },
     { field: 'contract_name', headerName: '사업명', flex: 1, minWidth: 200,
@@ -936,12 +936,12 @@ function restoreColState(gridApi, colStateKey) {
  * @param {Object} opts
  * @param {Array} opts.columnDefs
  * @param {string} opts.backPath - 뒤로가기 경로 ('/contracts' 또는 '/my-contracts')
- * @param {string} opts.customerInputId - 고객 텍스트 입력 ID
+ * @param {string} opts.partnerInputId - 고객 텍스트 입력 ID
  * @param {string} opts.nameInputId - 사업명 텍스트 입력 ID
  * @param {Function} opts.onColChange - 컬럼 변경 콜백
  */
 function buildContractGridOptions(opts) {
-  const getCustomerFilter = () => (document.getElementById(opts.customerInputId)?.value || '').trim().toLowerCase();
+  const getPartnerFilter = () => (document.getElementById(opts.partnerInputId)?.value || '').trim().toLowerCase();
   const getNameFilter = () => (document.getElementById(opts.nameInputId)?.value || '').trim().toLowerCase();
   return {
     columnDefs: opts.columnDefs,
@@ -958,11 +958,11 @@ function buildContractGridOptions(opts) {
         window.location.href = `/contracts/${e.data.id}`;
       }
     },
-    isExternalFilterPresent: () => getCustomerFilter() !== '' || getNameFilter() !== '',
+    isExternalFilterPresent: () => getPartnerFilter() !== '' || getNameFilter() !== '',
     doesExternalFilterPass: (node) => {
       const d = node.data;
-      const cf = getCustomerFilter();
-      if (cf && !(d.end_customer_name || '').toLowerCase().includes(cf)) return false;
+      const cf = getPartnerFilter();
+      if (cf && !(d.end_partner_name || '').toLowerCase().includes(cf)) return false;
       const nf = getNameFilter();
       if (nf && !(d.contract_name || '').toLowerCase().includes(nf)) return false;
       return true;
@@ -971,9 +971,9 @@ function buildContractGridOptions(opts) {
 }
 
 /** 거래처 datalist 로드 */
-function loadCustomerDatalist() {
-  fetch('/api/v1/customers').then(r => r.json()).then(custs => {
-    const dl = document.getElementById('customer-list');
+function loadPartnerDatalist() {
+  fetch('/api/v1/partners').then(r => r.json()).then(custs => {
+    const dl = document.getElementById('partner-list');
     if (dl) dl.innerHTML = custs.map(c => `<option value="${c.name}">`).join('');
   });
 }
@@ -1000,8 +1000,8 @@ function saveFilterState(storageKey) {
   const chkMy = document.getElementById('chk-my-contracts');
   if (chkMy) state.myOnly = chkMy.checked;
   // 텍스트 필터
-  const custInput = document.getElementById('filter-customer-text');
-  if (custInput) state.texts.customer = custInput.value;
+  const custInput = document.getElementById('filter-partner-text');
+  if (custInput) state.texts.partner = custInput.value;
   const nameInput = document.getElementById('filter-name-text');
   if (nameInput) state.texts.name = nameInput.value;
   localStorage.setItem(storageKey, JSON.stringify(state));
@@ -1040,9 +1040,9 @@ function restoreFilterState(storageKey) {
       chkMy.checked = state.myOnly;
     }
     // 텍스트 필터 복원
-    if (state.texts?.customer) {
-      const custInput = document.getElementById('filter-customer-text');
-      if (custInput) custInput.value = state.texts.customer;
+    if (state.texts?.partner) {
+      const custInput = document.getElementById('filter-partner-text');
+      if (custInput) custInput.value = state.texts.partner;
     }
     if (state.texts?.name) {
       const nameInput = document.getElementById('filter-name-text');
@@ -1063,7 +1063,7 @@ function resetContractFilters(loadDataFn, storageKey) {
   }
   document.querySelectorAll('.chk-drop').forEach(drop => updateDropLabel(drop));
   // 텍스트 필터 초기화
-  const custInput = document.getElementById('filter-customer-text');
+  const custInput = document.getElementById('filter-partner-text');
   if (custInput) custInput.value = '';
   const nameInput = document.getElementById('filter-name-text');
   if (nameInput) nameInput.value = '';

@@ -44,10 +44,10 @@ const ipColDefs = [
 /* ── Data Loading ── */
 
 async function loadSubnets() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { _subnets = []; renderSubnetList(); return; }
   try {
-    _subnets = await apiFetch("/api/v1/ip-subnets?customer_id=" + cid);
+    _subnets = await apiFetch("/api/v1/ip-subnets?partner_id=" + cid);
   } catch { _subnets = []; }
   renderSubnetList();
 }
@@ -105,10 +105,10 @@ function showSubnetDetail(subnet) {
 }
 
 async function loadIps() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { ipGridApi.setGridOption("rowData", []); return; }
   try {
-    const data = await apiFetch("/api/v1/ip-inventory?customer_id=" + cid);
+    const data = await apiFetch("/api/v1/ip-inventory?partner_id=" + cid);
     if (_selectedSubnet) {
       ipGridApi.setGridOption("rowData", data.filter(ip => ip.ip_subnet_id === _selectedSubnet.id));
     } else {
@@ -118,12 +118,12 @@ async function loadIps() {
 }
 
 async function loadDropdowns() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) return;
   try {
     const [assets, subnets] = await Promise.all([
-      apiFetch("/api/v1/assets?customer_id=" + cid),
-      apiFetch("/api/v1/ip-subnets?customer_id=" + cid),
+      apiFetch("/api/v1/assets?partner_id=" + cid),
+      apiFetch("/api/v1/ip-subnets?partner_id=" + cid),
     ]);
 
     const assetSelect = document.getElementById("ip-asset-id");
@@ -169,7 +169,7 @@ function resetSubnetForm() {
 }
 
 function openCreateSubnet() {
-  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetSubnetForm();
   document.getElementById("modal-subnet-title").textContent = "대역 등록";
   document.getElementById("btn-save-subnet").textContent = "등록";
@@ -200,11 +200,11 @@ function openEditSubnet(subnet) {
 }
 
 async function saveSubnet() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const subnetId = document.getElementById("subnet-id").value;
   const payload = {
-    customer_id: cid,
+    partner_id: cid,
     name: document.getElementById("subnet-name").value,
     subnet: document.getElementById("subnet-cidr").value,
     role: document.getElementById("subnet-role").value,
@@ -263,7 +263,7 @@ function resetIpForm() {
 }
 
 function openCreateIp() {
-  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetIpForm();
   document.getElementById("modal-ip-title").textContent = "IP 등록";
   document.getElementById("btn-save-ip").textContent = "등록";

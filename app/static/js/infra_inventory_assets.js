@@ -169,7 +169,7 @@ document.getElementById("btn-asset-import-run")?.addEventListener("click", async
   if (!file) { showToast("파일을 선택하세요.", "warning"); return; }
   const fd = new FormData();
   fd.append("file", file);
-  fd.append("customer_id", getCtxCustomerId());
+  fd.append("partner_id", getCtxPartnerId());
   fd.append("domain", "inventory");
   fd.append("on_duplicate", document.getElementById("asset-import-dup").value);
   const btn = document.getElementById("btn-asset-import-run");

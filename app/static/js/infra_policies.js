@@ -7,7 +7,7 @@ const ASSIGNMENT_STATUS_MAP = {
 
 const assignColDefs = [
   { field: "policy_definition_id", headerName: "정책 ID", width: 90 },
-  { field: "customer_id", headerName: "고객사 ID", width: 100 },
+  { field: "partner_id", headerName: "고객사 ID", width: 100 },
   { field: "asset_id", headerName: "자산 ID", width: 90 },
   {
     field: "status", headerName: "상태", width: 100,
@@ -44,9 +44,9 @@ let assignGridApi;
 /* ── Data Loading ── */
 
 async function loadAssignments() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { assignGridApi.setGridOption("rowData", []); return; }
-  let url = "/api/v1/policy-assignments?customer_id=" + cid;
+  let url = "/api/v1/policy-assignments?partner_id=" + cid;
   const pid = getCtxProjectId();
   if (pid) url += "&project_id=" + pid;
   const statusFilter = document.getElementById("filter-status").value;
@@ -58,11 +58,11 @@ async function loadAssignments() {
 }
 
 async function loadDropdowns() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) return;
   try {
     const [assets, policies] = await Promise.all([
-      apiFetch("/api/v1/assets?customer_id=" + cid),
+      apiFetch("/api/v1/assets?partner_id=" + cid),
       apiFetch("/api/v1/policies"),
     ]);
 
@@ -108,7 +108,7 @@ function resetAssignmentForm() {
 }
 
 function openCreateAssignment() {
-  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetAssignmentForm();
   document.getElementById("modal-assignment-title").textContent = "정책 적용 등록";
   document.getElementById("btn-save-assignment").textContent = "등록";
@@ -130,12 +130,12 @@ function openEditAssignment(assign) {
 }
 
 async function saveAssignment() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const assignId = document.getElementById("assignment-id").value;
   const assetVal = document.getElementById("assignment-asset-id").value;
   const payload = {
-    customer_id: cid,
+    partner_id: cid,
     policy_definition_id: Number(document.getElementById("assignment-policy-id").value),
     asset_id: assetVal ? Number(assetVal) : null,
     status: document.getElementById("assignment-status").value,

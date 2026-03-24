@@ -236,7 +236,7 @@ function initFaGrid() {
       { field: 'contract_type', headerName: '사업유형', width: 75 },
       { field: 'owner_name', headerName: '담당', width: 75 },
       { field: 'department', headerName: '부서', width: 85 },
-      { field: 'end_customer_name', headerName: getTermLabel('customer', '고객'), width: 130 },
+      { field: 'end_partner_name', headerName: getTermLabel('customer', '고객'), width: 130 },
       { field: 'stage', headerName: '단계', width: 90 },
       { field: 'forecast_revenue', headerName: 'Forecast', width: 120, valueFormatter: fmtNumber,
         cellClass: 'cell-number', type: 'numericColumn' },
@@ -294,7 +294,7 @@ function initArGrid() {
       { field: 'contract_type', headerName: '사업유형', width: 75 },
       { field: 'owner_name', headerName: '담당', width: 75 },
       { field: 'department', headerName: '부서', width: 85 },
-      { field: 'end_customer_name', headerName: getTermLabel('customer', '고객'), width: 130 },
+      { field: 'end_partner_name', headerName: getTermLabel('customer', '고객'), width: 130 },
       { field: 'actual_revenue', headerName: '매출 확정', width: 120, valueFormatter: fmtNumber,
         cellClass: 'cell-number', type: 'numericColumn' },
       { field: 'receipt', headerName: '입금', width: 120, valueFormatter: fmtNumber,
@@ -407,7 +407,7 @@ function renderPnl(data) {
         return `<td class="cell-number">${fmtCell(v)}</td>`;
       }).join('');
       return `<tr>
-        <td>${r.customer_name}</td>
+        <td>${r.partner_name}</td>
         <td>${r.contact_name || ''}</td>
         <td>${r.contact_phone || ''}</td>
         <td>${r.contact_email || ''}</td>

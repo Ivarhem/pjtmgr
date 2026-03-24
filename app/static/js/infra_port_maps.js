@@ -48,9 +48,9 @@ let gridApi;
 /* ── Data Loading ── */
 
 async function loadPortMaps() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { gridApi.setGridOption("rowData", []); return; }
-  let url = "/api/v1/port-maps?customer_id=" + cid;
+  let url = "/api/v1/port-maps?partner_id=" + cid;
   const pid = getCtxProjectId();
   if (pid && isProjectFilterActive()) url += "&project_id=" + pid;
   try {
@@ -111,7 +111,7 @@ function resetForm() {
 }
 
 function openCreateModal() {
-  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetForm();
   document.getElementById("modal-portmap-title").textContent = "배선 등록";
   document.getElementById("btn-save-portmap").textContent = "등록";
@@ -133,11 +133,11 @@ function openEditModal(pm) {
 }
 
 async function savePortMap() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const pmId = document.getElementById("portmap-id").value;
   const payload = {
-    customer_id: cid,
+    partner_id: cid,
     protocol: null, port: null, src_asset_id: null, dst_asset_id: null,
   };
   TEXT_FIELDS.forEach(([elId, key, type]) => {

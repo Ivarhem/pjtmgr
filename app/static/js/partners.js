@@ -5,9 +5,9 @@ let contractsGridApi;
 let masterContactGridApi;
 let financialsGridApi;
 let receiptsGridApi;
-let selectedCustomerId = null;
-let customerFilterTags = [];
-let allCustomers = [];
+let selectedPartnerId = null;
+let partnerFilterTags = [];
+let allPartners = [];
 let relatedContracts = [];   // 관련 사업 목록 (담당자 추가 모달용)
 let masterContacts = []; // 마스터 담당자 (폴백용 + 사업별 담당자 선택용)
 let loadedTabs = {};     // 탭별 로드 상태
@@ -16,7 +16,7 @@ let contractsData = null;  // 관련 사업 API 응답 캐시
 
 // ── 거래처 목록 그리드 (좌측) ──────────────────────────────────
 const listColDefs = [
-  { field: 'customer_code', headerName: '코드', width: 80, sort: 'asc' },
+  { field: 'partner_code', headerName: '코드', width: 80, sort: 'asc' },
   { field: 'name', headerName: '거래처명', flex: 1, minWidth: 120,
     cellRenderer: (params) => {
       const d = params.data;
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadTermLabels();
   applyTermLabels();
 
-  const el = document.getElementById('grid-customers');
+  const el = document.getElementById('grid-partners');
   gridApi = agGrid.createGrid(el, {
     columnDefs: listColDefs,
     rowData: [],
@@ -44,16 +44,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     ensureDomOrder: true,
     rowSelection: 'single',
     onRowClicked: (e) => {
-      if (e.data?.id) selectCustomer(e.data.id);
+      if (e.data?.id) selectPartner(e.data.id);
     },
-    isExternalFilterPresent: () => customerFilterTags.length > 0,
+    isExternalFilterPresent: () => partnerFilterTags.length > 0,
     doesExternalFilterPass: (node) => {
       const name = (node.data.name || '').toLowerCase();
-      return customerFilterTags.some(t => name.includes(t.toLowerCase()));
+      return partnerFilterTags.some(t => name.includes(t.toLowerCase()));
     },
   });
   loadData(true);
-  initTagInput('customer-tag-input', 'customer-tag-list', customerFilterTags, () => gridApi.onFilterChanged());
+  initTagInput('partner-tag-input', 'partner-tag-list', partnerFilterTags, () => gridApi.onFilterChanged());
   _initSplitter();
 
   // 저장된 필터 상태 복원
@@ -70,18 +70,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // "내 거래처만" 토글
-  document.getElementById('chk-my-customers').addEventListener('change', () => loadData());
+  document.getElementById('chk-my-partners').addEventListener('change', () => loadData());
 
   // 신규 거래처
   document.getElementById('btn-add').addEventListener('click', () => {
-    document.getElementById('new-customer-name').value = '';
+    document.getElementById('new-partner-name').value = '';
     document.getElementById('modal-add').showModal();
   });
   document.getElementById('btn-cancel').addEventListener('click', () => document.getElementById('modal-add').close());
   document.getElementById('btn-submit').addEventListener('click', submitNew);
 
   // 거래처 삭제
-  document.getElementById('btn-delete-customer').addEventListener('click', deleteCustomer);
+  document.getElementById('btn-delete-partner').addEventListener('click', deletePartner);
 
   // 마스터 담당자 등록
   document.getElementById('btn-add-master-contact').addEventListener('click', openAddMasterContact);
@@ -146,7 +146,7 @@ function switchTab(tabName) {
   document.getElementById('tab-' + tabName)?.classList.add('active');
   localStorage.setItem(LS_ACTIVE_TAB, tabName);
 
-  if (!loadedTabs[tabName] && selectedCustomerId) {
+  if (!loadedTabs[tabName] && selectedPartnerId) {
     loadedTabs[tabName] = true;
     loadTabContent(tabName);
   }
@@ -164,33 +164,33 @@ function loadTabContent(tabName) {
 // ── 데이터 로드 ───────────────────────────────────────────────
 async function loadData(restoreLast = false) {
   const params = new URLSearchParams();
-  const chkMy = document.getElementById('chk-my-customers');
+  const chkMy = document.getElementById('chk-my-partners');
   if (chkMy && chkMy.checked) params.set('my_only', 'true');
-  const res = await fetch('/api/v1/customers?' + params.toString());
-  allCustomers = await res.json();
-  gridApi.setGridOption('rowData', allCustomers);
+  const res = await fetch('/api/v1/partners?' + params.toString());
+  allPartners = await res.json();
+  gridApi.setGridOption('rowData', allPartners);
   gridApi.onFilterChanged();
 
   // 초기 로드 시 서버에 저장된 마지막 선택 거래처 복원
-  if (restoreLast && !selectedCustomerId) {
+  if (restoreLast && !selectedPartnerId) {
     try {
-      const prefRes = await fetch('/api/v1/preferences/last_selected_customer');
+      const prefRes = await fetch('/api/v1/preferences/last_selected_partner');
       const pref = await prefRes.json();
       if (pref.value) {
         const lastId = parseInt(pref.value, 10);
-        if (allCustomers.find(d => d.id === lastId)) {
-          selectedCustomerId = lastId;
+        if (allPartners.find(d => d.id === lastId)) {
+          selectedPartnerId = lastId;
         }
       }
     } catch { /* ignore */ }
   }
 
-  if (selectedCustomerId) {
-    const row = allCustomers.find(d => d.id === selectedCustomerId);
+  if (selectedPartnerId) {
+    const row = allPartners.find(d => d.id === selectedPartnerId);
     if (row) {
-      loadDetail(selectedCustomerId);
+      loadDetail(selectedPartnerId);
       gridApi.forEachNode(node => {
-        if (node.data.id === selectedCustomerId) node.setSelected(true);
+        if (node.data.id === selectedPartnerId) node.setSelected(true);
       });
     } else {
       hideDetail();
@@ -199,18 +199,18 @@ async function loadData(restoreLast = false) {
 }
 
 // ── 거래처 선택 ───────────────────────────────────────────────
-function selectCustomer(customerId) {
-  selectedCustomerId = customerId;
-  loadDetail(customerId);
-  fetch('/api/v1/preferences/last_selected_customer', {
+function selectPartner(partnerId) {
+  selectedPartnerId = partnerId;
+  loadDetail(partnerId);
+  fetch('/api/v1/preferences/last_selected_partner', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: String(customerId) }),
+    body: JSON.stringify({ value: String(partnerId) }),
   }).catch(() => {});
 }
 
-async function loadDetail(customerId) {
-  const cust = allCustomers.find(d => d.id === customerId);
+async function loadDetail(partnerId) {
+  const cust = allPartners.find(d => d.id === partnerId);
   if (!cust) return;
 
   document.getElementById('detail-empty').classList.add('is-hidden');
@@ -218,7 +218,7 @@ async function loadDetail(customerId) {
 
   // 기본정보
   document.getElementById('detail-name').textContent = cust.name;
-  renderCustomerInfo(cust);
+  renderPartnerInfo(cust);
 
   // 탭 상태 리셋 — 첫 탭(사업현황) 로드
   loadedTabs = {};
@@ -228,7 +228,7 @@ async function loadDetail(customerId) {
   loadTabContent(activeTab);
 }
 
-function renderCustomerInfo(cust) {
+function renderPartnerInfo(cust) {
   const card = document.getElementById('cust-info-card');
   card.textContent = '';
 
@@ -252,7 +252,7 @@ function renderCustomerInfo(cust) {
   const editBtn = document.createElement('button');
   editBtn.className = 'btn btn-secondary btn-sm';
   editBtn.textContent = '수정';
-  editBtn.onclick = openEditCustomerInfo;
+  editBtn.onclick = openEditPartnerInfo;
   btnItem.appendChild(editBtn);
 
   viewRow.append(bizItem, noteItem, btnItem);
@@ -282,7 +282,7 @@ function renderCustomerInfo(cust) {
   const cancelBtn = document.createElement('button');
   cancelBtn.className = 'btn btn-secondary btn-sm';
   cancelBtn.textContent = '취소';
-  cancelBtn.onclick = cancelEditCustomerInfo;
+  cancelBtn.onclick = cancelEditPartnerInfo;
   const saveBtn = document.createElement('button');
   saveBtn.id = 'btn-save-info';
   saveBtn.className = 'btn btn-primary btn-sm';
@@ -311,18 +311,18 @@ function _createEditField(label, inputId, value, extraClass) {
   return wrap;
 }
 
-function openEditCustomerInfo() {
+function openEditPartnerInfo() {
   document.getElementById('cust-info-view').classList.add('is-hidden');
   document.getElementById('cust-info-edit').classList.remove('is-hidden');
 }
 
-function cancelEditCustomerInfo() {
-  const cust = allCustomers.find(d => d.id === selectedCustomerId);
-  if (cust) renderCustomerInfo(cust);
+function cancelEditPartnerInfo() {
+  const cust = allPartners.find(d => d.id === selectedPartnerId);
+  if (cust) renderPartnerInfo(cust);
 }
 
 function hideDetail() {
-  selectedCustomerId = null;
+  selectedPartnerId = null;
   document.getElementById('detail-empty').classList.remove('is-hidden');
   document.getElementById('detail-content').classList.add('is-hidden');
 }
@@ -331,8 +331,8 @@ function hideDetail() {
 // 사업현황 탭
 // ══════════════════════════════════════════════════════════════
 async function loadContractsTab() {
-  if (!selectedCustomerId) return;
-  const res = await fetch(`/api/v1/customers/${selectedCustomerId}/contracts`);
+  if (!selectedPartnerId) return;
+  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/contracts`);
   if (!res.ok) { console.error('contracts API error', res.status); return; }
   contractsData = await res.json();
   relatedContracts = contractsData.contracts || [];
@@ -382,7 +382,7 @@ function renderContractsGrid(contracts) {
     { field: 'contract_name', headerName: '사업명', minWidth: 140,
       cellClass: 'cell-link' },
     { field: 'period_label', headerName: '기간', width: 60 },
-    { field: 'end_customer_name', headerName: 'END고객', width: 110 },
+    { field: 'end_partner_name', headerName: 'END고객', width: 110 },
     { field: 'contract_type', headerName: '유형', width: 70 },
     { field: 'stage', headerName: '단계', width: 90,
       cellRenderer: (p) => {
@@ -453,10 +453,10 @@ function renderContractsGrid(contracts) {
 // 담당자 탭
 // ══════════════════════════════════════════════════════════════
 async function loadContactsTab() {
-  if (!selectedCustomerId) return;
+  if (!selectedPartnerId) return;
   const [mcRes, dcRes] = await Promise.all([
-    fetch(`/api/v1/customers/${selectedCustomerId}/contacts`),
-    fetch(`/api/v1/customers/${selectedCustomerId}/contract-contacts-pivoted`),
+    fetch(`/api/v1/partners/${selectedPartnerId}/contacts`),
+    fetch(`/api/v1/partners/${selectedPartnerId}/contract-contacts-pivoted`),
   ]);
   masterContacts = await mcRes.json();
   const contractContacts = await dcRes.json();
@@ -665,7 +665,7 @@ async function saveAllContractContacts() {
           const res = await fetch(`/api/v1/contract-contacts/${existingId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customer_contact_id: pendingCcId, contact_type: roleType }),
+            body: JSON.stringify({ partner_contact_id: pendingCcId, contact_type: roleType }),
           });
           if (!res.ok) errors.push(`${row.contract_name} ${roleType} 수정 실패`);
         } else if (pendingCcId && !existingId) {
@@ -674,8 +674,8 @@ async function saveAllContractContacts() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              customer_id: selectedCustomerId,
-              customer_contact_id: pendingCcId,
+              partner_id: selectedPartnerId,
+              partner_contact_id: pendingCcId,
               contact_type: roleType,
               rank: '정',
             }),
@@ -702,8 +702,8 @@ async function saveAllContractContacts() {
 // 매출·매입 탭
 // ══════════════════════════════════════════════════════════════
 async function loadFinancialsTab() {
-  if (!selectedCustomerId) return;
-  const res = await fetch(`/api/v1/customers/${selectedCustomerId}/financials`);
+  if (!selectedPartnerId) return;
+  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/financials`);
   if (!res.ok) { console.error('financials API error', res.status); return; }
   const data = await res.json();
 
@@ -859,8 +859,8 @@ function renderFinancialsGrid(lines) {
 // 입금 탭
 // ══════════════════════════════════════════════════════════════
 async function loadReceiptsTab() {
-  if (!selectedCustomerId) return;
-  const res = await fetch(`/api/v1/customers/${selectedCustomerId}/receipts`);
+  if (!selectedPartnerId) return;
+  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/receipts`);
   if (!res.ok) { console.error('receipts API error', res.status); return; }
   const data = await res.json();
 
@@ -984,9 +984,9 @@ function renderReceiptsGrid(receipts) {
 
 // ── API 호출: 거래처 ──────────────────────────────────────────
 async function submitNew() {
-  const name = document.getElementById('new-customer-name').value.trim();
+  const name = document.getElementById('new-partner-name').value.trim();
   if (!name) { alert('거래처명을 입력하세요.'); return; }
-  const res = await fetch('/api/v1/customers', {
+  const res = await fetch('/api/v1/partners', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -1001,10 +1001,10 @@ async function submitNew() {
 }
 
 async function saveInfo() {
-  if (!selectedCustomerId) return;
+  if (!selectedPartnerId) return;
   const name = document.getElementById('info-name').value.trim();
   if (!name) { showToast('거래처명을 입력하세요.', 'error'); return; }
-  const res = await fetch(`/api/v1/customers/${selectedCustomerId}`, {
+  const res = await fetch(`/api/v1/partners/${selectedPartnerId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1015,9 +1015,9 @@ async function saveInfo() {
   });
   if (res.ok) {
     await loadData();
-    const cust = allCustomers.find(d => d.id === selectedCustomerId);
+    const cust = allPartners.find(d => d.id === selectedPartnerId);
     if (cust) {
-      renderCustomerInfo(cust);
+      renderPartnerInfo(cust);
       document.getElementById('detail-name').textContent = cust.name;
     }
     showToast('거래처 정보가 수정되었습니다.');
@@ -1027,14 +1027,14 @@ async function saveInfo() {
   }
 }
 
-async function deleteCustomer() {
-  if (!selectedCustomerId) { alert('삭제할 거래처를 선택하세요.'); return; }
-  const cust = allCustomers.find(d => d.id === selectedCustomerId);
+async function deletePartner() {
+  if (!selectedPartnerId) { alert('삭제할 거래처를 선택하세요.'); return; }
+  const cust = allPartners.find(d => d.id === selectedPartnerId);
   const name = cust ? cust.name : '';
   if (!confirm(`"${name}" 거래처를 삭제하시겠습니까?`)) return;
-  const res = await fetch(`/api/v1/customers/${selectedCustomerId}`, { method: 'DELETE' });
+  const res = await fetch(`/api/v1/partners/${selectedPartnerId}`, { method: 'DELETE' });
   if (res.ok) {
-    selectedCustomerId = null;
+    selectedPartnerId = null;
     hideDetail();
     await loadData();
   } else if (res.status === 403) {
@@ -1048,7 +1048,7 @@ async function deleteCustomer() {
 
 // ── API 호출: 마스터 담당자 ──────────────────────────────────
 function openAddMasterContact() {
-  if (!selectedCustomerId) return;
+  if (!selectedPartnerId) return;
   document.getElementById('new-mc-name').value = '';
   document.getElementById('new-mc-phone').value = '';
   document.getElementById('new-mc-email').value = '';
@@ -1074,7 +1074,7 @@ async function submitNewMasterContact() {
     email: document.getElementById('new-mc-email').value.trim() || null,
     roles: checkedRoles,
   };
-  const res = await fetch(`/api/v1/customers/${selectedCustomerId}/contacts`, {
+  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/contacts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1092,7 +1092,7 @@ async function submitNewMasterContact() {
 
 async function deleteMasterContact(contactId, contactName) {
   if (!confirm(`${contactName} 담당자를 삭제하시겠습니까?`)) return;
-  const res = await fetch(`/api/v1/customers/contacts/${contactId}`, { method: 'DELETE' });
+  const res = await fetch(`/api/v1/partners/contacts/${contactId}`, { method: 'DELETE' });
   if (res.ok) {
     loadedTabs['contacts'] = false;
     loadedTabs['contacts'] = true;
@@ -1137,7 +1137,7 @@ async function submitEditMasterContact() {
     email: document.getElementById('edit-mc-email').value.trim() || null,
     roles: checkedRoles,
   };
-  const res = await fetch(`/api/v1/customers/contacts/${contactId}`, {
+  const res = await fetch(`/api/v1/partners/contacts/${contactId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1155,18 +1155,18 @@ async function submitEditMasterContact() {
 
 // ── 스플리터 드래그 리사이즈 ──────────────────────────────────
 const SPLITTER_KEY = 'cust_splitter_width';
-const CUSTOMER_PANEL_RULE_SELECTOR = '.customers-layout .cust-list-panel';
+const PARTNER_PANEL_RULE_SELECTOR = '.partners-layout .cust-list-panel';
 
-function _setCustomerPanelWidth(widthPx) {
+function _setPartnerPanelWidth(widthPx) {
   const width = `${Math.round(widthPx)}px`;
-  const styleId = 'customer-panel-width-style';
+  const styleId = 'partner-panel-width-style';
   let styleEl = document.getElementById(styleId);
   if (!styleEl) {
     styleEl = document.createElement('style');
     styleEl.id = styleId;
     document.head.appendChild(styleEl);
   }
-  styleEl.textContent = `${CUSTOMER_PANEL_RULE_SELECTOR} { width: ${width}; }`;
+  styleEl.textContent = `${PARTNER_PANEL_RULE_SELECTOR} { width: ${width}; }`;
 }
 
 function _initSplitter() {
@@ -1174,7 +1174,7 @@ function _initSplitter() {
   const panel = document.querySelector('.cust-list-panel');
 
   const saved = localStorage.getItem(SPLITTER_KEY);
-  if (saved) _setCustomerPanelWidth(Number(saved));
+  if (saved) _setPartnerPanelWidth(Number(saved));
 
   let startX, startW;
 
@@ -1187,7 +1187,7 @@ function _initSplitter() {
 
     const onMove = (ev) => {
       const newW = Math.max(180, Math.min(startW + ev.clientX - startX, window.innerWidth * 0.5));
-      _setCustomerPanelWidth(newW);
+      _setPartnerPanelWidth(newW);
     };
     const onUp = () => {
       splitter.classList.remove('dragging');

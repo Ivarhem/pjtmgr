@@ -56,12 +56,12 @@ let _selectedAsset = null;
 /* ── Data loading ── */
 
 async function loadAssets() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) {
     gridApi.setGridOption("rowData", []);
     return;
   }
-  let url = "/api/v1/assets?customer_id=" + cid;
+  let url = "/api/v1/assets?partner_id=" + cid;
   const pid = getCtxProjectId();
   if (pid && isProjectFilterActive()) url += "&project_id=" + pid;
 
@@ -180,7 +180,7 @@ function resetForm() {
 }
 
 function openCreateModal() {
-  if (!getCtxCustomerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   resetForm();
   document.getElementById("modal-asset-title").textContent = "자산 등록";
   document.getElementById("btn-save-asset").textContent = "등록";
@@ -243,11 +243,11 @@ function intOrNull(id) {
 }
 
 async function saveAsset() {
-  const cid = getCtxCustomerId();
+  const cid = getCtxPartnerId();
   if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const assetId = document.getElementById("asset-id").value;
   const payload = {
-    customer_id: cid,
+    partner_id: cid,
     asset_name: document.getElementById("asset-name").value,
     asset_type: document.getElementById("asset-type").value,
     vendor: document.getElementById("asset-vendor").value || null,

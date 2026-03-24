@@ -21,7 +21,7 @@ function formatKoreanAmount(n) {
 let periodData = null;   // current contract_period
 let contractId = null;
 let currentContract = null;
-let customers = [];
+let partners = [];
 let users = [];           // 담당자 선택용
 let allPeriods = [];      // 모든 period 목록
 let viewMode = 'period';  // 'period' | 'multi'
@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       backLink.textContent = '← 내 사업';
     }
   }
-  await Promise.all([loadCustomers(), loadUsers()]);
+  await Promise.all([loadPartners(), loadUsers()]);
   await loadAll();
   setupModals();
   _initPillNav();
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.date-text-input').forEach(el => {
     el.addEventListener('blur', () => { if (el.value) el.value = _normalizeDate(el.value); });
   });
-  initEndCustomerPicker();
+  initEndPartnerPicker();
   await populateContractTypeSelect('add-contract-type');
   // 공용 Contract 모달 (사업정보 수정)
   const btnCancel = document.getElementById('btn-cancel');
@@ -131,11 +131,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('ledger-hide-future').addEventListener('change', () => applyLedgerFilter());
   document.getElementById('btn-ledger-filter').addEventListener('click', () => applyLedgerFilter());
   document.getElementById('btn-ledger-filter-reset').addEventListener('click', resetLedgerFilter);
-  initTextFilter('ledger-filter-customer', () => applyLedgerFilter());
+  initTextFilter('ledger-filter-partner', () => applyLedgerFilter());
   // 입금 필터
   document.getElementById('btn-receipt-filter').addEventListener('click', () => applyReceiptFilter());
   document.getElementById('btn-receipt-filter-reset').addEventListener('click', resetReceiptFilter);
-  initTextFilter('receipt-filter-customer', () => applyReceiptFilter());
+  initTextFilter('receipt-filter-partner', () => applyReceiptFilter());
 
   // 통합/분리 뷰 토글
   const chkUnified = document.getElementById('chk-unified-view');
@@ -148,8 +148,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 인라인 거래처 등록
-  document.getElementById('btn-new-cust-cancel').addEventListener('click', () => document.getElementById('modal-new-customer').close());
-  document.getElementById('btn-new-cust-submit').addEventListener('click', _submitNewCustomerInline);
+  document.getElementById('btn-new-cust-cancel').addEventListener('click', () => document.getElementById('modal-new-partner').close());
+  document.getElementById('btn-new-cust-submit').addEventListener('click', _submitNewPartnerInline);
 
   // 미저장 이탈 경고
   window.addEventListener('beforeunload', (e) => {
@@ -178,9 +178,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!document.getElementById('repeat-end').value) document.getElementById('repeat-end').value = `${pd.period_year}-12`;
     }
     // 거래처 select 채우기
-    const sel = document.getElementById('repeat-customer');
+    const sel = document.getElementById('repeat-partner');
     sel.innerHTML = '<option value="">-- 선택 --</option>' +
-      customers.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      partners.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
     // Forecast 매입 기준 체크박스 초기화
     const chkFc = document.getElementById('repeat-use-forecast');
     chkFc.checked = false;
@@ -307,7 +307,7 @@ function _receiptToLedgerRow(p) {
     _receipt_id: p.id,         // 입금 원본 ID
     revenue_month: p.revenue_month || null,
     type: '입금',
-    customer_name: p.customer_name || '',
+    partner_name: p.partner_name || '',
     amount: p.amount || 0,
     date: p.receipt_date || '',
     status: '',                // 입금은 상태 없음
@@ -346,12 +346,12 @@ function applyViewMode() {
   ledgerApi.onFilterChanged();
 }
 
-async function loadCustomers() {
-  const res = await fetch('/api/v1/customers');
-  customers = await res.json();
-  // datalist for customer autocomplete
-  const dl = document.getElementById('customer-list');
-  if (dl) dl.innerHTML = customers.map(c => `<option value="${c.name}">`).join('');
+async function loadPartners() {
+  const res = await fetch('/api/v1/partners');
+  partners = await res.json();
+  // datalist for partner autocomplete
+  const dl = document.getElementById('partner-list');
+  if (dl) dl.innerHTML = partners.map(c => `<option value="${c.name}">`).join('');
 }
 
 async function loadUsers() {
@@ -410,7 +410,7 @@ function renderHeader(contract, period) {
     <div class="info-row">
       <span class="info-item"><b>사업코드</b> ${contract.contract_code || '-'}</span>
       <span class="info-item"><b>사업유형</b> ${contract.contract_type}</span>
-      <span class="info-item"><b>${getTermLabel('customer', '고객')}</b> ${contract.end_customer_name || '-'}</span>
+      <span class="info-item"><b>${getTermLabel('customer', '고객')}</b> ${contract.end_partner_name || '-'}</span>
       <span class="info-item">
         <button class="btn btn-secondary btn-sm" onclick="openEditContractInfo()">수정</button>
       </span>
@@ -476,7 +476,7 @@ function renderPeriodInfoSections() {
         <div class="period-info-body">
           <div class="info-row">
             <span class="info-item"><b>담당</b> ${ownerName}</span>
-            <span class="info-item"><b>매출처</b> ${p.customer_name || currentContract?.end_customer_name || '-'}</span>
+            <span class="info-item"><b>매출처</b> ${p.partner_name || currentContract?.end_partner_name || '-'}</span>
             <span class="info-item"><b>예상 매출</b> ${rev ? fmt(rev) + '원' : '미설정'}</span>
             <span class="info-item"><b>예상 GP</b> ${gp ? fmt(gp) + '원' : '미설정'}</span>
             <span class="info-item"><b>GP%</b> ${rev ? gpPct + '%' : '-'}</span>
@@ -573,9 +573,9 @@ function openEditPeriodInfo() {
           </label>
           <label class="info-edit-field">
             <span>매출처</span>
-            <select id="edit-customer">
+            <select id="edit-partner">
               <option value="">-- ${getTermLabel('customer', '고객')} 동일 --</option>
-              ${customers.map(c => `<option value="${c.id}"${period.customer_id===c.id?' selected':''}>${c.name}</option>`).join('')}
+              ${partners.map(c => `<option value="${c.id}"${period.partner_id===c.id?' selected':''}>${c.name}</option>`).join('')}
             </select>
           </label>
           <label class="info-edit-field">
@@ -674,7 +674,7 @@ async function savePeriodInfo() {
 
   const isMA = currentContract.contract_type === 'MA';
 
-  const custEl = document.getElementById('edit-customer');
+  const custEl = document.getElementById('edit-partner');
   const custId = custEl?.value ? parseInt(custEl.value) : null;
 
   const startMonthEl = document.getElementById('edit-start-month');
@@ -685,7 +685,7 @@ async function savePeriodInfo() {
     start_month: startMonthEl?.value ? startMonthEl.value + '-01' : null,
     end_month: endMonthEl?.value ? endMonthEl.value + '-01' : null,
     owner_user_id: ownerUserId,
-    customer_id: custId,
+    partner_id: custId,
     stage: stageEl ? stageEl.value : undefined,
   };
   const isPlannedEl = document.getElementById('edit-is-planned');
@@ -939,7 +939,7 @@ async function switchToMultiView() {
     <div class="info-row">
       <span class="info-item"><b>사업코드</b> ${currentContract.contract_code || '-'}</span>
       <span class="info-item"><b>사업유형</b> ${currentContract.contract_type}</span>
-      <span class="info-item"><b>${getTermLabel('customer', '고객')}</b> ${currentContract.end_customer_name || '-'}</span>
+      <span class="info-item"><b>${getTermLabel('customer', '고객')}</b> ${currentContract.end_partner_name || '-'}</span>
       <span class="info-item">
         <button class="btn btn-secondary btn-sm" onclick="openEditContractInfo()">수정</button>
       </span>
@@ -1425,9 +1425,9 @@ function initLedgerGrid(ledgerRows) {
       cellEditorParams: () => ({ values: _ledgerTypeValues() }),
       cellClassRules: { 'cell-missing': p => p.data._missingFields?.includes('type') },
       cellRenderer: p => renderTypeBadge(p.value) },
-    { field: 'customer_name', headerName: '거래처', editable: true, width: 140,
-      cellEditor: CustomerCellEditor,
-      cellClassRules: { 'cell-missing': p => p.data._missingFields?.includes('customer_name') } },
+    { field: 'partner_name', headerName: '거래처', editable: true, width: 140,
+      cellEditor: PartnerCellEditor,
+      cellClassRules: { 'cell-missing': p => p.data._missingFields?.includes('partner_name') } },
     { field: 'amount', headerName: '금액(원)', editable: true, type: 'numericColumn', width: 130,
       valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
       valueFormatter: p => p.value > 0 ? fmt(p.value) : '',
@@ -1555,12 +1555,12 @@ async function deleteSelectedLedgerRows() {
   for (const row of selected) {
     if (row.type === '입금' && row._receipt_id) {
       const r = await fetch(`/api/v1/receipts/${row._receipt_id}`, { method: 'DELETE' });
-      if (!r.ok) { alert(`입금 삭제 실패: ${row.customer_name || ''} ${row.date || ''}`); continue; }
+      if (!r.ok) { alert(`입금 삭제 실패: ${row.partner_name || ''} ${row.date || ''}`); continue; }
     } else if (row.transaction_line_id) {
       const r = await fetch(`/api/v1/transaction-lines/${row.transaction_line_id}`, { method: 'DELETE' });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
-        alert(err.detail || `삭제 실패: ${row.customer_name || ''} ${row.revenue_month || ''}`);
+        alert(err.detail || `삭제 실패: ${row.partner_name || ''} ${row.revenue_month || ''}`);
         continue;
       }
     }
@@ -1618,22 +1618,22 @@ async function saveLedger() {
 }
 async function _doSaveLedger() {
   // 매출 행 중 거래처 미입력 → END 고객 자동 채우기 제안
-  const endName = currentContract?.end_customer_name;
+  const endName = currentContract?.end_partner_name;
   if (endName) {
-    const salesNoCustomer = [];
+    const salesNoPartner = [];
     ledgerApi.forEachNode(n => {
       if (n.rowPinned) return;
       const d = n.data;
-      if (d.type === '매출' && !d.customer_name && (d.revenue_month || d.amount)) {
-        salesNoCustomer.push(n);
+      if (d.type === '매출' && !d.partner_name && (d.revenue_month || d.amount)) {
+        salesNoPartner.push(n);
       }
     });
-    if (salesNoCustomer.length > 0) {
+    if (salesNoPartner.length > 0) {
       const fill = confirm(
-        `거래처가 비어있는 매출 ${salesNoCustomer.length}건이 있습니다.\n${getTermLabel('customer', '고객')}(${endName})으로 자동 채우시겠습니까?`
+        `거래처가 비어있는 매출 ${salesNoPartner.length}건이 있습니다.\n${getTermLabel('customer', '고객')}(${endName})으로 자동 채우시겠습니까?`
       );
       if (fill) {
-        salesNoCustomer.forEach(n => { n.setDataValue('customer_name', endName); });
+        salesNoPartner.forEach(n => { n.setDataValue('partner_name', endName); });
       }
     }
   }
@@ -1659,8 +1659,8 @@ async function _doSaveLedger() {
   // 미등록 거래처 검증 (모든 행)
   const allValid = rows.filter(r => r.amount && r.type);
   const unregistered = allValid
-    .filter(r => r.customer_name && !findCustomerId(r.customer_name))
-    .map(r => r.customer_name);
+    .filter(r => r.partner_name && !findPartnerId(r.partner_name))
+    .map(r => r.partner_name);
   if (unregistered.length > 0) {
     alert(`등록되지 않은 거래처가 있습니다: ${[...new Set(unregistered)].join(', ')}\n거래처를 먼저 등록해 주세요.`);
     return;
@@ -1672,8 +1672,8 @@ async function _doSaveLedger() {
       const body = {
         revenue_month: toMonthFirst(row.revenue_month),
         line_type: row.type === '매출' ? 'revenue' : 'cost',
-        customer_id: findCustomerId(row.customer_name),
-        customer_name: row.customer_name || null,
+        partner_id: findPartnerId(row.partner_name),
+        partner_name: row.partner_name || null,
         supply_amount: row.amount || 0,
         invoice_issue_date: row.date || null,
         status: row.status || null,
@@ -1688,7 +1688,7 @@ async function _doSaveLedger() {
   const receiptReqs = receiptRows.filter(r => r.amount)
     .map(row => {
       const body = {
-        customer_id: findCustomerId(row.customer_name),
+        partner_id: findPartnerId(row.partner_name),
         receipt_date: row.date || null,
         revenue_month: row.revenue_month || null,
         amount: row.amount || 0,
@@ -1709,19 +1709,19 @@ async function _doSaveLedger() {
 
 // ── 부분 재로드 ────────────────────────────────────────────────
 async function reloadLedger() {
-  const [ledgerRes, customersRes, receiptsRes, allocRes] = await Promise.all([
+  const [ledgerRes, partnersRes, receiptsRes, allocRes] = await Promise.all([
     fetch(`/api/v1/contracts/${contractId}/ledger`),
-    fetch('/api/v1/customers'),
+    fetch('/api/v1/partners'),
     fetch(`/api/v1/contracts/${contractId}/receipts`),
     fetch(`/api/v1/contracts/${contractId}/receipt-matches`),
   ]);
   const ledger = await ledgerRes.json();
-  customers = await customersRes.json();
+  partners = await partnersRes.json();
   const receipts = await receiptsRes.json();
   const allocations = allocRes.ok ? await allocRes.json() : [];
   _buildAllocationMap(allocations);
-  const _dl = document.getElementById('customer-list');
-  if (_dl) _dl.innerHTML = customers.map(c => `<option value="${c.name}">`).join('');
+  const _dl = document.getElementById('partner-list');
+  if (_dl) _dl.innerHTML = partners.map(c => `<option value="${c.name}">`).join('');
   fullLedger = ledger;
   fullReceipts = receipts;
   fullAllocations = allocations;
@@ -1778,11 +1778,11 @@ function bulkConfirmTransactionLines() {
     return;
   }
 
-  const incomplete = targets.filter(r => !r.customer_name || !r.date);
+  const incomplete = targets.filter(r => !r.partner_name || !r.date);
   if (incomplete.length) {
     incomplete.forEach(r => {
       const issues = [];
-      if (!r.customer_name) issues.push('customer_name');
+      if (!r.partner_name) issues.push('partner_name');
       if (!r.date) issues.push('date');
       r._missingFields = issues;
     });
@@ -1841,7 +1841,7 @@ function addLedgerRow(scrollToNew, type) {
     newRow = {
       revenue_month: prev?.revenue_month || ym,
       type: '입금',
-      customer_name: prev?.customer_name || '',
+      partner_name: prev?.partner_name || '',
       amount: 0,
       date: dateStr,
       status: '',
@@ -1852,7 +1852,7 @@ function addLedgerRow(scrollToNew, type) {
     newRow = {
       revenue_month: month,
       type: rowType,
-      customer_name: prev?.customer_name || '',
+      partner_name: prev?.partner_name || '',
       amount: 0,
       status: '예정',
     };
@@ -1900,10 +1900,10 @@ async function _openAddPeriodModal() {
   if (prev?.stage) stageEl.value = prev.stage;
 
   // 매출처
-  const custSel = document.getElementById('add-period-customer');
+  const custSel = document.getElementById('add-period-partner');
   custSel.innerHTML = `<option value="">-- ${getTermLabel('customer', '고객')} 동일 --</option>` +
-    customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  const defaultCustId = prev?.customer_id || currentContract?.end_customer_id || '';
+    partners.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const defaultCustId = prev?.partner_id || currentContract?.end_partner_id || '';
   custSel.value = String(defaultCustId);
 
   // ── 기간 ──
@@ -2053,14 +2053,14 @@ async function submitAddPeriod() {
     }
   }
 
-  const custId = document.getElementById('add-period-customer').value;
+  const custId = document.getElementById('add-period-partner').value;
   const body = {
     period_year: year,
     stage,
     start_month: startMonth ? startMonth + '-01' : null,
     end_month: endMonth ? endMonth + '-01' : null,
   };
-  if (custId) body.customer_id = parseInt(custId);
+  if (custId) body.partner_id = parseInt(custId);
   body.is_planned = document.getElementById('add-period-is-planned').checked;
 
   const res = await fetch(`/api/v1/contracts/${contractId}/periods`, {
@@ -2150,7 +2150,7 @@ function generateRepeatRows() {
   const start = document.getElementById('repeat-start').value;
   const end = document.getElementById('repeat-end').value;
   const type = document.getElementById('repeat-line-type').value; // 매출 / 매입
-  const customerName = document.getElementById('repeat-customer').value;
+  const partnerName = document.getElementById('repeat-partner').value;
   const useForecast = document.getElementById('repeat-use-forecast').checked;
   const amount = parseInt(document.getElementById('repeat-amount').value) || 0;
   const desc = document.getElementById('repeat-desc').value;
@@ -2165,7 +2165,7 @@ function generateRepeatRows() {
   if (ledgerApi) {
     ledgerApi.forEachNode(n => {
       if (!n.rowPinned && n.data.type === type) {
-        existingKeys.add(`${n.data.revenue_month}|${n.data.customer_name || ''}`);
+        existingKeys.add(`${n.data.revenue_month}|${n.data.partner_name || ''}`);
       }
     });
   }
@@ -2178,10 +2178,10 @@ function generateRepeatRows() {
     const ym = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-01`;
     const rowAmount = useForecast ? (costMap[ym] || 0) : amount;
     if (rowAmount > 0) {
-      if (existingKeys.has(`${ym}|${customerName}`)) {
+      if (existingKeys.has(`${ym}|${partnerName}`)) {
         skipped++;
       } else {
-        const row = { revenue_month: ym, type, customer_name: customerName, amount: rowAmount, status: '예정', description: desc };
+        const row = { revenue_month: ym, type, partner_name: partnerName, amount: rowAmount, status: '예정', description: desc };
         const invoiceDate = _calcInvoiceDate(ym, periodData);
         if (invoiceDate) row.date = invoiceDate;
         rows.push(row);
@@ -2252,9 +2252,9 @@ function toMonthFirst(val) {
   return s;
 }
 
-function findCustomerId(name) {
+function findPartnerId(name) {
   if (!name) return null;
-  const c = customers.find(c => c.name === name);
+  const c = partners.find(c => c.name === name);
   return c ? c.id : null;
 }
 
@@ -2265,11 +2265,11 @@ function _validateLedgerRows(api) {
   api.forEachNode(n => {
     if (n.rowPinned) return;
     const d = n.data;
-    if (!d.type && !d.amount && !d.customer_name && !d.revenue_month) return; // 완전 빈 행은 무시
+    if (!d.type && !d.amount && !d.partner_name && !d.revenue_month) return; // 완전 빈 행은 무시
     const issues = [];
     if (!d.revenue_month) issues.push('revenue_month');
     if (!d.type) issues.push('type');
-    if (!d.customer_name) issues.push('customer_name');
+    if (!d.partner_name) issues.push('partner_name');
     if (!d.amount || d.amount <= 0) issues.push('amount');
     if (issues.length) missing.push({ node: n, issues });
   });
@@ -2389,13 +2389,13 @@ class DateCellEditor {
 }
 
 // ── 거래처 검색 셀 에디터 ────────────────────────────────────────
-class CustomerCellEditor {
+class PartnerCellEditor {
   init(params) {
     this.value = params.value || '';
     this.params = params;
 
     this.container = document.createElement('div');
-    this.container.className = 'ag-cell-customer-editor';
+    this.container.className = 'ag-cell-partner-editor';
 
     this.input = document.createElement('input');
     this.input.type = 'text';
@@ -2404,7 +2404,7 @@ class CustomerCellEditor {
     this.container.appendChild(this.input);
 
     this.dropdown = document.createElement('div');
-    this.dropdown.className = 'ag-cell-customer-dropdown is-hidden';
+    this.dropdown.className = 'ag-cell-partner-dropdown is-hidden';
     document.body.appendChild(this.dropdown);
 
     this.input.addEventListener('input', () => this._renderList());
@@ -2420,7 +2420,7 @@ class CustomerCellEditor {
       }
       if (e.key === 'Enter') {
         // 목록에 정확히 일치하는 항목이 있으면 선택
-        const match = customers.find(c => c.name === this.input.value.trim());
+        const match = partners.find(c => c.name === this.input.value.trim());
         if (match) {
           this.value = match.name;
           this.params.stopEditing();
@@ -2432,7 +2432,7 @@ class CustomerCellEditor {
   _findSimilar(keyword) {
     if (!keyword || keyword.length < 2) return [];
     const kw = keyword.toLowerCase().replace(/\s/g, '');
-    return customers.filter(c => {
+    return partners.filter(c => {
       const cn = c.name.toLowerCase().replace(/\s/g, '');
       if (cn === kw) return false; // 완전 일치는 제외
       // 포함 관계 또는 편집 거리 2 이내
@@ -2447,8 +2447,8 @@ class CustomerCellEditor {
   _renderList() {
     const keyword = this.input.value.trim().toLowerCase();
     const filtered = keyword
-      ? customers.filter(c => c.name.toLowerCase().includes(keyword))
-      : customers;
+      ? partners.filter(c => c.name.toLowerCase().includes(keyword))
+      : partners;
     const limited = filtered.slice(0, 50);
 
     let html = limited.map(c =>
@@ -2456,7 +2456,7 @@ class CustomerCellEditor {
     ).join('');
 
     // 완전 일치 없고 입력값이 있으면 유사 거래처 경고
-    if (keyword && !customers.find(c => c.name.toLowerCase() === keyword)) {
+    if (keyword && !partners.find(c => c.name.toLowerCase() === keyword)) {
       const similar = this._findSimilar(this.input.value.trim());
       if (similar.length) {
         html += `<div class="cust-similar-warn">⚠ 유사 거래처: ${similar.map(c => `<b>${c.name}</b>`).join(', ')}</div>`;
@@ -2494,7 +2494,7 @@ class CustomerCellEditor {
         e.preventDefault(); // blur 방지
         setElementHidden(this.dropdown, true);
         this.params.stopEditing();
-        _openNewCustomerPopup(this.input.value.trim());
+        _openNewPartnerPopup(this.input.value.trim());
       });
     }
   }
@@ -2506,22 +2506,22 @@ class CustomerCellEditor {
   isPopup() { return true; }
 }
 
-function _openNewCustomerPopup(prefill) {
+function _openNewPartnerPopup(prefill) {
   document.getElementById('new-cust-name-inline').value = prefill || '';
-  document.getElementById('modal-new-customer').showModal();
+  document.getElementById('modal-new-partner').showModal();
 }
 
-async function _submitNewCustomerInline() {
+async function _submitNewPartnerInline() {
   const name = document.getElementById('new-cust-name-inline').value.trim();
   if (!name) { alert('거래처명을 입력하세요.'); return; }
-  const res = await fetch('/api/v1/customers', {
+  const res = await fetch('/api/v1/partners', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   });
   if (res.ok) {
-    document.getElementById('modal-new-customer').close();
-    await loadCustomers();
+    document.getElementById('modal-new-partner').close();
+    await loadPartners();
     showToast(`"${name}" 거래처가 등록되었습니다.`);
   } else {
     const body = await res.json().catch(() => null);
@@ -2698,8 +2698,8 @@ function initReceiptGrid(receipts) {
       cellEditor: MonthCellEditor,
       valueFormatter: p => p.value ? p.value.slice(0, 7) : '',
       valueSetter: p => { p.data.revenue_month = toMonthFirst(p.newValue); return true; } },
-    { field: 'customer_name', headerName: '거래처', editable: true, width: 140,
-      cellEditor: CustomerCellEditor },
+    { field: 'partner_name', headerName: '거래처', editable: true, width: 140,
+      cellEditor: PartnerCellEditor },
     { field: 'amount', headerName: '금액(원)', editable: true, type: 'numericColumn', width: 130,
       valueParser: p => Math.max(0, parseInt(String(p.newValue).replace(/,/g, '')) || 0),
       valueFormatter: p => p.value ? fmt(p.value) : '',
@@ -2766,7 +2766,7 @@ function addReceiptRow(scrollToNew) {
       const remaining = (d.amount || 0) - (allocMap[d.transaction_line_id] || 0) - (pendingByMonth[d.revenue_month] || 0);
       if (remaining <= 0) return;
       if (!oldest || (d.revenue_month || '') < (oldest.revenue_month || '')) {
-        oldest = { revenue_month: d.revenue_month, customer_name: d.customer_name, amount: remaining, date: d.date };
+        oldest = { revenue_month: d.revenue_month, partner_name: d.partner_name, amount: remaining, date: d.date };
       }
     });
   }
@@ -2777,7 +2777,7 @@ function addReceiptRow(scrollToNew) {
   const res = receiptApi.applyTransaction({ add: [{
     receipt_date: oldest?.date || dateStr,
     revenue_month: oldest?.revenue_month || prevReceipt?.revenue_month || ym,
-    customer_name: oldest?.customer_name || prevReceipt?.customer_name || currentContract?.end_customer_name || '',
+    partner_name: oldest?.partner_name || prevReceipt?.partner_name || currentContract?.end_partner_name || '',
     amount: oldest?.amount || 0,
   }] });
   dirtyReceipt = true; _updateDirtyIndicators();
@@ -2799,7 +2799,7 @@ async function _doSaveReceipt() {
   receiptApi.forEachNode(n => {
     if (n.rowPinned) return;
     const d = n.data;
-    if (!d.amount && !d.receipt_date && !d.customer_name) return;
+    if (!d.amount && !d.receipt_date && !d.partner_name) return;
     const issues = [];
     if (d.amount > 0 && !d.receipt_date) issues.push('receipt_date');
     if (issues.length) payMissing.push({ node: n, issues });
@@ -2820,8 +2820,8 @@ async function _doSaveReceipt() {
   // 미등록 거래처 검증
   const validRows = rows.filter(r => r.receipt_date && r.amount);
   const unregistered = validRows
-    .filter(r => r.customer_name && !findCustomerId(r.customer_name))
-    .map(r => r.customer_name);
+    .filter(r => r.partner_name && !findPartnerId(r.partner_name))
+    .map(r => r.partner_name);
   if (unregistered.length > 0) {
     alert(`등록되지 않은 거래처가 있습니다: ${[...new Set(unregistered)].join(', ')}\n거래처를 먼저 등록해 주세요.`);
     return;
@@ -2830,7 +2830,7 @@ async function _doSaveReceipt() {
   const reqs = validRows
     .map(row => {
       const body = {
-        customer_id: findCustomerId(row.customer_name),
+        partner_id: findPartnerId(row.partner_name),
         receipt_date: row.receipt_date,
         revenue_month: row.revenue_month || null,
         amount: row.amount || 0,
@@ -2861,7 +2861,7 @@ async function deleteSelectedReceiptRows() {
   for (const row of selected) {
     if (row.id) {
       const r = await fetch(`/api/v1/receipts/${row.id}`, { method: 'DELETE' });
-      if (!r.ok) { alert(`삭제 실패: ${row.customer_name || ''} ${row.receipt_date || ''}`); continue; }
+      if (!r.ok) { alert(`삭제 실패: ${row.partner_name || ''} ${row.receipt_date || ''}`); continue; }
     }
     toRemove.push(row);
   }
@@ -2916,7 +2916,7 @@ function openReceiptFromLedger() {
         <input type="checkbox" class="receipt-from-ledger-chk" data-idx="${i}" checked>
         ${r.revenue_month ? r.revenue_month.slice(0, 7) : '-'}
       </span>
-      <span class="sync-row-detail">${r.customer_name || '-'}</span>
+      <span class="sync-row-detail">${r.partner_name || '-'}</span>
       <span class="sync-row-detail">${r.date || '-'}</span>
       <span class="sync-row-amount">${fmt(r._remaining)}원</span>
     </label>`
@@ -2956,7 +2956,7 @@ function submitReceiptFromLedger() {
     return {
       receipt_date: receiptDate,
       revenue_month: r.revenue_month || (receiptDate ? receiptDate.slice(0, 7) + '-01' : null),
-      customer_name: r.customer_name || '',
+      partner_name: r.partner_name || '',
       amount: r._remaining,
       description: '',
     };
@@ -2978,8 +2978,8 @@ function _hasLedgerFilter() {
   const end = document.getElementById('ledger-filter-end').value;
   const status = document.getElementById('filter-ledger-status').value;
   const hideFuture = document.getElementById('ledger-hide-future').checked;
-  const customer = document.getElementById('ledger-filter-customer').value.trim();
-  return type !== '' || start !== '' || end !== '' || status !== '' || hideFuture || customer !== '';
+  const partnerFilter = document.getElementById('ledger-filter-partner').value.trim();
+  return type !== '' || start !== '' || end !== '' || status !== '' || hideFuture || partnerFilter !== '';
 }
 
 function _passLedgerFilter(node) {
@@ -3003,8 +3003,8 @@ function _passLedgerFilter(node) {
     if (ym > currentMonth) return false;
   }
 
-  const customer = document.getElementById('ledger-filter-customer').value.trim().toLowerCase();
-  if (customer && !(d.customer_name || '').toLowerCase().includes(customer)) return false;
+  const partnerFilter = document.getElementById('ledger-filter-partner').value.trim().toLowerCase();
+  if (partnerFilter && !(d.partner_name || '').toLowerCase().includes(partnerFilter)) return false;
 
   return true;
 }
@@ -3021,7 +3021,7 @@ function resetLedgerFilter() {
   document.getElementById('ledger-filter-start').value = '';
   document.getElementById('ledger-filter-end').value = '';
   document.getElementById('ledger-hide-future').checked = false;
-  document.getElementById('ledger-filter-customer').value = '';
+  document.getElementById('ledger-filter-partner').value = '';
   externalTypeFilter = '';
   ledgerApi.onFilterChanged();
   refreshLedgerSummary();
@@ -3032,8 +3032,8 @@ function resetLedgerFilter() {
 function _hasReceiptFilter() {
   const start = document.getElementById('receipt-filter-start').value;
   const end = document.getElementById('receipt-filter-end').value;
-  const customer = document.getElementById('receipt-filter-customer').value.trim();
-  return start !== '' || end !== '' || customer !== '';
+  const partnerFilter = document.getElementById('receipt-filter-partner').value.trim();
+  return start !== '' || end !== '' || partnerFilter !== '';
 }
 
 function _passReceiptFilter(node) {
@@ -3044,8 +3044,8 @@ function _passReceiptFilter(node) {
   if (start && ym < start) return false;
   if (end && ym > end) return false;
 
-  const customer = document.getElementById('receipt-filter-customer').value.trim().toLowerCase();
-  if (customer && !(d.customer_name || '').toLowerCase().includes(customer)) return false;
+  const partnerFilter = document.getElementById('receipt-filter-partner').value.trim().toLowerCase();
+  if (partnerFilter && !(d.partner_name || '').toLowerCase().includes(partnerFilter)) return false;
 
   return true;
 }
@@ -3058,7 +3058,7 @@ function applyReceiptFilter() {
 function resetReceiptFilter() {
   document.getElementById('receipt-filter-start').value = '';
   document.getElementById('receipt-filter-end').value = '';
-  document.getElementById('receipt-filter-customer').value = '';
+  document.getElementById('receipt-filter-partner').value = '';
   receiptApi.onFilterChanged();
   refreshReceiptSummary();
 }
@@ -3069,7 +3069,7 @@ function initReceiptMatchGrid(allocations) {
   const colDefs = [
     { field: 'revenue_month', headerName: '귀속월', width: 110,
       valueFormatter: p => p.value ? p.value.slice(0, 7) : '' },
-    { field: 'customer_name', headerName: '거래처', width: 140 },
+    { field: 'partner_name', headerName: '거래처', width: 140 },
     { field: 'supply_amount', headerName: '매출액', type: 'numericColumn', width: 120,
       valueFormatter: p => p.value ? fmt(p.value) : '' },
     { field: 'matched_amount', headerName: '배분액', type: 'numericColumn', width: 120,
@@ -3156,7 +3156,7 @@ function openReceiptMatchModal() {
   const paySelect = document.getElementById('match-receipt-select');
   paySelect.innerHTML = '<option value="">-- 입금을 선택하세요 --</option>';
   (fullReceipts || []).forEach(p => {
-    const label = `${p.receipt_date} / ${p.customer_name || '미지정'} / ${fmt(p.amount)}원`;
+    const label = `${p.receipt_date} / ${p.partner_name || '미지정'} / ${fmt(p.amount)}원`;
     paySelect.innerHTML += `<option value="${p.id}">${label}</option>`;
   });
 
@@ -3165,7 +3165,7 @@ function openReceiptMatchModal() {
   txnLineSelect.innerHTML = '<option value="">-- 매출 라인을 선택하세요 --</option>';
   (fullLedger || []).filter(r => r.line_type === 'revenue' && r.status === '확정').forEach(r => {
     const month = (r.revenue_month || '').slice(0, 7);
-    const label = `${month} / ${r.customer_name || '미지정'} / ${fmt(r.supply_amount)}원`;
+    const label = `${month} / ${r.partner_name || '미지정'} / ${fmt(r.supply_amount)}원`;
     txnLineSelect.innerHTML += `<option value="${r.transaction_line_id || r.id}">${label}</option>`;
   });
 
