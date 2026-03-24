@@ -34,6 +34,11 @@
 - RBAC 기본 구현 완료 (Role 모델 + permissions JSONB + 기본 역할 4종 + require_module_access)
 - 풀 RBAC 확장(resource x action 조합)은 향후 구현 예정 (permissions.resources 플레이스홀더 존재)
 
+## 정책 기능 (TODO)
+
+- 정책 정의/적용 UI를 메뉴에서 제거함 (DB 테이블, 모델, API 라우터는 유지)
+- 향후 재설계 후 구현 예정 — 현재 PolicyDefinition/PolicyAssignment 모델과 API는 동작하지만 UI 접근 경로 없음
+
 ## 발행일 휴일 조정
 
 - 공휴일 달력 미적용 (`invoice_holiday_adjust` 필드만 존재)

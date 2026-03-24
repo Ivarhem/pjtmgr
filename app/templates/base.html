@@ -118,7 +118,6 @@
 
         <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
         <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책</span></a></li>
         <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>업체</span></a></li>
         <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
 
@@ -136,7 +135,6 @@
 
         <li><a href="/projects"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
         <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
-        <li><a href="/policies"><i class="icon" data-lucide="shield-check"></i><span>정책</span></a></li>
         <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>업체</span></a></li>
         <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
 
@@ -156,7 +154,6 @@
     // Active link highlighting (with group mapping for tabbed pages)
     const _navGroups = {
       '/ip-inventory': '/assets', '/port-maps': '/assets',
-      '/policy-definitions': '/policies',
     };
     const _activePath = _navGroups[window.location.pathname] || window.location.pathname;
     document.querySelectorAll('.subnav-links a, .topbar-right a').forEach(a => {

@@ -32,7 +32,6 @@
   <button class="tab-btn" data-tab="relations" onclick="activateTab('relations')">자산 관계</button>
   <button class="tab-btn" data-tab="ip" onclick="activateTab('ip')">IP/네트워크</button>
   <button class="tab-btn" data-tab="portmap" onclick="activateTab('portmap')">포트맵</button>
-  <button class="tab-btn" data-tab="policy" onclick="activateTab('policy')">정책</button>
   <button class="tab-btn" data-tab="contacts" onclick="activateTab('contacts')">담당자/업체</button>
   <button class="tab-btn" data-tab="history" onclick="activateTab('history')">변경이력</button>
 </div>
@@ -48,10 +47,6 @@
     <div class="summary-card">
       <div class="card-label">IP 할당</div>
       <div class="card-value" id="card-ip-count">-</div>
-    </div>
-    <div class="summary-card">
-      <div class="card-label">정책 준수</div>
-      <div class="card-value" id="card-policy-rate">-</div>
     </div>
     <div class="summary-card">
       <div class="card-label">산출물</div>
@@ -194,16 +189,6 @@
   </div>
   <div class="card">
     <div id="grid-tab-portmaps" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
-  </div>
-</div>
-
-<div class="tab-content hidden" id="tab-policy">
-  <div class="page-header">
-    <h2>정책 적용 현황</h2>
-    <a href="/policies" class="btn btn-secondary btn-sm">정책 관리 페이지 &rarr;</a>
-  </div>
-  <div class="card">
-    <div id="grid-tab-policies" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
   </div>
 </div>
 

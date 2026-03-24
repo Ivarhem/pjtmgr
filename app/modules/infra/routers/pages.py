@@ -63,18 +63,9 @@ def port_maps_page(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/policy-definitions", response_class=HTMLResponse)
-def policy_definitions_page(request: Request) -> HTMLResponse:
-    return _templates(request).TemplateResponse(
-        "infra_policy_definitions.html", {"request": request}
-    )
-
-
-@router.get("/policies", response_class=HTMLResponse)
-def policies_page(request: Request) -> HTMLResponse:
-    return _templates(request).TemplateResponse(
-        "infra_policies.html", {"request": request}
-    )
+## TODO: 정책 기능은 향후 재설계 후 구현 예정
+## 페이지 라우트 제거됨 (/policies, /policy-definitions)
+## API 라우터(policy_assignments, policies)는 유지
 
 
 @router.get("/infra-dashboard")
