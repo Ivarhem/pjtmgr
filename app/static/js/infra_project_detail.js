@@ -156,7 +156,7 @@ let phases = [];
 
 async function loadPhases() {
   try {
-    phases = await apiFetch(`/api/v1/period-phases?contract_period_id=${PROJECT_ID}`);
+    phases = await apiFetch(`/api/v1/contract-periods/${PROJECT_ID}/phases`);
     phaseGridApi.setGridOption("rowData", phases);
     populatePhaseDropdown();
     renderPhaseTimeline(phases);
@@ -244,28 +244,15 @@ async function loadDeliverables() {
 /* ── 요약 카드 ── */
 async function loadSummaryCards(projectId) {
   try {
-    const assets = await apiFetch(`/api/v1/assets?partner_id=${_PROJECT_PARTNER_ID}&contract_period_id=${projectId}`);
+    const assets = await apiFetch(`/api/v1/assets?partner_id=${_PROJECT_PARTNER_ID}&period_id=${projectId}`);
     document.getElementById('card-asset-count').textContent =
       Array.isArray(assets) ? `${assets.length} 대` : '-';
   } catch (e) {
     console.warn('Asset count load error:', e);
   }
 
-  try {
-    const ips = await apiFetch(`/api/v1/asset-ips?contract_period_id=${projectId}`);
-    document.getElementById('card-ip-count').textContent =
-      Array.isArray(ips) ? `${ips.length} 개` : '-';
-  } catch (e) {
-    console.warn('IP count load error:', e);
-  }
-
-  try {
-    const metrics = await apiFetch(`/api/v1/infra-dashboard/project/${projectId}`);
-    document.getElementById('card-policy-rate').textContent =
-      metrics.compliance_rate != null ? metrics.compliance_rate + '%' : '-';
-  } catch (e) {
-    document.getElementById('card-policy-rate').textContent = '-';
-  }
+  // IP 할당 카드 — contract_period 기반 IP 조회 API 미구현 (TODO)
+  // 정책 준수율 — 정책 기능 TODO
 }
 
 function updateDeliverableProgress(deliverables) {
