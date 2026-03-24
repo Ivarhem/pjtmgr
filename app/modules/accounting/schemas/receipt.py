@@ -3,7 +3,7 @@ from app.core._normalize import normalize_month, normalize_date
 
 
 class ReceiptCreate(BaseModel):
-    customer_id: int | None = None
+    partner_id: int | None = None
     receipt_date: str           # YYYY-MM-DD
     revenue_month: str | None = None   # YYYY-MM-01 (귀속월 연결)
     amount: int
@@ -23,7 +23,7 @@ class ReceiptCreate(BaseModel):
 
 
 class ReceiptUpdate(BaseModel):
-    customer_id: int | None = None
+    partner_id: int | None = None
     receipt_date: str | None = None
     revenue_month: str | None = None
     amount: int | None = None
@@ -47,8 +47,8 @@ class ReceiptUpdate(BaseModel):
 class ReceiptRead(BaseModel):
     id: int
     contract_id: int
-    customer_id: int | None
-    customer_name: str | None
+    partner_id: int | None
+    partner_name: str | None
     receipt_date: str
     revenue_month: str | None
     amount: int

@@ -36,7 +36,7 @@ class ReceiptMatchRead(BaseModel):
     # 조회 편의 필드
     receipt_date: str | None = None
     revenue_month: str | None = None
-    customer_name: str | None = None
+    partner_name: str | None = None
     supply_amount: int | None = None
 
     model_config = {"from_attributes": True}

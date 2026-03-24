@@ -156,7 +156,7 @@ def list_forecast_vs_actual(
         db.query(ContractPeriod)
         .join(ContractPeriod.contract)
         .options(
-            joinedload(ContractPeriod.contract).joinedload(Contract.end_customer),
+            joinedload(ContractPeriod.contract).joinedload(Contract.end_partner),
             joinedload(ContractPeriod.contract).joinedload(Contract.owner),
             joinedload(ContractPeriod.owner),
         )
@@ -212,7 +212,7 @@ def list_forecast_vs_actual(
             "contract_type": contract.contract_type,
             "owner_name": owner.name if owner else None,
             "department": owner.department if owner else None,
-            "end_customer_name": contract.end_customer.name if contract.end_customer else None,
+            "end_partner_name": contract.end_partner.name if contract.end_partner else None,
             "stage": period.stage,
             "forecast_revenue": fc_revenue,
             "actual_revenue": act_revenue,
@@ -233,7 +233,7 @@ def list_forecast_vs_actual(
         "contract_type": "",
         "owner_name": None,
         "department": None,
-        "end_customer_name": None,
+        "end_partner_name": None,
         "stage": None,
         "forecast_revenue": total_fc,
         "actual_revenue": total_act_revenue,
@@ -260,7 +260,7 @@ def list_receivables(
         db.query(ContractPeriod)
         .join(ContractPeriod.contract)
         .options(
-            joinedload(ContractPeriod.contract).joinedload(Contract.end_customer),
+            joinedload(ContractPeriod.contract).joinedload(Contract.end_partner),
             joinedload(ContractPeriod.contract).joinedload(Contract.owner),
             joinedload(ContractPeriod.owner),
         )
@@ -312,7 +312,7 @@ def list_receivables(
             "contract_type": contract.contract_type,
             "owner_name": owner.name if owner else None,
             "department": owner.department if owner else None,
-            "end_customer_name": contract.end_customer.name if contract.end_customer else None,
+            "end_partner_name": contract.end_partner.name if contract.end_partner else None,
             "actual_revenue": act_revenue,
             "receipt": receipt,
             "ar": ar,
@@ -343,7 +343,7 @@ def get_contract_pnl(
 ) -> dict:
     """사업별 매입매출관리: 거래처별 월별 매출/매입/입금 피벗 + GP + 미수금."""
     contract = db.query(Contract).options(
-        joinedload(Contract.end_customer),
+        joinedload(Contract.end_partner),
         joinedload(Contract.owner),
     ).filter(Contract.id == contract_id).first()
     if not contract:
@@ -370,14 +370,14 @@ def get_contract_pnl(
 
     act_q = (
         db.query(TransactionLine)
-        .options(joinedload(TransactionLine.customer))
+        .options(joinedload(TransactionLine.partner))
         .filter(TransactionLine.contract_id == contract_id, TransactionLine.status == STATUS_CONFIRMED)
     )
     if year_filter:
         act_q = act_q.filter(TransactionLine.revenue_month.like(year_filter))
     transaction_lines = act_q.order_by(TransactionLine.revenue_month).all()
 
-    rcpt_q = db.query(Receipt).options(joinedload(Receipt.customer)).filter(Receipt.contract_id == contract_id)
+    rcpt_q = db.query(Receipt).options(joinedload(Receipt.partner)).filter(Receipt.contract_id == contract_id)
     if year_filter:
         rcpt_q = rcpt_q.filter(Receipt.revenue_month.like(year_filter))
     receipts = rcpt_q.order_by(Receipt.receipt_date).all()
@@ -388,15 +388,15 @@ def get_contract_pnl(
     period_ids = [p.id for p in db.query(_DP.id).filter(_DP.contract_id == contract_id).all()]
     contacts = (
         db.query(ContractContact)
-        .options(_jl(ContractContact.customer_contact))
+        .options(_jl(ContractContact.partner_contact))
         .filter(ContractContact.contract_period_id.in_(period_ids))
         .all()
     ) if period_ids else []
     contact_map: dict[int, dict] = {}
     for c in contacts:
-        cc = c.customer_contact
-        if c.customer_id and c.customer_id not in contact_map and cc:
-            contact_map[c.customer_id] = {
+        cc = c.partner_contact
+        if c.partner_id and c.partner_id not in contact_map and cc:
+            contact_map[c.partner_id] = {
                 "name": cc.name, "phone": cc.phone,
                 "email": cc.email, "contact_type": c.contact_type,
             }
@@ -409,38 +409,38 @@ def get_contract_pnl(
             active_months.add(p.revenue_month)
     sorted_months = sorted(active_months)
 
-    revenue_by_customer: dict[int | None, dict[str, int]] = {}
-    cost_by_customer: dict[int | None, dict[str, int]] = {}
+    revenue_by_partner: dict[int | None, dict[str, int]] = {}
+    cost_by_partner: dict[int | None, dict[str, int]] = {}
 
     for a in transaction_lines:
-        cid = a.customer_id
-        target = revenue_by_customer if a.line_type == "revenue" else cost_by_customer
+        cid = a.partner_id
+        target = revenue_by_partner if a.line_type == "revenue" else cost_by_partner
         row = target.setdefault(cid, {})
         row[a.revenue_month] = row.get(a.revenue_month, 0) + (a.supply_amount or 0)
 
-    receipt_by_customer: dict[int | None, dict[str, int]] = {}
+    receipt_by_partner: dict[int | None, dict[str, int]] = {}
     for p in receipts:
-        cid = p.customer_id
-        row = receipt_by_customer.setdefault(cid, {})
+        cid = p.partner_id
+        row = receipt_by_partner.setdefault(cid, {})
         month = p.revenue_month or "unknown"
         row[month] = row.get(month, 0) + (p.amount or 0)
 
-    customer_names: dict[int | None, str] = {None: "(미지정)"}
+    partner_names: dict[int | None, str] = {None: "(미지정)"}
     for a in transaction_lines:
-        if a.customer_id and a.customer_id not in customer_names:
-            customer_names[a.customer_id] = a.customer.name if a.customer else f"ID:{a.customer_id}"
+        if a.partner_id and a.partner_id not in partner_names:
+            partner_names[a.partner_id] = a.partner.name if a.partner else f"ID:{a.partner_id}"
     for p in receipts:
-        if p.customer_id and p.customer_id not in customer_names:
-            customer_names[p.customer_id] = p.customer.name if p.customer else f"ID:{p.customer_id}"
+        if p.partner_id and p.partner_id not in partner_names:
+            partner_names[p.partner_id] = p.partner.name if p.partner else f"ID:{p.partner_id}"
 
-    def _build_rows(by_customer: dict, section: str) -> list[dict]:
+    def _build_rows(by_partner: dict, section: str) -> list[dict]:
         rows = []
-        for cid, month_data in sorted(by_customer.items(), key=lambda x: customer_names.get(x[0], "")):
+        for cid, month_data in sorted(by_partner.items(), key=lambda x: partner_names.get(x[0], "")):
             contact = contact_map.get(cid, {})
             rows.append({
                 "section": section,
-                "customer_id": cid,
-                "customer_name": customer_names.get(cid, "(미지정)"),
+                "partner_id": cid,
+                "partner_name": partner_names.get(cid, "(미지정)"),
                 "contact_name": contact.get("name"),
                 "contact_phone": contact.get("phone"),
                 "contact_email": contact.get("email"),
@@ -449,9 +449,9 @@ def get_contract_pnl(
             })
         return rows
 
-    revenue_rows = _build_rows(revenue_by_customer, "revenue")
-    cost_rows = _build_rows(cost_by_customer, "cost")
-    receipt_rows = _build_rows(receipt_by_customer, "receipt")
+    revenue_rows = _build_rows(revenue_by_partner, "revenue")
+    cost_rows = _build_rows(cost_by_partner, "cost")
+    receipt_rows = _build_rows(receipt_by_partner, "receipt")
 
     revenue_totals: dict[str, int] = {}
     cost_totals: dict[str, int] = {}
@@ -510,7 +510,7 @@ def get_contract_pnl(
         "contract_id": contract.id,
         "contract_name": contract.contract_name,
         "contract_type": contract.contract_type,
-        "end_customer_name": contract.end_customer.name if contract.end_customer else None,
+        "end_partner_name": contract.end_partner.name if contract.end_partner else None,
         "owner_name": contract.owner.name if contract.owner else None,
         "years": [int(y) for y in years],
         "months": sorted_months,

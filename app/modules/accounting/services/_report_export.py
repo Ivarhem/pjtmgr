@@ -128,7 +128,7 @@ def export_forecast_vs_actual(
     for ri, row_data in enumerate(data["rows"], 5):
         vals = [
             row_data["contract_name"], row_data["contract_type"], row_data["owner_name"],
-            row_data["department"], row_data["end_customer_name"], row_data["stage"],
+            row_data["department"], row_data["end_partner_name"], row_data["stage"],
             row_data["forecast_revenue"], row_data["actual_revenue"],
             row_data["gap_revenue"], row_data["achievement_rate"],
             row_data["gp"], row_data["gp_pct"],
@@ -206,7 +206,7 @@ def export_receivables(
     for ri, row_data in enumerate(data["rows"], 5):
         vals = [
             row_data["contract_name"], row_data["contract_type"], row_data["owner_name"],
-            row_data["department"], row_data["end_customer_name"],
+            row_data["department"], row_data["end_partner_name"],
             row_data["actual_revenue"], row_data["receipt"],
             row_data["ar"], row_data["ar_rate"],
         ]
@@ -290,7 +290,7 @@ def export_contract_pnl(
     def _write_section(start_row: int, section_name: str, rows_data: list[dict], totals: dict, fill: PatternFill) -> int:
         r = start_row
         for item in rows_data:
-            ws.cell(row=r, column=2, value=item["customer_name"]).border = thin_border
+            ws.cell(row=r, column=2, value=item["partner_name"]).border = thin_border
             ws.cell(row=r, column=3, value=item.get("contact_name")).border = thin_border
             ws.cell(row=r, column=4, value=item.get("contact_phone")).border = thin_border
             ws.cell(row=r, column=5, value=item.get("contact_email")).border = thin_border

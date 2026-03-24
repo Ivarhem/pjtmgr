@@ -35,14 +35,14 @@ def create_period_contact(period_id: int, data: ContractContactCreate, db: Sessi
     return svc.create_contract_contact(db, period_id, data)
 
 
-@router.get("/customers/{customer_id}/contract-contacts")
-def list_customer_contract_contacts(customer_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> list[dict]:
-    return svc.list_by_customer(db, customer_id, current_user=current_user)
+@router.get("/partners/{partner_id}/contract-contacts")
+def list_partner_contract_contacts(partner_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> list[dict]:
+    return svc.list_by_partner(db, partner_id, current_user=current_user)
 
 
-@router.get("/customers/{customer_id}/contract-contacts-pivoted")
-def list_customer_contract_contacts_pivoted(customer_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> list[dict]:
-    return svc.list_by_customer_pivoted(db, customer_id, current_user=current_user)
+@router.get("/partners/{partner_id}/contract-contacts-pivoted")
+def list_partner_contract_contacts_pivoted(partner_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> list[dict]:
+    return svc.list_by_partner_pivoted(db, partner_id, current_user=current_user)
 
 
 @router.patch("/contract-contacts/{contact_id}", dependencies=[require_module_access("accounting", "full")])

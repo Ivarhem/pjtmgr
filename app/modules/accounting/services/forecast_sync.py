@@ -114,7 +114,7 @@ def preview_forecast_sync(
     for month, rows in sorted(tl_by_month.items()):
         if month not in forecast_months:
             for a in rows:
-                if a.status == STATUS_EXPECTED and a.customer_id is None:
+                if a.status == STATUS_EXPECTED and a.partner_id is None:
                     to_delete.append(
                         {
                             "id": a.id,
@@ -176,10 +176,10 @@ def sync_transaction_lines_from_forecast(
     for month, info in sorted(forecast_months.items()):
         if (month, "revenue") not in existing:
             period = period_map.get(info["period_id"])
-            # Period의 매출처 우선, 없으면 Contract의 end_customer fallback
-            period_cust = period.customer_id if period else None
-            customer_id = (
-                period_cust if period_cust is not None else contract.end_customer_id
+            # Period의 매출처 우선, 없으면 Contract의 end_partner fallback
+            period_partner = period.partner_id if period else None
+            partner_id = (
+                period_partner if period_partner is not None else contract.end_partner_id
             )
             # 발행일: Period 설정 우선, 없으면 Contract fallback
             invoice_src = period if (period and period.invoice_day_type) else contract
@@ -187,7 +187,7 @@ def sync_transaction_lines_from_forecast(
                 contract_id=contract_id,
                 revenue_month=month,
                 line_type="revenue",
-                customer_id=customer_id,
+                partner_id=partner_id,
                 supply_amount=info["amount"],
                 invoice_issue_date=_calc_invoice_date(invoice_src, month),
                 status=STATUS_EXPECTED,

@@ -14,12 +14,12 @@ from app.modules.accounting.models.contract_period import ContractPeriod
 from app.modules.accounting.models.monthly_forecast import MonthlyForecast
 from app.modules.accounting.models.transaction_line import TransactionLine
 from app.modules.common.services.user import get_default_role_id
-from app.modules.common.services.customer import get_or_create_by_name as _get_or_create_customer_svc
-from app.core.code_generator import next_contract_code, next_period_code, RESERVED_CUSTOMER_CODE
+from app.modules.common.services.partner import get_or_create_by_name as _get_or_create_partner_svc
+from app.core.code_generator import next_contract_code, next_period_code, RESERVED_PARTNER_CODE
 from app.core.exceptions import BusinessRuleError
 
 if TYPE_CHECKING:
-    from app.modules.common.models.customer import Customer
+    from app.modules.common.models.partner import Partner
 from app.modules.accounting.schemas.contract import VALID_STAGES
 from app.modules.accounting.services.contract_type_config import get_valid_codes as _get_valid_contract_types
 
@@ -77,18 +77,18 @@ def _get_or_create_user(db: Session, name: str) -> User | None:
     return user
 
 
-def _get_or_create_customer(
+def _get_or_create_partner(
     db: Session,
     name: str,
     tax_contact_name: str | None = None,
     tax_contact_phone: str | None = None,
     tax_contact_email: str | None = None,
-) -> "Customer":
-    """pandas NaN 처리 후 customer 서비스 호출."""
+) -> "Partner":
+    """pandas NaN 처리 후 partner 서비스 호출."""
     def _clean(val: object) -> str | None:
         return str(val).strip() if pd.notna(val) and val else None
 
-    return _get_or_create_customer_svc(
+    return _get_or_create_partner_svc(
         db,
         str(name).strip(),
         tax_contact_name=_clean(tax_contact_name),
@@ -400,14 +400,14 @@ def _import_data_inner(
             if is_new:
                 new_users.append(owner_name)
 
-        end_customer = _get_or_create_customer(db, row["거래처(END)"].strip())
+        end_partner = _get_or_create_partner(db, row["거래처(END)"].strip())
 
         if existing_period:
             # 덮어쓰기: period + contract 업데이트
             contract = existing_period.contract
             contract.contract_name = contract_name
             contract.contract_type = contract_type
-            contract.end_customer_id = end_customer.id
+            contract.end_partner_id = end_partner.id
             if owner:
                 contract.owner_user_id = owner.id
             existing_period.stage = row["진행단계"].strip()
@@ -415,12 +415,12 @@ def _import_data_inner(
             existing_period.expected_gp_total = _to_int(row.get("예상GP(원)", ""))
             period_map[_import_key(row)] = existing_period
         else:
-            cust_code = end_customer.customer_code if end_customer else RESERVED_CUSTOMER_CODE
+            cust_code = end_partner.partner_code if end_partner else RESERVED_PARTNER_CODE
             contract = Contract(
                 contract_code=next_contract_code(db, cust_code),
                 contract_name=contract_name,
                 contract_type=contract_type,
-                end_customer_id=end_customer.id,
+                end_partner_id=end_partner.id,
                 owner_user_id=owner.id if owner else None,
                 status="active",
             )
@@ -482,7 +482,7 @@ def _import_data_inner(
             year_val = int(row["연도"].strip())
             line_type = LINE_TYPE_MAP.get(row["매출/매입"].strip(), "revenue")
 
-            customer = _get_or_create_customer(
+            partner = _get_or_create_partner(
                 db,
                 name=row["거래처명"],
                 tax_contact_name=row.get("세금계산서담당자"),
@@ -500,7 +500,7 @@ def _import_data_inner(
                     contract_id=contract_id,
                     revenue_month=revenue_month,
                     line_type=line_type,
-                    customer_id=customer.id,
+                    partner_id=partner.id,
                     supply_amount=amount,
                 ))
 
@@ -665,8 +665,8 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
             )
             continue
 
-        customer_name = str(row.get("거래처명", "")).strip()
-        if not customer_name:
+        partner_name = str(row.get("거래처명", "")).strip()
+        if not partner_name:
             _append_error(
                 errors,
                 error_details,
@@ -674,13 +674,13 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
                 sheet="Sheet3",
                 row=i + 2,
                 column="거래처명",
-                code="required_customer_name",
+                code="required_partner_name",
             )
             continue
 
-        customer = _get_or_create_customer(
+        partner = _get_or_create_partner(
             db,
-            name=customer_name,
+            name=partner_name,
             tax_contact_name=row.get("세금계산서담당자"),
             tax_contact_phone=row.get("연락처"),
             tax_contact_email=row.get("이메일"),
@@ -697,7 +697,7 @@ def import_actuals_sheet(db: Session, file_bytes: bytes) -> dict:
                 contract_id=period.contract_id,
                 revenue_month=revenue_month,
                 line_type=line_type,
-                customer_id=customer.id,
+                partner_id=partner.id,
                 supply_amount=amount,
             ))
             saved += 1

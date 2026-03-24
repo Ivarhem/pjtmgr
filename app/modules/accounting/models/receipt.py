@@ -10,7 +10,7 @@ class Receipt(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), nullable=False, index=True)
-    customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))  # 주로 매출처
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("partners.id"))  # 주로 매출처
     receipt_date: Mapped[str] = mapped_column(String(10), nullable=False, index=True)    # YYYY-MM-DD
     revenue_month: Mapped[str | None] = mapped_column(String(10), index=True)            # YYYY-MM-01 (귀속월 연결)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)             # 공급가액 기준 (원)
@@ -18,7 +18,7 @@ class Receipt(TimestampMixin, Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
     contract: Mapped["Contract"] = relationship(foreign_keys="[Receipt.contract_id]")
-    customer: Mapped["Customer | None"] = relationship(foreign_keys="[Receipt.customer_id]")
+    partner: Mapped["Partner | None"] = relationship(foreign_keys="[Receipt.partner_id]")
     matches: Mapped[list["ReceiptMatch"]] = relationship(
         back_populates="receipt", cascade="all, delete-orphan",
     )

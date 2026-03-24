@@ -32,7 +32,7 @@ from app.modules.accounting.services.metrics import (
     load_payments,
     month_range,
     safe_pct,
-    top_customers,
+    top_partners,
 )
 
 if TYPE_CHECKING:
@@ -92,7 +92,7 @@ def get_dashboard(
     department: list[str] | None = None,
     contract_type: list[str] | None = None,
     stage: list[str] | None = None,
-    customer_id: list[int] | None = None,
+    partner_id: list[int] | None = None,
     group_by: str = "month",
     current_user: User | None = None,
 ) -> dict:
@@ -101,11 +101,11 @@ def get_dashboard(
     Args:
         date_from: 시작월 (YYYY-MM). 미지정 시 올해 1월.
         date_to: 종료월 (YYYY-MM). 미지정 시 올해 12월.
-        owner_id, department, contract_type, stage, customer_id: 선택적 필터.
+        owner_id, department, contract_type, stage, partner_id: 선택적 필터.
         group_by: 집계 단위 (month/quarter/half/year).
 
     반환:
-        kpis, trend, by_type, by_department, top_customers, ar_warnings
+        kpis, trend, by_type, by_department, top_partners, ar_warnings
     """
     if group_by not in _VALID_GROUP_BY:
         group_by = "month"
@@ -117,7 +117,7 @@ def get_dashboard(
         department=department,
         contract_type=contract_type,
         stage=stage,
-        customer_id=customer_id,
+        partner_id=partner_id,
     )
 
     label = f"{filt.date_from[:4]}"
@@ -137,7 +137,7 @@ def get_dashboard(
         "group_by": group_by,
         "by_type": aggregate_by_field(db, filt, current_user, "contract_type"),
         "by_department": aggregate_by_field(db, filt, current_user, "department"),
-        "top_customers": top_customers(db, filt, current_user, n=10),
+        "top_partners": top_partners(db, filt, current_user, n=10),
         "ar_warnings": ar_warnings(db, filt, current_user, n=10),
     }
 
@@ -396,7 +396,7 @@ def get_target_vs_actual(
     owner_id: list[int] | None = None,
     department: list[str] | None = None,
     contract_type: list[str] | None = None,
-    customer_id: list[int] | None = None,
+    partner_id: list[int] | None = None,
     group_by: str = "month",
     current_user: User | None = None,
 ) -> TargetVsActualResponse:
@@ -410,7 +410,7 @@ def get_target_vs_actual(
         owner_id=owner_id,
         department=department,
         contract_type=contract_type,
-        customer_id=customer_id,
+        partner_id=partner_id,
     )
 
     periods = load_filtered_periods(db, filt, current_user, with_owner=True)

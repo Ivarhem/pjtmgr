@@ -6,15 +6,15 @@ RankType = Literal["정", "부"]
 
 
 class ContractContactCreate(BaseModel):
-    customer_id: int
-    customer_contact_id: int
+    partner_id: int
+    partner_contact_id: int
     contact_type: ContactType
     rank: RankType = "정"
     notes: str | None = None
 
 
 class ContractContactUpdate(BaseModel):
-    customer_contact_id: int | None = None
+    partner_contact_id: int | None = None
     contact_type: ContactType | None = None
     rank: RankType | None = None
     notes: str | None = None
@@ -23,8 +23,8 @@ class ContractContactUpdate(BaseModel):
 class ContractContactRead(BaseModel):
     id: int
     contract_period_id: int
-    customer_id: int
-    customer_contact_id: int | None
+    partner_id: int
+    partner_contact_id: int | None
     contact_type: str
     rank: str
     contact_name: str | None = None

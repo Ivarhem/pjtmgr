@@ -30,8 +30,8 @@ def _period_list_dict(period: ContractPeriod, sales_detail: ContractSalesDetail 
         "contract_code": contract.contract_code,
         "contract_name": contract.contract_name,
         "contract_type": contract.contract_type,
-        "end_customer_name": contract.end_customer.name if contract.end_customer else None,
-        "customer_name": period.customer.name if period.customer else None,
+        "end_partner_name": contract.end_partner.name if contract.end_partner else None,
+        "partner_name": period.partner.name if period.partner else None,
         "owner_name": owner.name if owner else None,
         "owner_department": owner.department if owner else None,
         "status": contract.status,
@@ -83,10 +83,10 @@ def list_periods_flat(
         .join(ContractPeriod.contract)
         .filter(Contract.status != "cancelled")
         .options(
-            joinedload(ContractPeriod.contract).joinedload(Contract.end_customer),
+            joinedload(ContractPeriod.contract).joinedload(Contract.end_partner),
             joinedload(ContractPeriod.contract).joinedload(Contract.owner),
             joinedload(ContractPeriod.owner),
-            joinedload(ContractPeriod.customer),
+            joinedload(ContractPeriod.partner),
         )
     )
     # 역할 기반 데이터 가시 범위 적용

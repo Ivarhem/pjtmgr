@@ -17,7 +17,7 @@ from app.modules.accounting.models.receipt import Receipt
 from app.modules.accounting.models.receipt_match import ReceiptMatch
 from app.core.auth.authorization import apply_contract_scope
 from app.modules.accounting.schemas.report import ReportFilter
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 
 if TYPE_CHECKING:
     from app.modules.common.models.user import User
@@ -34,7 +34,7 @@ def build_filter(
     department: list[str] | None = None,
     contract_type: list[str] | None = None,
     stage: list[str] | None = None,
-    customer_id: list[int] | None = None,
+    partner_id: list[int] | None = None,
 ) -> ReportFilter:
     """라우터 파라미터 → ReportFilter 변환."""
     df = date_from if len(date_from) > 7 else f"{date_from}-01"
@@ -46,7 +46,7 @@ def build_filter(
         department=department,
         contract_type=contract_type,
         stage=stage,
-        customer_id=customer_id,
+        partner_id=partner_id,
     )
 
 
@@ -128,11 +128,11 @@ def apply_common_filters(
         q = q.filter(Contract.contract_type.in_(filt.contract_type))
     if filt.stage:
         q = q.filter(ContractPeriod.stage.in_(filt.stage))
-    if filt.customer_id:
+    if filt.partner_id:
         q = q.filter(
             or_(
-                ContractPeriod.customer_id.in_(filt.customer_id),
-                Contract.end_customer_id.in_(filt.customer_id),
+                ContractPeriod.partner_id.in_(filt.partner_id),
+                Contract.end_partner_id.in_(filt.partner_id),
             )
         )
 
@@ -309,7 +309,7 @@ def load_filtered_periods(
     current_user: User | None,
     *,
     with_owner: bool = False,
-    with_end_customer: bool = False,
+    with_end_partner: bool = False,
 ) -> list[ContractPeriod]:
     """공통 필터 적용 후 ContractPeriod 목록 반환."""
     q = (
@@ -321,8 +321,8 @@ def load_filtered_periods(
     if with_owner:
         loads.append(joinedload(ContractPeriod.contract).joinedload(Contract.owner))
         loads.append(joinedload(ContractPeriod.owner))
-    if with_end_customer:
-        loads.append(joinedload(ContractPeriod.contract).joinedload(Contract.end_customer))
+    if with_end_partner:
+        loads.append(joinedload(ContractPeriod.contract).joinedload(Contract.end_partner))
     q = q.options(*loads)
 
     q, _ = apply_common_filters(q, filt, current_user)
@@ -698,7 +698,7 @@ def aggregate_by_field(
     return result
 
 
-def top_customers(
+def top_partners(
     db: Session,
     filt: ReportFilter,
     current_user: User | None,
@@ -706,13 +706,13 @@ def top_customers(
 ) -> list[dict]:
     """매출 상위 N 거래처 (END 고객 기준).
 
-    반환: [{customer_name, actual_revenue, contract_count}]
+    반환: [{partner_name, actual_revenue, contract_count}]
     """
     period_scope = _filtered_period_scope_subquery(db, filt, current_user)
     contract_scope = (
         db.query(
             period_scope.c.contract_id.label("contract_id"),
-            Contract.end_customer_id.label("end_customer_id"),
+            Contract.end_partner_id.label("end_partner_id"),
         )
         .join(Contract, Contract.id == period_scope.c.contract_id)
         .distinct()
@@ -740,24 +740,24 @@ def top_customers(
 
     rows = (
         db.query(
-            func.coalesce(Customer.name, "(미지정)").label("customer_name"),
+            func.coalesce(Partner.name, "(미지정)").label("partner_name"),
             func.coalesce(func.sum(func.coalesce(actuals_by_contract.c.actual_revenue, 0)), 0).label("actual_revenue"),
             func.count(func.distinct(contract_scope.c.contract_id)).label("contract_count"),
         )
-        .outerjoin(Customer, Customer.id == contract_scope.c.end_customer_id)
+        .outerjoin(Partner, Partner.id == contract_scope.c.end_partner_id)
         .outerjoin(actuals_by_contract, actuals_by_contract.c.contract_id == contract_scope.c.contract_id)
-        .group_by(Customer.name)
+        .group_by(Partner.name)
         .order_by(func.coalesce(func.sum(func.coalesce(actuals_by_contract.c.actual_revenue, 0)), 0).desc())
         .limit(n)
         .all()
     )
     return [
         {
-            "customer_name": customer_name,
+            "partner_name": partner_name,
             "actual_revenue": int(actual_revenue or 0),
             "contract_count": int(contract_count or 0),
         }
-        for customer_name, actual_revenue, contract_count in rows
+        for partner_name, actual_revenue, contract_count in rows
     ]
 
 

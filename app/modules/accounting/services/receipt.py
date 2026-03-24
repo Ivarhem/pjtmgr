@@ -23,8 +23,8 @@ def _receipt_dict(p: Receipt) -> dict:
     return {
         "id": p.id,
         "contract_id": p.contract_id,
-        "customer_id": p.customer_id,
-        "customer_name": p.customer.name if p.customer else None,
+        "partner_id": p.partner_id,
+        "partner_name": p.partner.name if p.partner else None,
         "receipt_date": p.receipt_date,
         "revenue_month": p.revenue_month,
         "amount": p.amount,
@@ -39,7 +39,7 @@ def get_receipts(db: Session, contract_id: int) -> list[dict]:
 def _get_receipts(db: Session, contract_id: int) -> list[dict]:
     rows = (
         db.query(Receipt)
-        .options(joinedload(Receipt.customer))
+        .options(joinedload(Receipt.partner))
         .filter(Receipt.contract_id == contract_id)
         .order_by(Receipt.receipt_date)
         .all()
@@ -101,7 +101,7 @@ def update_receipt(
     try:
         row = (
             db.query(Receipt)
-            .options(joinedload(Receipt.customer))
+            .options(joinedload(Receipt.partner))
             .filter(Receipt.id == receipt_id)
             .first()
         )

@@ -29,7 +29,7 @@ def get_ledger(db: Session, contract_id: int, *, current_user: User | None = Non
                 "type": "매출" if a["line_type"] == "revenue" else "매입",
                 "revenue_month": a["revenue_month"],
                 "date": a["invoice_issue_date"],
-                "customer_name": a["customer_name"],
+                "partner_name": a["partner_name"],
                 "amount": a["supply_amount"],
                 "status": a["status"],
                 "description": a["description"],

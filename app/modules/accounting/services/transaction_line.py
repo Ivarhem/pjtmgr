@@ -18,7 +18,7 @@ from app.modules.accounting.services._contract_helpers import (
     check_period_not_completed,
     check_periods_not_completed,
 )
-from app.modules.common.services.customer import get_or_create_by_name as _get_or_create_customer
+from app.modules.common.services.partner import get_or_create_by_name as _get_or_create_partner
 
 if TYPE_CHECKING:
     from app.modules.common.models.user import User
@@ -32,8 +32,8 @@ def _transaction_line_dict(a: TransactionLine) -> dict:
         "contract_id": a.contract_id,
         "revenue_month": a.revenue_month,
         "line_type": a.line_type,
-        "customer_id": a.customer_id,
-        "customer_name": a.customer.name if a.customer else None,
+        "partner_id": a.partner_id,
+        "partner_name": a.partner.name if a.partner else None,
         "supply_amount": a.supply_amount,
         "invoice_issue_date": a.invoice_issue_date,
         "status": a.status or "확정",
@@ -45,17 +45,17 @@ def _transaction_line_dict(a: TransactionLine) -> dict:
 
 def _auto_status(fields: dict) -> str:
     """거래처·발행일 유무로 상태를 자동 판별."""
-    has_customer = fields.get("customer_id") is not None
+    has_partner = fields.get("partner_id") is not None
     has_date = bool(fields.get("invoice_issue_date"))
-    return STATUS_CONFIRMED if (has_customer and has_date) else STATUS_EXPECTED
+    return STATUS_CONFIRMED if (has_partner and has_date) else STATUS_EXPECTED
 
 
-def _resolve_customer(db: Session, data_dict: dict) -> dict:
-    """customer_id가 없고 customer_name이 있으면 자동 생성/조회."""
-    name = data_dict.pop("customer_name", None)
-    if not data_dict.get("customer_id") and name and name.strip():
-        customer = _get_or_create_customer(db, name.strip())
-        data_dict["customer_id"] = customer.id
+def _resolve_partner(db: Session, data_dict: dict) -> dict:
+    """partner_id가 없고 partner_name이 있으면 자동 생성/조회."""
+    name = data_dict.pop("partner_name", None)
+    if not data_dict.get("partner_id") and name and name.strip():
+        partner = _get_or_create_partner(db, name.strip())
+        data_dict["partner_id"] = partner.id
     return data_dict
 
 
@@ -68,7 +68,7 @@ def get_transaction_lines(db: Session, contract_id: int) -> list[dict]:
 def _get_transaction_lines(db: Session, contract_id: int) -> list[dict]:
     rows = (
         db.query(TransactionLine)
-        .options(joinedload(TransactionLine.customer))
+        .options(joinedload(TransactionLine.partner))
         .filter(TransactionLine.contract_id == contract_id)
         .order_by(TransactionLine.revenue_month, TransactionLine.line_type)
         .all()
@@ -93,7 +93,7 @@ def create_transaction_line(
         if contract.status == "cancelled":
             raise BusinessRuleError("삭제된 사업에는 매출/매입을 추가할 수 없습니다.")
         check_period_not_completed(db, contract_id, data.revenue_month)
-        fields = _resolve_customer(db, data.model_dump())
+        fields = _resolve_partner(db, data.model_dump())
         if not fields.get("status"):
             fields["status"] = _auto_status(fields)
         row = TransactionLine(contract_id=contract_id, created_by=created_by, **fields)
@@ -127,7 +127,7 @@ def update_transaction_line(
     try:
         row = (
             db.query(TransactionLine)
-            .options(joinedload(TransactionLine.customer))
+            .options(joinedload(TransactionLine.partner))
             .filter(TransactionLine.id == transaction_line_id)
             .first()
         )
@@ -135,7 +135,7 @@ def update_transaction_line(
             raise NotFoundError("실적을 찾을 수 없습니다.")
         if current_user:
             check_contract_access(db, row.contract_id, current_user)
-        fields = _resolve_customer(db, data.model_dump(exclude_unset=True))
+        fields = _resolve_partner(db, data.model_dump(exclude_unset=True))
         check_periods_not_completed(
             db,
             row.contract_id,
@@ -198,7 +198,7 @@ def bulk_confirm_transaction_lines(
             .filter(
                 TransactionLine.contract_id == contract_id,
                 TransactionLine.status == STATUS_EXPECTED,
-                TransactionLine.customer_id.isnot(None),
+                TransactionLine.partner_id.isnot(None),
                 TransactionLine.invoice_issue_date.isnot(None),
                 TransactionLine.invoice_issue_date != "",
             )

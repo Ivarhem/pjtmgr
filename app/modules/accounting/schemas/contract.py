@@ -31,8 +31,8 @@ class ContractPeriodListRead(BaseModel):
     contract_code: str | None
     contract_name: str
     contract_type: str
-    end_customer_name: str | None
-    customer_name: str | None
+    end_partner_name: str | None
+    partner_name: str | None
     owner_name: str | None
     status: str
     period_year: int

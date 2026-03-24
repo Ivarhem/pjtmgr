@@ -334,7 +334,7 @@ def _match_dict(a: ReceiptMatch) -> dict:
         "match_type": a.match_type,
         "receipt_date": receipt.receipt_date if receipt else None,
         "revenue_month": transaction_line.revenue_month if transaction_line else None,
-        "customer_name": transaction_line.customer.name if transaction_line and transaction_line.customer else None,
+        "partner_name": transaction_line.partner.name if transaction_line and transaction_line.partner else None,
         "supply_amount": transaction_line.supply_amount if transaction_line else None,
     }
 

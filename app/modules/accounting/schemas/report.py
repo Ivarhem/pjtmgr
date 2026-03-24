@@ -14,7 +14,7 @@ class ReportFilter(BaseModel):
     department: list[str] | None = None
     contract_type: list[str] | None = None
     stage: list[str] | None = None
-    customer_id: list[int] | None = None
+    partner_id: list[int] | None = None
     basis: str = "revenue_month"   # 향후 확장: invoice_month 등
 
 
@@ -56,7 +56,7 @@ class ForecastActualRow(BaseModel):
     contract_type: str
     owner_name: str | None = None
     department: str | None = None
-    end_customer_name: str | None = None
+    end_partner_name: str | None = None
     stage: str | None = None
     forecast_revenue: int = 0
     actual_revenue: int = 0
@@ -109,7 +109,7 @@ class ReceivableRow(BaseModel):
     contract_type: str
     owner_name: str | None = None
     department: str | None = None
-    end_customer_name: str | None = None
+    end_partner_name: str | None = None
     actual_revenue: int = 0
     receipt: int = 0
     ar: int = 0

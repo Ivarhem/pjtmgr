@@ -16,7 +16,7 @@ class TransactionLine(TimestampMixin, Base):
     contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id"), nullable=False, index=True)
     revenue_month: Mapped[str] = mapped_column(String(10), nullable=False, index=True)   # YYYY-MM-01 (귀속월)
     line_type: Mapped[str] = mapped_column(String(20), nullable=False)       # revenue / cost
-    customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))  # 매출처/매입처
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("partners.id"))  # 매출처/매입처
     supply_amount: Mapped[int] = mapped_column(Integer, nullable=False)      # 공급가액 (원, VAT별도)
     invoice_issue_date: Mapped[str | None] = mapped_column(String(10))      # 세금계산서 발행일 YYYY-MM-DD
     status: Mapped[str] = mapped_column(String(20), default=STATUS_CONFIRMED)  # 예정/확정
@@ -24,7 +24,7 @@ class TransactionLine(TimestampMixin, Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
     contract: Mapped["Contract"] = relationship(foreign_keys="[TransactionLine.contract_id]")
-    customer: Mapped["Customer | None"] = relationship(foreign_keys="[TransactionLine.customer_id]")
+    partner: Mapped["Partner | None"] = relationship(foreign_keys="[TransactionLine.partner_id]")
     receipt_matches: Mapped[list["ReceiptMatch"]] = relationship(
         back_populates="transaction_line", cascade="all, delete-orphan",
     )

@@ -9,8 +9,8 @@ TransactionLineStatus = Literal["예정", "확정"]
 class TransactionLineCreate(BaseModel):
     revenue_month: str          # YYYY-MM-01 (귀속월)
     line_type: LineType         # revenue / cost
-    customer_id: int | None = None
-    customer_name: str | None = None    # id가 없을 때 이름으로 자동 생성
+    partner_id: int | None = None
+    partner_name: str | None = None    # id가 없을 때 이름으로 자동 생성
     supply_amount: int
     invoice_issue_date: str | None = None   # YYYY-MM-DD
     status: TransactionLineStatus | None = None      # 예정/확정 (None이면 자동 판별)
@@ -32,8 +32,8 @@ class TransactionLineCreate(BaseModel):
 class TransactionLineUpdate(BaseModel):
     revenue_month: str | None = None
     line_type: LineType | None = None
-    customer_id: int | None = None
-    customer_name: str | None = None    # id가 없을 때 이름으로 자동 생성
+    partner_id: int | None = None
+    partner_name: str | None = None    # id가 없을 때 이름으로 자동 생성
     supply_amount: int | None = None
     invoice_issue_date: str | None = None
     status: TransactionLineStatus | None = None
@@ -59,8 +59,8 @@ class TransactionLineRead(BaseModel):
     contract_id: int
     revenue_month: str
     line_type: str
-    customer_id: int | None
-    customer_name: str | None
+    partner_id: int | None
+    partner_name: str | None
     supply_amount: int
     invoice_issue_date: str | None
     status: str
