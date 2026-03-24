@@ -58,6 +58,8 @@ def _period_read_dict(period: ContractPeriod) -> dict:
     return {
         "id": period.id,
         "contract_id": period.contract_id,
+        "contract_name": period.contract.contract_name if period.contract else None,
+        "contract_code": period.contract.contract_code if period.contract else None,
         "period_year": period.period_year,
         "period_label": period.period_label,
         "period_code": period.period_code,
