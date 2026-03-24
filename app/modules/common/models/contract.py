@@ -12,12 +12,12 @@ class Contract(TimestampMixin, Base):
     contract_code: Mapped[str] = mapped_column(String(9), unique=True, nullable=False)
     contract_name: Mapped[str] = mapped_column(String(300), nullable=False)
     contract_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
-    end_customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))
+    end_partner_id: Mapped[int | None] = mapped_column(ForeignKey("partners.id"))
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     status: Mapped[str] = mapped_column(String(30), default="active", index=True)
     notes: Mapped[str | None] = mapped_column(String(500))
 
-    end_customer: Mapped["Customer | None"] = relationship(back_populates="contracts")
+    end_partner: Mapped["Partner | None"] = relationship(back_populates="contracts")
     owner: Mapped["User | None"] = relationship(back_populates="contracts")
     periods: Mapped[list["ContractPeriod"]] = relationship(
         back_populates="contract", cascade="all, delete-orphan", order_by="ContractPeriod.period_year"

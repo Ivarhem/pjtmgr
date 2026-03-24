@@ -3,9 +3,9 @@ from app.modules.common.models.role import Role
 from app.modules.common.models.user import User
 from app.modules.common.models.login_failure import LoginFailure
 from app.modules.common.models.user_preference import UserPreference
-from app.modules.common.models.customer import Customer
-from app.modules.common.models.customer_contact import CustomerContact
-from app.modules.common.models.customer_contact_role import CustomerContactRole
+from app.modules.common.models.partner import Partner
+from app.modules.common.models.partner_contact import PartnerContact
+from app.modules.common.models.partner_contact_role import PartnerContactRole
 from app.modules.common.models.setting import Setting
 from app.modules.common.models.term_config import TermConfig
 from app.modules.common.models.audit_log import AuditLog
@@ -19,9 +19,9 @@ __all__ = [
     "User",
     "LoginFailure",
     "UserPreference",
-    "Customer",
-    "CustomerContact",
-    "CustomerContactRole",
+    "Partner",
+    "PartnerContact",
+    "PartnerContactRole",
     "Setting",
     "TermConfig",
     "AuditLog",

@@ -19,13 +19,13 @@ class ContractPeriod(TimestampMixin, Base):
     end_month: Mapped[str | None] = mapped_column(String(10), index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
-    customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id", ondelete="SET NULL"))
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("partners.id", ondelete="SET NULL"))
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     is_planned: Mapped[bool] = mapped_column(Boolean, default=True)
     notes: Mapped[str | None] = mapped_column(String(500))
 
     contract: Mapped["Contract"] = relationship(back_populates="periods")
     owner: Mapped["User | None"] = relationship(foreign_keys=[owner_user_id])
-    customer: Mapped["Customer | None"] = relationship(foreign_keys=[customer_id])
+    partner: Mapped["Partner | None"] = relationship(foreign_keys=[partner_id])
     # Note: forecasts, contract_contacts relationships는 accounting 모델 측에서
     # backref로 정의한다 (common → accounting 역방향 의존 방지).
