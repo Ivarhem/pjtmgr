@@ -68,6 +68,20 @@ def port_maps_page(request: Request) -> HTMLResponse:
 ## API 라우터(policy_assignments, policies)는 유지
 
 
+@router.get("/contacts", response_class=HTMLResponse)
+def contacts_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_contacts.html", {"request": request}
+    )
+
+
+@router.get("/audit-history", response_class=HTMLResponse)
+def audit_history_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_audit_history.html", {"request": request}
+    )
+
+
 @router.get("/infra-dashboard")
 def infra_dashboard_page(request: Request) -> RedirectResponse:
     """Dashboard merged into /periods page."""
