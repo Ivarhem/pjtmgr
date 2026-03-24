@@ -16,11 +16,11 @@ from app.core.auth.authorization import (
     check_contract_access,
     check_period_access,
 )
-from app.core.code_generator import next_contract_code, next_period_code, RESERVED_CUSTOMER_CODE
+from app.core.code_generator import next_business_code, next_period_code, RESERVED_PARTNER_CODE
 from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.modules.common.models.contract import Contract
 from app.modules.common.models.contract_period import ContractPeriod
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.common.schemas.contract import ContractCreate, ContractUpdate
 from app.modules.common.schemas.contract_period import (
     ContractPeriodCreate,
@@ -44,8 +44,8 @@ def _contract_read_dict(contract: Contract) -> dict:
         "contract_code": contract.contract_code,
         "contract_name": contract.contract_name,
         "contract_type": contract.contract_type,
-        "end_customer_id": contract.end_customer_id,
-        "end_customer_name": contract.end_customer.name if contract.end_customer else None,
+        "end_partner_id": contract.end_partner_id,
+        "end_partner_name": contract.end_partner.name if contract.end_partner else None,
         "owner_user_id": contract.owner_user_id,
         "owner_name": contract.owner.name if contract.owner else None,
         "status": contract.status,
@@ -67,8 +67,8 @@ def _period_read_dict(period: ContractPeriod) -> dict:
         "description": period.description,
         "owner_user_id": period.owner_user_id,
         "owner_name": period.owner.name if period.owner else None,
-        "customer_id": period.customer_id,
-        "customer_name": period.customer.name if period.customer else None,
+        "partner_id": period.partner_id,
+        "partner_name": period.partner.name if period.partner else None,
         "is_completed": period.is_completed,
         "is_planned": period.is_planned,
         "notes": period.notes,
@@ -88,16 +88,16 @@ def list_periods(
         .join(ContractPeriod.contract)
         .filter(Contract.status != "cancelled")
         .options(
-            joinedload(ContractPeriod.contract).joinedload(Contract.end_customer),
+            joinedload(ContractPeriod.contract).joinedload(Contract.end_partner),
             joinedload(ContractPeriod.owner),
-            joinedload(ContractPeriod.customer),
+            joinedload(ContractPeriod.partner),
         )
     )
     if customer_id is not None:
         q = q.filter(
             or_(
-                Contract.end_customer_id == customer_id,
-                ContractPeriod.customer_id == customer_id,
+                Contract.end_partner_id == customer_id,
+                ContractPeriod.partner_id == customer_id,
             )
         )
     periods = q.order_by(ContractPeriod.period_year.desc(), Contract.contract_name).all()
@@ -113,7 +113,7 @@ def list_periods(
             "period_code": p.period_code,
             "stage": p.stage,
             "description": p.description,
-            "customer_id": p.customer_id or p.contract.end_customer_id,
+            "customer_id": p.partner_id or p.contract.end_partner_id,
             "is_completed": p.is_completed,
             "start_month": p.start_month,
             "end_month": p.end_month,
@@ -133,7 +133,7 @@ def get_contract_periods(
         check_contract_access(db, contract_id, current_user)
     periods = (
         db.query(ContractPeriod)
-        .options(joinedload(ContractPeriod.owner), joinedload(ContractPeriod.customer))
+        .options(joinedload(ContractPeriod.owner), joinedload(ContractPeriod.partner))
         .filter(ContractPeriod.contract_id == contract_id)
         .order_by(ContractPeriod.period_year)
         .all()
@@ -150,8 +150,8 @@ def get_contract_periods(
             "description": p.description,
             "owner_user_id": p.owner_user_id,
             "owner_name": p.owner.name if p.owner else None,
-            "customer_id": p.customer_id,
-            "customer_name": p.customer.name if p.customer else None,
+            "partner_id": p.partner_id,
+            "partner_name": p.partner.name if p.partner else None,
             "is_completed": p.is_completed,
             "is_planned": p.is_planned,
             "notes": p.notes,
@@ -169,7 +169,7 @@ def get_contract(db: Session, contract_id: int, *, current_user: User | None = N
     contract = (
         db.query(Contract)
         .options(
-            joinedload(Contract.end_customer),
+            joinedload(Contract.end_partner),
             joinedload(Contract.owner),
             joinedload(Contract.periods),
         )
@@ -196,19 +196,19 @@ def create_contract(db: Session, data: ContractCreate, *, created_by: int | None
     if data.contract_type not in valid:
         raise BusinessRuleError(f"유효하지 않은 사업유형: {data.contract_type}")
 
-    # contract_code 채번: {customer_code}-P{seq}
-    if data.end_customer_id:
-        customer = db.get(Customer, data.end_customer_id)
-        cust_code = customer.customer_code if customer else RESERVED_CUSTOMER_CODE
+    # contract_code 채번: {partner_code}-B{seq}
+    if data.end_partner_id:
+        partner = db.get(Partner, data.end_partner_id)
+        partner_code = partner.partner_code if partner else RESERVED_PARTNER_CODE
     else:
-        cust_code = RESERVED_CUSTOMER_CODE
-    code = next_contract_code(db, cust_code)
+        partner_code = RESERVED_PARTNER_CODE
+    code = next_business_code(db, partner_code)
 
     contract = Contract(
         contract_code=code,
         contract_name=data.contract_name,
         contract_type=data.contract_type,
-        end_customer_id=data.end_customer_id,
+        end_partner_id=data.end_partner_id,
         owner_user_id=data.owner_user_id,
         status=data.status,
         notes=data.notes,
@@ -230,7 +230,7 @@ def update_contract(
         check_contract_access(db, contract_id, current_user)
     contract = (
         db.query(Contract)
-        .options(joinedload(Contract.end_customer), joinedload(Contract.owner))
+        .options(joinedload(Contract.end_partner), joinedload(Contract.owner))
         .filter(Contract.id == contract_id)
         .first()
     )
@@ -258,7 +258,7 @@ def restore_contract(db: Session, contract_id: int) -> dict:
     """삭제(cancelled)된 사업을 복구 (status → active)."""
     contract = (
         db.query(Contract)
-        .options(joinedload(Contract.end_customer), joinedload(Contract.owner))
+        .options(joinedload(Contract.end_partner), joinedload(Contract.owner))
         .filter(Contract.id == contract_id)
         .first()
     )
@@ -295,10 +295,10 @@ def get_period(db: Session, period_id: int, *, current_user: User | None = None)
     period = (
         db.query(ContractPeriod)
         .options(
-            joinedload(ContractPeriod.contract).joinedload(Contract.end_customer),
+            joinedload(ContractPeriod.contract).joinedload(Contract.end_partner),
             joinedload(ContractPeriod.contract).joinedload(Contract.owner),
             joinedload(ContractPeriod.owner),
-            joinedload(ContractPeriod.customer),
+            joinedload(ContractPeriod.partner),
         )
         .filter(ContractPeriod.id == period_id)
         .first()
@@ -317,7 +317,7 @@ def create_period(
 ) -> dict:
     """Period 생성. 검수/청구서 필드는 상속하지 않는다 (accounting 전용).
 
-    상속 필드: owner_user_id, customer_id (← Contract.end_customer_id).
+    상속 필드: owner_user_id, partner_id (← Contract.end_partner_id).
     """
     if current_user:
         check_contract_access(db, contract_id, current_user)
@@ -334,10 +334,10 @@ def create_period(
         raise BusinessRuleError("시작월이 종료월보다 클 수 없습니다.", status_code=422)
 
     # 담당자/매출처 필드: 미지정 시 Contract의 값을 복사
-    _inherit_fields = ["owner_user_id", "customer_id"]
+    _inherit_fields = ["owner_user_id", "partner_id"]
     provided = data.model_dump(exclude_unset=True)
-    # Contract 필드명이 다른 경우 매핑 (Period.customer_id ← Contract.end_customer_id)
-    _contract_field_map = {"customer_id": "end_customer_id"}
+    # Contract 필드명이 다른 경우 매핑 (Period.partner_id ← Contract.end_partner_id)
+    _contract_field_map = {"partner_id": "end_partner_id"}
     inherit_vals: dict = {}
     for f in _inherit_fields:
         if f in provided:
@@ -378,7 +378,7 @@ def update_period(
         db.query(ContractPeriod)
         .options(
             joinedload(ContractPeriod.owner),
-            joinedload(ContractPeriod.customer),
+            joinedload(ContractPeriod.partner),
         )
         .filter(ContractPeriod.id == period_id)
         .first()

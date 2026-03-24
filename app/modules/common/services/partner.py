@@ -6,106 +6,106 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
-from app.core.code_generator import next_customer_code
+from app.core.code_generator import next_partner_code
 
 if TYPE_CHECKING:
     from app.modules.common.models.user import User
-from app.modules.common.models.customer import Customer
-from app.modules.common.models.customer_contact import CustomerContact
-from app.modules.common.models.customer_contact_role import CustomerContactRole
+from app.modules.common.models.partner import Partner
+from app.modules.common.models.partner_contact import PartnerContact
+from app.modules.common.models.partner_contact_role import PartnerContactRole
 from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_contact import ContractContact
 from app.modules.accounting.models.contract_period import ContractPeriod
 from app.modules.accounting.models.transaction_line import TransactionLine
 from app.modules.accounting.models.receipt import Receipt
 from app.modules.accounting.models.receipt_match import ReceiptMatch
-from app.modules.common.schemas.customer import CustomerCreate, CustomerUpdate
-from app.modules.common.schemas.customer_contact import CustomerContactCreate, CustomerContactUpdate
+from app.modules.common.schemas.partner import PartnerCreate, PartnerUpdate
+from app.modules.common.schemas.partner_contact import PartnerContactCreate, PartnerContactUpdate
 from app.core.exceptions import NotFoundError, BusinessRuleError, DuplicateError
-from app.modules.common.services._customer_helpers import (
+from app.modules.common.services._partner_helpers import (
     _related_contract_ids,
     list_related_contracts,
-    list_customer_financials,
-    list_customer_receipts,
+    list_partner_financials,
+    list_partner_receipts,
 )
 
 # re-export for external consumers
 __all__ = [
-    "list_customers", "get_customer", "create_customer", "update_customer", "delete_customer",
+    "list_partners", "get_partner", "create_partner", "update_partner", "delete_partner",
     "get_or_create_by_name", "get_contacts", "create_contact", "update_contact", "delete_contact",
-    "_related_contract_ids", "list_related_contracts", "list_customer_financials", "list_customer_receipts",
+    "_related_contract_ids", "list_related_contracts", "list_partner_financials", "list_partner_receipts",
 ]
 
 
-def list_customers(
+def list_partners(
     db: Session,
     current_user: User | None = None,
     *,
     my_only: bool = False,
-    customer_type: str | None = None,
+    partner_type: str | None = None,
 ) -> list[dict]:
     """거래처 목록 (요약 데이터 포함: active_count, total_revenue)."""
     if my_only and current_user:
         contract_ids = _get_owner_contract_ids(db, current_user.id)
         if not contract_ids:
             return []
-        customer_ids = _collect_customer_ids(db, contract_ids)
-        if not customer_ids:
+        partner_ids = _collect_partner_ids(db, contract_ids)
+        if not partner_ids:
             return []
-        query = db.query(Customer).filter(Customer.id.in_(customer_ids))
+        query = db.query(Partner).filter(Partner.id.in_(partner_ids))
     elif not current_user or has_full_contract_scope(current_user):
-        query = db.query(Customer)
+        query = db.query(Partner)
     else:
         contract_ids = list_accessible_contract_ids(db, current_user)
         if not contract_ids:
             return []
-        customer_ids = _collect_customer_ids(db, contract_ids)
-        if not customer_ids:
+        partner_ids = _collect_partner_ids(db, contract_ids)
+        if not partner_ids:
             return []
-        query = db.query(Customer).filter(Customer.id.in_(customer_ids))
+        query = db.query(Partner).filter(Partner.id.in_(partner_ids))
 
-    if customer_type:
-        query = query.filter(Customer.customer_type == customer_type)
+    if partner_type:
+        query = query.filter(Partner.partner_type == partner_type)
 
-    customers = query.order_by(Customer.name).all()
+    partners = query.order_by(Partner.name).all()
 
-    if not customers:
+    if not partners:
         return []
 
-    return _enrich_customers_with_summary(db, customers)
+    return _enrich_partners_with_summary(db, partners)
 
 
-def _enrich_customers_with_summary(db: Session, customers: list[Customer]) -> list[dict]:
+def _enrich_partners_with_summary(db: Session, partners: list[Partner]) -> list[dict]:
     """거래처 ORM 목록에 active_count, total_revenue 요약을 추가하여 dict 리스트로 반환."""
-    customer_ids = [c.id for c in customers]
+    partner_ids = [c.id for c in partners]
 
-    # 1) customer_id별 진행중 사업 건수 (stage != '계약완료')
-    # end_customer 또는 period customer로 연결된 사업 기준
+    # 1) partner_id별 진행중 사업 건수 (stage != '계약완료')
+    # end_partner 또는 period partner로 연결된 사업 기준
     active_q = (
         db.query(
-            Customer.id,
+            Partner.id,
             func.count(func.distinct(Contract.id)),
         )
-        .outerjoin(Contract, Contract.end_customer_id == Customer.id)
+        .outerjoin(Contract, Contract.end_partner_id == Partner.id)
         .outerjoin(ContractPeriod, ContractPeriod.contract_id == Contract.id)
         .filter(
-            Customer.id.in_(customer_ids),
+            Partner.id.in_(partner_ids),
             Contract.status != "cancelled",
             ContractPeriod.stage != "계약완료",
         )
-        .group_by(Customer.id)
+        .group_by(Partner.id)
         .all()
     )
     active_map = {cid: cnt for cid, cnt in active_q}
 
-    # 2) customer_id별 매출 합계 (TransactionLine에서 해당 customer가 매출처인 것)
+    # 2) partner_id별 매출 합계 (TransactionLine에서 해당 partner가 매출처인 것)
     rev_q = (
         db.query(
             TransactionLine.customer_id,
             func.sum(TransactionLine.supply_amount),
         )
         .filter(
-            TransactionLine.customer_id.in_(customer_ids),
+            TransactionLine.customer_id.in_(partner_ids),
             TransactionLine.line_type == "revenue",
         )
         .group_by(TransactionLine.customer_id)
@@ -114,14 +114,14 @@ def _enrich_customers_with_summary(db: Session, customers: list[Customer]) -> li
     rev_map = {cid: total or 0 for cid, total in rev_q}
 
     result = []
-    for c in customers:
+    for c in partners:
         result.append({
             "id": c.id,
-            "customer_code": c.customer_code,
+            "partner_code": c.partner_code,
             "name": c.name,
             "business_no": c.business_no,
             "notes": c.notes,
-            "customer_type": c.customer_type,
+            "partner_type": c.partner_type,
             "phone": c.phone,
             "address": c.address,
             "note": c.note,
@@ -154,38 +154,38 @@ def _get_owner_contract_ids(db: Session, user_id: int) -> list[int]:
     return list(ids)
 
 
-def _collect_customer_ids(db: Session, contract_ids: list[int]) -> set[int]:
+def _collect_partner_ids(db: Session, contract_ids: list[int]) -> set[int]:
     """계약 ID 목록으로부터 관련 거래처 ID를 수집."""
-    customer_ids: set[int] = set()
-    customer_ids.update(
+    partner_ids: set[int] = set()
+    partner_ids.update(
         cid
-        for cid, in db.query(Contract.end_customer_id)
-        .filter(Contract.id.in_(contract_ids), Contract.end_customer_id.isnot(None))
+        for cid, in db.query(Contract.end_partner_id)
+        .filter(Contract.id.in_(contract_ids), Contract.end_partner_id.isnot(None))
         .all()
     )
     # Period 매출처
-    customer_ids.update(
+    partner_ids.update(
         cid
-        for cid, in db.query(ContractPeriod.customer_id)
-        .filter(ContractPeriod.contract_id.in_(contract_ids), ContractPeriod.customer_id.isnot(None))
+        for cid, in db.query(ContractPeriod.partner_id)
+        .filter(ContractPeriod.contract_id.in_(contract_ids), ContractPeriod.partner_id.isnot(None))
         .distinct()
         .all()
     )
-    customer_ids.update(
+    partner_ids.update(
         cid
         for cid, in db.query(TransactionLine.customer_id)
         .filter(TransactionLine.contract_id.in_(contract_ids), TransactionLine.customer_id.isnot(None))
         .distinct()
         .all()
     )
-    customer_ids.update(
+    partner_ids.update(
         cid
         for cid, in db.query(Receipt.customer_id)
         .filter(Receipt.contract_id.in_(contract_ids), Receipt.customer_id.isnot(None))
         .distinct()
         .all()
     )
-    customer_ids.update(
+    partner_ids.update(
         cid
         for cid, in db.query(ContractContact.customer_id)
         .join(ContractContact.contract_period)
@@ -193,11 +193,11 @@ def _collect_customer_ids(db: Session, contract_ids: list[int]) -> set[int]:
         .distinct()
         .all()
     )
-    return customer_ids
+    return partner_ids
 
 
-def get_customer(db: Session, customer_id: int) -> Customer | None:
-    return db.get(Customer, customer_id)
+def get_partner(db: Session, partner_id: int) -> Partner | None:
+    return db.get(Partner, partner_id)
 
 
 def get_or_create_by_name(
@@ -207,22 +207,22 @@ def get_or_create_by_name(
     tax_contact_name: str | None = None,
     tax_contact_phone: str | None = None,
     tax_contact_email: str | None = None,
-) -> Customer:
+) -> Partner:
     name = name.strip()
-    obj = db.query(Customer).filter(Customer.name == name).first()
+    obj = db.query(Partner).filter(Partner.name == name).first()
     if not obj:
-        obj = Customer(name=name, customer_code=next_customer_code(db))
+        obj = Partner(name=name, partner_code=next_partner_code(db))
         db.add(obj)
         db.flush()
 
-    # 세금계산서 담당자 정보가 있으면 customer_contacts에 추가 (중복 방지)
+    # 세금계산서 담당자 정보가 있으면 partner_contacts에 추가 (중복 방지)
     if tax_contact_name and tax_contact_name.strip():
         tc_name = tax_contact_name.strip()
         existing = (
-            db.query(CustomerContact)
+            db.query(PartnerContact)
             .filter(
-                CustomerContact.customer_id == obj.id,
-                CustomerContact.name == tc_name,
+                PartnerContact.partner_id == obj.id,
+                PartnerContact.name == tc_name,
             )
             .first()
         )
@@ -230,24 +230,24 @@ def get_or_create_by_name(
             # 기존 담당자에 세금계산서 역할 추가 (없으면)
             has_tax_role = any(r.role_type == "세금계산서" for r in existing.roles)
             if not has_tax_role:
-                role = CustomerContactRole(
-                    customer_contact_id=existing.id,
+                role = PartnerContactRole(
+                    partner_contact_id=existing.id,
                     role_type="세금계산서",
                     is_default=True,
                 )
                 db.add(role)
                 db.flush()
         else:
-            contact = CustomerContact(
-                customer_id=obj.id,
+            contact = PartnerContact(
+                partner_id=obj.id,
                 name=tc_name,
                 phone=tax_contact_phone.strip() if tax_contact_phone else None,
                 email=tax_contact_email.strip() if tax_contact_email else None,
             )
             db.add(contact)
             db.flush()
-            role = CustomerContactRole(
-                customer_contact_id=contact.id,
+            role = PartnerContactRole(
+                partner_contact_id=contact.id,
                 role_type="세금계산서",
                 is_default=True,
             )
@@ -257,46 +257,46 @@ def get_or_create_by_name(
     return obj
 
 
-def create_customer(db: Session, data: CustomerCreate) -> Customer:
-    existing = db.query(Customer).filter(Customer.name == data.name.strip()).first()
+def create_partner(db: Session, data: PartnerCreate) -> Partner:
+    existing = db.query(Partner).filter(Partner.name == data.name.strip()).first()
     if existing:
         raise DuplicateError(f"동일한 거래처명이 이미 존재합니다: {data.name}")
-    obj = Customer(**data.model_dump())
-    obj.customer_code = next_customer_code(db)
+    obj = Partner(**data.model_dump())
+    obj.partner_code = next_partner_code(db)
     db.add(obj)
     db.commit()
     db.refresh(obj)
     return obj
 
 
-def delete_customer(db: Session, customer_id: int) -> None:
-    obj = db.get(Customer, customer_id)
+def delete_partner(db: Session, partner_id: int) -> None:
+    obj = db.get(Partner, partner_id)
     if not obj:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
     # 참조 데이터가 있으면 삭제 불가
     if obj.contracts:
         raise BusinessRuleError("END 고객으로 등록된 사업이 있어 삭제할 수 없습니다.")
-    transaction_line_count = db.query(TransactionLine).filter(TransactionLine.customer_id == customer_id).count()
+    transaction_line_count = db.query(TransactionLine).filter(TransactionLine.customer_id == partner_id).count()
     if transaction_line_count > 0:
         raise BusinessRuleError("매출/매입 실적이 있어 삭제할 수 없습니다.")
-    receipt_count = db.query(Receipt).filter(Receipt.customer_id == customer_id).count()
+    receipt_count = db.query(Receipt).filter(Receipt.customer_id == partner_id).count()
     if receipt_count > 0:
         raise BusinessRuleError("입금 내역이 있어 삭제할 수 없습니다.")
     db.delete(obj)
     db.commit()
 
 
-def update_customer(db: Session, customer_id: int, data: CustomerUpdate) -> Customer:
-    obj = db.get(Customer, customer_id)
+def update_partner(db: Session, partner_id: int, data: PartnerUpdate) -> Partner:
+    obj = db.get(Partner, partner_id)
     if not obj:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
     updates = data.model_dump(exclude_unset=True)
-    if "customer_code" in updates:
-        raise BusinessRuleError("고객코드는 변경할 수 없습니다.")
+    if "partner_code" in updates:
+        raise BusinessRuleError("업체코드는 변경할 수 없습니다.")
     if "name" in updates and updates["name"] != obj.name:
-        dup = db.query(Customer).filter(
-            func.lower(Customer.name) == updates["name"].strip().lower(),
-            Customer.id != customer_id,
+        dup = db.query(Partner).filter(
+            func.lower(Partner.name) == updates["name"].strip().lower(),
+            Partner.id != partner_id,
         ).first()
         if dup:
             raise DuplicateError(f"'{updates['name']}' 거래처가 이미 존재합니다.")
@@ -307,26 +307,26 @@ def update_customer(db: Session, customer_id: int, data: CustomerUpdate) -> Cust
     return obj
 
 
-# ── CustomerContact CRUD ──────────────────────────────────────
+# ── PartnerContact CRUD ──────────────────────────────────────
 
 
-def get_contacts(db: Session, customer_id: int) -> list[dict]:
+def get_contacts(db: Session, partner_id: int) -> list[dict]:
     contacts = (
-        db.query(CustomerContact)
-        .options(joinedload(CustomerContact.roles))
-        .filter(CustomerContact.customer_id == customer_id)
-        .order_by(CustomerContact.name, CustomerContact.id)
+        db.query(PartnerContact)
+        .options(joinedload(PartnerContact.roles))
+        .filter(PartnerContact.partner_id == partner_id)
+        .order_by(PartnerContact.name, PartnerContact.id)
         .all()
     )
     return [_contact_to_dict(c) for c in contacts]
 
 
-def create_contact(db: Session, customer_id: int, data: CustomerContactCreate) -> dict:
-    customer = db.get(Customer, customer_id)
-    if not customer:
+def create_contact(db: Session, partner_id: int, data: PartnerContactCreate) -> dict:
+    partner = db.get(Partner, partner_id)
+    if not partner:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
-    obj = CustomerContact(
-        customer_id=customer_id,
+    obj = PartnerContact(
+        partner_id=partner_id,
         name=data.name,
         phone=data.phone,
         email=data.email,
@@ -339,9 +339,9 @@ def create_contact(db: Session, customer_id: int, data: CustomerContactCreate) -
     db.flush()
     for role_data in data.roles:
         if role_data.is_default:
-            _clear_default(db, customer_id, role_data.role_type)
-        role = CustomerContactRole(
-            customer_contact_id=obj.id,
+            _clear_default(db, partner_id, role_data.role_type)
+        role = PartnerContactRole(
+            partner_contact_id=obj.id,
             role_type=role_data.role_type,
             is_default=role_data.is_default,
         )
@@ -351,8 +351,8 @@ def create_contact(db: Session, customer_id: int, data: CustomerContactCreate) -
     return _contact_to_dict(obj)
 
 
-def update_contact(db: Session, contact_id: int, data: CustomerContactUpdate) -> dict:
-    obj = db.get(CustomerContact, contact_id)
+def update_contact(db: Session, contact_id: int, data: PartnerContactUpdate) -> dict:
+    obj = db.get(PartnerContact, contact_id)
     if not obj:
         raise NotFoundError("담당자를 찾을 수 없습니다.")
     updates = data.model_dump(exclude_unset=True)
@@ -369,9 +369,9 @@ def update_contact(db: Session, contact_id: int, data: CustomerContactUpdate) ->
         # 새 역할 추가
         for role_data in data.roles:
             if role_data.is_default:
-                _clear_default(db, obj.customer_id, role_data.role_type, exclude_contact_id=obj.id)
-            role = CustomerContactRole(
-                customer_contact_id=obj.id,
+                _clear_default(db, obj.partner_id, role_data.role_type, exclude_contact_id=obj.id)
+            role = PartnerContactRole(
+                partner_contact_id=obj.id,
                 role_type=role_data.role_type,
                 is_default=role_data.is_default,
             )
@@ -382,7 +382,7 @@ def update_contact(db: Session, contact_id: int, data: CustomerContactUpdate) ->
 
 
 def delete_contact(db: Session, contact_id: int) -> None:
-    obj = db.get(CustomerContact, contact_id)
+    obj = db.get(PartnerContact, contact_id)
     if not obj:
         raise NotFoundError("담당자를 찾을 수 없습니다.")
     db.delete(obj)
@@ -392,29 +392,29 @@ def delete_contact(db: Session, contact_id: int) -> None:
 
 
 def _clear_default(
-    db: Session, customer_id: int, role_type: str, *, exclude_contact_id: int | None = None,
+    db: Session, partner_id: int, role_type: str, *, exclude_contact_id: int | None = None,
 ) -> None:
     """같은 거래처·같은 역할에서 기존 기본 담당자를 해제."""
     query = (
-        db.query(CustomerContactRole)
-        .join(CustomerContact)
+        db.query(PartnerContactRole)
+        .join(PartnerContact)
         .filter(
-            CustomerContact.customer_id == customer_id,
-            CustomerContactRole.role_type == role_type,
-            CustomerContactRole.is_default.is_(True),
+            PartnerContact.partner_id == partner_id,
+            PartnerContactRole.role_type == role_type,
+            PartnerContactRole.is_default.is_(True),
         )
     )
     if exclude_contact_id:
-        query = query.filter(CustomerContactRole.customer_contact_id != exclude_contact_id)
+        query = query.filter(PartnerContactRole.partner_contact_id != exclude_contact_id)
     for r in query.all():
         r.is_default = False
 
 
-def _contact_to_dict(obj: CustomerContact) -> dict:
-    """CustomerContact ORM 객체를 dict로 변환."""
+def _contact_to_dict(obj: PartnerContact) -> dict:
+    """PartnerContact ORM 객체를 dict로 변환."""
     return {
         "id": obj.id,
-        "customer_id": obj.customer_id,
+        "partner_id": obj.partner_id,
         "name": obj.name,
         "phone": obj.phone,
         "email": obj.email,

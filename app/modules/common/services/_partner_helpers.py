@@ -1,6 +1,6 @@
 """거래처 관련 사업·재무·입금 조회 헬퍼.
 
-customer.py에서 분리된 교차 도메인 조회 함수들.
+partner.py에서 분리된 교차 도메인 조회 함수들.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from app.core.auth.authorization import has_full_contract_scope, list_accessible
 from app.modules.accounting.models.contract import Contract
 from app.modules.accounting.models.contract_contact import ContractContact
 from app.modules.accounting.models.contract_period import ContractPeriod
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.accounting.models.receipt import Receipt
 from app.modules.accounting.models.receipt_match import ReceiptMatch
 from app.modules.accounting.models.transaction_line import TransactionLine
@@ -24,24 +24,24 @@ if TYPE_CHECKING:
     from app.modules.common.models.user import User
 
 
-def _related_contract_ids(db: Session, customer_id: int) -> set[int]:
+def _related_contract_ids(db: Session, partner_id: int) -> set[int]:
     """거래처와 관련된 모든 사업 ID를 수집한다."""
-    roles = _related_contract_roles(db, customer_id)
+    roles = _related_contract_roles(db, partner_id)
     result: set[int] = set()
     for ids in roles.values():
         result |= ids
     return result
 
 
-def _related_contract_roles(db: Session, customer_id: int) -> dict[str, set[int]]:
+def _related_contract_roles(db: Session, partner_id: int) -> dict[str, set[int]]:
     """거래처와 관련된 사업 ID를 역할별로 분류하여 반환한다."""
     end_cust_ids = {
-        r[0] for r in db.query(Contract.id).filter(Contract.end_customer_id == customer_id).all()
+        r[0] for r in db.query(Contract.id).filter(Contract.end_partner_id == partner_id).all()
     }
     period_cust_ids = {
         r[0]
         for r in db.query(ContractPeriod.contract_id)
-        .filter(ContractPeriod.customer_id == customer_id)
+        .filter(ContractPeriod.partner_id == partner_id)
         .distinct()
         .all()
     }
@@ -49,31 +49,31 @@ def _related_contract_roles(db: Session, customer_id: int) -> dict[str, set[int]
         r[0]
         for r in db.query(ContractPeriod.contract_id)
         .join(ContractContact, ContractContact.contract_period_id == ContractPeriod.id)
-        .filter(ContractContact.customer_id == customer_id)
+        .filter(ContractContact.customer_id == partner_id)
         .distinct()
         .all()
     }
     cost_cust_ids = {
         r[0]
         for r in db.query(TransactionLine.contract_id)
-        .filter(TransactionLine.customer_id == customer_id, TransactionLine.line_type == "cost")
+        .filter(TransactionLine.customer_id == partner_id, TransactionLine.line_type == "cost")
         .distinct()
         .all()
     }
     revenue_cust_ids = {
         r[0]
         for r in db.query(TransactionLine.contract_id)
-        .filter(TransactionLine.customer_id == customer_id, TransactionLine.line_type == "revenue")
+        .filter(TransactionLine.customer_id == partner_id, TransactionLine.line_type == "revenue")
         .distinct()
         .all()
     }
     receipt_cust_ids = {
         r[0]
-        for r in db.query(Receipt.contract_id).filter(Receipt.customer_id == customer_id).distinct().all()
+        for r in db.query(Receipt.contract_id).filter(Receipt.customer_id == partner_id).distinct().all()
     }
     return {
-        "end_customer": end_cust_ids,
-        "period_customer": period_cust_ids,
+        "end_partner": end_cust_ids,
+        "period_partner": period_cust_ids,
         "contact": contact_cust_ids,
         "cost": cost_cust_ids,
         "revenue": revenue_cust_ids,
@@ -103,7 +103,7 @@ def _match_period(periods: list[ContractPeriod], contract_id: int, revenue_month
     return contract_periods[-1] if contract_periods else None
 
 
-def list_related_contracts(db: Session, customer_id: int, current_user: User | None = None) -> dict:
+def list_related_contracts(db: Session, partner_id: int, current_user: User | None = None) -> dict:
     """거래처와 관련된 사업 목록 (역할, 재무 요약 포함).
 
     Returns:
@@ -112,8 +112,8 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
     _empty = {"summary": {"active_count": 0, "completed_count": 0, "total_revenue": 0}, "contracts": []}
 
     # ── 1) 관련 사업 ID 수집 + 역할별 분류 ──
-    roles_map = _related_contract_roles(db, customer_id)
-    end_cust_ids = roles_map["end_customer"]
+    roles_map = _related_contract_roles(db, partner_id)
+    end_cust_ids = roles_map["end_partner"]
     contract_ids: set[int] = set()
     for ids in roles_map.values():
         contract_ids |= ids
@@ -129,7 +129,7 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
     # ── 2) 사업 조회 (Period 있는 활성 사업) ──
     contracts = (
         db.query(Contract)
-        .options(joinedload(Contract.end_customer), joinedload(Contract.owner))
+        .options(joinedload(Contract.end_partner), joinedload(Contract.owner))
         .filter(
             Contract.id.in_(contract_ids),
             Contract.status != "cancelled",
@@ -193,7 +193,7 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
             )
             .filter(
                 ContractPeriod.id.in_(period_ids),
-                TransactionLine.customer_id == customer_id,
+                TransactionLine.customer_id == partner_id,
                 TransactionLine.line_type == "revenue",
                 TransactionLine.revenue_month >= ContractPeriod.start_month,
                 TransactionLine.revenue_month <= ContractPeriod.end_month,
@@ -211,7 +211,7 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
             )
             .filter(
                 ContractPeriod.id.in_(period_ids),
-                TransactionLine.customer_id == customer_id,
+                TransactionLine.customer_id == partner_id,
                 TransactionLine.line_type == "cost",
                 TransactionLine.revenue_month >= ContractPeriod.start_month,
                 TransactionLine.revenue_month <= ContractPeriod.end_month,
@@ -228,16 +228,16 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
             db.query(ContractContact.contract_period_id)
             .filter(
                 ContractContact.contract_period_id.in_(period_ids),
-                ContractContact.customer_id == customer_id,
+                ContractContact.customer_id == partner_id,
             )
             .distinct()
             .all()
         )
         period_contact_set = {r[0] for r in contact_period_rows}
 
-    # Period별 매출처 (ContractPeriod.customer_id)
+    # Period별 매출처 (ContractPeriod.partner_id)
     period_cust_set: set[int] = {
-        p.id for p in all_periods if p.customer_id == customer_id
+        p.id for p in all_periods if p.partner_id == partner_id
     }
 
     # ── 6) Period 단위 결과 생성 ──
@@ -276,7 +276,7 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
             roles.append("담당자")
 
         owner_name = c.owner.name if c.owner else None
-        end_customer_name = c.end_customer.name if c.end_customer else None
+        end_partner_name = c.end_partner.name if c.end_partner else None
 
         result.append({
             "id": c.id,
@@ -292,7 +292,7 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
             "revenue_amount": rev,
             "cost_amount": cost,
             "gp_pct": gp_pct,
-            "end_customer_name": end_customer_name,
+            "end_partner_name": end_partner_name,
             "owner_name": owner_name,
             "roles": roles,
             "notes": c.notes,
@@ -314,18 +314,18 @@ def list_related_contracts(db: Session, customer_id: int, current_user: User | N
     }
 
 
-def list_customer_financials(db: Session, customer_id: int, current_user: User | None = None) -> dict:
+def list_partner_financials(db: Session, partner_id: int, current_user: User | None = None) -> dict:
     """거래처 기준 매출·매입 period 단위 집계 + 미수금.
 
     Returns:
         {"summary": {total_revenue, total_cost, ar}, "lines": [...]}
         lines: 사업 그룹 행(_is_group=True) + period 디테일 행
     """
-    customer = db.get(Customer, customer_id)
-    if not customer:
+    partner = db.get(Partner, partner_id)
+    if not partner:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
 
-    related = list_related_contracts(db, customer_id, current_user=current_user)
+    related = list_related_contracts(db, partner_id, current_user=current_user)
     contract_ids = list({c["id"] for c in related["contracts"]})
     if not contract_ids:
         return {"summary": {"total_revenue": 0, "total_cost": 0, "ar": 0}, "lines": []}
@@ -341,7 +341,7 @@ def list_customer_financials(db: Session, customer_id: int, current_user: User |
         db.query(TransactionLine)
         .filter(
             TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.customer_id == customer_id,
+            TransactionLine.customer_id == partner_id,
         )
         .all()
     )
@@ -422,7 +422,7 @@ def list_customer_financials(db: Session, customer_id: int, current_user: User |
         db.query(func.coalesce(func.sum(TransactionLine.supply_amount), 0))
         .filter(
             TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.customer_id == customer_id,
+            TransactionLine.customer_id == partner_id,
             TransactionLine.line_type == "revenue",
             TransactionLine.status == "확정",
         )
@@ -433,7 +433,7 @@ def list_customer_financials(db: Session, customer_id: int, current_user: User |
         .join(ReceiptMatch.transaction_line)
         .filter(
             TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.customer_id == customer_id,
+            TransactionLine.customer_id == partner_id,
             TransactionLine.line_type == "revenue",
         )
         .scalar()
@@ -446,18 +446,18 @@ def list_customer_financials(db: Session, customer_id: int, current_user: User |
     }
 
 
-def list_customer_receipts(db: Session, customer_id: int, current_user: User | None = None) -> dict:
+def list_partner_receipts(db: Session, partner_id: int, current_user: User | None = None) -> dict:
     """거래처 기준 입금 내역 + 미수금 잔액.
 
     Returns:
         {"summary": {total_receipt, ar_balance}, "receipts": [...]}
     """
-    customer = db.get(Customer, customer_id)
-    if not customer:
+    partner = db.get(Partner, partner_id)
+    if not partner:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
 
     # 접근 제어
-    related = list_related_contracts(db, customer_id, current_user=current_user)
+    related = list_related_contracts(db, partner_id, current_user=current_user)
     contract_ids = [c["id"] for c in related["contracts"]]
     if not contract_ids:
         return {"summary": {"total_receipt": 0, "ar_balance": 0}, "receipts": []}
@@ -466,7 +466,7 @@ def list_customer_receipts(db: Session, customer_id: int, current_user: User | N
         db.query(Receipt)
         .filter(
             Receipt.contract_id.in_(contract_ids),
-            Receipt.customer_id == customer_id,
+            Receipt.customer_id == partner_id,
         )
         .order_by(Receipt.contract_id, Receipt.receipt_date.desc())
         .all()
@@ -562,7 +562,7 @@ def list_customer_receipts(db: Session, customer_id: int, current_user: User | N
         db.query(func.coalesce(func.sum(TransactionLine.supply_amount), 0))
         .filter(
             TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.customer_id == customer_id,
+            TransactionLine.customer_id == partner_id,
             TransactionLine.line_type == "revenue",
             TransactionLine.status == "확정",
         )
@@ -573,7 +573,7 @@ def list_customer_receipts(db: Session, customer_id: int, current_user: User | N
         .join(ReceiptMatch.transaction_line)
         .filter(
             TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.customer_id == customer_id,
+            TransactionLine.customer_id == partner_id,
             TransactionLine.line_type == "revenue",
         )
         .scalar()
