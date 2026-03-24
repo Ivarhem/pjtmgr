@@ -1,13 +1,5 @@
 /* ── 자산 인벤토리 (고객사 중심) ── */
 
-const ASSET_TYPE_MAP = {
-  server: "서버",
-  network: "네트워크",
-  security: "보안장비",
-  storage: "스토리지",
-  other: "기타",
-};
-
 const ENV_MAP = {
   prod: "운영",
   dev: "개발",
@@ -28,7 +20,7 @@ const columnDefs = [
     field: "asset_type",
     headerName: "유형",
     width: 110,
-    valueFormatter: (p) => ASSET_TYPE_MAP[p.value] || p.value,
+    valueFormatter: (p) => getAssetTypeLabel(p.value),
   },
   { field: "vendor", headerName: "제조사", width: 130 },
   { field: "model", headerName: "모델", width: 130 },
@@ -81,7 +73,8 @@ async function loadAssets() {
 
 /* ── Grid init ── */
 
-function initGrid() {
+async function initGrid() {
+  await loadAssetTypeCodes();
   const gridDiv = document.getElementById("grid-assets");
   gridApi = agGrid.createGrid(gridDiv, {
     columnDefs,
@@ -100,7 +93,7 @@ function initGrid() {
 
 const DETAIL_TABS = {
   basic: [
-    ["자산명", "asset_name"], ["유형", "asset_type", v => ASSET_TYPE_MAP[v] || v],
+    ["자산명", "asset_name"], ["유형", "asset_type", v => getAssetTypeLabel(v)],
     ["제조사", "vendor"], ["모델", "model"], ["시리얼", "serial_no"],
     ["환경", "environment", v => ENV_MAP[v] || v], ["상태", "status", v => ASSET_STATUS_MAP[v] || v],
     ["비고", "note"],
@@ -188,6 +181,7 @@ function resetForm() {
 
 function openCreateModal() {
   if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  document.getElementById("asset-type").disabled = false;
   resetForm();
   document.getElementById("modal-asset-title").textContent = "자산 등록";
   document.getElementById("btn-save-asset").textContent = "등록";
@@ -241,6 +235,7 @@ function openEditModal(asset) {
 
   document.getElementById("modal-asset-title").textContent = "자산 수정";
   document.getElementById("btn-save-asset").textContent = "저장";
+  document.getElementById("asset-type").disabled = true;
   modal.showModal();
 }
 
@@ -328,7 +323,11 @@ async function deleteAssetAction() {
 }
 
 /* ── Events ── */
-document.addEventListener("DOMContentLoaded", initGrid);
+document.addEventListener("DOMContentLoaded", async () => {
+  await populateAssetTypeSelect("asset-type");
+  await populateAssetTypeSelect("filter-type", true);
+  initGrid();
+});
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-asset").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-asset").addEventListener("click", saveAsset);

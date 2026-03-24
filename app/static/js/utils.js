@@ -304,6 +304,46 @@ async function populateContractTypeSelect(selectId) {
   });
 }
 
+// ── 자산유형 코드 ──────────────────────────────────────────
+let _assetTypeCodesCache = null;
+
+async function loadAssetTypeCodes() {
+  if (!_assetTypeCodesCache) {
+    _assetTypeCodesCache = await apiFetch('/api/v1/asset-type-codes');
+  }
+  return _assetTypeCodesCache;
+}
+
+// system.js에서 자산유형 CRUD 성공 후 반드시 호출
+function invalidateAssetTypeCodesCache() {
+  _assetTypeCodesCache = null;
+}
+
+async function populateAssetTypeSelect(selectId, includeAll) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const types = await loadAssetTypeCodes();
+  sel.textContent = '';
+  if (includeAll) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '전체';
+    sel.appendChild(opt);
+  }
+  types.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.type_key;
+    opt.textContent = t.label;
+    sel.appendChild(opt);
+  });
+}
+
+function getAssetTypeLabel(typeKey) {
+  if (!_assetTypeCodesCache) return typeKey;
+  const found = _assetTypeCodesCache.find(t => t.type_key === typeKey);
+  return found ? found.label : typeKey;
+}
+
 // ── 태그 입력 & 필터 ────────────────────────────────────────────────
 
 function initTagInput(inputId, listId, tagArray, onChangeFn) {
