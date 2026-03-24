@@ -161,8 +161,8 @@ def configure_templates(app: FastAPI, enabled: list[str]) -> None:
 _ACCOUNTING_PREFIXES = ("/my-contracts", "/contracts", "/dashboard", "/reports")
 _INFRA_PREFIXES = (
     "/projects", "/periods", "/assets", "/ip-inventory", "/port-maps",
-    "/policies", "/policy-definitions", "/contacts",
-    "/audit-history", "/infra-dashboard",
+    "/policies", "/policy-definitions",
+    "/infra-dashboard",
 )
 
 
