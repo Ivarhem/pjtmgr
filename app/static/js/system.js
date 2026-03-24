@@ -1,3 +1,22 @@
+// ── 탭 전환 ──
+document.querySelectorAll('#system-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#system-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['tab-common', 'tab-accounting', 'tab-infra'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden', id !== 'tab-' + btn.dataset.tab);
+    });
+    history.replaceState(null, '', '#' + btn.dataset.tab);
+  });
+});
+// URL hash로 초기 탭
+(function() {
+  const initTab = location.hash.slice(1) || 'common';
+  const initBtn = document.querySelector('#system-tabs .tab-btn[data-tab="' + initTab + '"]');
+  if (initBtn) initBtn.click();
+})();
+
 let editingCode = null; // null = 추가 모드, 문자열 = 수정 모드
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -29,11 +48,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ── 사업유형 관리 ──────────────────────────────────────────────
-  loadContractTypeTable();
-
-  document.getElementById('btn-add-contract-type').addEventListener('click', () => openContractTypeModal());
-  document.getElementById('btn-dt-cancel').addEventListener('click', () => document.getElementById('modal-contract-type').close());
-  document.getElementById('btn-dt-submit').addEventListener('click', submitContractType);
+  if (document.getElementById('btn-add-contract-type')) {
+    loadContractTypeTable();
+    document.getElementById('btn-add-contract-type').addEventListener('click', () => openContractTypeModal());
+    document.getElementById('btn-dt-cancel').addEventListener('click', () => document.getElementById('modal-contract-type').close());
+    document.getElementById('btn-dt-submit').addEventListener('click', submitContractType);
+  }
 
   // ── 용어 관리 ────────────────────────────────────────────────
   loadTermConfigTable();
@@ -283,4 +303,100 @@ async function resetTermLabel(termKey) {
     const err = await res.json();
     alert(err.detail || '초기화에 실패했습니다.');
   }
+}
+
+
+// ── 자산유형 관리 ──
+let _editingTypeKey = null;
+
+async function loadAssetTypeTable() {
+  const types = await apiFetch('/api/v1/asset-type-codes?active_only=false');
+  const tbody = document.getElementById('asset-type-tbody');
+  tbody.textContent = '';
+  types.forEach(t => {
+    const tr = document.createElement('tr');
+    const cells = [t.type_key, t.code, t.label, t.sort_order, t.is_active ? '\u2713' : '\u2014'];
+    cells.forEach(val => {
+      const td = document.createElement('td');
+      td.textContent = val;
+      tr.appendChild(td);
+    });
+    const actionTd = document.createElement('td');
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-sm';
+    editBtn.textContent = '수정';
+    editBtn.addEventListener('click', () => openAssetTypeModal(t.type_key));
+    actionTd.appendChild(editBtn);
+    tr.appendChild(actionTd);
+    tbody.appendChild(tr);
+  });
+}
+
+function openAssetTypeModal(typeKey) {
+  const modal = document.getElementById('modal-asset-type');
+  const titleEl = document.getElementById('modal-at-title');
+  const keyInput = document.getElementById('at-type-key');
+  const codeInput = document.getElementById('at-code');
+
+  if (typeKey) {
+    _editingTypeKey = typeKey;
+    titleEl.textContent = '자산유형 수정';
+    apiFetch('/api/v1/asset-type-codes?active_only=false').then(types => {
+      const t = types.find(x => x.type_key === typeKey);
+      if (!t) return;
+      keyInput.value = t.type_key;
+      keyInput.disabled = true;
+      codeInput.value = t.code;
+      codeInput.disabled = true;
+      document.getElementById('at-label').value = t.label;
+      document.getElementById('at-sort-order').value = t.sort_order;
+      document.getElementById('at-is-active').value = String(t.is_active);
+    });
+  } else {
+    _editingTypeKey = null;
+    titleEl.textContent = '자산유형 추가';
+    keyInput.value = '';
+    keyInput.disabled = false;
+    codeInput.value = '';
+    codeInput.disabled = false;
+    document.getElementById('at-label').value = '';
+    document.getElementById('at-sort-order').value = '0';
+    document.getElementById('at-is-active').value = 'true';
+  }
+  modal.showModal();
+}
+
+async function submitAssetType() {
+  const label = document.getElementById('at-label').value.trim();
+  const sortOrder = Number(document.getElementById('at-sort-order').value) || 0;
+  const isActive = document.getElementById('at-is-active').value === 'true';
+
+  try {
+    if (_editingTypeKey) {
+      await apiFetch('/api/v1/asset-type-codes/' + encodeURIComponent(_editingTypeKey), {
+        method: 'PATCH', body: { label, sort_order: sortOrder, is_active: isActive },
+      });
+      showToast('자산유형이 수정되었습니다.');
+    } else {
+      const typeKey = document.getElementById('at-type-key').value.trim();
+      const code = document.getElementById('at-code').value.trim().toUpperCase();
+      await apiFetch('/api/v1/asset-type-codes', {
+        method: 'POST', body: { type_key: typeKey, code, label, sort_order: sortOrder },
+      });
+      showToast('자산유형이 추가되었습니다.');
+    }
+    document.getElementById('modal-asset-type').close();
+    if (typeof invalidateAssetTypeCodesCache === 'function') invalidateAssetTypeCodesCache();
+    loadAssetTypeTable();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// 자산유형 이벤트 바인딩
+if (document.getElementById('btn-add-asset-type')) {
+  document.getElementById('btn-add-asset-type').addEventListener('click', () => openAssetTypeModal(null));
+  document.getElementById('btn-at-cancel').addEventListener('click', () => document.getElementById('modal-asset-type').close());
+  document.getElementById('btn-at-submit').addEventListener('click', submitAssetType);
+  loadAssetTypeTable();
 }

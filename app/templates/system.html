@@ -2,11 +2,23 @@
 {% block title %}시스템 관리{% endblock %}
 {% block styles %}
 <link rel="stylesheet" href="/static/css/system.css">
+<link rel="stylesheet" href="/static/css/infra_common.css">
 {% endblock %}
 {% block content %}
 <div class="page-header">
   <h1>시스템 관리</h1>
 </div>
+<div class="tab-nav" id="system-tabs">
+  <button class="tab-btn active" data-tab="common">공통</button>
+  {% if "accounting" in enabled_modules %}
+  <button class="tab-btn" data-tab="accounting">영업관리</button>
+  {% endif %}
+  {% if "infra" in enabled_modules %}
+  <button class="tab-btn" data-tab="infra">프로젝트관리</button>
+  {% endif %}
+</div>
+
+<div id="tab-common">
 <p class="data-note">※ 시스템 전반 설정을 관리합니다. 조직명, 사업유형(MA/SI/HW 등)의 기본값, UI에 표시되는 용어를 커스터마이징할 수 있습니다.</p>
 
 <!-- 기본 설정 -->
@@ -28,6 +40,42 @@
   <p class="data-note">설정된 조직명은 상단 브랜드명 앞에 표시됩니다. 비밀번호 최소 길이는 비밀번호 변경 화면과 서버 검증에 함께 적용됩니다.</p>
 </div>
 
+<!-- 용어 관리 -->
+<div class="sys-section">
+  <div class="sys-section-header">
+    <h2 class="sys-section-title">용어 관리</h2>
+    <button id="btn-add-term" class="btn btn-primary btn-sm">+ 추가</button>
+  </div>
+  <p class="data-note sys-note">화면에 표시되는 용어를 커스터마이징합니다. 예를 들어 '고객'이라는 용어를 조직에 맞게 '거래처'로 변경할 수 있습니다. 커스텀 표시명을 비워두면 기본값이 사용됩니다.</p>
+  <div class="sys-table-wrap">
+    <table class="sys-table" id="term-config-table">
+      <colgroup>
+        <col class="col-w50">
+        <col class="col-w130">
+        <col class="col-w80">
+        <col class="col-w80">
+        <col class="col-w80">
+        <col class="col-w50">
+        <col class="col-w80">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>키</th>
+          <th>표준명(한)</th>
+          <th>기본 표시명</th>
+          <th>커스텀 표시명</th>
+          <th>활성</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="term-config-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<div id="tab-accounting" class="hidden">
 <!-- 사업유형 관리 -->
 <div class="sys-section">
   <div class="sys-section-header">
@@ -63,38 +111,31 @@
     </table>
   </div>
 </div>
+</div>
 
-<!-- 용어 관리 -->
-<div class="sys-section">
-  <div class="sys-section-header">
-    <h2 class="sys-section-title">용어 관리</h2>
-    <button id="btn-add-term" class="btn btn-primary btn-sm">+ 추가</button>
-  </div>
-  <p class="data-note sys-note">화면에 표시되는 용어를 커스터마이징합니다. 예를 들어 '고객'이라는 용어를 조직에 맞게 '거래처'로 변경할 수 있습니다. 커스텀 표시명을 비워두면 기본값이 사용됩니다.</p>
-  <div class="sys-table-wrap">
-    <table class="sys-table" id="term-config-table">
-      <colgroup>
-        <col class="col-w50">
-        <col class="col-w130">
-        <col class="col-w80">
-        <col class="col-w80">
-        <col class="col-w80">
-        <col class="col-w50">
-        <col class="col-w80">
-      </colgroup>
-      <thead>
-        <tr>
-          <th>구분</th>
-          <th>키</th>
-          <th>표준명(한)</th>
-          <th>기본 표시명</th>
-          <th>커스텀 표시명</th>
-          <th>활성</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="term-config-tbody"></tbody>
-    </table>
+<div id="tab-infra" class="hidden">
+  <div class="sys-section">
+    <div class="sys-section-header">
+      <h2 class="sys-section-title">자산유형 관리</h2>
+      <button id="btn-add-asset-type" class="btn btn-primary btn-sm">+ 추가</button>
+    </div>
+    <p class="data-note sys-note">자산유형 코드(예: SVR=서버, NET=네트워크)를 관리합니다. 자산 등록 시 유형에 따라 자동으로 코드가 부여됩니다.</p>
+    <div class="sys-table-wrap">
+      <table class="sys-table" id="asset-type-table">
+        <colgroup>
+          <col class="col-w80">
+          <col class="col-w60">
+          <col class="col-w80">
+          <col class="col-w50">
+          <col class="col-w50">
+          <col class="col-w60">
+        </colgroup>
+        <thead>
+          <tr><th>키</th><th>코드</th><th>표시명</th><th>순서</th><th>활성</th><th></th></tr>
+        </thead>
+        <tbody id="asset-type-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -184,6 +225,30 @@
   <div class="modal-actions">
     <button type="button" id="btn-dt-cancel" class="btn btn-secondary">취소</button>
     <button type="button" id="btn-dt-submit" class="btn btn-primary">저장</button>
+  </div>
+</dialog>
+
+<!-- 자산유형 추가/수정 모달 -->
+<dialog id="modal-asset-type" class="modal modal-md">
+  <h2 id="modal-at-title">자산유형 추가</h2>
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">유형 정보</legend>
+    <div class="form-grid">
+      <label>키 <input type="text" id="at-type-key" required pattern="[a-z][a-z0-9_]*" placeholder="예: server" maxlength="30"></label>
+      <label>코드 <input type="text" id="at-code" required pattern="[A-Z]{3}" maxlength="3" placeholder="예: SVR" style="text-transform:uppercase"></label>
+      <label>표시명 <input type="text" id="at-label" required placeholder="예: 서버"></label>
+      <label>정렬순서 <input type="number" id="at-sort-order" value="0" min="0"></label>
+      <label>활성
+        <select id="at-is-active">
+          <option value="true">활성</option>
+          <option value="false">비활성</option>
+        </select>
+      </label>
+    </div>
+  </fieldset>
+  <div class="modal-actions">
+    <button type="button" id="btn-at-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-at-submit" class="btn btn-primary">저장</button>
   </div>
 </dialog>
 {% endblock %}
