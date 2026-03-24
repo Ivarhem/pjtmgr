@@ -540,7 +540,7 @@ async function initContextSelectors() {
           _ctxPartnerId = saved.id;
           custInput.value = saved.label;
           custInput.title = saved.code + ' ' + saved.label;
-          await loadProjects(saved.id);
+          await loadPeriods(saved.id);
         }
       }
     }
