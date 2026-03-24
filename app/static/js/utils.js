@@ -513,7 +513,6 @@ async function initContextSelectors() {
   // ── 프로젝트 (Period) 드롭다운 ──
   async function loadPeriods(partnerId) {
     allProjects = [];
-    if (projInput) { projInput.value = ''; projInput.title = ''; }
     if (!partnerId) return;
     try {
       const periods = await apiFetch('/api/v1/contract-periods?partner_id=' + partnerId);
@@ -580,6 +579,8 @@ async function initContextSelectors() {
           custInput.value = saved.label;
           custInput.title = saved.code + ' ' + saved.label;
           await loadPeriods(saved.id);
+          // 복원 완료 후 페이지 데이터 로딩 트리거
+          window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: _ctxProjectId } }));
         }
       }
     }

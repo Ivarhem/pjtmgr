@@ -86,7 +86,8 @@ function initGrid() {
     enableCellTextSelection: true,
     onRowClicked: (e) => showAssetDetail(e.data),
   });
-  loadAssets();
+  // 초기 로드는 ctx-changed 이벤트에서 처리 (initContextSelectors 완료 후 dispatch)
+  if (getCtxPartnerId()) loadAssets();
 }
 
 /* ── Detail panel ── */
