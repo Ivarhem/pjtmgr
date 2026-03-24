@@ -13,7 +13,7 @@ class Asset(TimestampMixin, Base):
     __tablename__ = "assets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
+    partner_id: Mapped[int] = mapped_column(ForeignKey("partners.id"), index=True)
     asset_code: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
     asset_name: Mapped[str] = mapped_column(String(255), index=True)
     asset_type: Mapped[str] = mapped_column(String(50))

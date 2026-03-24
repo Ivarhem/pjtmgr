@@ -10,11 +10,11 @@ from app.modules.infra.models.asset_contact import AssetContact
 from app.modules.infra.models.asset_software import AssetSoftware
 from app.modules.infra.models.asset_relation import AssetRelation
 from app.modules.infra.models.period_asset import PeriodAsset
-from app.modules.infra.models.period_customer import PeriodCustomer
+from app.modules.infra.models.period_partner import PeriodPartner
 from app.modules.infra.models.product_catalog import ProductCatalog
 from app.modules.infra.models.hardware_spec import HardwareSpec
 from app.modules.infra.models.hardware_interface import HardwareInterface
-from app.modules.infra.models.period_customer_contact import PeriodCustomerContact
+from app.modules.infra.models.period_partner_contact import PeriodPartnerContact
 
 __all__ = [
     "PeriodPhase",
@@ -29,8 +29,8 @@ __all__ = [
     "AssetSoftware",
     "PeriodAsset",
     "AssetRelation",
-    "PeriodCustomer",
-    "PeriodCustomerContact",
+    "PeriodPartner",
+    "PeriodPartnerContact",
     "ProductCatalog",
     "HardwareSpec",
     "HardwareInterface",

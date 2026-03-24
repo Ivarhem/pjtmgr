@@ -13,6 +13,6 @@ class AssetContact(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     asset_id: Mapped[int] = mapped_column(ForeignKey("assets.id"), index=True)
     contact_id: Mapped[int] = mapped_column(
-        ForeignKey("customer_contacts.id"), index=True
+        ForeignKey("partner_contacts.id"), index=True
     )
     role: Mapped[str | None] = mapped_column(String(100), nullable=True)

@@ -11,7 +11,7 @@ class IpSubnet(TimestampMixin, Base):
     __tablename__ = "ip_subnets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
+    partner_id: Mapped[int] = mapped_column(ForeignKey("partners.id"), index=True)
     name: Mapped[str] = mapped_column(String(200))
     subnet: Mapped[str] = mapped_column(String(64))
     role: Mapped[str] = mapped_column(String(30), default="service")

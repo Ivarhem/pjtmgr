@@ -13,7 +13,7 @@ class PolicyAssignment(TimestampMixin, Base):
     __tablename__ = "policy_assignments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
+    partner_id: Mapped[int] = mapped_column(ForeignKey("partners.id"), index=True)
     asset_id: Mapped[int | None] = mapped_column(
         ForeignKey("assets.id"), nullable=True
     )
