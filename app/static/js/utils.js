@@ -367,9 +367,8 @@ function getCtxProjectId() { return _ctxProjectId; }
 async function initContextSelectors() {
   const custInput = document.getElementById('ctx-partner');
   const custDrop = document.getElementById('ctx-partner-dropdown');
-  const projDisplay = document.getElementById('ctx-project-display');
-  const projText = document.getElementById('ctx-project-text');
-  const projClear = document.getElementById('ctx-project-clear');
+  const projInput = document.getElementById('ctx-project');
+  const projDrop = document.getElementById('ctx-project-dropdown');
   if (!custInput) return;
 
   let allPartners = [];
@@ -430,7 +429,7 @@ async function initContextSelectors() {
     custInput.value = item ? item.label : '';
     custInput.title = item ? (item.code + ' ' + item.label) : '';
     _ctxProjectId = null;
-    _updateProjectDisplay(null);
+    if (projInput) { projInput.value = ''; projInput.title = ''; }
     // Pin 저장
     apiFetch('/api/v1/preferences/infra.pinned_partner_id', {
       method: 'PATCH', body: { value: item ? String(item.id) : '' },
@@ -476,14 +475,15 @@ async function initContextSelectors() {
     }
   });
 
-  // ── 사업기간 (Period) ──
+  // ── 프로젝트 (Period) 드롭다운 ──
   async function loadPeriods(partnerId) {
     allProjects = [];
+    if (projInput) { projInput.value = ''; projInput.title = ''; }
     if (!partnerId) return;
     try {
       const periods = await apiFetch('/api/v1/contract-periods?partner_id=' + partnerId);
       allProjects = periods.map(p => ({
-        id: p.id, code: p.contract_code || '', label: p.contract_name + ' (' + p.period_label + ')',
+        id: p.id, code: p.period_code || '', label: p.contract_name + ' (' + p.period_label + ')',
       }));
       // 저장된 Period 복원
       const savedPeriodId = localStorage.getItem('infra.last_period_id');
@@ -494,21 +494,17 @@ async function initContextSelectors() {
     } catch { /* ignore */ }
   }
 
-  function _updateProjectDisplay(item) {
-    if (projDisplay) {
-      if (item) {
-        projText.textContent = item.label;
-        projDisplay.style.display = '';
-      } else {
-        projText.textContent = '';
-        projDisplay.style.display = 'none';
-      }
-    }
-  }
-
   function selectProject(item) {
     _ctxProjectId = item ? item.id : null;
-    _updateProjectDisplay(item);
+    if (projInput) {
+      projInput.value = item ? item.label : '';
+      projInput.title = item ? (item.code + ' ' + item.label) : '';
+    }
+    // 사이드바 프로젝트 메뉴 링크 동적 변경
+    const navLink = document.getElementById('nav-project-link');
+    if (navLink) {
+      navLink.href = item ? '/periods/' + item.id : '/periods';
+    }
     if (item && item.id) {
       localStorage.setItem('infra.last_period_id', String(item.id));
     } else {
@@ -517,16 +513,26 @@ async function initContextSelectors() {
     window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: _ctxProjectId } }));
   }
 
-  /** 프로젝트 선택 해제 (전체 목록으로 복귀) */
+  /** 프로젝트 선택 해제 */
   window.resetCtxProject = function() { selectProject(null); };
-  /** 외부에서 프로젝트 선택 (프로젝트 목록 행 클릭 등) */
+  /** 외부에서 프로젝트 선택 */
   window.setCtxProject = function(id, code, label) {
     selectProject(id ? { id, code: code || '', label: label || '' } : null);
   };
 
-  // ── X 버튼: 프로젝트 선택 해제 ──
-  if (projClear) {
-    projClear.addEventListener('click', () => selectProject(null));
+  // 프로젝트 드롭다운 이벤트
+  if (projInput && projDrop) {
+    projInput.addEventListener('focus', () => filterAndShow(projInput, projDrop, allProjects, selectProject));
+    projInput.addEventListener('input', () => filterAndShow(projInput, projDrop, allProjects, selectProject));
+    projInput.addEventListener('blur', () => setTimeout(() => setElementHidden(projDrop, true), 150));
+    projInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') setElementHidden(projDrop, true);
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const first = projDrop.querySelector('.ctx-option');
+        if (first) first.focus();
+      }
+    });
   }
 
   // ── 초기 복원 ──
