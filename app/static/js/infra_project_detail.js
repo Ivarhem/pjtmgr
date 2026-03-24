@@ -61,7 +61,7 @@ function autoPinProject() {
   localStorage.setItem('infra.last_period_id', String(PROJECT_ID));
 }
 
-/* ── 사업기간 기본 정보 ── */
+/* ── 프로젝트 기본 정보 ── */
 async function loadProjectInfo() {
   try {
     const p = await apiFetch(`/api/v1/contract-periods/${PROJECT_ID}`);

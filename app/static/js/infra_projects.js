@@ -1,4 +1,4 @@
-/* ── 사업기간 (목록 + 상세 통합) ── */
+/* ── 프로젝트 (목록 + 상세 통합) ── */
 
 const STATUS_MAP = {
   planned: "계획", active: "진행중", on_hold: "보류", completed: "완료",
@@ -67,54 +67,8 @@ async function loadPeriods() {
   } catch (err) { showToast(err.message, "error"); }
 }
 
-async function loadDashboard() {
-  const cid = getCtxPartnerId();
-  try {
-    const qs = cid ? "?partner_id=" + cid : "";
-    const [summary, unsubmitted] = await Promise.all([
-      apiFetch("/api/v1/infra-dashboard/summary" + qs),
-      apiFetch("/api/v1/infra-dashboard/unsubmitted" + qs),
-    ]);
-    renderPhaseSummary(summary);
-    renderAlerts(unsubmitted);
-  } catch (err) { showToast(err.message, "error"); }
-}
-
 async function loadListView() {
-  await Promise.all([loadPeriods(), loadDashboard()]);
-}
-
-function renderPhaseSummary(projects) {
-  document.getElementById("card-total").textContent = projects.length;
-  const early = projects.filter(p =>
-    p.current_phase === "analysis" || p.current_phase === "design"
-  ).length;
-  const build = projects.filter(p => p.current_phase === "build").length;
-  const late = projects.filter(p =>
-    p.current_phase === "test" || p.current_phase === "stabilize"
-  ).length;
-  document.getElementById("card-early").textContent = early || "0";
-  document.getElementById("card-build").textContent = build || "0";
-  document.getElementById("card-late").textContent = late || "0";
-}
-
-function renderAlerts(unsubmitted) {
-  const section = document.getElementById("alert-section");
-  const list = document.getElementById("alert-list");
-  if (!unsubmitted || unsubmitted.length === 0) {
-    section.classList.add("is-hidden");
-    return;
-  }
-  section.classList.remove("is-hidden");
-  document.getElementById("alert-title").textContent =
-    "미제출 산출물 (" + unsubmitted.length + "건)";
-  list.textContent = "";
-  unsubmitted.forEach(d => {
-    const li = document.createElement("li");
-    const phase = PHASE_LABELS[d.phase_type] || d.phase_type;
-    li.textContent = "[" + d.project_code + "] " + phase + " — " + d.name;
-    list.appendChild(li);
-  });
+  await loadPeriods();
 }
 
 function initListGrids() {
@@ -521,7 +475,7 @@ function openCreateModal() {
   const today = new Date().toISOString().slice(0, 10);
   document.getElementById("start-date").value = today;
   document.getElementById("end-date").value = today;
-  document.getElementById("modal-project-title").textContent = "사업기간 등록";
+  document.getElementById("modal-project-title").textContent = "프로젝트 등록";
   document.getElementById("btn-save-project").textContent = "등록";
   modal.showModal();
 }
@@ -534,7 +488,7 @@ function openEditModal(period) {
   document.getElementById("start-date").value = period.start_month ? period.start_month.slice(0, 10) : "";
   document.getElementById("end-date").value = period.end_month ? period.end_month.slice(0, 10) : "";
   document.getElementById("project-desc").value = period.description || "";
-  document.getElementById("modal-project-title").textContent = "사업기간 수정";
+  document.getElementById("modal-project-title").textContent = "프로젝트 수정";
   document.getElementById("btn-save-project").textContent = "저장";
   modal.showModal();
 }
@@ -552,11 +506,11 @@ async function savePeriod() {
   try {
     if (periodId) {
       await apiFetch("/api/v1/contract-periods/" + periodId, { method: "PATCH", body: payload });
-      showToast("사업기간이 수정되었습니다.");
+      showToast("프로젝트가 수정되었습니다.");
     } else {
       payload.partner_id = cid;
       await apiFetch("/api/v1/contract-periods", { method: "POST", body: payload });
-      showToast("사업기간이 등록되었습니다.");
+      showToast("프로젝트가 등록되었습니다.");
     }
     modal.close();
     onCtxChanged(); // 현재 뷰 새로고침
@@ -566,11 +520,11 @@ async function savePeriod() {
 async function deletePeriod(period) {
   const displayName = period.contract_name ? period.contract_name + ' (' + period.period_label + ')' : period.id;
   confirmDelete(
-    '사업기간 "' + displayName + '"을(를) 삭제하시겠습니까?',
+    '프로젝트 "' + displayName + '"을(를) 삭제하시겠습니까?',
     async () => {
       try {
         await apiFetch("/api/v1/contract-periods/" + period.id, { method: "DELETE" });
-        showToast("사업기간이 삭제되었습니다.");
+        showToast("프로젝트가 삭제되었습니다.");
         onCtxChanged();
       } catch (err) { showToast(err.message, "error"); }
     }

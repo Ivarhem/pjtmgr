@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}사업기간 - 프로젝트관리{% endblock %}
+{% block title %}프로젝트 - 프로젝트관리{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
@@ -15,34 +15,8 @@
 <!-- ═══ 목록 뷰 (전체) ═══ -->
 <div id="view-list">
   <div class="page-header">
-    <h1>사업기간</h1>
-    <button class="btn btn-primary" id="btn-add-project">사업기간 등록</button>
-  </div>
-
-  <div class="summary-cards" id="phase-summary">
-    <div class="summary-card">
-      <div class="card-label">전체 사업기간</div>
-      <div class="card-value" id="card-total">-</div>
-    </div>
-    <div class="summary-card">
-      <div class="card-label">분석/설계</div>
-      <div class="card-value" id="card-early">-</div>
-    </div>
-    <div class="summary-card">
-      <div class="card-label">구축</div>
-      <div class="card-value" id="card-build">-</div>
-    </div>
-    <div class="summary-card">
-      <div class="card-label">시험/안정화</div>
-      <div class="card-value" id="card-late">-</div>
-    </div>
-  </div>
-
-  <div class="card mb-md is-hidden" id="alert-section">
-    <div class="card-body">
-      <h3 class="text-warning" id="alert-title">미제출 산출물</h3>
-      <ul id="alert-list" class="alert-list"></ul>
-    </div>
+    <h1>프로젝트 목록</h1>
+    <button class="btn btn-primary" id="btn-add-project">프로젝트 등록</button>
   </div>
 
   <div class="card mb-md">
@@ -51,12 +25,12 @@
 
 </div>
 
-<!-- ═══ 상세 뷰 (사업기간 선택 시) ═══ -->
+<!-- ═══ 상세 뷰 (프로젝트 선택 시) ═══ -->
 <div id="view-detail" class="is-hidden">
   <div class="page-header">
     <div>
-      <a href="#" class="text-secondary text-sm" id="link-back-to-list">&larr; 사업기간 목록</a>
-      <h1 id="detail-project-title">사업기간 상세</h1>
+      <a href="#" class="text-secondary text-sm" id="link-back-to-list">&larr; 프로젝트 목록</a>
+      <h1 id="detail-project-title">프로젝트 상세</h1>
     </div>
     <button class="btn btn-secondary btn-sm" id="btn-edit-project-detail">수정</button>
   </div>
@@ -105,9 +79,9 @@
   </div>
 </div>
 
-<!-- ═══ 모달: 사업기간 등록/수정 ═══ -->
+<!-- ═══ 모달: 프로젝트 등록/수정 ═══ -->
 <dialog id="modal-project" class="modal">
-  <h2 id="modal-project-title">사업기간 등록</h2>
+  <h2 id="modal-project-title">프로젝트 등록</h2>
   <form id="form-project" class="form-grid">
     <input type="hidden" id="project-id">
     <input type="hidden" id="project-code">
