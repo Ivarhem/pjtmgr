@@ -80,17 +80,17 @@ def upgrade() -> None:
         "WHERE partner_code LIKE 'C%'"
     ))
 
-    # contract_code: C→P prefix, -P→-B
+    # contract_code: C000-P000 → P000-B000 (FROM 7 skips the old '-P' prefix)
     conn.execute(text(
         "UPDATE contracts SET contract_code = "
-        "'P' || SUBSTRING(contract_code FROM 2 FOR 3) || '-B' || SUBSTRING(contract_code FROM 6) "
+        "'P' || SUBSTRING(contract_code FROM 2 FOR 3) || '-B' || SUBSTRING(contract_code FROM 7) "
         "WHERE contract_code LIKE 'C%'"
     ))
 
-    # period_code: same pattern
+    # period_code: C000-P000-Y26A → P000-B000-Y26A
     conn.execute(text(
         "UPDATE contract_periods SET period_code = "
-        "'P' || SUBSTRING(period_code FROM 2 FOR 3) || '-B' || SUBSTRING(period_code FROM 6) "
+        "'P' || SUBSTRING(period_code FROM 2 FOR 3) || '-B' || SUBSTRING(period_code FROM 7) "
         "WHERE period_code LIKE 'C%'"
     ))
 
