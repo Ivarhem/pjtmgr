@@ -241,9 +241,12 @@ body.mobile-nav-open .mobile-nav-toggle .icon-close { display: block; }
   border-radius: 6px;
   background: var(--surface-color);
   color: var(--text-color);
-  width: 140px;
+  min-width: 120px;
+  width: auto;
   outline: none;
 }
+#ctx-partner { max-width: 160px; }
+#ctx-project { max-width: 280px; }
 .ctx-input:focus { border-color: var(--primary-color); }
 .ctx-input::placeholder { color: var(--text-color-tertiary); }
 #ctx-project-display {

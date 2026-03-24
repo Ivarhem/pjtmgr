@@ -371,6 +371,12 @@ async function initContextSelectors() {
   const projDrop = document.getElementById('ctx-project-dropdown');
   if (!custInput) return;
 
+  // ── 캐시된 라벨 즉시 표시 (API 응답 전 깜빡임 방지) ──
+  const _cachedPartnerLabel = localStorage.getItem('infra.ctx_partner_label');
+  const _cachedProjectLabel = localStorage.getItem('infra.ctx_project_label');
+  if (_cachedPartnerLabel) custInput.value = _cachedPartnerLabel;
+  if (_cachedProjectLabel && projInput) projInput.value = _cachedProjectLabel;
+
   let allPartners = [];
   let allProjects = [];
 
@@ -430,6 +436,9 @@ async function initContextSelectors() {
     custInput.title = item ? (item.code + ' ' + item.label) : '';
     _ctxProjectId = null;
     if (projInput) { projInput.value = ''; projInput.title = ''; }
+    // 라벨 캐시
+    localStorage.setItem('infra.ctx_partner_label', item ? item.label : '');
+    localStorage.setItem('infra.ctx_project_label', '');
     // Pin 저장
     apiFetch('/api/v1/preferences/infra.pinned_partner_id', {
       method: 'PATCH', body: { value: item ? String(item.id) : '' },
@@ -494,12 +503,20 @@ async function initContextSelectors() {
     } catch { /* ignore */ }
   }
 
+  function _autoSizeInput(input, maxW) {
+    if (!input) return;
+    const len = input.value.length;
+    input.size = Math.max(len || 8, 8);
+  }
+
   function selectProject(item) {
     _ctxProjectId = item ? item.id : null;
     if (projInput) {
       projInput.value = item ? item.label : '';
       projInput.title = item ? (item.code + ' ' + item.label) : '';
+      _autoSizeInput(projInput);
     }
+    localStorage.setItem('infra.ctx_project_label', item ? item.label : '');
     // 사이드바 프로젝트 메뉴 링크 동적 변경
     const navLink = document.getElementById('nav-project-link');
     if (navLink) {
