@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
@@ -43,12 +43,21 @@ def list_assets(
     if status is not None:
         stmt = stmt.where(Asset.status == status)
     if q:
+        from app.modules.infra.models.asset_alias import AssetAlias
         like = f"%{q}%"
+        alias_exists = exists(
+            select(AssetAlias.id).where(
+                AssetAlias.asset_id == Asset.id,
+                AssetAlias.alias_name.ilike(like),
+            )
+        )
         stmt = stmt.where(
             Asset.asset_name.ilike(like)
             | Asset.hostname.ilike(like)
             | Asset.service_ip.ilike(like)
             | Asset.equipment_id.ilike(like)
+            | Asset.asset_code.ilike(like)
+            | alias_exists
         )
     stmt = stmt.order_by(Asset.asset_name.asc())
     return list(db.scalars(stmt))

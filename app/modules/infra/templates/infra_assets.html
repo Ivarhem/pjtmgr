@@ -58,7 +58,11 @@
     <button class="tab-btn" data-dtab="network">네트워크</button>
     <button class="tab-btn" data-dtab="hw">HW 사양</button>
     <button class="tab-btn" data-dtab="mgmt">자산 관리</button>
+    <button class="tab-btn" data-dtab="software">소프트웨어</button>
+    <button class="tab-btn" data-dtab="ip">IP 할당</button>
+    <button class="tab-btn" data-dtab="contacts">담당자</button>
     <button class="tab-btn" data-dtab="relations">관계</button>
+    <button class="tab-btn" data-dtab="aliases">별칭</button>
   </div>
   <div id="detail-content" class="detail-body"></div>
 </div>
@@ -250,6 +254,136 @@
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-asset">취소</button>
     <button class="btn btn-primary" id="btn-save-asset">등록</button>
+  </div>
+</dialog>
+<!-- 소프트웨어 추가/수정 모달 -->
+<dialog id="modal-software" class="modal">
+  <h2 id="modal-software-title">소프트웨어 추가</h2>
+  <form id="form-software">
+    <input type="hidden" id="sw-id">
+    <div class="form-grid">
+      <label>소프트웨어명 <input type="text" id="sw-name" required></label>
+      <label>버전 <input type="text" id="sw-version"></label>
+      <label>라이선스 유형 <input type="text" id="sw-license-type"></label>
+      <label>라이선스 수량 <input type="number" id="sw-license-count" min="0"></label>
+      <label>관계 유형
+        <select id="sw-relation-type">
+          <option value="installed">설치됨</option>
+          <option value="managed">관리됨</option>
+          <option value="dependent">의존</option>
+        </select>
+      </label>
+      <label>비고 <input type="text" id="sw-note"></label>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-sw">취소</button>
+    <button class="btn btn-primary" id="btn-save-sw">저장</button>
+  </div>
+</dialog>
+
+<!-- IP 할당 추가/수정 모달 -->
+<dialog id="modal-ip" class="modal">
+  <h2 id="modal-ip-title">IP 추가</h2>
+  <form id="form-ip">
+    <input type="hidden" id="ip-id">
+    <div class="form-grid">
+      <label>IP 주소 <input type="text" id="ip-address" required></label>
+      <label>유형
+        <select id="ip-type">
+          <option value="service">서비스</option>
+          <option value="management">관리</option>
+          <option value="heartbeat">하트비트</option>
+          <option value="backup">백업</option>
+          <option value="other">기타</option>
+        </select>
+      </label>
+      <label>인터페이스 <input type="text" id="ip-interface"></label>
+      <label>호스트명 <input type="text" id="ip-hostname"></label>
+      <label>VLAN <input type="text" id="ip-vlan"></label>
+      <label>네트워크 <input type="text" id="ip-network"></label>
+      <label>서브넷 마스크 <input type="text" id="ip-netmask"></label>
+      <label>게이트웨이 <input type="text" id="ip-gateway"></label>
+      <label class="chk-inline"><input type="checkbox" id="ip-is-primary"> 대표 IP</label>
+      <label>비고 <input type="text" id="ip-note"></label>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-ip">취소</button>
+    <button class="btn btn-primary" id="btn-save-ip">저장</button>
+  </div>
+</dialog>
+
+<!-- 담당자 연결 모달 -->
+<dialog id="modal-contact" class="modal">
+  <h2>담당자 연결</h2>
+  <form id="form-contact">
+    <input type="hidden" id="ct-id">
+    <div class="form-grid">
+      <label>담당자 ID <input type="number" id="ct-contact-id" required></label>
+      <label>역할 <input type="text" id="ct-role" placeholder="예: 운영, 보안, 네트워크"></label>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-ct">취소</button>
+    <button class="btn btn-primary" id="btn-save-ct">저장</button>
+  </div>
+</dialog>
+
+<!-- 관계 추가 모달 -->
+<dialog id="modal-relation" class="modal">
+  <h2 id="modal-relation-title">관계 추가</h2>
+  <form id="form-relation">
+    <input type="hidden" id="rel-id">
+    <div class="form-grid">
+      <label>대상 자산 ID <input type="number" id="rel-dst-asset-id" required></label>
+      <label>관계 유형
+        <select id="rel-type">
+          <option value="HOSTS">HOSTS</option>
+          <option value="INSTALLED_ON">INSTALLED_ON</option>
+          <option value="PROTECTS">PROTECTS</option>
+          <option value="CONNECTS_TO">CONNECTS_TO</option>
+          <option value="DEPENDS_ON">DEPENDS_ON</option>
+          <option value="BACKUP_OF">BACKUP_OF</option>
+          <option value="HA_PAIR">HA_PAIR</option>
+          <option value="OTHER">OTHER</option>
+        </select>
+      </label>
+      <label>비고 <input type="text" id="rel-note"></label>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-rel">취소</button>
+    <button class="btn btn-primary" id="btn-save-rel">저장</button>
+  </div>
+</dialog>
+
+<!-- 별칭 추가/수정 모달 -->
+<dialog id="modal-alias" class="modal">
+  <h2 id="modal-alias-title">별칭 추가</h2>
+  <form id="form-alias">
+    <input type="hidden" id="alias-id">
+    <div class="form-grid">
+      <label>별칭 이름 <input type="text" id="alias-name" required></label>
+      <label>유형
+        <select id="alias-type">
+          <option value="INTERNAL">내부</option>
+          <option value="CUSTOMER">고객사</option>
+          <option value="VENDOR">벤더</option>
+          <option value="TEAM">팀</option>
+          <option value="LEGACY">레거시</option>
+          <option value="ETC">기타</option>
+        </select>
+      </label>
+      <label>출처 업체 ID <input type="number" id="alias-source-partner"></label>
+      <label>출처 텍스트 <input type="text" id="alias-source-text"></label>
+      <label>비고 <input type="text" id="alias-note"></label>
+      <label class="chk-inline"><input type="checkbox" id="alias-is-primary"> 대표 별칭</label>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-alias">취소</button>
+    <button class="btn btn-primary" id="btn-save-alias">저장</button>
   </div>
 </dialog>
 {% endblock %}
