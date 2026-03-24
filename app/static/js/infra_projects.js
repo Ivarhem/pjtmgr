@@ -74,8 +74,8 @@ function initListGrids() {
     rowSelection: "single", animateRows: true, enableCellTextSelection: true,
     onRowClicked: (e) => {
       const d = e.data;
-      if (d && d.id && window.setCtxProject) {
-        window.setCtxProject(d.id, d.period_code, d.contract_name);
+      if (d && d.id) {
+        window.location.href = "/periods/" + d.id;
       }
     },
   });
