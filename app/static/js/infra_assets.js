@@ -22,7 +22,8 @@ const ASSET_STATUS_MAP = {
 };
 
 const columnDefs = [
-  { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180, sort: "asc" },
+  { field: "asset_code", headerName: "코드", width: 120, sort: "asc" },
+  { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180 },
   {
     field: "asset_type",
     headerName: "유형",
@@ -32,10 +33,9 @@ const columnDefs = [
   { field: "vendor", headerName: "제조사", width: 130 },
   { field: "model", headerName: "모델", width: 130 },
   { field: "hostname", headerName: "호스트명", width: 140 },
-  { field: "service_ip", headerName: "서비스IP", width: 130 },
+  { field: "mgmt_ip", headerName: "관리IP", width: 130 },
   { field: "zone", headerName: "존", width: 100 },
   { field: "category", headerName: "분류", width: 110 },
-  { field: "rack_no", headerName: "랙", width: 80 },
   {
     field: "status",
     headerName: "상태",
