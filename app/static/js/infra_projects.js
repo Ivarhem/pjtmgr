@@ -61,6 +61,7 @@ async function loadPeriods() {
 }
 
 async function loadListView() {
+  initListGrids();
   await loadPeriods();
 }
 
