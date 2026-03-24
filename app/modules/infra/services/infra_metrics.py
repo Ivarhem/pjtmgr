@@ -65,7 +65,7 @@ def get_period_summary(db: Session, contract_period_id: int) -> dict:
         "contract_period_id": contract_period_id,
         "period_label": period.period_label if period else "",
         "stage": period.stage if period else "",
-        "customer_id": period.customer_id if period else None,
+        "partner_id": period.partner_id if period else None,
         "asset_count": asset_count,
         "ip_count": ip_count,
         "compliance_rate": compliance,
@@ -76,12 +76,12 @@ def get_period_summary(db: Session, contract_period_id: int) -> dict:
 
 
 def list_periods_summary(
-    db: Session, customer_id: int | None = None
+    db: Session, partner_id: int | None = None
 ) -> list[dict]:
-    """All contract periods summary list for dashboard. Optionally filtered by customer."""
+    """All contract periods summary list for dashboard. Optionally filtered by partner."""
     stmt = select(ContractPeriod.id).order_by(ContractPeriod.id)
-    if customer_id is not None:
-        stmt = stmt.where(ContractPeriod.customer_id == customer_id)
+    if partner_id is not None:
+        stmt = stmt.where(ContractPeriod.partner_id == partner_id)
     period_ids = list(db.scalars(stmt))
     return [get_period_summary(db, pid) for pid in period_ids]
 
@@ -115,7 +115,7 @@ def get_policy_compliance_rate(db: Session, contract_period_id: int) -> float:
     return round(compliant / denominator * 100, 1)
 
 
-def get_unsubmitted_deliverables(db: Session, customer_id: int | None = None) -> list[dict]:
+def get_unsubmitted_deliverables(db: Session, partner_id: int | None = None) -> list[dict]:
     """Unsubmitted deliverables in in_progress phases."""
     stmt = (
         select(
@@ -134,8 +134,8 @@ def get_unsubmitted_deliverables(db: Session, customer_id: int | None = None) ->
         )
         .order_by(ContractPeriod.period_label, PeriodPhase.phase_type, PeriodDeliverable.name)
     )
-    if customer_id is not None:
-        stmt = stmt.where(ContractPeriod.customer_id == customer_id)
+    if partner_id is not None:
+        stmt = stmt.where(ContractPeriod.partner_id == partner_id)
     rows = db.execute(stmt).all()
     return [
         {
@@ -149,33 +149,33 @@ def get_unsubmitted_deliverables(db: Session, customer_id: int | None = None) ->
     ]
 
 
-def get_non_compliant_assignments(db: Session, customer_id: int | None = None) -> list[dict]:
-    """Policy assignments with non_compliant status. Optionally filtered by customer."""
-    from app.modules.common.models.customer import Customer
+def get_non_compliant_assignments(db: Session, partner_id: int | None = None) -> list[dict]:
+    """Policy assignments with non_compliant status. Optionally filtered by partner."""
+    from app.modules.common.models.partner import Partner
 
     stmt = (
         select(
             PolicyAssignment.id,
-            PolicyAssignment.customer_id,
+            PolicyAssignment.partner_id,
             PolicyAssignment.asset_id,
             PolicyAssignment.status,
             PolicyAssignment.exception_reason,
             PolicyAssignment.checked_by,
             PolicyAssignment.checked_date,
-            Customer.name.label("customer_name"),
+            Partner.name.label("partner_name"),
         )
-        .join(Customer, PolicyAssignment.customer_id == Customer.id)
+        .join(Partner, PolicyAssignment.partner_id == Partner.id)
         .where(PolicyAssignment.status == "non_compliant")
     )
-    if customer_id is not None:
-        stmt = stmt.where(PolicyAssignment.customer_id == customer_id)
-    stmt = stmt.order_by(Customer.name, PolicyAssignment.id)
+    if partner_id is not None:
+        stmt = stmt.where(PolicyAssignment.partner_id == partner_id)
+    stmt = stmt.order_by(Partner.name, PolicyAssignment.id)
     rows = db.execute(stmt).all()
     return [
         {
             "id": r.id,
-            "customer_id": r.customer_id,
-            "customer_name": r.customer_name,
+            "partner_id": r.partner_id,
+            "partner_name": r.partner_name,
             "asset_id": r.asset_id,
             "status": r.status,
             "exception_reason": r.exception_reason,

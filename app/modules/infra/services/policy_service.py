@@ -23,7 +23,7 @@ from app.modules.infra.schemas.policy_definition import (
     PolicyDefinitionUpdate,
 )
 from app.modules.infra.services._helpers import (
-    ensure_customer_exists,
+    ensure_partner_exists,
     get_period_asset_ids,
 )
 
@@ -109,12 +109,12 @@ def delete_policy(db: Session, policy_id: int, current_user) -> None:
 
 
 def list_assignments(
-    db: Session, customer_id: int, period_id: int | None = None
+    db: Session, partner_id: int, period_id: int | None = None
 ) -> list[PolicyAssignment]:
-    ensure_customer_exists(db, customer_id)
+    ensure_partner_exists(db, partner_id)
     stmt = (
         select(PolicyAssignment)
-        .where(PolicyAssignment.customer_id == customer_id)
+        .where(PolicyAssignment.partner_id == partner_id)
         .order_by(PolicyAssignment.id.asc())
     )
     if period_id is not None:
@@ -134,14 +134,14 @@ def create_assignment(
     db: Session, payload: PolicyAssignmentCreate, current_user
 ) -> PolicyAssignment:
     _require_inventory_edit(current_user)
-    ensure_customer_exists(db, payload.customer_id)
+    ensure_partner_exists(db, payload.partner_id)
     _ensure_policy_exists(db, payload.policy_definition_id)
 
     if payload.asset_id is not None:
-        _ensure_asset_belongs_to_customer(db, payload.asset_id, payload.customer_id)
+        _ensure_asset_belongs_to_partner(db, payload.asset_id, payload.partner_id)
 
     _ensure_assignment_unique(
-        db, payload.customer_id, payload.asset_id, payload.policy_definition_id
+        db, payload.partner_id, payload.asset_id, payload.policy_definition_id
     )
 
     assignment = PolicyAssignment(**payload.model_dump())
@@ -195,25 +195,25 @@ def _ensure_policy_code_unique(
     raise DuplicateError("Policy code already exists")
 
 
-def _ensure_asset_belongs_to_customer(
-    db: Session, asset_id: int, customer_id: int
+def _ensure_asset_belongs_to_partner(
+    db: Session, asset_id: int, partner_id: int
 ) -> None:
     asset = db.get(Asset, asset_id)
     if asset is None:
         raise NotFoundError("Asset not found")
-    if asset.customer_id != customer_id:
-        raise BusinessRuleError("Asset does not belong to this customer")
+    if asset.partner_id != partner_id:
+        raise BusinessRuleError("Asset does not belong to this partner")
 
 
 def _ensure_assignment_unique(
     db: Session,
-    customer_id: int,
+    partner_id: int,
     asset_id: int | None,
     policy_definition_id: int,
     assignment_id: int | None = None,
 ) -> None:
     stmt = select(PolicyAssignment).where(
-        PolicyAssignment.customer_id == customer_id,
+        PolicyAssignment.partner_id == partner_id,
         PolicyAssignment.asset_id == asset_id,
         PolicyAssignment.policy_definition_id == policy_definition_id,
     )

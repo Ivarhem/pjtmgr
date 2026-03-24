@@ -1,4 +1,4 @@
-"""인프라모듈 Excel Export 서비스 — 고객사 단위 데이터 내보내기."""
+"""인프라모듈 Excel Export 서비스 — 업체 단위 데이터 내보내기."""
 from __future__ import annotations
 
 from io import BytesIO
@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
@@ -128,10 +128,10 @@ def _auto_width(ws, headers: list[tuple[str, str | None]]) -> None:
 # -- 메인 --
 
 
-def export_customer(db: Session, customer_id: int, period_id: int | None = None) -> bytes:
-    """고객사 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export. period_id 지정 시 해당 기간 자산만 필터."""
-    if db.get(Customer, customer_id) is None:
-        raise NotFoundError("Customer not found")
+def export_partner(db: Session, partner_id: int, period_id: int | None = None) -> bytes:
+    """업체 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export. period_id 지정 시 해당 기간 자산만 필터."""
+    if db.get(Partner, partner_id) is None:
+        raise NotFoundError("Partner not found")
 
     # 기간 필터용 자산 ID 집합
     period_asset_ids: set[int] | None = None
@@ -145,7 +145,7 @@ def export_customer(db: Session, customer_id: int, period_id: int | None = None)
     # Sheet 1: Inventory (Assets)
     ws_inv = wb.active
     ws_inv.title = "01. Inventory"
-    stmt = select(Asset).where(Asset.customer_id == customer_id).order_by(Asset.id.asc())
+    stmt = select(Asset).where(Asset.partner_id == partner_id).order_by(Asset.id.asc())
     if period_asset_ids is not None:
         stmt = stmt.where(Asset.id.in_(period_asset_ids)) if period_asset_ids else stmt.where(Asset.id == -1)
     assets = list(db.scalars(stmt))
@@ -166,7 +166,7 @@ def export_customer(db: Session, customer_id: int, period_id: int | None = None)
     subnets = list(
         db.scalars(
             select(IpSubnet)
-            .where(IpSubnet.customer_id == customer_id)
+            .where(IpSubnet.partner_id == partner_id)
             .order_by(IpSubnet.id.asc())
         )
     )
@@ -184,7 +184,7 @@ def export_customer(db: Session, customer_id: int, period_id: int | None = None)
     portmaps = list(
         db.scalars(
             select(PortMap)
-            .where(PortMap.customer_id == customer_id)
+            .where(PortMap.partner_id == partner_id)
             .order_by(PortMap.id.asc())
         )
     )

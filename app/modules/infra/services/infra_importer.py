@@ -11,7 +11,7 @@ from app.core.exceptions import BusinessRuleError, NotFoundError
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
-from app.modules.common.models.customer import Customer
+from app.modules.common.models.partner import Partner
 
 # ── 파일 유효성 검증 ──
 
@@ -148,7 +148,7 @@ def _append_error(
     )
 
 
-def parse_inventory_sheet(file_bytes: bytes, customer_id: int) -> dict:
+def parse_inventory_sheet(file_bytes: bytes, partner_id: int) -> dict:
     """
     01. Inventory 시트를 파싱하여 프리뷰 데이터 반환.
 
@@ -228,7 +228,7 @@ def parse_inventory_sheet(file_bytes: bytes, customer_id: int) -> dict:
             continue
 
         # 필드 추출
-        asset_data: dict = {"customer_id": None}  # filled at import time
+        asset_data: dict = {"partner_id": None}  # filled at import time
         row_errors: list[str] = []
 
         for col_idx, field_name in _COLUMN_MAP.items():
@@ -317,7 +317,7 @@ def parse_inventory_sheet(file_bytes: bytes, customer_id: int) -> dict:
 
 def import_inventory(
     db: Session,
-    customer_id: int,
+    partner_id: int,
     parsed_rows: list[dict],
     current_user,
     on_duplicate: str = "skip",
@@ -336,21 +336,21 @@ def import_inventory(
     created = 0
     skipped = 0
 
-    # 고객사 존재 확인
-    if db.get(Customer, customer_id) is None:
-        _append_error(errors, error_details, f"고객사(ID={customer_id})를 찾을 수 없습니다.", code="customer_not_found")
+    # 업체 존재 확인
+    if db.get(Partner, partner_id) is None:
+        _append_error(errors, error_details, f"업체(ID={partner_id})를 찾을 수 없습니다.", code="partner_not_found")
         return {"created": 0, "skipped": 0, "errors": errors, "error_details": error_details}
 
-    # 기존 자산명 조회 (고객사 범위)
+    # 기존 자산명 조회 (업체 범위)
     existing_assets = {
         a.asset_name: a
         for a in db.scalars(
-            select(Asset).where(Asset.customer_id == customer_id)
+            select(Asset).where(Asset.partner_id == partner_id)
         )
     }
 
     for row_data in parsed_rows:
-        row_data["customer_id"] = customer_id
+        row_data["partner_id"] = partner_id
         asset_name = row_data.get("asset_name", "")
         if not asset_name:
             continue
@@ -364,7 +364,7 @@ def import_inventory(
             elif on_duplicate == "overwrite":
                 # 기존 자산 업데이트
                 for field, value in row_data.items():
-                    if field in ("customer_id",) or value is None:
+                    if field in ("partner_id",) or value is None:
                         continue
                     setattr(existing, field, value)
                 skipped += 1  # overwrite도 기존 건이므로 skipped에 포함
@@ -391,7 +391,7 @@ _SUBNET_HEADERS = ["name", "subnet", "netmask", "gateway", "vlan_id", "zone", "r
 _SUBNET_HEADER_LABELS = ["대역명", "Subnet (CIDR)", "Netmask", "Gateway", "VLAN", "Zone", "역할", "지역/층", "분류", "설명"]
 
 
-def parse_subnet_sheet(file_bytes: bytes, customer_id: int) -> dict:
+def parse_subnet_sheet(file_bytes: bytes, partner_id: int) -> dict:
     """IP 대역 Excel 시트 파싱. Row 1=헤더, Row 2+= 데이터."""
     errors: list[str] = []
     error_details: list[dict] = []
@@ -415,7 +415,7 @@ def parse_subnet_sheet(file_bytes: bytes, customer_id: int) -> dict:
         if not name_val and not subnet_val:
             continue
 
-        data: dict = {"customer_id": None}  # filled at import time
+        data: dict = {"partner_id": None}  # filled at import time
         row_errors: list[str] = []
 
         for i, field in enumerate(_SUBNET_HEADERS):
@@ -452,21 +452,21 @@ def parse_subnet_sheet(file_bytes: bytes, customer_id: int) -> dict:
     return {"rows": parsed_rows, "preview_rows": preview_rows, "errors": errors, "error_details": error_details, "warnings": warnings, "total": len(parsed_rows), "valid_count": max(valid_count, 0)}
 
 
-def import_subnets(db: Session, customer_id: int, parsed_rows: list[dict], current_user, on_duplicate: str = "skip") -> dict:
+def import_subnets(db: Session, partner_id: int, parsed_rows: list[dict], current_user, on_duplicate: str = "skip") -> dict:
     """파싱된 IP 대역 데이터를 DB에 저장."""
     errors: list[str] = []
     error_details: list[dict] = []
     created = 0
     skipped = 0
 
-    if db.get(Customer, customer_id) is None:
-        _append_error(errors, error_details, f"고객사(ID={customer_id})를 찾을 수 없습니다.", code="customer_not_found")
+    if db.get(Partner, partner_id) is None:
+        _append_error(errors, error_details, f"업체(ID={partner_id})를 찾을 수 없습니다.", code="partner_not_found")
         return {"created": 0, "skipped": 0, "errors": errors, "error_details": error_details}
 
-    existing = {s.subnet: s for s in db.scalars(select(IpSubnet).where(IpSubnet.customer_id == customer_id))}
+    existing = {s.subnet: s for s in db.scalars(select(IpSubnet).where(IpSubnet.partner_id == partner_id))}
 
     for row_data in parsed_rows:
-        row_data["customer_id"] = customer_id
+        row_data["partner_id"] = partner_id
         subnet_key = row_data.get("subnet", "")
         if not subnet_key:
             continue
@@ -476,7 +476,7 @@ def import_subnets(db: Session, customer_id: int, parsed_rows: list[dict], curre
                 skipped += 1
             elif on_duplicate == "overwrite":
                 for f, v in row_data.items():
-                    if f == "customer_id" or v is None:
+                    if f == "partner_id" or v is None:
                         continue
                     setattr(ex, f, v)
                 skipped += 1
@@ -512,7 +512,7 @@ _PORTMAP_HEADER_LABELS = [
 _PORTMAP_INT_FIELDS = {"seq", "port"}
 
 
-def parse_portmap_sheet(file_bytes: bytes, customer_id: int) -> dict:
+def parse_portmap_sheet(file_bytes: bytes, partner_id: int) -> dict:
     """포트맵 Excel 시트 파싱. Row 1=헤더, Row 2+=데이터."""
     errors: list[str] = []
     error_details: list[dict] = []
@@ -537,7 +537,7 @@ def parse_portmap_sheet(file_bytes: bytes, customer_id: int) -> dict:
         if not src_host and not dst_host and not summary:
             continue
 
-        data: dict = {"customer_id": None}  # filled at import time
+        data: dict = {"partner_id": None}  # filled at import time
         row_errors: list[str] = []
 
         for i, field in enumerate(_PORTMAP_HEADERS):
@@ -571,18 +571,18 @@ def parse_portmap_sheet(file_bytes: bytes, customer_id: int) -> dict:
     return {"rows": parsed_rows, "preview_rows": preview_rows, "errors": errors, "error_details": error_details, "warnings": warnings, "total": len(parsed_rows), "valid_count": max(valid_count, 0)}
 
 
-def import_portmaps(db: Session, customer_id: int, parsed_rows: list[dict], current_user) -> dict:
+def import_portmaps(db: Session, partner_id: int, parsed_rows: list[dict], current_user) -> dict:
     """파싱된 포트맵 데이터를 DB에 저장. 포트맵은 중복 개념이 약하므로 모두 신규 생성."""
     errors: list[str] = []
     error_details: list[dict] = []
     created = 0
 
-    if db.get(Customer, customer_id) is None:
-        _append_error(errors, error_details, f"고객사(ID={customer_id})를 찾을 수 없습니다.", code="customer_not_found")
+    if db.get(Partner, partner_id) is None:
+        _append_error(errors, error_details, f"업체(ID={partner_id})를 찾을 수 없습니다.", code="partner_not_found")
         return {"created": 0, "skipped": 0, "errors": errors, "error_details": error_details}
 
     for row_data in parsed_rows:
-        row_data["customer_id"] = customer_id
+        row_data["partner_id"] = partner_id
         db.add(PortMap(**row_data))
         created += 1
 

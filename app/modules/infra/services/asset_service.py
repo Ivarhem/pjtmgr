@@ -13,12 +13,12 @@ from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_contact import AssetContact
 from app.modules.infra.schemas.asset import AssetCreate, AssetUpdate
-from app.modules.infra.services._helpers import ensure_customer_exists, get_period_asset_ids
+from app.modules.infra.services._helpers import ensure_partner_exists, get_period_asset_ids
 from app.modules.infra.schemas.asset_contact import (
     AssetContactCreate,
     AssetContactUpdate,
 )
-from app.modules.common.models.customer_contact import CustomerContact
+from app.modules.common.models.partner_contact import PartnerContact
 
 
 # ── Asset ──
@@ -26,13 +26,13 @@ from app.modules.common.models.customer_contact import CustomerContact
 
 def list_assets(
     db: Session,
-    customer_id: int,
+    partner_id: int,
     period_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
     q: str | None = None,
 ) -> list[Asset]:
-    stmt = select(Asset).where(Asset.customer_id == customer_id)
+    stmt = select(Asset).where(Asset.partner_id == partner_id)
     if period_id is not None:
         asset_ids = get_period_asset_ids(db, period_id)
         if not asset_ids:
@@ -107,8 +107,8 @@ def get_asset(db: Session, asset_id: int) -> Asset:
 
 def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     _require_inventory_edit(current_user)
-    ensure_customer_exists(db, payload.customer_id)
-    _ensure_asset_name_unique(db, payload.customer_id, payload.asset_name)
+    ensure_partner_exists(db, payload.partner_id)
+    _ensure_asset_name_unique(db, payload.partner_id, payload.asset_name)
     if payload.hardware_model_id is not None:
         _ensure_hardware_model_exists(db, payload.hardware_model_id)
 
@@ -130,14 +130,14 @@ def update_asset(
     asset = get_asset(db, asset_id)
     changes = payload.model_dump(exclude_unset=True)
 
-    target_customer_id = changes.get("customer_id", asset.customer_id)
+    target_partner_id = changes.get("partner_id", asset.partner_id)
     target_asset_name = changes.get("asset_name", asset.asset_name)
 
-    if "customer_id" in changes:
-        ensure_customer_exists(db, target_customer_id)
+    if "partner_id" in changes:
+        ensure_partner_exists(db, target_partner_id)
 
-    if target_customer_id != asset.customer_id or target_asset_name != asset.asset_name:
-        _ensure_asset_name_unique(db, target_customer_id, target_asset_name, asset.id)
+    if target_partner_id != asset.partner_id or target_asset_name != asset.asset_name:
+        _ensure_asset_name_unique(db, target_partner_id, target_asset_name, asset.id)
 
     if "hardware_model_id" in changes and changes["hardware_model_id"] is not None:
         _ensure_hardware_model_exists(db, changes["hardware_model_id"])
@@ -243,18 +243,18 @@ def _ensure_hardware_model_exists(db: Session, product_id: int) -> None:
 
 
 def _ensure_contact_exists(db: Session, contact_id: int) -> None:
-    if db.get(CustomerContact, contact_id) is None:
+    if db.get(PartnerContact, contact_id) is None:
         raise NotFoundError("Contact not found")
 
 
 def _ensure_asset_name_unique(
     db: Session,
-    customer_id: int,
+    partner_id: int,
     asset_name: str,
     asset_id: int | None = None,
 ) -> None:
     stmt = select(Asset).where(
-        Asset.customer_id == customer_id, Asset.asset_name == asset_name
+        Asset.partner_id == partner_id, Asset.asset_name == asset_name
     )
     existing = db.scalar(stmt)
     if existing is None:

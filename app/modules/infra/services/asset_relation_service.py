@@ -34,9 +34,9 @@ def list_by_asset(db: Session, asset_id: int) -> list[dict]:
     return _enrich(db, rels)
 
 
-def list_by_customer(db: Session, customer_id: int) -> list[dict]:
-    """고객사 소속 자산들의 모든 관계 조회."""
-    asset_ids_q = select(Asset.id).where(Asset.customer_id == customer_id)
+def list_by_partner(db: Session, partner_id: int) -> list[dict]:
+    """업체 소속 자산들의 모든 관계 조회."""
+    asset_ids_q = select(Asset.id).where(Asset.partner_id == partner_id)
     rels = list(
         db.scalars(
             select(AssetRelation)

@@ -19,7 +19,7 @@ from app.modules.infra.schemas.asset_ip import AssetIPCreate, AssetIPUpdate
 from app.modules.infra.schemas.ip_subnet import IpSubnetCreate, IpSubnetUpdate
 from app.modules.infra.schemas.port_map import PortMapCreate, PortMapUpdate
 from app.modules.infra.services._helpers import (
-    ensure_customer_exists,
+    ensure_partner_exists,
     get_period_asset_ids,
 )
 
@@ -27,12 +27,12 @@ from app.modules.infra.services._helpers import (
 # ── IpSubnet ──
 
 
-def list_subnets(db: Session, customer_id: int) -> list[IpSubnet]:
-    ensure_customer_exists(db, customer_id)
+def list_subnets(db: Session, partner_id: int) -> list[IpSubnet]:
+    ensure_partner_exists(db, partner_id)
     return list(
         db.scalars(
             select(IpSubnet)
-            .where(IpSubnet.customer_id == customer_id)
+            .where(IpSubnet.partner_id == partner_id)
             .order_by(IpSubnet.name.asc())
         )
     )
@@ -47,7 +47,7 @@ def get_subnet(db: Session, subnet_id: int) -> IpSubnet:
 
 def create_subnet(db: Session, payload: IpSubnetCreate, current_user) -> IpSubnet:
     _require_inventory_edit(current_user)
-    ensure_customer_exists(db, payload.customer_id)
+    ensure_partner_exists(db, payload.partner_id)
 
     subnet = IpSubnet(**payload.model_dump())
     db.add(subnet)
@@ -111,14 +111,14 @@ def list_asset_ips(db: Session, asset_id: int) -> list[AssetIP]:
     )
 
 
-def list_customer_ips(db: Session, customer_id: int) -> list[AssetIP]:
-    """고객사 전체 IP 인벤토리 조회."""
-    ensure_customer_exists(db, customer_id)
+def list_partner_ips(db: Session, partner_id: int) -> list[AssetIP]:
+    """업체 전체 IP 인벤토리 조회."""
+    ensure_partner_exists(db, partner_id)
     return list(
         db.scalars(
             select(AssetIP)
             .join(Asset, AssetIP.asset_id == Asset.id)
-            .where(Asset.customer_id == customer_id)
+            .where(Asset.partner_id == partner_id)
             .order_by(AssetIP.ip_address.asc())
         )
     )
@@ -138,7 +138,7 @@ def create_asset_ip(db: Session, payload: AssetIPCreate, current_user) -> AssetI
     if payload.ip_subnet_id is not None:
         _ensure_subnet_exists(db, payload.ip_subnet_id)
 
-    _ensure_ip_unique_in_customer(db, asset.customer_id, payload.ip_address)
+    _ensure_ip_unique_in_partner(db, asset.partner_id, payload.ip_address)
 
     asset_ip = AssetIP(**payload.model_dump())
     db.add(asset_ip)
@@ -159,7 +159,7 @@ def update_asset_ip(
 
     if "ip_address" in changes and changes["ip_address"] != asset_ip.ip_address:
         asset = db.get(Asset, asset_ip.asset_id)
-        _ensure_ip_unique_in_customer(db, asset.customer_id, changes["ip_address"], ip_id)
+        _ensure_ip_unique_in_partner(db, asset.partner_id, changes["ip_address"], ip_id)
 
     for field, value in changes.items():
         setattr(asset_ip, field, value)
@@ -180,10 +180,10 @@ def delete_asset_ip(db: Session, ip_id: int, current_user) -> None:
 
 
 def list_port_maps(
-    db: Session, customer_id: int, period_id: int | None = None
+    db: Session, partner_id: int, period_id: int | None = None
 ) -> list[PortMap]:
-    ensure_customer_exists(db, customer_id)
-    stmt = select(PortMap).where(PortMap.customer_id == customer_id)
+    ensure_partner_exists(db, partner_id)
+    stmt = select(PortMap).where(PortMap.partner_id == partner_id)
     if period_id is not None:
         asset_ids = get_period_asset_ids(db, period_id)
         stmt = stmt.where(
@@ -205,12 +205,12 @@ def get_port_map(db: Session, port_map_id: int) -> PortMap:
 
 def create_port_map(db: Session, payload: PortMapCreate, current_user) -> PortMap:
     _require_inventory_edit(current_user)
-    ensure_customer_exists(db, payload.customer_id)
+    ensure_partner_exists(db, payload.partner_id)
 
     if payload.src_asset_id is not None:
-        _ensure_asset_belongs_to_customer(db, payload.src_asset_id, payload.customer_id)
+        _ensure_asset_belongs_to_partner(db, payload.src_asset_id, payload.partner_id)
     if payload.dst_asset_id is not None:
-        _ensure_asset_belongs_to_customer(db, payload.dst_asset_id, payload.customer_id)
+        _ensure_asset_belongs_to_partner(db, payload.dst_asset_id, payload.partner_id)
 
     port_map = PortMap(**payload.model_dump())
     db.add(port_map)
@@ -231,12 +231,12 @@ def update_port_map(
     changes = payload.model_dump(exclude_unset=True)
 
     if "src_asset_id" in changes and changes["src_asset_id"] is not None:
-        _ensure_asset_belongs_to_customer(
-            db, changes["src_asset_id"], port_map.customer_id
+        _ensure_asset_belongs_to_partner(
+            db, changes["src_asset_id"], port_map.partner_id
         )
     if "dst_asset_id" in changes and changes["dst_asset_id"] is not None:
-        _ensure_asset_belongs_to_customer(
-            db, changes["dst_asset_id"], port_map.customer_id
+        _ensure_asset_belongs_to_partner(
+            db, changes["dst_asset_id"], port_map.partner_id
         )
 
     for field, value in changes.items():
@@ -277,22 +277,22 @@ def _ensure_subnet_exists(db: Session, subnet_id: int) -> None:
         raise NotFoundError("IP subnet not found")
 
 
-def _ensure_asset_belongs_to_customer(
-    db: Session, asset_id: int, customer_id: int
+def _ensure_asset_belongs_to_partner(
+    db: Session, asset_id: int, partner_id: int
 ) -> None:
     asset = _ensure_asset_exists(db, asset_id)
-    if asset.customer_id != customer_id:
-        raise BusinessRuleError("Asset does not belong to this customer")
+    if asset.partner_id != partner_id:
+        raise BusinessRuleError("Asset does not belong to this partner")
 
 
-def _ensure_ip_unique_in_customer(
-    db: Session, customer_id: int, ip_address: str, ip_id: int | None = None
+def _ensure_ip_unique_in_partner(
+    db: Session, partner_id: int, ip_address: str, ip_id: int | None = None
 ) -> None:
-    """고객사 범위 내 IP 중복 검증."""
+    """업체 범위 내 IP 중복 검증."""
     stmt = (
         select(AssetIP)
         .join(Asset, AssetIP.asset_id == Asset.id)
-        .where(Asset.customer_id == customer_id, AssetIP.ip_address == ip_address)
+        .where(Asset.partner_id == partner_id, AssetIP.ip_address == ip_address)
     )
     existing = db.scalar(stmt)
     if existing is None:
