@@ -7,51 +7,10 @@ from pydantic import BaseModel, ConfigDict
 
 class AssetCreate(BaseModel):
     partner_id: int
-    asset_code: str | None = None
+    hardware_model_id: int          # 필수 — 카탈로그 제품
     asset_name: str
-    asset_type: str
-    vendor: str | None = None
-    model: str | None = None
-    role: str | None = None
-    environment: str = "prod"
-    location: str | None = None
-    status: str = "planned"
-    note: str | None = None
-    hardware_model_id: int | None = None
-    # Equipment Spec
-    center: str | None = None
-    operation_type: str | None = None
-    equipment_id: str | None = None
-    rack_no: str | None = None
-    rack_unit: str | None = None
-    phase: str | None = None
-    received_date: date | None = None
-    category: str | None = None
-    subcategory: str | None = None
-    serial_no: str | None = None
-    # Logical Config
     hostname: str | None = None
-    cluster: str | None = None
-    service_name: str | None = None
-    zone: str | None = None
-    service_ip: str | None = None
-    mgmt_ip: str | None = None
-    # Hardware Config
-    size_unit: int | None = None
-    lc_count: int | None = None
-    ha_count: int | None = None
-    utp_count: int | None = None
-    power_count: int | None = None
-    power_type: str | None = None
-    firmware_version: str | None = None
-    # Asset Info
-    asset_class: str | None = None
-    asset_number: str | None = None
-    year_acquired: int | None = None
-    dept: str | None = None
-    primary_contact_name: str | None = None
-    secondary_contact_name: str | None = None
-    maintenance_vendor: str | None = None
+    period_id: int | None = None    # 귀속사업 (선택)
 
 
 class AssetUpdate(BaseModel):

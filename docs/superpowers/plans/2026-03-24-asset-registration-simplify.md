@@ -200,7 +200,7 @@ feat(infra): add asset_type_key to catalog schemas and service
 - Modify: `app/modules/infra/schemas/asset.py` — `AssetCreate` 간소화
 - Modify: `app/modules/infra/services/asset_service.py` — `create_asset` 로직 변경
 
-- [ ] **Step 1: AssetCreate 스키마 간소화**
+- [x] **Step 1: AssetCreate 스키마 간소화**
 
 `app/modules/infra/schemas/asset.py`에서 `AssetCreate`를 수정:
 
@@ -217,7 +217,7 @@ class AssetCreate(BaseModel):
 
 **주의:** `AssetUpdate`는 변경하지 않음 (상세 패널 인라인 편집에서 사용).
 
-- [ ] **Step 2: create_asset 서비스 로직 변경**
+- [x] **Step 2: create_asset 서비스 로직 변경**
 
 ```python
 def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
@@ -282,7 +282,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     return asset
 ```
 
-- [ ] **Step 3: update_asset에 카탈로그 변경 시 동일 유형 검증 추가**
+- [x] **Step 3: update_asset에 카탈로그 변경 시 동일 유형 검증 추가**
 
 `update_asset()`에서 `hardware_model_id` 변경 시:
 

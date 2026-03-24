@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
 from app.core.exceptions import (
+    BusinessRuleError,
     DuplicateError,
     NotFoundError,
     PermissionDeniedError,
@@ -141,26 +142,48 @@ def get_asset(db: Session, asset_id: int) -> Asset:
 
 def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     from sqlalchemy.exc import IntegrityError
-    from app.modules.common.services.asset_type_code import get_valid_type_keys
+    from app.modules.infra.models.product_catalog import ProductCatalog
+    from app.modules.infra.models.period_asset import PeriodAsset
 
     _require_inventory_edit(current_user)
     ensure_partner_exists(db, payload.partner_id)
     _ensure_asset_name_unique(db, payload.partner_id, payload.asset_name)
 
-    # 유형 검증
-    valid_keys = get_valid_type_keys(db)
-    if payload.asset_type not in valid_keys:
-        raise NotFoundError(f"유효하지 않은 자산유형: {payload.asset_type}")
+    # 카탈로그 조회
+    catalog = db.get(ProductCatalog, payload.hardware_model_id)
+    if catalog is None:
+        raise NotFoundError("Product catalog entry not found")
+    if catalog.asset_type_key is None:
+        raise BusinessRuleError(
+            "카탈로그에 자산 유형이 설정되지 않았습니다.", status_code=422
+        )
 
-    if payload.hardware_model_id is not None:
-        _ensure_hardware_model_exists(db, payload.hardware_model_id)
+    # placeholder면 vendor/model 없음, 아니면 카탈로그 값 사용
+    if catalog.is_placeholder:
+        vendor = None
+        model_name = None
+    else:
+        vendor = catalog.vendor
+        model_name = catalog.name
 
-    data = payload.model_dump()
-    data.pop("asset_code", None)  # 사용자 입력 무시
+    data = {
+        "partner_id": payload.partner_id,
+        "hardware_model_id": payload.hardware_model_id,
+        "asset_name": payload.asset_name,
+        "asset_type": catalog.asset_type_key,
+        "vendor": vendor,
+        "model": model_name,
+        "category": catalog.category,
+        "hostname": payload.hostname,
+        "status": "planned",
+        "environment": "prod",
+    }
 
     # 코드 자동 생성 (동시성 충돌 시 최대 3회 재시도)
     for attempt in range(3):
-        data["asset_code"] = _generate_asset_code(db, payload.partner_id, payload.asset_type)
+        data["asset_code"] = _generate_asset_code(
+            db, payload.partner_id, catalog.asset_type_key
+        )
         asset = Asset(**data)
         db.add(asset)
         try:
@@ -170,6 +193,14 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
             db.rollback()
             if attempt == 2:
                 raise
+
+    # 귀속사업 연결
+    if payload.period_id is not None:
+        pa = PeriodAsset(
+            contract_period_id=payload.period_id,
+            asset_id=asset.id,
+        )
+        db.add(pa)
 
     audit.log(
         db, user_id=current_user.id, action="create", entity_type="asset",
@@ -202,7 +233,22 @@ def update_asset(
         _ensure_asset_name_unique(db, target_partner_id, target_asset_name, asset.id)
 
     if "hardware_model_id" in changes and changes["hardware_model_id"] is not None:
-        _ensure_hardware_model_exists(db, changes["hardware_model_id"])
+        from app.modules.infra.models.product_catalog import ProductCatalog
+
+        new_catalog = db.get(ProductCatalog, changes["hardware_model_id"])
+        if new_catalog is None:
+            raise NotFoundError("Product catalog entry not found")
+        if new_catalog.asset_type_key != asset.asset_type:
+            raise BusinessRuleError(
+                "동일한 자산 유형의 카탈로그만 선택할 수 있습니다.", status_code=422
+            )
+        if new_catalog.is_placeholder:
+            changes["vendor"] = None
+            changes["model"] = None
+        else:
+            changes["vendor"] = new_catalog.vendor
+            changes["model"] = new_catalog.name
+        changes["category"] = new_catalog.category
 
     for field, value in changes.items():
         setattr(asset, field, value)
