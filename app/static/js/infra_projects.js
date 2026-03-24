@@ -19,14 +19,7 @@ const PHASE_STATUS_MAP = {
 
 const columnDefs = [
   { field: "period_code", headerName: "기간코드", width: 160, sort: "asc" },
-  {
-    headerName: "사업명", flex: 1, minWidth: 200,
-    valueGetter: (params) => {
-      const d = params.data;
-      if (!d) return '';
-      return d.contract_name + ' (' + d.period_code + ')';
-    },
-  },
+  { field: "contract_name", headerName: "사업명", flex: 1, minWidth: 200 },
   {
     field: "stage", headerName: "진행단계", width: 100,
     cellRenderer: (params) => {
@@ -81,7 +74,7 @@ function initListGrids() {
     onRowClicked: (e) => {
       const d = e.data;
       if (d && d.id && window.setCtxProject) {
-        window.setCtxProject(d.id, d.period_code, d.contract_name + ' (' + d.period_code + ')');
+        window.setCtxProject(d.id, d.period_code, d.contract_name);
       }
     },
   });
