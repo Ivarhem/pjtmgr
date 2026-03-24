@@ -80,9 +80,9 @@ def _period_read_dict(period: ContractPeriod) -> dict:
 
 def list_periods(
     db: Session,
-    customer_id: int | None = None,
+    partner_id: int | None = None,
 ) -> list[dict]:
-    """계약단위 목록. customer_id 지정 시 해당 고객사의 period만 반환."""
+    """계약단위 목록. partner_id 지정 시 해당 업체의 period만 반환."""
     q = (
         db.query(ContractPeriod)
         .join(ContractPeriod.contract)
@@ -93,11 +93,11 @@ def list_periods(
             joinedload(ContractPeriod.partner),
         )
     )
-    if customer_id is not None:
+    if partner_id is not None:
         q = q.filter(
             or_(
-                Contract.end_partner_id == customer_id,
-                ContractPeriod.partner_id == customer_id,
+                Contract.end_partner_id == partner_id,
+                ContractPeriod.partner_id == partner_id,
             )
         )
     periods = q.order_by(ContractPeriod.period_year.desc(), Contract.contract_name).all()
@@ -113,7 +113,7 @@ def list_periods(
             "period_code": p.period_code,
             "stage": p.stage,
             "description": p.description,
-            "customer_id": p.partner_id or p.contract.end_partner_id,
+            "partner_id": p.partner_id or p.contract.end_partner_id,
             "is_completed": p.is_completed,
             "start_month": p.start_month,
             "end_month": p.end_month,

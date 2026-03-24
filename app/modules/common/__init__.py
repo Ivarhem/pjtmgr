@@ -1,1 +1,1 @@
-"""Common module: shared entities (User, Customer, Setting, etc.)."""
+"""Common module: shared entities (User, Partner, Setting, etc.)."""

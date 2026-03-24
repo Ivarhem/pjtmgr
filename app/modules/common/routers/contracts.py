@@ -27,7 +27,7 @@ def list_contract_periods(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[dict]:
-    return svc.list_periods(db, customer_id=partner_id)
+    return svc.list_periods(db, partner_id=partner_id)
 
 
 # ── Contract CRUD ─────────────────────────────────────────────────
