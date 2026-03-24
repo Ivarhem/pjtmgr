@@ -17,15 +17,15 @@ router = APIRouter(tags=["infra-asset-relations"])
 
 @router.get("/api/v1/asset-relations", response_model=list[AssetRelationRead])
 def list_asset_relations(
-    customer_id: int | None = None,
+    partner_id: int | None = None,
     asset_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRelationRead]:
     if asset_id is not None:
         return svc.list_by_asset(db, asset_id)
-    if customer_id is not None:
-        return svc.list_by_customer(db, customer_id)
+    if partner_id is not None:
+        return svc.list_by_partner(db, partner_id)
     return []
 
 

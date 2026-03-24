@@ -19,11 +19,11 @@ router = APIRouter(prefix="/api/v1/infra-dashboard", tags=["infra-dashboard"])
 
 @router.get("/summary")
 def dashboard_summary(
-    customer_id: int | None = Query(default=None),
+    partner_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[dict]:
-    return list_periods_summary(db, customer_id=customer_id)
+    return list_periods_summary(db, partner_id=partner_id)
 
 
 @router.get("/period/{contract_period_id}")
@@ -37,20 +37,20 @@ def period_summary(
 
 @router.get("/unsubmitted")
 def unsubmitted_deliverables(
-    customer_id: int | None = Query(default=None),
+    partner_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[dict]:
-    return get_unsubmitted_deliverables(db, customer_id=customer_id)
+    return get_unsubmitted_deliverables(db, partner_id=partner_id)
 
 
 @router.get("/non-compliant")
 def non_compliant_policies(
-    customer_id: int | None = Query(default=None),
+    partner_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[dict]:
-    return get_non_compliant_assignments(db, customer_id=customer_id)
+    return get_non_compliant_assignments(db, partner_id=partner_id)
 
 
 @router.get("/audit-log")

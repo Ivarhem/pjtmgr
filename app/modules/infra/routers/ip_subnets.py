@@ -24,11 +24,11 @@ router = APIRouter(prefix="/api/v1/ip-subnets", tags=["infra-ip-subnets"])
 
 @router.get("", response_model=list[IpSubnetRead])
 def list_subnets_endpoint(
-    customer_id: int,
+    partner_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[IpSubnetRead]:
-    return list_subnets(db, customer_id)
+    return list_subnets(db, partner_id)
 
 
 @router.post(

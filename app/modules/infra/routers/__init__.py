@@ -18,9 +18,9 @@ from app.modules.infra.routers.asset_contacts import router as asset_contacts_ro
 from app.modules.infra.routers.asset_softwares import router as asset_software_router
 from app.modules.infra.routers.period_assets import router as period_assets_router
 from app.modules.infra.routers.asset_relations import router as asset_relations_router
-from app.modules.infra.routers.period_customers import router as period_customers_router
-from app.modules.infra.routers.period_customer_contacts import (
-    router as period_customer_contacts_router,
+from app.modules.infra.routers.period_partners import router as period_partners_router
+from app.modules.infra.routers.period_partner_contacts import (
+    router as period_partner_contacts_router,
 )
 from app.modules.infra.routers.infra_dashboard import router as infra_dashboard_router
 from app.modules.infra.routers.product_catalogs import router as product_catalog_router
@@ -40,8 +40,8 @@ api_router.include_router(asset_contacts_router)
 api_router.include_router(asset_software_router)
 api_router.include_router(period_assets_router)
 api_router.include_router(asset_relations_router)
-api_router.include_router(period_customers_router)
-api_router.include_router(period_customer_contacts_router)
+api_router.include_router(period_partners_router)
+api_router.include_router(period_partner_contacts_router)
 api_router.include_router(infra_dashboard_router)
 api_router.include_router(product_catalog_router)
 api_router.include_router(infra_excel_router)

@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/v1/assets", tags=["infra-assets"])
 
 @router.get("", response_model=list[AssetRead])
 def list_assets_endpoint(
-    customer_id: int,
+    partner_id: int,
     period_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
@@ -29,12 +29,12 @@ def list_assets_endpoint(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRead]:
-    return list_assets(db, customer_id, period_id, asset_type, status, q)
+    return list_assets(db, partner_id, period_id, asset_type, status, q)
 
 
 @router.get("/inventory", response_model=list[AssetRead])
 def list_assets_inventory(
-    customer_id: int,
+    partner_id: int,
     period_id: int | None = None,
     asset_type: str | None = None,
     status: str | None = None,
@@ -42,8 +42,8 @@ def list_assets_inventory(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRead]:
-    """Customer-scoped asset inventory with period info enrichment."""
-    assets = list_assets(db, customer_id, period_id, asset_type, status, q)
+    """Partner-scoped asset inventory with period info enrichment."""
+    assets = list_assets(db, partner_id, period_id, asset_type, status, q)
     return enrich_assets_with_period(db, assets)
 
 

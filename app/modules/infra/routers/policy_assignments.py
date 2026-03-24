@@ -24,12 +24,12 @@ router = APIRouter(prefix="/api/v1/policy-assignments", tags=["infra-policy-assi
 
 @router.get("", response_model=list[PolicyAssignmentRead])
 def list_assignments_endpoint(
-    customer_id: int,
+    partner_id: int,
     period_id: int | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[PolicyAssignmentRead]:
-    return list_assignments(db, customer_id, period_id)
+    return list_assignments(db, partner_id, period_id)
 
 
 @router.post(
