@@ -376,8 +376,30 @@ async function initContextSelectors() {
   // ── 캐시된 라벨 즉시 표시 (API 응답 전 깜빡임 방지) ──
   const _cachedPartnerLabel = localStorage.getItem('infra.ctx_partner_label');
   const _cachedProjectLabel = localStorage.getItem('infra.ctx_project_label');
+  const _cachedProjectId = localStorage.getItem('infra.last_period_id');
   if (_cachedPartnerLabel) custInput.value = _cachedPartnerLabel;
-  if (_cachedProjectLabel && projText) projText.textContent = _cachedProjectLabel;
+  if (_cachedProjectLabel && projText) {
+    projText.textContent = _cachedProjectLabel;
+    if (projDisplay) projDisplay.classList.add('has-project');
+    if (projClear) projClear.classList.remove('is-hidden');
+  }
+  // 사이드바 프로젝트 링크 즉시 설정
+  const _navLink = document.getElementById('nav-project-link');
+  if (_navLink) {
+    if (_cachedProjectId) {
+      _navLink.href = '/periods/' + _cachedProjectId;
+      _navLink.dataset.hasProject = '1';
+    } else {
+      _navLink.href = '#';
+      _navLink.dataset.hasProject = '';
+    }
+    _navLink.addEventListener('click', (e) => {
+      if (!_navLink.dataset.hasProject) {
+        e.preventDefault();
+        showToast('선택한 프로젝트가 없습니다.', 'warning');
+      }
+    });
+  }
 
   let allPartners = [];
   let allProjects = [];
@@ -523,7 +545,8 @@ async function initContextSelectors() {
     // 사이드바 프로젝트 메뉴 링크 동적 변경
     const navLink = document.getElementById('nav-project-link');
     if (navLink) {
-      navLink.href = item ? '/periods/' + item.id : '/periods';
+      navLink.href = item ? '/periods/' + item.id : '#';
+      navLink.dataset.hasProject = item ? '1' : '';
     }
     if (item && item.id) {
       localStorage.setItem('infra.last_period_id', String(item.id));
