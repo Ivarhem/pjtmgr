@@ -67,188 +67,54 @@
   <div id="detail-content" class="detail-body"></div>
 </div>
 
-<!-- 자산 등록/수정 모달 -->
-<dialog id="modal-asset" class="modal modal-xl">
-  <h2 id="modal-asset-title">자산 등록</h2>
+<!-- 자산 등록 모달 (간소화) -->
+<dialog id="modal-asset" class="modal">
+  <h2>자산 등록</h2>
   <form id="form-asset">
-    <input type="hidden" id="asset-id">
+    <!-- 카탈로그 제품 (필수) -->
+    <label>
+      카탈로그 제품 <span class="text-danger">*</span>
+      <div class="catalog-search-wrap">
+        <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
+        <input type="hidden" id="catalog-id">
+        <div id="catalog-dropdown" class="catalog-dropdown hidden"></div>
+      </div>
+    </label>
+    <div id="catalog-summary" class="catalog-summary hidden"></div>
 
-    <!-- 장비 명세 -->
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">장비 명세</legend>
+    <!-- 인라인 카탈로그 등록 -->
+    <fieldset id="inline-catalog-form" class="modal-group hidden">
+      <legend class="modal-group-title">새 제품 등록</legend>
       <div class="form-grid">
-        <label>
-          자산명
-          <input type="text" id="asset-name" required>
-        </label>
-        <label>
-          자산 유형
-          <select id="asset-type" required></select>
-        </label>
-        <label>
-          제조사
-          <input type="text" id="asset-vendor">
-        </label>
-        <label>
-          모델
-          <input type="text" id="asset-model">
-        </label>
-        <label>
-          시리얼 번호
-          <input type="text" id="asset-serial-no">
-        </label>
-        <label>
-          장비 ID
-          <input type="text" id="asset-equipment-id">
-        </label>
-        <label>
-          랙 번호
-          <input type="text" id="asset-rack-no">
-        </label>
-        <label>
-          랙 유닛
-          <input type="text" id="asset-rack-unit">
-        </label>
-        <label>
-          센터
-          <input type="text" id="asset-center">
-        </label>
-        <label>
-          운영 유형
-          <input type="text" id="asset-operation-type">
-        </label>
-        <label>
-          분류
-          <input type="text" id="asset-category">
-        </label>
-        <label>
-          세부 분류
-          <input type="text" id="asset-subcategory">
-        </label>
-        <label>
-          단계
-          <input type="text" id="asset-phase">
-        </label>
-        <label>
-          입고일
-          <input type="date" id="asset-received-date">
-        </label>
+        <label>제조사 <span class="text-danger">*</span> <input type="text" id="inline-vendor" required></label>
+        <label>모델명 <span class="text-danger">*</span> <input type="text" id="inline-model" required></label>
+        <label>카테고리 <span class="text-danger">*</span> <input type="text" id="inline-category" required></label>
+        <label>자산유형 <span class="text-danger">*</span> <select id="inline-asset-type" required></select></label>
+      </div>
+      <div class="modal-actions" style="margin-top:8px">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-inline-cancel">취소</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-inline-save">등록</button>
       </div>
     </fieldset>
 
-    <!-- 논리 구성 -->
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">논리 구성</legend>
-      <div class="form-grid">
-        <label>
-          호스트명
-          <input type="text" id="asset-hostname">
-        </label>
-        <label>
-          클러스터
-          <input type="text" id="asset-cluster">
-        </label>
-        <label>
-          서비스명
-          <input type="text" id="asset-service-name">
-        </label>
-        <label>
-          존
-          <input type="text" id="asset-zone">
-        </label>
-        <label>
-          서비스 IP
-          <input type="text" id="asset-service-ip">
-        </label>
-        <label>
-          관리 IP
-          <input type="text" id="asset-mgmt-ip">
-        </label>
-        <label>
-          상태
-          <select id="asset-status">
-            <option value="planned">계획</option>
-            <option value="active">운영중</option>
-            <option value="decommissioned">폐기</option>
-          </select>
-        </label>
-      </div>
-    </fieldset>
+    <!-- 자산명 (필수) -->
+    <label>
+      자산명 <span class="text-danger">*</span>
+      <input type="text" id="asset-name" required>
+    </label>
 
-    <!-- Hardware 구성 -->
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">Hardware 구성</legend>
-      <div class="form-grid">
-        <label>
-          크기(U)
-          <input type="number" id="asset-size-unit" min="0">
-        </label>
-        <label>
-          LC 수량
-          <input type="number" id="asset-lc-count" min="0">
-        </label>
-        <label>
-          HA 수량
-          <input type="number" id="asset-ha-count" min="0">
-        </label>
-        <label>
-          UTP 수량
-          <input type="number" id="asset-utp-count" min="0">
-        </label>
-        <label>
-          전원 수량
-          <input type="number" id="asset-power-count" min="0">
-        </label>
-        <label>
-          전원 유형
-          <input type="text" id="asset-power-type">
-        </label>
-        <label>
-          펌웨어 버전
-          <input type="text" id="asset-firmware-version">
-        </label>
-      </div>
-    </fieldset>
+    <!-- 호스트명 (선택) -->
+    <label>
+      호스트명
+      <input type="text" id="asset-hostname">
+    </label>
 
-    <!-- 자산 정보 -->
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">자산 정보</legend>
-      <div class="form-grid">
-        <label>
-          자산 등급
-          <input type="text" id="asset-asset-class">
-        </label>
-        <label>
-          자산 번호
-          <input type="text" id="asset-asset-number">
-        </label>
-        <label>
-          도입 연도
-          <input type="number" id="asset-year-acquired" min="2000" max="2100">
-        </label>
-        <label>
-          부서
-          <input type="text" id="asset-dept">
-        </label>
-        <label>
-          주 담당자
-          <input type="text" id="asset-primary-contact-name">
-        </label>
-        <label>
-          부 담당자
-          <input type="text" id="asset-secondary-contact-name">
-        </label>
-        <label>
-          유지보수 업체
-          <input type="text" id="asset-maintenance-vendor">
-        </label>
-      </div>
-    </fieldset>
-
-    <!-- 비고 -->
-    <label class="full-width">
-      비고
-      <textarea id="asset-note" rows="2"></textarea>
+    <!-- 귀속사업 (선택) -->
+    <label>
+      귀속사업
+      <select id="asset-period">
+        <option value="">-- 선택 안함 --</option>
+      </select>
     </label>
   </form>
   <div class="modal-actions">

@@ -567,137 +567,182 @@ function closeDetail() {
   _selectedAsset = null;
 }
 
-/* ── Modal ── */
+/* ── Modal (간소화 등록) ── */
 const modal = document.getElementById("modal-asset");
+let _catalogSearchTimer = null;
 
-function resetForm() {
-  document.getElementById("asset-id").value = "";
-  document.getElementById("form-asset").reset();
-}
-
-function openCreateModal() {
+async function openCreateModal() {
   if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
-  document.getElementById("asset-type").disabled = false;
-  resetForm();
-  document.getElementById("modal-asset-title").textContent = "자산 등록";
-  document.getElementById("btn-save-asset").textContent = "등록";
+
+  // Reset form
+  document.getElementById("form-asset").reset();
+  document.getElementById("catalog-id").value = "";
+  document.getElementById("catalog-search").value = "";
+  document.getElementById("catalog-summary").classList.add("hidden");
+  document.getElementById("catalog-summary").textContent = "";
+  document.getElementById("catalog-summary").classList.remove("placeholder-style");
+  document.getElementById("catalog-dropdown").classList.add("hidden");
+  document.getElementById("inline-catalog-form").classList.add("hidden");
+
+  // 귀속사업 드롭다운 채우기
+  const periodSel = document.getElementById("asset-period");
+  periodSel.textContent = "";
+  const emptyOpt = document.createElement("option");
+  emptyOpt.value = "";
+  emptyOpt.textContent = "-- 선택 안함 --";
+  periodSel.appendChild(emptyOpt);
+
+  try {
+    const cid = getCtxPartnerId();
+    const periods = await apiFetch("/api/v1/contract-periods?partner_id=" + cid);
+    periods.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name || ("사업 #" + p.id);
+      periodSel.appendChild(opt);
+    });
+    // topbar 프로젝트 선택 시 자동 선택
+    const pid = getCtxProjectId();
+    if (pid) periodSel.value = pid;
+  } catch (_) { /* ignore */ }
+
   modal.showModal();
 }
 
-function openEditModal(asset) {
-  if (!asset) asset = _selectedAsset;
-  if (!asset) return;
-  document.getElementById("asset-id").value = asset.id;
-  document.getElementById("asset-name").value = asset.asset_name;
-  document.getElementById("asset-type").value = asset.asset_type;
-  document.getElementById("asset-vendor").value = asset.vendor || "";
-  document.getElementById("asset-model").value = asset.model || "";
-  document.getElementById("asset-status").value = asset.status;
-  document.getElementById("asset-note").value = asset.note || "";
+/* ── 카탈로그 검색 ── */
 
-  document.getElementById("asset-serial-no").value = asset.serial_no || "";
-  document.getElementById("asset-equipment-id").value = asset.equipment_id || "";
-  document.getElementById("asset-rack-no").value = asset.rack_no || "";
-  document.getElementById("asset-rack-unit").value = asset.rack_unit || "";
-  document.getElementById("asset-center").value = asset.center || "";
-  document.getElementById("asset-operation-type").value = asset.operation_type || "";
-  document.getElementById("asset-category").value = asset.category || "";
-  document.getElementById("asset-subcategory").value = asset.subcategory || "";
-  document.getElementById("asset-phase").value = asset.phase || "";
-  document.getElementById("asset-received-date").value = asset.received_date || "";
+function renderCatalogDropdown(items) {
+  const dd = document.getElementById("catalog-dropdown");
+  dd.textContent = "";
 
-  document.getElementById("asset-hostname").value = asset.hostname || "";
-  document.getElementById("asset-cluster").value = asset.cluster || "";
-  document.getElementById("asset-service-name").value = asset.service_name || "";
-  document.getElementById("asset-zone").value = asset.zone || "";
-  document.getElementById("asset-service-ip").value = asset.service_ip || "";
-  document.getElementById("asset-mgmt-ip").value = asset.mgmt_ip || "";
+  items.forEach(item => {
+    const div = document.createElement("div");
+    const label = (item.vendor || "") + " " + (item.name || "");
+    div.textContent = label.trim();
 
-  document.getElementById("asset-size-unit").value = asset.size_unit != null ? asset.size_unit : "";
-  document.getElementById("asset-lc-count").value = asset.lc_count != null ? asset.lc_count : "";
-  document.getElementById("asset-ha-count").value = asset.ha_count != null ? asset.ha_count : "";
-  document.getElementById("asset-utp-count").value = asset.utp_count != null ? asset.utp_count : "";
-  document.getElementById("asset-power-count").value = asset.power_count != null ? asset.power_count : "";
-  document.getElementById("asset-power-type").value = asset.power_type || "";
-  document.getElementById("asset-firmware-version").value = asset.firmware_version || "";
+    if (!item.asset_type_key) {
+      div.className = "catalog-dropdown-item disabled";
+      const warn = document.createElement("span");
+      warn.textContent = " (유형 미설정)";
+      warn.style.color = "var(--danger-color, #dc3545)";
+      warn.style.fontSize = "12px";
+      div.appendChild(warn);
+    } else {
+      div.className = "catalog-dropdown-item" + (item.is_placeholder ? " placeholder" : "");
+      if (item.is_placeholder) div.textContent += " (placeholder)";
+      div.addEventListener("click", () => selectCatalogItem(item));
+    }
+    dd.appendChild(div);
+  });
 
-  document.getElementById("asset-asset-class").value = asset.asset_class || "";
-  document.getElementById("asset-asset-number").value = asset.asset_number || "";
-  document.getElementById("asset-year-acquired").value = asset.year_acquired != null ? asset.year_acquired : "";
-  document.getElementById("asset-dept").value = asset.dept || "";
-  document.getElementById("asset-primary-contact-name").value = asset.primary_contact_name || "";
-  document.getElementById("asset-secondary-contact-name").value = asset.secondary_contact_name || "";
-  document.getElementById("asset-maintenance-vendor").value = asset.maintenance_vendor || "";
+  // 맨 아래: 새 제품 등록
+  const addDiv = document.createElement("div");
+  addDiv.className = "catalog-dropdown-add";
+  addDiv.textContent = "+ 새 제품 등록";
+  addDiv.addEventListener("click", openInlineCatalogForm);
+  dd.appendChild(addDiv);
 
-  document.getElementById("modal-asset-title").textContent = "자산 수정";
-  document.getElementById("btn-save-asset").textContent = "저장";
-  document.getElementById("asset-type").disabled = true;
-  modal.showModal();
+  dd.classList.remove("hidden");
 }
 
-function intOrNull(id) {
-  const v = document.getElementById(id).value;
-  return v !== "" ? Number(v) : null;
+async function onCatalogSearchInput() {
+  const q = document.getElementById("catalog-search").value.trim();
+  if (!q) {
+    document.getElementById("catalog-dropdown").classList.add("hidden");
+    return;
+  }
+  clearTimeout(_catalogSearchTimer);
+  _catalogSearchTimer = setTimeout(async () => {
+    try {
+      const items = await apiFetch("/api/v1/product-catalog?q=" + encodeURIComponent(q));
+      renderCatalogDropdown(items);
+    } catch (e) { showToast(e.message, "error"); }
+  }, 300);
 }
+
+function selectCatalogItem(item) {
+  document.getElementById("catalog-id").value = item.id;
+  document.getElementById("catalog-search").value = ((item.vendor || "") + " " + (item.name || "")).trim();
+  document.getElementById("catalog-dropdown").classList.add("hidden");
+
+  // 요약 표시
+  const summary = document.getElementById("catalog-summary");
+  const typeLabel = item.asset_type_key ? getAssetTypeLabel(item.asset_type_key) : "미설정";
+  summary.textContent = "제조사: " + (item.vendor || "-") +
+    " | 모델: " + (item.name || "-") +
+    " | 유형: " + typeLabel +
+    " | 분류: " + (item.category || "-");
+  summary.classList.remove("hidden");
+  if (item.is_placeholder) {
+    summary.classList.add("placeholder-style");
+  } else {
+    summary.classList.remove("placeholder-style");
+  }
+}
+
+// 바깥 클릭 시 드롭다운 닫기
+document.addEventListener("click", (e) => {
+  const wrap = document.querySelector(".catalog-search-wrap");
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById("catalog-dropdown").classList.add("hidden");
+  }
+});
+
+/* ── 인라인 카탈로그 등록 ── */
+
+async function openInlineCatalogForm() {
+  document.getElementById("catalog-dropdown").classList.add("hidden");
+  const form = document.getElementById("inline-catalog-form");
+  form.classList.remove("hidden");
+  document.getElementById("inline-vendor").value = "";
+  document.getElementById("inline-model").value = "";
+  document.getElementById("inline-category").value = "";
+  await populateAssetTypeSelect("inline-asset-type");
+}
+
+async function saveInlineCatalog() {
+  const vendor = document.getElementById("inline-vendor").value.trim();
+  const name = document.getElementById("inline-model").value.trim();
+  const category = document.getElementById("inline-category").value.trim();
+  const assetTypeKey = document.getElementById("inline-asset-type").value;
+  if (!vendor || !name || !category || !assetTypeKey) {
+    showToast("모든 필수 항목을 입력하세요.", "warning");
+    return;
+  }
+  try {
+    const item = await apiFetch("/api/v1/product-catalog", {
+      method: "POST",
+      body: { vendor, name, category, asset_type_key: assetTypeKey },
+    });
+    document.getElementById("inline-catalog-form").classList.add("hidden");
+    selectCatalogItem(item);
+    showToast("제품이 등록되었습니다.");
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+/* ── 자산 저장 ── */
 
 async function saveAsset() {
   const cid = getCtxPartnerId();
   if (!cid) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
-  const assetId = document.getElementById("asset-id").value;
+  const catalogId = document.getElementById("catalog-id").value;
+  if (!catalogId) { showToast("카탈로그 제품을 선택하세요.", "warning"); return; }
+  const name = document.getElementById("asset-name").value.trim();
+  if (!name) { showToast("자산명을 입력하세요.", "warning"); return; }
   const payload = {
     partner_id: cid,
-    asset_name: document.getElementById("asset-name").value,
-    asset_type: document.getElementById("asset-type").value,
-    vendor: document.getElementById("asset-vendor").value || null,
-    model: document.getElementById("asset-model").value || null,
-    status: document.getElementById("asset-status").value,
-    note: document.getElementById("asset-note").value || null,
-    serial_no: document.getElementById("asset-serial-no").value || null,
-    equipment_id: document.getElementById("asset-equipment-id").value || null,
-    rack_no: document.getElementById("asset-rack-no").value || null,
-    rack_unit: document.getElementById("asset-rack-unit").value || null,
-    center: document.getElementById("asset-center").value || null,
-    operation_type: document.getElementById("asset-operation-type").value || null,
-    category: document.getElementById("asset-category").value || null,
-    subcategory: document.getElementById("asset-subcategory").value || null,
-    phase: document.getElementById("asset-phase").value || null,
-    received_date: document.getElementById("asset-received-date").value || null,
+    hardware_model_id: Number(catalogId),
+    asset_name: name,
     hostname: document.getElementById("asset-hostname").value || null,
-    cluster: document.getElementById("asset-cluster").value || null,
-    service_name: document.getElementById("asset-service-name").value || null,
-    zone: document.getElementById("asset-zone").value || null,
-    service_ip: document.getElementById("asset-service-ip").value || null,
-    mgmt_ip: document.getElementById("asset-mgmt-ip").value || null,
-    size_unit: intOrNull("asset-size-unit"),
-    lc_count: intOrNull("asset-lc-count"),
-    ha_count: intOrNull("asset-ha-count"),
-    utp_count: intOrNull("asset-utp-count"),
-    power_count: intOrNull("asset-power-count"),
-    power_type: document.getElementById("asset-power-type").value || null,
-    firmware_version: document.getElementById("asset-firmware-version").value || null,
-    asset_class: document.getElementById("asset-asset-class").value || null,
-    asset_number: document.getElementById("asset-asset-number").value || null,
-    year_acquired: intOrNull("asset-year-acquired"),
-    dept: document.getElementById("asset-dept").value || null,
-    primary_contact_name: document.getElementById("asset-primary-contact-name").value || null,
-    secondary_contact_name: document.getElementById("asset-secondary-contact-name").value || null,
-    maintenance_vendor: document.getElementById("asset-maintenance-vendor").value || null,
+    period_id: document.getElementById("asset-period").value ? Number(document.getElementById("asset-period").value) : null,
   };
-
   try {
-    if (assetId) {
-      await apiFetch("/api/v1/assets/" + assetId, { method: "PATCH", body: payload });
-      showToast("자산이 수정되었습니다.");
-    } else {
-      await apiFetch("/api/v1/assets", { method: "POST", body: payload });
-      showToast("자산이 등록되었습니다.");
-    }
+    const asset = await apiFetch("/api/v1/assets", { method: "POST", body: payload });
     modal.close();
-    loadAssets();
-    closeDetail();
-  } catch (err) {
-    showToast(err.message, "error");
-  }
+    showToast("자산이 등록되었습니다.");
+    await loadAssets();
+    showAssetDetail(asset);
+  } catch (err) { showToast(err.message, "error"); }
 }
 
 async function deleteAssetAction() {
@@ -720,15 +765,23 @@ async function deleteAssetAction() {
 
 /* ── Events ── */
 document.addEventListener("DOMContentLoaded", async () => {
-  await populateAssetTypeSelect("asset-type");
   await populateAssetTypeSelect("filter-type", true);
   initGrid();
 });
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-asset").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-asset").addEventListener("click", saveAsset);
-document.getElementById("btn-edit-asset").addEventListener("click", () => openEditModal());
+document.getElementById("btn-edit-asset").addEventListener("click", () => showToast("상세 패널에서 수정하세요."));
 document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
+
+// 카탈로그 검색
+document.getElementById("catalog-search").addEventListener("input", onCatalogSearchInput);
+
+// 인라인 카탈로그 등록
+document.getElementById("btn-inline-save").addEventListener("click", saveInlineCatalog);
+document.getElementById("btn-inline-cancel").addEventListener("click", () => {
+  document.getElementById("inline-catalog-form").classList.add("hidden");
+});
 document.getElementById("btn-close-detail").addEventListener("click", closeDetail);
 
 // Detail tab switching
