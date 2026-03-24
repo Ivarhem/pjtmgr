@@ -75,7 +75,7 @@ function autoPinProject() {
 async function loadProjectInfo() {
   try {
     const p = await apiFetch(`/api/v1/contract-periods/${PROJECT_ID}`);
-    document.getElementById("project-title").textContent = p.contract_name + ' (' + p.period_code + ')';
+    document.getElementById("project-title").textContent = p.contract_name;
 
     const info = document.getElementById("project-info");
     while (info.firstChild) info.removeChild(info.firstChild);
