@@ -64,12 +64,12 @@
         <div class="ctx-dropdown is-hidden" id="ctx-partner-dropdown"></div>
       </div>
     </div>
-    <div class="ctx-selector">
+    <div class="ctx-selector ctx-project-selector" id="ctx-project-display">
       <label class="ctx-label">프로젝트</label>
-      <div class="ctx-combo" id="ctx-project-combo">
-        <input type="text" id="ctx-project" class="ctx-input" placeholder="프로젝트 검색" autocomplete="off">
-        <div class="ctx-dropdown is-hidden" id="ctx-project-dropdown"></div>
-      </div>
+      <a href="/periods" class="ctx-project-link" id="ctx-project-link" title="프로젝트 목록에서 선택">
+        <span id="ctx-project-text" class="ctx-project-name">선택 안 됨</span>
+      </a>
+      <button class="ctx-project-clear is-hidden" id="ctx-project-clear" title="선택 해제">&times;</button>
     </div>
     <!-- 고객사 신규등록 모달 -->
     <dialog id="ctx-modal-partner" class="modal modal-sm">

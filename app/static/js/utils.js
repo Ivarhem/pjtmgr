@@ -367,15 +367,17 @@ function getCtxProjectId() { return _ctxProjectId; }
 async function initContextSelectors() {
   const custInput = document.getElementById('ctx-partner');
   const custDrop = document.getElementById('ctx-partner-dropdown');
-  const projInput = document.getElementById('ctx-project');
-  const projDrop = document.getElementById('ctx-project-dropdown');
+  const projDisplay = document.getElementById('ctx-project-display');
+  const projText = document.getElementById('ctx-project-text');
+  const projClear = document.getElementById('ctx-project-clear');
+  const projLink = document.getElementById('ctx-project-link');
   if (!custInput) return;
 
   // ── 캐시된 라벨 즉시 표시 (API 응답 전 깜빡임 방지) ──
   const _cachedPartnerLabel = localStorage.getItem('infra.ctx_partner_label');
   const _cachedProjectLabel = localStorage.getItem('infra.ctx_project_label');
   if (_cachedPartnerLabel) custInput.value = _cachedPartnerLabel;
-  if (_cachedProjectLabel && projInput) projInput.value = _cachedProjectLabel;
+  if (_cachedProjectLabel && projText) projText.textContent = _cachedProjectLabel;
 
   let allPartners = [];
   let allProjects = [];
@@ -435,7 +437,9 @@ async function initContextSelectors() {
     custInput.value = item ? item.label : '';
     custInput.title = item ? (item.code + ' ' + item.label) : '';
     _ctxProjectId = null;
-    if (projInput) { projInput.value = ''; projInput.title = ''; }
+    if (projText) projText.textContent = '선택 안 됨';
+    if (projDisplay) projDisplay.classList.remove('has-project');
+    if (projClear) projClear.classList.add('is-hidden');
     // 라벨 캐시
     localStorage.setItem('infra.ctx_partner_label', item ? item.label : '');
     localStorage.setItem('infra.ctx_project_label', '');
@@ -503,18 +507,17 @@ async function initContextSelectors() {
     } catch { /* ignore */ }
   }
 
-  function _autoSizeInput(input, maxW) {
-    if (!input) return;
-    const len = input.value.length;
-    input.size = Math.max(len || 8, 8);
-  }
-
   function selectProject(item) {
     _ctxProjectId = item ? item.id : null;
-    if (projInput) {
-      projInput.value = item ? item.label : '';
-      projInput.title = item ? (item.code + ' ' + item.label) : '';
-      _autoSizeInput(projInput);
+    // topbar 프로젝트 표시 업데이트
+    if (projText) {
+      projText.textContent = item ? item.label : '선택 안 됨';
+    }
+    if (projDisplay) {
+      projDisplay.classList.toggle('has-project', !!item);
+    }
+    if (projClear) {
+      projClear.classList.toggle('is-hidden', !item);
     }
     localStorage.setItem('infra.ctx_project_label', item ? item.label : '');
     // 사이드바 프로젝트 메뉴 링크 동적 변경
@@ -537,19 +540,9 @@ async function initContextSelectors() {
     selectProject(id ? { id, code: code || '', label: label || '' } : null);
   };
 
-  // 프로젝트 드롭다운 이벤트
-  if (projInput && projDrop) {
-    projInput.addEventListener('focus', () => filterAndShow(projInput, projDrop, allProjects, selectProject));
-    projInput.addEventListener('input', () => filterAndShow(projInput, projDrop, allProjects, selectProject));
-    projInput.addEventListener('blur', () => setTimeout(() => setElementHidden(projDrop, true), 150));
-    projInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') setElementHidden(projDrop, true);
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        const first = projDrop.querySelector('.ctx-option');
-        if (first) first.focus();
-      }
-    });
+  // × 버튼: 프로젝트 선택 해제
+  if (projClear) {
+    projClear.addEventListener('click', () => selectProject(null));
   }
 
   // ── 초기 복원 ──
