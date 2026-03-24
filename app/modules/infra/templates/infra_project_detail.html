@@ -25,266 +25,43 @@
   <p class="text-secondary">로딩 중...</p>
 </div>
 
-<!-- Tab navigation -->
-<div class="tab-nav">
-  <button class="tab-btn active" data-tab="overview" onclick="activateTab('overview')">개요</button>
-  <button class="tab-btn" data-tab="assets" onclick="activateTab('assets')">자산</button>
-  <button class="tab-btn" data-tab="relations" onclick="activateTab('relations')">자산 관계</button>
-  <button class="tab-btn" data-tab="ip" onclick="activateTab('ip')">IP/네트워크</button>
-  <button class="tab-btn" data-tab="portmap" onclick="activateTab('portmap')">포트맵</button>
-  <button class="tab-btn" data-tab="contacts" onclick="activateTab('contacts')">담당자/업체</button>
-  <button class="tab-btn" data-tab="history" onclick="activateTab('history')">변경이력</button>
-</div>
-
-<!-- Tab contents -->
-<div class="tab-content" id="tab-overview">
-  <!-- 요약 카드 -->
-  <div class="summary-cards">
-    <div class="summary-card">
-      <div class="card-label">자산</div>
-      <div class="card-value" id="card-asset-count">-</div>
-    </div>
-    <div class="summary-card">
-      <div class="card-label">IP 할당</div>
-      <div class="card-value" id="card-ip-count">-</div>
-    </div>
-    <div class="summary-card">
-      <div class="card-label">산출물</div>
-      <div class="card-value" id="card-deliverable-progress">-</div>
-    </div>
+<!-- 요약 카드 -->
+<div class="summary-cards">
+  <div class="summary-card">
+    <div class="card-label">자산</div>
+    <div class="card-value" id="card-asset-count">-</div>
   </div>
-
-  <!-- 단계 타임라인 -->
-  <div class="phase-timeline" id="phase-timeline">
-    <p class="text-muted">로딩 중...</p>
+  <div class="summary-card">
+    <div class="card-label">IP 할당</div>
+    <div class="card-value" id="card-ip-count">-</div>
   </div>
-
-  <!-- 단계 관리 -->
-  <div class="page-header mt-md">
-    <h1>단계</h1>
-    <button class="btn btn-primary" id="btn-add-phase">단계 등록</button>
-  </div>
-
-  <div class="card mb-md">
-    <div id="grid-phases" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
-  </div>
-
-  <!-- 산출물 관리 -->
-  <div class="page-header mt-md">
-    <h1>산출물</h1>
-    <button class="btn btn-primary" id="btn-add-deliverable">산출물 등록</button>
-  </div>
-
-  <div class="card">
-    <div id="grid-deliverables" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
-  </div>
-
-  <!-- 연결된 계약 (accounting 모듈 활성 시만) -->
-  {% if "accounting" in enabled_modules %}
-  <div class="page-header mt-md">
-    <h2>연결된 계약</h2>
-    <button class="btn btn-primary btn-sm" id="btn-link-contract">계약 연결</button>
-  </div>
-  <div class="card" id="linked-contracts-section">
-    <div id="grid-linked-contracts" class="ag-theme-quartz infra-grid infra-grid-linked-contracts"></div>
-  </div>
-  {% endif %}
-</div>
-
-<div class="tab-content hidden" id="tab-assets">
-  <div class="page-header">
-    <h2>자산 목록</h2>
-    <div class="infra-inline-actions">
-      <button class="btn btn-secondary btn-sm" id="btn-asset-import">Excel Import</button>
-      <a href="/assets" class="btn btn-secondary btn-sm">자산 관리 페이지 &rarr;</a>
-    </div>
-  </div>
-  <!-- Asset Import 영역 (토글) -->
-  <div id="asset-import-panel" class="card hidden infra-import-compact-panel">
-    <div class="infra-import-compact-row">
-      <label class="infra-compact-label">Excel 파일 (.xlsx)
-        <input type="file" id="asset-import-file" accept=".xlsx" class="infra-compact-input-wide">
-      </label>
-      <label class="infra-compact-label">중복 처리
-        <select id="asset-import-dup" class="infra-compact-select">
-          <option value="skip">건너뛰기</option>
-          <option value="overwrite">덮어쓰기</option>
-        </select>
-      </label>
-      <button class="btn btn-primary btn-sm" id="btn-asset-import-run">Import 실행</button>
-      <button class="btn btn-sm" id="btn-asset-import-close">닫기</button>
-    </div>
-    <div id="asset-import-result" class="infra-import-result-text"></div>
-  </div>
-  <div class="card">
-    <div id="grid-tab-assets" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
+  <div class="summary-card">
+    <div class="card-label">산출물</div>
+    <div class="card-value" id="card-deliverable-progress">-</div>
   </div>
 </div>
 
-<div class="tab-content hidden" id="tab-relations">
-  <div class="page-header">
-    <h2>자산 관계</h2>
-    <button class="btn btn-primary btn-sm" id="btn-add-relation">관계 등록</button>
-  </div>
-  <div class="card">
-    <div id="grid-tab-relations" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
-  </div>
+<!-- 단계 타임라인 -->
+<div class="phase-timeline" id="phase-timeline">
+  <p class="text-muted">로딩 중...</p>
 </div>
 
-<!-- 자산 관계 등록/수정 모달 -->
-<dialog id="modal-relation" class="modal">
-  <h2 id="modal-relation-title">자산 관계 등록</h2>
-  <form class="form-grid">
-    <input type="hidden" id="relation-id">
-    <label>
-      출발 자산
-      <select id="relation-src-asset" required></select>
-    </label>
-    <label>
-      도착 자산
-      <select id="relation-dst-asset" required></select>
-    </label>
-    <label>
-      관계 유형
-      <select id="relation-type" required>
-        <option value="HOSTS">HOSTS</option>
-        <option value="USES">USES</option>
-        <option value="INSTALLED_ON">INSTALLED_ON</option>
-        <option value="PROTECTS">PROTECTS</option>
-        <option value="CONNECTS_TO">CONNECTS_TO</option>
-        <option value="DEPENDS_ON">DEPENDS_ON</option>
-      </select>
-    </label>
-    <label class="full-width">
-      비고
-      <textarea id="relation-note" rows="2"></textarea>
-    </label>
-  </form>
-  <div class="modal-actions">
-    <button class="btn btn-secondary" id="btn-cancel-relation">취소</button>
-    <button class="btn btn-primary" id="btn-save-relation">저장</button>
-  </div>
-</dialog>
-
-<div class="tab-content hidden" id="tab-ip">
-  <div class="page-header">
-    <h2>IP 대역</h2>
-    <a href="/ip-inventory" class="btn btn-secondary btn-sm">IP 인벤토리 페이지 &rarr;</a>
-  </div>
-  <div class="card mb-md">
-    <div id="grid-tab-subnets" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
-  </div>
-  <div class="page-header">
-    <h2>IP 할당</h2>
-  </div>
-  <div class="card">
-    <div id="grid-tab-ips" class="ag-theme-quartz infra-grid infra-grid-mid"></div>
-  </div>
+<!-- 단계 관리 -->
+<div class="page-header mt-md">
+  <h2>단계</h2>
+  <button class="btn btn-primary" id="btn-add-phase">단계 등록</button>
+</div>
+<div class="card mb-md">
+  <div id="grid-phases" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
 </div>
 
-<div class="tab-content hidden" id="tab-portmap">
-  <div class="page-header">
-    <h2>포트맵 / 케이블 배선</h2>
-    <a href="/port-maps" class="btn btn-secondary btn-sm">포트맵 관리 페이지 &rarr;</a>
-  </div>
-  <div class="card">
-    <div id="grid-tab-portmaps" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
-  </div>
+<!-- 산출물 관리 -->
+<div class="page-header mt-md">
+  <h2>산출물</h2>
+  <button class="btn btn-primary" id="btn-add-deliverable">산출물 등록</button>
 </div>
-
-<div class="tab-content hidden" id="tab-contacts">
-  <!-- 사업 업체 -->
-  <div class="page-header">
-    <h2>사업 업체</h2>
-    <button class="btn btn-primary btn-sm" id="btn-add-project-partner">업체 연결</button>
-  </div>
-  <div id="project-partners-list" class="project-partners-grid">
-    <p class="text-muted infra-card-padding">로딩 중...</p>
-  </div>
-
-  <!-- 자산별 담당자 (기존) -->
-  <details class="mt-md">
-    <summary class="text-secondary infra-details-summary">자산별 담당자 (AssetContact)</summary>
-    <div class="card">
-      <div id="grid-tab-contacts" class="ag-theme-quartz infra-grid infra-grid-mid"></div>
-    </div>
-  </details>
-</div>
-
-<!-- 업체 연결 모달 -->
-<dialog id="modal-project-partner" class="modal">
-  <h2 id="modal-pc-title">업체 연결</h2>
-  <form class="form-grid">
-    <input type="hidden" id="pc-id">
-    <label>
-      거래처
-      <select id="pc-partner-id" required></select>
-    </label>
-    <label>
-      역할
-      <select id="pc-role" required>
-        <option value="고객사">고객사</option>
-        <option value="수행사">수행사</option>
-        <option value="유지보수사">유지보수사</option>
-        <option value="통신사">통신사</option>
-        <option value="벤더">벤더</option>
-      </select>
-    </label>
-    <label class="full-width">
-      범위/설명
-      <input type="text" id="pc-scope-text">
-    </label>
-    <label class="full-width">
-      비고
-      <textarea id="pc-note" rows="2"></textarea>
-    </label>
-  </form>
-  <div class="modal-actions">
-    <button class="btn btn-secondary" id="btn-cancel-pc">취소</button>
-    <button class="btn btn-primary" id="btn-save-pc">저장</button>
-  </div>
-</dialog>
-
-<!-- 담당자 연결 모달 -->
-<dialog id="modal-project-partner-contact" class="modal">
-  <h2 id="modal-pcc-title">담당자 연결</h2>
-  <form class="form-grid">
-    <input type="hidden" id="pcc-id">
-    <input type="hidden" id="pcc-project-partner-id">
-    <label>
-      담당자
-      <select id="pcc-contact-id" required></select>
-    </label>
-    <label>
-      프로젝트 역할
-      <select id="pcc-project-role" required>
-        <option value="고객PM">고객PM</option>
-        <option value="고객실무">고객실무</option>
-        <option value="승인자">승인자</option>
-        <option value="수행PM">수행PM</option>
-        <option value="구축엔지니어">구축엔지니어</option>
-        <option value="유지보수담당">유지보수담당</option>
-        <option value="보안업무담당">보안업무담당</option>
-      </select>
-    </label>
-    <label class="full-width">
-      비고
-      <textarea id="pcc-note" rows="2"></textarea>
-    </label>
-  </form>
-  <div class="modal-actions">
-    <button class="btn btn-secondary" id="btn-cancel-pcc">취소</button>
-    <button class="btn btn-primary" id="btn-save-pcc">저장</button>
-  </div>
-</dialog>
-
-<div class="tab-content hidden" id="tab-history">
-  <div class="page-header">
-    <h2>변경이력</h2>
-  </div>
-  <div class="card">
-    <div id="grid-tab-history" class="ag-theme-quartz infra-grid infra-grid-preview"></div>
-  </div>
+<div class="card">
+  <div id="grid-deliverables" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
 </div>
 
 <!-- 단계 등록/수정 모달 -->
@@ -375,6 +152,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/utils.js"></script>
-<script src="/static/js/infra_project_detail.js?v=2"></script>
+<script src="/static/js/infra_project_detail.js?v=3"></script>
 {% endblock %}
