@@ -16,7 +16,7 @@ class AliasType(str, Enum):
 
 
 class AssetAliasCreate(BaseModel):
-    asset_id: int
+    asset_id: int = 0
     alias_name: str
     alias_type: AliasType
     source_partner_id: int | None = None

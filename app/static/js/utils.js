@@ -68,7 +68,10 @@ async function apiFetch(url, opts = {}) {
   const res = await fetch(url, fetchOpts);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.detail || `요청 실패 (${res.status})`);
+    const detail = body.detail;
+    const msg = Array.isArray(detail) ? detail.map(e => e.msg || JSON.stringify(e)).join('; ')
+              : (typeof detail === 'string' ? detail : `요청 실패 (${res.status})`);
+    throw new Error(msg);
   }
   if (res.status === 204) return null;
   return res.json();

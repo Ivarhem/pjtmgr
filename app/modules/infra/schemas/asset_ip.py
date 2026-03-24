@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AssetIPCreate(BaseModel):
-    asset_id: int
+    asset_id: int = 0
     ip_subnet_id: int | None = None
     ip_address: str
     ip_type: str = "service"

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AssetSoftwareCreate(BaseModel):
-    asset_id: int
+    asset_id: int = 0
     software_name: str
     version: str | None = None
     license_type: str | None = None

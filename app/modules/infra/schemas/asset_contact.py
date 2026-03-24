@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AssetContactCreate(BaseModel):
-    asset_id: int
+    asset_id: int = 0
     contact_id: int
     role: str | None = None
 

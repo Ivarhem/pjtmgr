@@ -11,6 +11,12 @@ down_revision = "0013"
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'asset_aliases'"
+    ))
+    if result.scalar():
+        return
     op.create_table(
         "asset_aliases",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
