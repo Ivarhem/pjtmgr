@@ -46,6 +46,7 @@ def get_product_attributes(db: Session, product_id: int) -> list[dict]:
             "attribute_label": attributes[value.attribute_id].label if value.attribute_id in attributes else None,
             "option_key": options[value.option_id].option_key if value.option_id in options else None,
             "option_label": options[value.option_id].label if value.option_id in options else None,
+            "option_label_kr": options[value.option_id].label_kr if value.option_id in options else None,
         }
         for value in values
     ]

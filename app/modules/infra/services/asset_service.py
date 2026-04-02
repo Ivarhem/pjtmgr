@@ -818,7 +818,11 @@ def _build_classification_info(
     levels: list[str | None] = [None, None, None, None, None]
     if layout is None or not attrs:
         ordered = [attrs.get("domain"), attrs.get("imp_type"), attrs.get("product_family"), attrs.get("platform")]
-        parts = [item["label"] for item in ordered if item and item.get("label")]
+        parts = [
+            (item.get("label_kr") or item["label"])
+            for item in ordered
+            if item and item.get("label")
+        ]
         for idx, part in enumerate(parts[:5]):
             levels[idx] = part
         return {"path": " > ".join(parts) if parts else None, "levels": levels, "is_fallback_text": False}
@@ -830,7 +834,7 @@ def _build_classification_info(
         for attribute_key in level["attribute_keys"]:
             item = attrs.get(attribute_key)
             if item and item.get("label"):
-                labels.append(item["label"])
+                labels.append(item.get("label_kr") or item["label"])
         if labels:
             part = joiner.join(labels)
             levels[idx] = part
@@ -1003,6 +1007,7 @@ def _get_catalog_attribute_map(db: Session, catalog_id: int) -> dict[str, dict[s
         item["attribute_key"]: {
             "option_key": item.get("option_key"),
             "label": item.get("option_label") or item.get("option_key") or item.get("raw_value"),
+            "label_kr": item.get("option_label_kr"),
         }
         for item in values
         if item.get("attribute_key")
