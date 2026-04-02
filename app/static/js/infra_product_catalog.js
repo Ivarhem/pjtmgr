@@ -787,7 +787,7 @@ async function rebuildCatalogClassificationTree(rows) {
     levelDefinitions.push({ levelNo, attributeKey, optionMap });
   }
 
-  function ensureNode(levelNo, optionKey, optionLabel, parentNode = null) {
+  function ensureNode(levelNo, optionKey, optionLabel, parentNode = null, optionData = null) {
     const codePath = [...(parentNode?.code_path || []), optionKey];
     const labelPath = [...(parentNode?.label_path || []), optionLabel];
     const nodeId = codePath.join(">");
@@ -804,6 +804,7 @@ async function rebuildCatalogClassificationTree(rows) {
         selected_codes: new Set(),
         code_path: codePath,
         label_path: labelPath,
+        option_data: optionData,
       };
       treeMap.set(nodeId, node);
       nodeList.push(node);
@@ -822,14 +823,14 @@ async function rebuildCatalogClassificationTree(rows) {
         const optionLabel = option
           ? (lang === "ko" ? (option.label_kr || option.label || optionKey) : (option.label || optionKey))
           : (row[`classification_level_${level.levelNo}_name`] || optionKey);
-        return { levelNo: level.levelNo, optionKey, optionLabel };
+        return { levelNo: level.levelNo, optionKey, optionLabel, optionData: option || null };
       })
       .filter(Boolean);
     if (!segments.length) return;
     const leafToken = getCatalogRowClassificationToken(row);
     let parentNode = null;
     segments.forEach((segment, idx) => {
-      const currentNode = ensureNode(segment.levelNo, segment.optionKey, segment.optionLabel, parentNode);
+      const currentNode = ensureNode(segment.levelNo, segment.optionKey, segment.optionLabel, parentNode, segment.optionData);
       currentNode.selected_codes.add(leafToken);
       parentNode = currentNode;
     });
@@ -1178,6 +1179,15 @@ function filterCatalogClassificationTreeRoots(roots) {
     .filter(Boolean);
 }
 
+function matchesCatalogOptionSearch(option, searchTerm) {
+  const term = searchTerm.toLowerCase();
+  if ((option.option_key || "").toLowerCase().includes(term)) return true;
+  if ((option.label || "").toLowerCase().includes(term)) return true;
+  if ((option.label_kr || "").toLowerCase().includes(term)) return true;
+  if ((option.aliases || []).some((a) => (a.alias_value || "").toLowerCase().includes(term))) return true;
+  return false;
+}
+
 function filterCatalogClassificationTreeNode(node, query) {
   const haystack = [
     node.node_name,
@@ -1187,7 +1197,8 @@ function filterCatalogClassificationTreeNode(node, query) {
     .filter(Boolean)
     .join(" ")
     .toLocaleLowerCase("ko-KR");
-  if (haystack.includes(query)) {
+  const optionMatch = node.option_data ? matchesCatalogOptionSearch(node.option_data, query) : false;
+  if (haystack.includes(query) || optionMatch) {
     return {
       ...node,
       children: [...(node.children || [])],
