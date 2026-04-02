@@ -91,17 +91,17 @@ def _setup(db, admin):
 
     asset_one = create_asset(
         db,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="SRV-01"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="SRV-01"),
         admin,
     )
     asset_two = create_asset(
         db,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="SRV-02"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="SRV-02"),
         admin,
     )
     other_asset = create_asset(
         db,
-        AssetCreate(partner_id=other_partner.id, hardware_model_id=catalog.id, asset_name="SRV-99"),
+        AssetCreate(partner_id=other_partner.id, model_id=catalog.id, asset_name="SRV-99"),
         admin,
     )
     return partner, period, asset_one, asset_two, other_asset
@@ -157,7 +157,7 @@ def _setup_with_contract_partner_only_period(db, admin):
 
     asset_one = create_asset(
         db,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="SRV-CP-01"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="SRV-CP-01"),
         admin,
     )
     return partner, period, asset_one

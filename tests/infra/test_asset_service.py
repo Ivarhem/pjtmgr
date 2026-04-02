@@ -129,7 +129,7 @@ def test_create_and_list_assets(db_session, admin_role_id) -> None:
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             project_asset_number="FW-INT-01",
             customer_asset_number="CUST-FW-01",
             asset_name="APP-01",
@@ -154,7 +154,7 @@ def test_list_assets_can_search_project_asset_number(db_session, admin_role_id) 
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             project_asset_number="FW-INT-99",
             customer_asset_number="CUST-FW-99",
             asset_name="APP-99",
@@ -176,7 +176,7 @@ def test_list_assets_can_search_customer_asset_number(db_session, admin_role_id)
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             customer_asset_number="CUST-APP-77",
             asset_name="APP-77",
         ),
@@ -196,7 +196,7 @@ def test_create_asset_requires_existing_partner(db_session, admin_role_id) -> No
             db_session,
             AssetCreate(
                 partner_id=999,
-                hardware_model_id=catalog.id,
+                model_id=catalog.id,
                 asset_name="APP-01",
             ),
             admin,
@@ -211,7 +211,7 @@ def test_create_asset_rejects_duplicate_name_in_same_partner(
     catalog = _make_catalog(db_session)
     payload = AssetCreate(
         partner_id=partner.id,
-        hardware_model_id=catalog.id,
+        model_id=catalog.id,
         asset_name="APP-01",
     )
     create_asset(db_session, payload, admin)
@@ -228,7 +228,7 @@ def test_update_and_delete_asset(db_session, admin_role_id) -> None:
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-01",
         ),
         admin,
@@ -256,7 +256,7 @@ def test_update_asset_period_link(db_session, admin_role_id) -> None:
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-02",
         ),
         admin,
@@ -282,7 +282,7 @@ def test_enrich_asset_marks_raw_text_location_and_classification(db_session, adm
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-RAW-01",
         ),
         admin,
@@ -294,11 +294,13 @@ def test_enrich_asset_marks_raw_text_location_and_classification(db_session, adm
         AssetUpdate(
             center="본사 IDC",
             rack_no="A-01",
-            category="보안",
             subcategory="방화벽",
         ),
         admin,
     )
+    # category is now synced from catalog, so set it directly for fallback-text test
+    updated.category = "보안"
+    db_session.flush()
 
     enriched = enrich_asset_with_catalog_kind(db_session, updated)
     assert enriched["center_is_fallback_text"] is True
@@ -319,7 +321,7 @@ def test_update_asset_period_link_allows_contract_end_partner_period(
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-02B",
         ),
         admin,
@@ -345,7 +347,7 @@ def test_update_asset_period_rejects_other_partner_period(db_session, admin_role
         db_session,
         AssetCreate(
             partner_id=partner_a.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-03",
         ),
         admin,
@@ -373,7 +375,7 @@ def test_update_asset_current_role(db_session, admin_role_id) -> None:
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-ROLE-01",
         ),
         admin,
@@ -411,7 +413,7 @@ def test_create_asset_with_physical_layout_refs(db_session, admin_role_id) -> No
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-LAYOUT-01",
             center_id=center.id,
             room_id=room.id,
@@ -435,7 +437,7 @@ def test_clear_asset_current_role(db_session, admin_role_id) -> None:
         db_session,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="APP-ROLE-02",
         ),
         admin,
@@ -462,3 +464,35 @@ def test_clear_asset_current_role(db_session, admin_role_id) -> None:
 
     assert assignments
     assert all(not assignment.is_current for assignment in assignments)
+
+
+def test_update_model_id_syncs_vendor_model_category(db_session, admin_role_id) -> None:
+    """model_id 변경 시 vendor/model/category가 카탈로그에서 자동 동기화된다."""
+    admin = _make_admin_user(db_session, admin_role_id)
+    partner = _make_partner(db_session)
+    catalog1 = _make_catalog(db_session, type_key="server")
+
+    asset = create_asset(
+        db_session,
+        AssetCreate(partner_id=partner.id, model_id=catalog1.id, asset_name="SRV-01"),
+        admin,
+    )
+    assert asset.vendor == "Dell"
+    assert asset.model == "PowerEdge R760"
+
+    # 새 카탈로그 생성
+    catalog2 = ProductCatalog(
+        vendor="HP", name="ProLiant DL380", product_type="hardware",
+        category="서버", asset_type_key="server",
+    )
+    db_session.add(catalog2)
+    db_session.flush()
+
+    updated = update_asset(
+        db_session, asset.id,
+        AssetUpdate(model_id=catalog2.id),
+        admin,
+    )
+    assert updated.model_id == catalog2.id
+    assert updated.vendor == "HP"
+    assert updated.model == "ProLiant DL380"

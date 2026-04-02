@@ -66,7 +66,7 @@ def _setup(db, admin):
         db,
         AssetCreate(
             partner_id=partner.id,
-            hardware_model_id=catalog.id,
+            model_id=catalog.id,
             asset_name="SRV-01",
         ),
         admin,

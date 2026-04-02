@@ -55,7 +55,7 @@ def test_create_asset_logs_create_event(db_session, admin_role_id) -> None:
 
     asset = create_asset(
         db_session,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="EVT-01"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="EVT-01"),
         admin,
     )
 
@@ -69,7 +69,7 @@ def test_update_asset_logs_update_event(db_session, admin_role_id) -> None:
     partner, catalog = _setup_asset(db_session)
     asset = create_asset(
         db_session,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="EVT-02"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="EVT-02"),
         admin,
     )
 
@@ -86,7 +86,7 @@ def test_manual_asset_event_can_be_added(db_session, admin_role_id) -> None:
     partner, catalog = _setup_asset(db_session)
     asset = create_asset(
         db_session,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="EVT-03"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="EVT-03"),
         admin,
     )
 
@@ -112,12 +112,12 @@ def test_asset_event_includes_related_asset_and_actor(db_session, admin_role_id)
     partner, catalog = _setup_asset(db_session)
     asset = create_asset(
         db_session,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="EVT-04"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="EVT-04"),
         admin,
     )
     replacement_asset = create_asset(
         db_session,
-        AssetCreate(partner_id=partner.id, hardware_model_id=catalog.id, asset_name="EVT-05"),
+        AssetCreate(partner_id=partner.id, model_id=catalog.id, asset_name="EVT-05"),
         admin,
     )
 
