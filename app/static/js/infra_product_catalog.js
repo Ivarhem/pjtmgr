@@ -1360,6 +1360,9 @@ async function openCatalogClassificationNodeModal(mode, forcedLevelNo = null, fo
   document.getElementById("catalog-classification-node-parent").dataset.attributeKey = attribute.attribute_key;
   document.getElementById("catalog-classification-node-code").value = option?.option_key || "";
   document.getElementById("catalog-classification-node-name").value = option?.label || "";
+  document.getElementById("catalog-classification-node-name-kr").value = option?.label_kr || "";
+  renderCatalogNodeAliasTags(option?.id || null, option?.aliases || []);
+  document.getElementById("catalog-node-alias-section").classList.toggle("is-hidden", !option?.id);
   document.getElementById("catalog-classification-node-sort-order").value = option?.sort_order ?? 100;
   document.getElementById("catalog-classification-node-active").value = String(option?.is_active ?? true);
   document.getElementById("catalog-classification-node-note").value = option?.description || "";
@@ -1456,6 +1459,7 @@ async function saveCatalogClassificationNode() {
   const payload = {
     option_key: document.getElementById("catalog-classification-node-code").value.trim(),
     label: document.getElementById("catalog-classification-node-name").value.trim(),
+    label_kr: document.getElementById("catalog-classification-node-name-kr").value.trim() || null,
     sort_order: Number(document.getElementById("catalog-classification-node-sort-order").value || 100),
     is_active: document.getElementById("catalog-classification-node-active").value === "true",
     description: document.getElementById("catalog-classification-node-note").value.trim() || null,
@@ -1469,7 +1473,8 @@ async function saveCatalogClassificationNode() {
     if (optionId && Number(item.id) === optionId) return false;
     const sameKey = String(item.option_key || "").trim().toLowerCase() === payload.option_key.toLowerCase();
     const sameLabel = String(item.label || "").trim().toLocaleLowerCase("ko-KR") === payload.label.toLocaleLowerCase("ko-KR");
-    return sameKey || sameLabel;
+    const sameLabelKr = payload.label_kr && String(item.label_kr || "").trim().toLocaleLowerCase("ko-KR") === payload.label_kr.toLocaleLowerCase("ko-KR");
+    return sameKey || sameLabel || sameLabelKr;
   });
   if (duplicate) {
     showToast(
@@ -2739,3 +2744,76 @@ document.addEventListener("DOMContentLoaded", async () => {
     applyFilter();
   });
 });
+
+function renderCatalogNodeAliasTags(optionId, aliases) {
+  const container = document.getElementById("catalog-node-alias-tags");
+  if (!container) return;
+  container.replaceChildren();
+  (aliases || []).forEach((alias) => {
+    const tag = document.createElement("span");
+    tag.className = "catalog-alias-tag" + (alias.match_type === "label_kr_auto" ? " is-auto" : "");
+    tag.textContent = alias.alias_value;
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "catalog-alias-tag-remove";
+    removeBtn.textContent = "×";
+    removeBtn.disabled = alias.match_type === "label_kr_auto";
+    if (alias.match_type !== "label_kr_auto") {
+      removeBtn.addEventListener("click", () => deleteCatalogNodeAlias(alias.id, optionId));
+    }
+    tag.appendChild(removeBtn);
+    container.appendChild(tag);
+  });
+  if (optionId) {
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "btn btn-compact";
+    addBtn.textContent = "+ 추가";
+    addBtn.addEventListener("click", () => showCatalogNodeAliasInput(optionId));
+    container.appendChild(addBtn);
+  }
+}
+
+function showCatalogNodeAliasInput(optionId) {
+  const container = document.getElementById("catalog-node-alias-tags");
+  if (!container || container.querySelector(".catalog-alias-add-input")) return;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "catalog-alias-add-input";
+  input.placeholder = "별칭 입력";
+  const addBtn = container.querySelector(".btn");
+  container.insertBefore(input, addBtn);
+  input.focus();
+  input.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const value = input.value.trim();
+      if (value) await addCatalogNodeAlias(optionId, value);
+      input.remove();
+    } else if (e.key === "Escape") {
+      input.remove();
+    }
+  });
+  input.addEventListener("blur", () => input.remove());
+}
+
+async function addCatalogNodeAlias(optionId, aliasValue) {
+  const attributeKey = document.getElementById("catalog-classification-node-parent").dataset.attributeKey;
+  await apiFetch("/api/v1/catalog-integrity/attribute-aliases", {
+    method: "POST",
+    body: { attribute_key: attributeKey, option_id: optionId, alias_value: aliasValue },
+  });
+  invalidateCatalogAttributeOptionCache(attributeKey);
+  const options = await loadCatalogAttributeOptions(attributeKey, false);
+  const option = options.find((item) => item.id === optionId);
+  renderCatalogNodeAliasTags(optionId, option?.aliases || []);
+}
+
+async function deleteCatalogNodeAlias(aliasId, optionId) {
+  await apiFetch(`/api/v1/catalog-integrity/attribute-aliases/${aliasId}`, { method: "DELETE" });
+  const attributeKey = document.getElementById("catalog-classification-node-parent").dataset.attributeKey;
+  invalidateCatalogAttributeOptionCache(attributeKey);
+  const options = await loadCatalogAttributeOptions(attributeKey, false);
+  const option = options.find((item) => item.id === optionId);
+  renderCatalogNodeAliasTags(optionId, option?.aliases || []);
+}

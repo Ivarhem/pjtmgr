@@ -475,7 +475,8 @@
       <div class="form-grid">
         <label>대상 속성 <input type="text" id="catalog-classification-node-parent" readonly></label>
         <label>속성값 키 <input type="text" id="catalog-classification-node-code" required></label>
-        <label>표시명 <input type="text" id="catalog-classification-node-name" required></label>
+        <label>영문명 <input type="text" id="catalog-classification-node-name" required></label>
+        <label>한글명 <input type="text" id="catalog-classification-node-name-kr"></label>
         <label class="hidden" id="catalog-classification-node-domain-wrap">도메인
           <select id="catalog-classification-node-domain">
             <option value="">도메인 선택</option>
@@ -488,7 +489,17 @@
             <option value="false">비활성</option>
           </select>
         </label>
-        <label class="full-width">설명 <textarea id="catalog-classification-node-note" rows="3"></textarea></label>
+      </div>
+    </fieldset>
+    <fieldset class="modal-group" id="catalog-node-alias-section">
+      <legend class="modal-group-title">별칭</legend>
+      <div class="catalog-alias-tags" id="catalog-node-alias-tags"></div>
+      <p class="modal-hint">※ 한글명은 자동 등록됩니다</p>
+    </fieldset>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">설명</legend>
+      <div class="form-grid">
+        <label class="full-width"><textarea id="catalog-classification-node-note" rows="3"></textarea></label>
       </div>
     </fieldset>
   </form>
