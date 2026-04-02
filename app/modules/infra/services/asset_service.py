@@ -90,11 +90,11 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
         .order_by(AssetAlias.is_primary.desc(), AssetAlias.alias_name)
     ))
     catalog_map = {}
+    catalog_entity_map = {}
     if catalog_ids:
-        catalog_map = {
-            c.id: c.product_type
-            for c in db.scalars(select(ProductCatalog).where(ProductCatalog.id.in_(catalog_ids)))
-        }
+        catalog_rows = list(db.scalars(select(ProductCatalog).where(ProductCatalog.id.in_(catalog_ids))))
+        catalog_map = {c.id: c.product_type for c in catalog_rows}
+        catalog_entity_map = {c.id: c for c in catalog_rows}
     alias_map: dict[int, list[str]] = {}
     for row in alias_rows:
         alias_map.setdefault(row.asset_id, []).append(row.alias_name)
@@ -141,6 +141,19 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
         d["rack_label"] = rack_map.get(asset.rack_id).rack_name or rack_map.get(asset.rack_id).rack_code if asset.rack_id in rack_map else asset.rack_no
         d["center_is_fallback_text"] = bool(not asset.center_id and asset.center)
         d["rack_is_fallback_text"] = bool(not asset.rack_id and asset.rack_no)
+        classification_info = _build_classification_info(
+            db,
+            catalog_entity_map.get(asset.hardware_model_id),
+            category=asset.category,
+            subcategory=asset.subcategory,
+        )
+        d["classification_path"] = classification_info["path"]
+        d["classification_is_fallback_text"] = classification_info["is_fallback_text"]
+        d["classification_level_1_name"] = classification_info["levels"][0]
+        d["classification_level_2_name"] = classification_info["levels"][1]
+        d["classification_level_3_name"] = classification_info["levels"][2]
+        d["classification_level_4_name"] = classification_info["levels"][3]
+        d["classification_level_5_name"] = classification_info["levels"][4]
         result.append(d)
     return result
 
