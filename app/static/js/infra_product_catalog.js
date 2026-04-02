@@ -109,8 +109,11 @@ async function loadCatalogPermissions() {
 
 async function loadCatalogTaxonomyContext() {
   try {
-    _catalogAttributeDefs = await apiFetch("/api/v1/catalog-attributes");
-    const layouts = await apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true");
+    const [attrDefs, layouts] = await Promise.all([
+      apiFetch("/api/v1/catalog-attributes"),
+      apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true"),
+    ]);
+    _catalogAttributeDefs = attrDefs;
     _catalogLayouts = Array.isArray(layouts) ? layouts : [];
     const preferredId = Number(localStorage.getItem(CATALOG_LAYOUT_PRESET_KEY) || 0);
     const targetLayout = _catalogLayouts.find((item) => Number(item.id) === preferredId)
@@ -2588,8 +2591,11 @@ function loadCatalogClassificationSearchState() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   loadCatalogClassificationSearchState();
-  await loadCatalogPermissions();
-  await loadCatalogTaxonomyContext();
+  await Promise.all([
+    loadCatalogPermissions(),
+    loadCatalogTaxonomyContext(),
+    loadCatalogLabelLangPreference(),
+  ]);
   initCatalogGrid();
   initIfaceGrid();
   initCatalogLayoutItemGrid();
@@ -2600,7 +2606,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindProductSimilarityInputs();
   setCatalogDetailOpen(localStorage.getItem(CATALOG_DETAIL_OPEN_KEY) === "1");
   applyCatalogPermissionState();
-  await loadCatalogLabelLangPreference();
   const langToggleBtn = document.getElementById("btn-catalog-lang-toggle");
   if (langToggleBtn) langToggleBtn.textContent = getCatalogLabelLang() === "ko" ? "한" : "EN";
   await loadCatalog();
