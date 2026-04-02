@@ -34,6 +34,24 @@ const _catalogAttributeOptionCache = new Map();
 let _productSimilarityTimer = null;
 let _catalogClassificationSchemeEditing = false;
 
+const CATALOG_LABEL_LANG_KEY = "catalog_label_lang";
+
+function getCatalogLabelLang() {
+  const lang = localStorage.getItem(CATALOG_LABEL_LANG_KEY);
+  return lang === "en" ? "en" : "ko";
+}
+
+function setCatalogLabelLang(lang) {
+  localStorage.setItem(CATALOG_LABEL_LANG_KEY, lang === "en" ? "en" : "ko");
+}
+
+function getCatalogOptionDisplayLabel(option) {
+  if (!option) return "";
+  const lang = getCatalogLabelLang();
+  if (lang === "ko") return option.label_kr || option.label || option.option_key;
+  return option.label || option.option_key;
+}
+
 const PRODUCT_KIND_LABELS = {
   hardware: "하드웨어",
   software: "소프트웨어",
@@ -800,9 +818,10 @@ async function rebuildCatalogClassificationTree(rows) {
         const optionKey = values[level.attributeKey] || "";
         if (!optionKey) return null;
         const option = level.optionMap.get(optionKey);
-        const optionLabel = option?.label
-          || row[`classification_level_${level.levelNo}_name`]
-          || optionKey;
+        const lang = getCatalogLabelLang();
+        const optionLabel = option
+          ? (lang === "ko" ? (option.label_kr || option.label || optionKey) : (option.label || optionKey))
+          : (row[`classification_level_${level.levelNo}_name`] || optionKey);
         return { levelNo: level.levelNo, optionKey, optionLabel };
       })
       .filter(Boolean);
@@ -1028,13 +1047,13 @@ async function buildCatalogAttributeOptionMaps() {
     const attributeKey = getCatalogPrimaryLevelKey(levelNo);
     if (!attributeKey) continue;
     const options = await loadCatalogAttributeOptions(attributeKey, true);
-    maps.set(attributeKey, new Map(options.map((item) => [item.option_key, item.label])));
+    maps.set(attributeKey, new Map(options.map((item) => [item.option_key, { label: item.label, label_kr: item.label_kr }])));
   }
   /* 나머지 displayable 속성 */
   for (const attr of getDisplayableCatalogAttributes()) {
     if (maps.has(attr.attribute_key)) continue;
     const options = await loadCatalogAttributeOptions(attr.attribute_key, true);
-    maps.set(attr.attribute_key, new Map(options.map((item) => [item.option_key, item.label])));
+    maps.set(attr.attribute_key, new Map(options.map((item) => [item.option_key, { label: item.label, label_kr: item.label_kr }])));
   }
   return maps;
 }
@@ -1042,23 +1061,41 @@ async function buildCatalogAttributeOptionMaps() {
 function projectCatalogRowForCurrentLayout(row, attrOptionMaps = new Map()) {
   const projected = { ...row };
   const values = getProductAttributeValueMap(row.attributes || []);
+  const lang = getCatalogLabelLang();
 
   /* 레이아웃 레벨 필드 (트리 호환 유지) */
   for (let levelNo = 1; levelNo <= 5; levelNo += 1) {
     const attributeKey = getCatalogPrimaryLevelKey(levelNo);
     const optionKey = attributeKey ? values[attributeKey] || "" : "";
-    const optionLabel = optionKey
-      ? attrOptionMaps.get(attributeKey)?.get(optionKey) || getCatalogAttributeLabel(attributeKey, optionKey) || optionKey
-      : null;
+    let optionLabel = null;
+    if (optionKey) {
+      const optionData = attrOptionMaps.get(attributeKey)?.get(optionKey);
+      if (optionData) {
+        optionLabel = lang === "ko"
+          ? (optionData.label_kr || optionData.label || optionKey)
+          : (optionData.label || optionKey);
+      } else {
+        optionLabel = getCatalogAttributeLabel(attributeKey, optionKey) || optionKey;
+      }
+    }
     projected[`classification_level_${levelNo}_name`] = optionLabel || null;
   }
 
   /* 모든 속성 → attr_{key} 필드 (그리드 컬럼용) */
   for (const [attributeKey, optionMap] of attrOptionMaps) {
     const optionKey = values[attributeKey] || "";
-    projected[`attr_${attributeKey}`] = optionKey
-      ? optionMap.get(optionKey) || getCatalogAttributeLabel(attributeKey, optionKey) || optionKey
-      : null;
+    let displayLabel = null;
+    if (optionKey) {
+      const optionData = optionMap.get(optionKey);
+      if (optionData) {
+        displayLabel = lang === "ko"
+          ? (optionData.label_kr || optionData.label || optionKey)
+          : (optionData.label || optionKey);
+      } else {
+        displayLabel = getCatalogAttributeLabel(attributeKey, optionKey) || optionKey;
+      }
+    }
+    projected[`attr_${attributeKey}`] = displayLabel;
   }
 
   return projected;
@@ -2526,10 +2563,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindProductSimilarityInputs();
   setCatalogDetailOpen(localStorage.getItem(CATALOG_DETAIL_OPEN_KEY) === "1");
   applyCatalogPermissionState();
+  const langToggleBtn = document.getElementById("btn-catalog-lang-toggle");
+  if (langToggleBtn) langToggleBtn.textContent = getCatalogLabelLang() === "ko" ? "한" : "EN";
   await loadCatalog();
 
   // 이벤트 바인딩
   document.getElementById("btn-open-import").addEventListener("click", openCatalogImport);
+  document.getElementById("btn-catalog-lang-toggle")?.addEventListener("click", async () => {
+    const current = getCatalogLabelLang();
+    const next = current === "ko" ? "en" : "ko";
+    setCatalogLabelLang(next);
+    document.getElementById("btn-catalog-lang-toggle").textContent = next === "ko" ? "한" : "EN";
+    applyCatalogClassificationAliases();
+    const projected = await projectCatalogRowsForCurrentLayout(_catalogRows || []);
+    if (catalogGridApi) catalogGridApi.setGridOption("rowData", projected);
+    await rebuildCatalogClassificationTree(_catalogRows || []);
+  });
   document.getElementById("btn-catalog-classification-edit-toggle").addEventListener("click", () => {
     if (!_catalogPermissions.canManageCatalogTaxonomy) {
       showToast("카탈로그 기준 관리 권한이 없습니다.", "warning");
