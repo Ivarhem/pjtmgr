@@ -302,6 +302,13 @@ body.dark-mode .chk-drop-btn {
   gap: 10px;
   pointer-events: none;
 }
+.toast-container.toast-container-modal {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  left: auto;
+  z-index: 2;
+}
 .toast {
   pointer-events: auto;
   display: flex;
@@ -321,8 +328,14 @@ body.dark-mode .chk-drop-btn {
 .toast.toast-success { background: var(--success-strong-color); }
 .toast.toast-error { background: var(--danger-strong-color); }
 .toast.toast-info { background: var(--primary-color); }
-.toast.toast-warning { background: var(--warning-color); color: #1a1a1a; }
-.toast.toast-warning a { color: #1a1a1a; font-weight: 600; text-decoration: underline; }
+.toast.toast-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  color: #1f1300;
+  border: 1px solid rgba(146, 64, 14, 0.28);
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.22);
+  font-weight: 700;
+}
+.toast.toast-warning a { color: #1f1300; font-weight: 800; text-decoration: underline; }
 .toast.toast-out { animation: toast-out 0.25s ease-in forwards; }
 body.dark-mode .toast { box-shadow: var(--modal-shadow); }
 

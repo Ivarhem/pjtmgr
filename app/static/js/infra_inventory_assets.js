@@ -1,13 +1,5 @@
 /* ── 자산 횡단 검색 (인벤토리) ── */
 
-const ASSET_TYPE_MAP = {
-  server: "서버",
-  network: "네트워크",
-  security: "보안장비",
-  storage: "스토리지",
-  other: "기타",
-};
-
 const ASSET_STATUS_MAP = {
   planned: "계획",
   active: "운영중",
@@ -36,12 +28,6 @@ const columnDefs = [
   },
   { field: "project_name", headerName: "프로젝트명", width: 160 },
   { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180, sort: "asc" },
-  {
-    field: "asset_type",
-    headerName: "유형",
-    width: 110,
-    valueFormatter: (p) => ASSET_TYPE_MAP[p.value] || p.value,
-  },
   { field: "vendor", headerName: "제조사", width: 120 },
   { field: "model", headerName: "모델", width: 120 },
   { field: "hostname", headerName: "호스트명", width: 140 },
@@ -75,12 +61,10 @@ let gridApi;
 async function loadInventory() {
   const params = new URLSearchParams();
   const projectId = document.getElementById("filter-project").value;
-  const assetType = document.getElementById("filter-type").value;
   const status = document.getElementById("filter-status").value;
   const q = document.getElementById("filter-search").value.trim();
 
   if (projectId) params.set("period_id", projectId);
-  if (assetType) params.set("asset_type", assetType);
   if (status) params.set("status", status);
   if (q) params.set("q", q);
 

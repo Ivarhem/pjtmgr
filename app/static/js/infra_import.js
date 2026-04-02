@@ -142,7 +142,6 @@
     const colDefs = [
       { field: 'row_num', headerName: '행', width: 70, pinned: 'left' },
       { field: 'asset_name', headerName: '자산명', width: 160 },
-      { field: 'asset_type', headerName: '유형', width: 100 },
       { field: 'hostname', headerName: 'Hostname', width: 140 },
       { field: 'vendor', headerName: '제조사', width: 120 },
       { field: 'model', headerName: '모델', width: 120 },

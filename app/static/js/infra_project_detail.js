@@ -481,14 +481,12 @@ async function deleteDeliverable(d) {
 }
 
 /* ── Assets Tab (lazy-load) ── */
-const ASSET_TYPE_LABELS = { server: "서버", network: "네트워크", security: "보안장비", storage: "스토리지", other: "기타" };
 const ASSET_ENV_LABELS = { prod: "운영", dev: "개발", staging: "스테이징", dr: "DR" };
 const ASSET_STATUS_LABELS = { planned: "계획", active: "운영중", decommissioned: "폐기" };
 
 function initAssetsTab() {
   const colDefs = [
     { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 180, sort: "asc" },
-    { field: "asset_type", headerName: "유형", width: 110, valueFormatter: p => ASSET_TYPE_LABELS[p.value] || p.value },
     { field: "vendor", headerName: "제조사", width: 130 },
     { field: "model", headerName: "모델", width: 130 },
     { field: "role", headerName: "역할", width: 130 },

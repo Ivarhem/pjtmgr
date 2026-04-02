@@ -1,10 +1,12 @@
 import csv
 import io
 import logging
+from copy import deepcopy
 
 from sqlalchemy.orm import Session
 
 from app.core.config import PASSWORD_MIN_LENGTH
+from app.modules.common.models.role import Role
 from app.modules.common.models.user import User
 from app.modules.common.schemas.user import UserCreate, UserUpdate
 from app.core.auth.password import hash_password
@@ -31,15 +33,20 @@ def _is_admin_user(user: User) -> bool:
 
 
 def list_users(db: Session) -> list[User]:
-    return db.query(User).order_by(User.department, User.name).all()
+    users = db.query(User).order_by(User.department, User.name).all()
+    return [_serialize_user(user) for user in users]
 
 
 def get_user(db: Session, user_id: int) -> User | None:
-    return db.get(User, user_id)
+    user = db.get(User, user_id)
+    return _serialize_user(user) if user else None
 
 
 def create_user(db: Session, data: UserCreate) -> User:
-    obj = User(**data.model_dump())
+    payload = data.model_dump()
+    permissions_payload = payload.pop("permissions", None)
+    payload["role_id"] = _resolve_role_id(db, payload.get("role_id"), permissions_payload)
+    obj = User(**payload)
     # 초기 비밀번호: login_id 값 사용 (로그인 후 변경 강제)
     if obj.login_id:
         obj.password_hash = hash_password(obj.login_id)
@@ -48,7 +55,7 @@ def create_user(db: Session, data: UserCreate) -> User:
     db.add(obj)
     db.commit()
     db.refresh(obj)
-    return obj
+    return _serialize_user(obj)
 
 
 def _active_admin_count(db: Session) -> int:
@@ -133,6 +140,9 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> User:
     if not obj:
         raise NotFoundError("사용자를 찾을 수 없습니다.")
     changes = data.model_dump(exclude_unset=True)
+    permissions_payload = changes.pop("permissions", None)
+    if permissions_payload is not None:
+        changes["role_id"] = _resolve_role_id(db, changes.get("role_id"), permissions_payload)
     # 관리자 비활성화 시 다른 활성 관리자 존재 여부 확인
     if _is_admin_user(obj) and changes.get("is_active") is False:
         from app.modules.common.models.role import Role
@@ -153,7 +163,7 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> User:
         setattr(obj, field, value)
     db.commit()
     db.refresh(obj)
-    return obj
+    return _serialize_user(obj)
 
 
 def reset_password(db: Session, user_id: int) -> None:
@@ -191,6 +201,113 @@ def get_default_role_id(db: Session) -> int:
         role = db.query(Role).filter(Role.is_system.is_(True)).first()
     if not role:
         raise BusinessRuleError("시스템 역할이 존재하지 않습니다. 서버를 재시작하세요.")
+    return role.id
+
+
+def _serialize_user(user: User) -> dict:
+    perms = deepcopy(user.role_obj.permissions or {}) if user.role_obj else {}
+    return {
+        "id": user.id,
+        "name": user.name,
+        "department": user.department,
+        "position": user.position,
+        "login_id": user.login_id,
+        "role_id": user.role_id,
+        "role_name": user.role_obj.name if user.role_obj else None,
+        "role_permissions": perms,
+        "permission_tags": _permission_tags(perms),
+        "is_active": user.is_active,
+    }
+
+
+def _permission_flags_from_payload(payload: dict | None) -> dict[str, bool]:
+    raw = payload or {}
+    return {
+        "common_manage": bool(raw.get("common_manage")),
+        "accounting_use": bool(raw.get("accounting_use") or raw.get("accounting_manage")),
+        "accounting_manage": bool(raw.get("accounting_manage")),
+        "infra_use": bool(raw.get("infra_use") or raw.get("infra_manage")),
+        "infra_manage": bool(raw.get("infra_manage")),
+        "catalog_products_manage": bool(raw.get("catalog_products_manage")),
+        "catalog_taxonomy_manage": bool(raw.get("catalog_taxonomy_manage")),
+    }
+
+
+def _permissions_from_flags(flags: dict[str, bool]) -> dict:
+    permissions = {
+        "admin": False,
+        "modules": {},
+        "common": {"manage": flags["common_manage"]},
+        "scopes": {},
+        "catalog": {
+            "manage_products": flags["catalog_products_manage"],
+            "manage_taxonomy": flags["catalog_taxonomy_manage"],
+        },
+    }
+    if flags["accounting_manage"]:
+        permissions["modules"]["accounting"] = "full"
+        permissions["scopes"]["accounting"] = "all"
+    elif flags["accounting_use"]:
+        permissions["modules"]["accounting"] = "full"
+        permissions["scopes"]["accounting"] = "own"
+
+    if flags["infra_manage"]:
+        permissions["modules"]["infra"] = "full"
+        permissions["scopes"]["infra"] = "all"
+    elif flags["infra_use"]:
+        permissions["modules"]["infra"] = "read"
+        permissions["scopes"]["infra"] = "own"
+
+    return permissions
+
+
+def _permission_tags(permissions: dict) -> list[str]:
+    tags: list[str] = []
+    modules = permissions.get("modules", {}) or {}
+    catalog = permissions.get("catalog", {}) or {}
+    legacy_infra_manage = modules.get("infra") == "full" and not catalog
+    if permissions.get("admin") or permissions.get("common", {}).get("manage"):
+        tags.append("공통관리")
+    if permissions.get("admin") or permissions.get("scopes", {}).get("accounting") == "all":
+        tags.append("영업관리")
+    elif permissions.get("modules", {}).get("accounting") in {"read", "full"}:
+        tags.append("영업사용")
+    if permissions.get("admin") or permissions.get("modules", {}).get("infra") == "full":
+        tags.append("프로젝트관리")
+    elif permissions.get("modules", {}).get("infra") in {"read", "full"}:
+        tags.append("프로젝트사용")
+    if permissions.get("admin") or catalog.get("manage_products") or legacy_infra_manage:
+        tags.append("카탈로그제품관리")
+    if permissions.get("admin") or catalog.get("manage_taxonomy") or legacy_infra_manage:
+        tags.append("카탈로그기준관리")
+    return tags
+
+
+def _role_name_for_permissions(permissions: dict) -> str:
+    tags = _permission_tags(permissions)
+    return "+".join(tags) if tags else "권한없음"
+
+
+def _resolve_role_id(db: Session, role_id: int | None, permissions_payload: dict | None) -> int:
+    if permissions_payload is None:
+        if role_id is not None:
+            return role_id
+        return get_default_role_id(db)
+
+    flags = _permission_flags_from_payload(permissions_payload)
+    permissions = _permissions_from_flags(flags)
+    existing_roles = db.query(Role).order_by(Role.is_system.desc(), Role.id.asc()).all()
+    for role in existing_roles:
+        if (role.permissions or {}) == permissions:
+            return role.id
+
+    role = Role(
+        name=_role_name_for_permissions(permissions),
+        is_system=False,
+        permissions=permissions,
+    )
+    db.add(role)
+    db.flush()
     return role.id
 
 

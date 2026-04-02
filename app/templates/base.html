@@ -147,7 +147,7 @@
         {# --- 공통 메뉴 (모듈 무관) --- #}
 
         <li><a href="/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
-        <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">HW 제품 사양·EOSL 관리</small></span></a></li>
+        <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>제조사/제품 관리<small class="subnav-sub">카탈로그·제조사·제품·정합성 운영</small></span></a></li>
         <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
       </ul>
     </nav>
@@ -156,6 +156,10 @@
     // Active link highlighting (with group mapping for tabbed pages)
     const _navGroups = {
       '/ip-inventory': '/assets', '/port-maps': '/assets',
+      '/catalog-management/vendors': '/product-catalog',
+      '/catalog-management/products': '/product-catalog',
+      '/catalog-management/integrity': '/product-catalog',
+      '/catalog-integrity': '/product-catalog',
     };
     const _activePath = _navGroups[window.location.pathname] || window.location.pathname;
     document.querySelectorAll('.subnav-links a, .topbar-right a').forEach(a => {

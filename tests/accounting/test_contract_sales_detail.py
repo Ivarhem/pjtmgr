@@ -4,10 +4,6 @@ Note: These tests require a PostgreSQL test database with the accounting schema.
 """
 from __future__ import annotations
 
-import pytest
-
-from app.modules.common.models.contract import Contract
-from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.schemas.contract import ContractCreate
 from app.modules.common.schemas.contract_period import ContractPeriodCreate
 from app.modules.accounting.schemas.contract_sales_detail import ContractSalesDetailUpdate
@@ -19,7 +15,7 @@ def _make_contract_and_period(db_session) -> tuple[int, int]:
 
     contract = create_contract(
         db_session,
-        ContractCreate(contract_name="SalesDetail Test", contract_type="인프라"),
+        ContractCreate(contract_name="SalesDetail Test", contract_type="MA"),
     )
     period = create_period(
         db_session,

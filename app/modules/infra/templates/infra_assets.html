@@ -8,8 +8,10 @@
 {% block content %}
 <div class="tab-nav">
   <a href="/assets" class="tab-btn active">자산 목록</a>
+  <a href="/asset-roles" class="tab-btn">역할 기준 보기</a>
   <a href="/ip-inventory" class="tab-btn">IP 인벤토리</a>
   <a href="/port-maps" class="tab-btn">포트맵</a>
+  <a href="/physical-layout" class="tab-btn">물리배치</a>
   <label class="chk-inline tab-nav-filter"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
 </div>
 
@@ -25,9 +27,6 @@
   <label>검색
     <input type="text" id="filter-search" placeholder="자산명, 호스트명, IP, 장비ID">
   </label>
-  <label>유형
-    <select id="filter-type"></select>
-  </label>
   <label>상태
     <select id="filter-status">
       <option value="">전체</option>
@@ -38,109 +37,215 @@
   </label>
 </div>
 
-<div class="card">
-  <div id="grid-assets" class="ag-theme-quartz infra-grid infra-grid-480"></div>
-</div>
-
-<!-- 하단 상세 패널 -->
-<div id="asset-detail-panel" class="detail-panel hidden">
-  <div class="detail-header">
-    <span id="detail-asset-name" class="detail-title"></span>
-    <div class="detail-header-actions">
-      <button class="btn btn-sm btn-secondary" id="btn-edit-asset">수정</button>
-      <button class="btn btn-sm btn-danger" id="btn-delete-asset">삭제</button>
-      <button class="btn btn-sm" id="btn-close-detail" title="닫기">&times;</button>
+<div id="asset-layout" class="asset-layout">
+  <div class="asset-list-panel">
+    <div class="asset-grid-toolbar">
+      <button class="btn btn-secondary btn-sm" id="btn-toggle-grid-edit">테이블 편집</button>
+    </div>
+    <div class="card">
+      <div id="grid-assets" class="ag-theme-quartz infra-grid"></div>
     </div>
   </div>
-  <div class="detail-tabs">
-    <button class="tab-btn active" data-dtab="basic">기본 정보</button>
-    <button class="tab-btn" data-dtab="location">설치 위치</button>
-    <button class="tab-btn" data-dtab="network">네트워크</button>
-    <button class="tab-btn" data-dtab="hw">HW 사양</button>
-    <button class="tab-btn" data-dtab="mgmt">자산 관리</button>
-    <button class="tab-btn" data-dtab="software">소프트웨어</button>
-    <button class="tab-btn" data-dtab="ip">IP 할당</button>
-    <button class="tab-btn" data-dtab="contacts">담당자</button>
-    <button class="tab-btn" data-dtab="relations">관계</button>
-    <button class="tab-btn" data-dtab="aliases">별칭</button>
+
+  <div id="asset-splitter" class="asset-splitter hidden" aria-hidden="true"></div>
+
+  <div class="asset-detail-handle-wrap">
+    <button class="asset-detail-minimize" id="btn-minimize-detail" title="상세 패널 열기/닫기">❯</button>
   </div>
-  <div id="detail-content" class="detail-body"></div>
+
+  <div id="asset-detail-panel" class="asset-detail-panel hidden">
+    <div class="asset-detail-empty" id="asset-detail-empty">
+      자산을 선택하면 오른쪽에서 상세 정보를 확인할 수 있습니다.
+    </div>
+    <div id="asset-detail-shell" class="hidden">
+      <div class="detail-header">
+        <span id="detail-asset-name" class="detail-title"></span>
+        <div class="detail-header-actions">
+          <button class="btn btn-sm btn-secondary" id="btn-asset-replacement">교체</button>
+          <button class="btn btn-sm btn-secondary" id="btn-asset-failover">장애대체</button>
+          <button class="btn btn-sm btn-secondary" id="btn-asset-repurpose">용도전환</button>
+          <button class="btn btn-sm btn-secondary" id="btn-edit-asset">수정</button>
+          <button class="btn btn-sm btn-danger" id="btn-delete-asset">삭제</button>
+        </div>
+      </div>
+      <div class="detail-tabs">
+        <button class="tab-btn active" data-dtab="overview">핵심 정보</button>
+        <button class="tab-btn" data-dtab="operations">설치·운영</button>
+        <button class="tab-btn" data-dtab="connections">연결 정보</button>
+        <button class="tab-btn" data-dtab="history">이력</button>
+      </div>
+      <div id="detail-content" class="detail-body"></div>
+    </div>
+  </div>
 </div>
 
-<!-- 자산 등록 모달 (간소화) -->
-<dialog id="modal-asset" class="modal">
+<!-- 자산 등록 모달 -->
+<dialog id="modal-asset" class="modal modal-md">
   <h2>자산 등록</h2>
+  <p class="modal-desc">카탈로그 제품을 선택한 뒤 자산 기본 정보를 입력합니다.</p>
   <form id="form-asset">
-    <!-- 카탈로그 제품 (필수) -->
-    <label>
-      카탈로그 제품 <span class="text-danger">*</span>
-      <div class="catalog-search-wrap">
-        <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
-        <input type="hidden" id="catalog-id">
-        <div id="catalog-dropdown" class="catalog-dropdown hidden"></div>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">제품 선택</legend>
+      <div class="form-grid">
+        <label>
+          상위분류
+          <select id="catalog-kind-filter-modal">
+            <option value="hardware">하드웨어</option>
+            <option value="software">소프트웨어</option>
+            <option value="model">모델</option>
+            <option value="service">서비스</option>
+            <option value="business_capability">업무기능</option>
+            <option value="dataset">데이터셋</option>
+          </select>
+        </label>
+        <label class="full-width">
+          카탈로그 제품 <span class="text-danger">*</span>
+          <div class="catalog-search-wrap">
+            <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
+            <input type="hidden" id="catalog-id">
+            <div id="catalog-dropdown" class="catalog-dropdown hidden"></div>
+          </div>
+        </label>
+        <div id="catalog-summary" class="catalog-summary full-width hidden"></div>
+        <div class="modal-actions modal-actions-compact full-width">
+          <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-clear-catalog">선택 해제</button>
+        </div>
       </div>
-    </label>
-    <div id="catalog-summary" class="catalog-summary hidden"></div>
+    </fieldset>
 
-    <!-- 인라인 카탈로그 등록 -->
     <fieldset id="inline-catalog-form" class="modal-group hidden">
       <legend class="modal-group-title">새 제품 등록</legend>
       <div class="form-grid">
         <label>제조사 <span class="text-danger">*</span> <input type="text" id="inline-vendor" required></label>
         <label>모델명 <span class="text-danger">*</span> <input type="text" id="inline-model" required></label>
-        <label>카테고리 <span class="text-danger">*</span> <input type="text" id="inline-category" required></label>
-        <label>자산유형 <span class="text-danger">*</span> <select id="inline-asset-type" required></select></label>
+        <label>상위분류 <span class="text-danger">*</span>
+          <select id="inline-kind" required>
+            <option value="hardware">하드웨어</option>
+            <option value="software">소프트웨어</option>
+            <option value="model">모델</option>
+            <option value="service">서비스</option>
+            <option value="business_capability">업무기능</option>
+            <option value="dataset">데이터셋</option>
+          </select>
+        </label>
+        <label>도메인 <span class="text-danger">*</span>
+          <select id="inline-attr-domain" required>
+            <option value="">-- 도메인 선택 --</option>
+          </select>
+        </label>
+        <label>구현형태 <span class="text-danger">*</span>
+          <select id="inline-attr-imp-type" required>
+            <option value="">-- 구현형태 선택 --</option>
+          </select>
+        </label>
+        <label>제품군 <span class="text-danger">*</span>
+          <select id="inline-attr-product-family" required>
+            <option value="">-- 제품군 선택 --</option>
+          </select>
+        </label>
+        <label>플랫폼
+          <select id="inline-attr-platform">
+            <option value="">-- 플랫폼 선택 --</option>
+          </select>
+        </label>
       </div>
-      <div class="modal-actions" style="margin-top:8px">
+      <div class="modal-actions modal-actions-compact">
         <button type="button" class="btn btn-secondary btn-sm" id="btn-inline-cancel">취소</button>
         <button type="button" class="btn btn-primary btn-sm" id="btn-inline-save">등록</button>
       </div>
     </fieldset>
 
-    <!-- 자산명 (필수) -->
-    <label>
-      자산명 <span class="text-danger">*</span>
-      <input type="text" id="asset-name" required>
-    </label>
-
-    <!-- 호스트명 (선택) -->
-    <label>
-      호스트명
-      <input type="text" id="asset-hostname">
-    </label>
-
-    <!-- 귀속사업 (선택) -->
-    <label>
-      귀속사업
-      <select id="asset-period">
-        <option value="">-- 선택 안함 --</option>
-      </select>
-    </label>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">자산 기본 정보</legend>
+      <div class="form-grid">
+        <label>
+          프로젝트코드
+          <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
+        </label>
+        <label>
+          고객 자산번호
+          <input type="text" id="asset-customer-code" placeholder="예: CUST-FW-0001">
+        </label>
+        <label>
+          자산명 <span class="text-danger">*</span>
+          <input type="text" id="asset-name" required>
+        </label>
+        <label>
+          호스트명
+          <input type="text" id="asset-hostname">
+        </label>
+        <p class="modal-hint full-width" id="asset-name-hint">카탈로그를 선택하면 자산명이 자동 제안됩니다.</p>
+        <p class="modal-hint full-width" id="asset-hostname-hint">호스트명은 자산명 기준으로 자동 제안됩니다.</p>
+        <p class="modal-hint full-width" id="asset-role-suggestion-hint">역할명 추천은 자산명 기준으로 참고용 제안만 제공합니다. 자동 선택되지 않습니다.</p>
+        <label class="full-width">
+          귀속사업
+          <select id="asset-period">
+            <option value="">-- 선택 안함 --</option>
+          </select>
+        </label>
+        <label class="full-width">
+          <span id="asset-classification-label">분류 경로</span>
+          <div id="asset-classification-preview" class="input-like-readonly">카탈로그 제품을 선택하면 분류 경로가 표시됩니다.</div>
+        </label>
+        <p class="modal-hint full-width" id="asset-classification-hint">분류는 카탈로그 속성과 현재 레이아웃 기준으로 자동 계산됩니다.</p>
+        <div class="modal-actions modal-actions-compact full-width">
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-open-classification-schemes">카탈로그에서 기준 관리</button>
+        </div>
+        <label>
+          센터
+          <select id="asset-center-id">
+            <option value="">-- 선택 안함 --</option>
+          </select>
+        </label>
+        <label>
+          전산실
+          <select id="asset-room-id" disabled>
+            <option value="">-- 센터 선택 --</option>
+          </select>
+        </label>
+        <label>
+          랙
+          <select id="asset-rack-id" disabled>
+            <option value="">-- 전산실 선택 --</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
   </form>
+  <p class="modal-hint">카탈로그에 없는 제품은 검색 결과 하단의 새 제품 등록에서 바로 추가할 수 있습니다.</p>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-asset">취소</button>
     <button class="btn btn-primary" id="btn-save-asset">등록</button>
   </div>
 </dialog>
 <!-- 소프트웨어 추가/수정 모달 -->
-<dialog id="modal-software" class="modal">
+<dialog id="modal-software" class="modal modal-md">
   <h2 id="modal-software-title">소프트웨어 추가</h2>
+  <p class="modal-desc">자산에 연결된 소프트웨어와 라이선스 정보를 관리합니다.</p>
   <form id="form-software">
     <input type="hidden" id="sw-id">
-    <div class="form-grid">
-      <label>소프트웨어명 <input type="text" id="sw-name" required></label>
-      <label>버전 <input type="text" id="sw-version"></label>
-      <label>라이선스 유형 <input type="text" id="sw-license-type"></label>
-      <label>라이선스 수량 <input type="number" id="sw-license-count" min="0"></label>
-      <label>관계 유형
-        <select id="sw-relation-type">
-          <option value="installed">설치됨</option>
-          <option value="managed">관리됨</option>
-          <option value="dependent">의존</option>
-        </select>
-      </label>
-      <label>비고 <input type="text" id="sw-note"></label>
-    </div>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">기본 정보</legend>
+      <div class="form-grid">
+        <label>소프트웨어명 <input type="text" id="sw-name" required></label>
+        <label>버전 <input type="text" id="sw-version"></label>
+        <label>관계 유형
+          <select id="sw-relation-type">
+            <option value="installed">설치됨</option>
+            <option value="managed">관리됨</option>
+            <option value="dependent">의존</option>
+          </select>
+        </label>
+        <label>비고 <input type="text" id="sw-note"></label>
+      </div>
+    </fieldset>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">라이선스</legend>
+      <div class="form-grid">
+        <label>라이선스 유형 <input type="text" id="sw-license-type"></label>
+        <label>라이선스 수량 <input type="number" id="sw-license-count" min="0"></label>
+      </div>
+    </fieldset>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-sw">취소</button>
@@ -149,30 +254,39 @@
 </dialog>
 
 <!-- IP 할당 추가/수정 모달 -->
-<dialog id="modal-ip" class="modal">
+<dialog id="modal-ip" class="modal modal-lg">
   <h2 id="modal-ip-title">IP 추가</h2>
+  <p class="modal-desc">IP 주소와 네트워크 연결 정보를 자산에 연결합니다.</p>
   <form id="form-ip">
     <input type="hidden" id="ip-id">
-    <div class="form-grid">
-      <label>IP 주소 <input type="text" id="ip-address" required></label>
-      <label>유형
-        <select id="ip-type">
-          <option value="service">서비스</option>
-          <option value="management">관리</option>
-          <option value="heartbeat">하트비트</option>
-          <option value="backup">백업</option>
-          <option value="other">기타</option>
-        </select>
-      </label>
-      <label>인터페이스 <input type="text" id="ip-interface"></label>
-      <label>호스트명 <input type="text" id="ip-hostname"></label>
-      <label>VLAN <input type="text" id="ip-vlan"></label>
-      <label>네트워크 <input type="text" id="ip-network"></label>
-      <label>서브넷 마스크 <input type="text" id="ip-netmask"></label>
-      <label>게이트웨이 <input type="text" id="ip-gateway"></label>
-      <label class="chk-inline"><input type="checkbox" id="ip-is-primary"> 대표 IP</label>
-      <label>비고 <input type="text" id="ip-note"></label>
-    </div>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">주소 정보</legend>
+      <div class="form-grid">
+        <label>IP 주소 <input type="text" id="ip-address" required></label>
+        <label>유형
+          <select id="ip-type">
+            <option value="service">서비스</option>
+            <option value="management">관리</option>
+            <option value="heartbeat">하트비트</option>
+            <option value="backup">백업</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+        <label>인터페이스 <input type="text" id="ip-interface"></label>
+        <label>호스트명 <input type="text" id="ip-hostname"></label>
+      </div>
+    </fieldset>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">네트워크</legend>
+      <div class="form-grid">
+        <label>VLAN <input type="text" id="ip-vlan"></label>
+        <label>네트워크 <input type="text" id="ip-network"></label>
+        <label>서브넷 마스크 <input type="text" id="ip-netmask"></label>
+        <label>게이트웨이 <input type="text" id="ip-gateway"></label>
+        <label class="chk-inline full-width"><input type="checkbox" id="ip-is-primary"> 대표 IP</label>
+        <label class="full-width">비고 <input type="text" id="ip-note"></label>
+      </div>
+    </fieldset>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-ip">취소</button>
@@ -181,14 +295,37 @@
 </dialog>
 
 <!-- 담당자 연결 모달 -->
-<dialog id="modal-contact" class="modal">
+<dialog id="modal-contact" class="modal modal-sm">
   <h2>담당자 연결</h2>
+  <p class="modal-desc">자산 담당자와 역할을 연결합니다.</p>
   <form id="form-contact">
     <input type="hidden" id="ct-id">
-    <div class="form-grid">
-      <label>담당자 ID <input type="number" id="ct-contact-id" required></label>
-      <label>역할 <input type="text" id="ct-role" placeholder="예: 운영, 보안, 네트워크"></label>
-    </div>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">담당자 정보</legend>
+      <div class="form-grid">
+        <label class="full-width">담당자
+          <select id="ct-contact-id" required></select>
+        </label>
+        <label>역할
+          <select id="ct-role-preset">
+            <option value="">-- 역할 선택 --</option>
+            <option value="운영">운영</option>
+            <option value="보안">보안</option>
+            <option value="네트워크">네트워크</option>
+            <option value="시스템">시스템</option>
+            <option value="DBA">DBA</option>
+            <option value="애플리케이션">애플리케이션</option>
+            <option value="개발">개발</option>
+            <option value="관리자">관리자</option>
+            <option value="승인자">승인자</option>
+            <option value="custom">직접 입력</option>
+          </select>
+        </label>
+        <label id="ct-role-custom-wrap" class="full-width hidden">직접 입력 역할
+          <input type="text" id="ct-role-custom" placeholder="예: 운영 총괄, 야간 담당">
+        </label>
+      </div>
+    </fieldset>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-ct">취소</button>
@@ -196,27 +333,72 @@
   </div>
 </dialog>
 
+<!-- 관련업체 연결 모달 -->
+<dialog id="modal-related-partner" class="modal modal-md">
+  <h2 id="modal-related-partner-title">관련업체 연결</h2>
+  <p class="modal-desc">유지보수사, 공급사, 설치사 등 자산과 연관된 업체를 관리합니다.</p>
+  <form id="form-related-partner">
+    <input type="hidden" id="rp-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">업체 정보</legend>
+      <div class="form-grid">
+        <label class="full-width">업체
+          <select id="rp-partner-id" required></select>
+        </label>
+        <label>관계 유형
+          <select id="rp-relation-type">
+            <option value="maintainer">유지보수사</option>
+            <option value="supplier">공급사</option>
+            <option value="installer">설치사</option>
+            <option value="operator">운영사</option>
+            <option value="carrier">통신사</option>
+            <option value="vendor">제조사/벤더</option>
+            <option value="lessor">임대사</option>
+            <option value="owner">소유주체</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+        <label>유효 시작일 <input type="date" id="rp-valid-from"></label>
+        <label>유효 종료일 <input type="date" id="rp-valid-to"></label>
+        <label class="chk-inline full-width"><input type="checkbox" id="rp-is-primary"> 대표 연결로 표시</label>
+        <label class="full-width">비고 <input type="text" id="rp-note" placeholder="계약 범위나 담당 역할을 남겨두세요."></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-rp">취소</button>
+    <button class="btn btn-primary" id="btn-save-rp">저장</button>
+  </div>
+</dialog>
+
 <!-- 관계 추가 모달 -->
-<dialog id="modal-relation" class="modal">
+<dialog id="modal-relation" class="modal modal-sm">
   <h2 id="modal-relation-title">관계 추가</h2>
+  <p class="modal-desc">다른 자산과의 연결 관계를 등록합니다.</p>
   <form id="form-relation">
     <input type="hidden" id="rel-id">
-    <div class="form-grid">
-      <label>대상 자산 ID <input type="number" id="rel-dst-asset-id" required></label>
-      <label>관계 유형
-        <select id="rel-type">
-          <option value="HOSTS">HOSTS</option>
-          <option value="INSTALLED_ON">INSTALLED_ON</option>
-          <option value="PROTECTS">PROTECTS</option>
-          <option value="CONNECTS_TO">CONNECTS_TO</option>
-          <option value="DEPENDS_ON">DEPENDS_ON</option>
-          <option value="BACKUP_OF">BACKUP_OF</option>
-          <option value="HA_PAIR">HA_PAIR</option>
-          <option value="OTHER">OTHER</option>
-        </select>
-      </label>
-      <label>비고 <input type="text" id="rel-note"></label>
-    </div>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">연결 대상</legend>
+      <div class="form-grid">
+        <label class="full-width">대상 자산
+          <select id="rel-dst-asset-id" required></select>
+        </label>
+        <label>관계 유형
+          <select id="rel-type">
+            <option value="HOSTS">호스팅함</option>
+            <option value="INSTALLED_ON">설치됨</option>
+            <option value="PROTECTS">보호함</option>
+            <option value="CONNECTS_TO">연결됨</option>
+            <option value="DEPENDS_ON">의존함</option>
+            <option value="BACKUP_OF">백업/대체</option>
+            <option value="HA_PAIR">HA 페어</option>
+            <option value="OTHER">기타</option>
+          </select>
+        </label>
+        <p class="modal-hint full-width" id="rel-type-hint">현재 자산과 대상 자산의 연결 의미를 선택하세요.</p>
+        <label class="full-width">비고 <input type="text" id="rel-note"></label>
+      </div>
+    </fieldset>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-rel">취소</button>
@@ -225,31 +407,136 @@
 </dialog>
 
 <!-- 별칭 추가/수정 모달 -->
-<dialog id="modal-alias" class="modal">
+<dialog id="modal-alias" class="modal modal-md">
   <h2 id="modal-alias-title">별칭 추가</h2>
+  <p class="modal-desc">내부명, 고객사명, 레거시명을 자산 별칭으로 관리합니다.</p>
   <form id="form-alias">
     <input type="hidden" id="alias-id">
-    <div class="form-grid">
-      <label>별칭 이름 <input type="text" id="alias-name" required></label>
-      <label>유형
-        <select id="alias-type">
-          <option value="INTERNAL">내부</option>
-          <option value="CUSTOMER">고객사</option>
-          <option value="VENDOR">벤더</option>
-          <option value="TEAM">팀</option>
-          <option value="LEGACY">레거시</option>
-          <option value="ETC">기타</option>
-        </select>
-      </label>
-      <label>출처 업체 ID <input type="number" id="alias-source-partner"></label>
-      <label>출처 텍스트 <input type="text" id="alias-source-text"></label>
-      <label>비고 <input type="text" id="alias-note"></label>
-      <label class="chk-inline"><input type="checkbox" id="alias-is-primary"> 대표 별칭</label>
-    </div>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">별칭 정보</legend>
+      <div class="form-grid">
+        <label>별칭 이름 <input type="text" id="alias-name" required></label>
+        <label>유형
+          <select id="alias-type">
+            <option value="INTERNAL">내부</option>
+            <option value="CUSTOMER">고객사</option>
+            <option value="VENDOR">벤더</option>
+            <option value="TEAM">팀</option>
+            <option value="LEGACY">레거시</option>
+            <option value="ETC">기타</option>
+          </select>
+        </label>
+        <label>출처 업체 ID <input type="number" id="alias-source-partner"></label>
+        <label>출처 텍스트 <input type="text" id="alias-source-text"></label>
+        <label class="full-width">비고 <input type="text" id="alias-note"></label>
+        <label class="chk-inline full-width"><input type="checkbox" id="alias-is-primary"> 대표 별칭</label>
+      </div>
+    </fieldset>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-alias">취소</button>
     <button class="btn btn-primary" id="btn-save-alias">저장</button>
+  </div>
+</dialog>
+
+<!-- 변경 이력 추가 모달 -->
+<dialog id="modal-event" class="modal modal-md">
+  <h2>변경 이력 추가</h2>
+  <p class="modal-desc">교체, 장애, 용도전환 등 자산 변경 이벤트를 기록합니다.</p>
+  <form id="form-event">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">이력 정보</legend>
+      <div class="form-grid">
+        <label>이력 유형
+          <select id="event-type">
+            <option value="replacement">교체</option>
+            <option value="failover">장애 대체</option>
+            <option value="repurpose">용도 전환</option>
+            <option value="maintenance_change">유지보수 변경</option>
+            <option value="serial_update">식별정보 변경</option>
+            <option value="note">일반 메모</option>
+          </select>
+        </label>
+        <label>발생 시각
+          <input type="datetime-local" id="event-occurred-at">
+        </label>
+        <p class="modal-hint full-width" id="event-template-hint">이력 유형을 선택하면 요약과 상세 문구를 기본 제안합니다.</p>
+        <label id="event-related-asset-wrap" class="full-width hidden">관련 자산
+          <select id="event-related-asset-id"></select>
+        </label>
+        <label id="event-related-partner-wrap" class="full-width hidden">변경 대상 업체
+          <select id="event-related-partner-id"></select>
+        </label>
+        <label id="event-from-use-wrap" class="hidden">이전 용도
+          <input type="text" id="event-from-use" placeholder="예: 내부망 운영 방화벽">
+        </label>
+        <label id="event-to-use-wrap" class="hidden">변경 용도
+          <input type="text" id="event-to-use" placeholder="예: 개발 검증 방화벽">
+        </label>
+        <label id="event-old-id-wrap" class="hidden">이전 식별정보
+          <input type="text" id="event-old-id" placeholder="예: serial, asset number">
+        </label>
+        <label id="event-new-id-wrap" class="hidden">신규 식별정보
+          <input type="text" id="event-new-id" placeholder="예: 교체 후 serial">
+        </label>
+        <label class="full-width">요약 <input type="text" id="event-summary" required></label>
+        <label class="full-width">상세 <textarea id="event-detail" rows="4"></textarea></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-event">취소</button>
+    <button class="btn btn-primary" id="btn-save-event">저장</button>
+  </div>
+</dialog>
+
+<dialog id="modal-asset-role-action" class="modal modal-md">
+  <h2 id="asset-role-action-title">역할 액션</h2>
+  <p class="modal-desc" id="asset-role-action-desc">현재 자산이 맡고 있는 역할 기준으로 전환 액션을 처리합니다.</p>
+  <form id="form-asset-role-action">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">액션 정보</legend>
+      <div class="form-grid">
+        <label class="full-width">대상 역할
+          <select id="asset-role-action-role-id"></select>
+        </label>
+        <label id="asset-role-action-asset-wrap" class="full-width hidden">대상 자산
+          <select id="asset-role-action-asset-id"></select>
+        </label>
+        <label id="asset-role-action-new-role-name-wrap" class="full-width hidden">신규 역할명
+          <input type="text" id="asset-role-action-new-role-name" placeholder="예: 개발 검증 방화벽">
+        </label>
+        <label id="asset-role-action-new-role-type-wrap" class="hidden">신규 역할 유형
+          <input type="text" id="asset-role-action-new-role-type" placeholder="예: firewall">
+        </label>
+        <label id="asset-role-action-new-period-wrap" class="hidden">신규 귀속사업
+          <select id="asset-role-action-new-period-id"></select>
+        </label>
+        <label>발생 시각
+          <input type="datetime-local" id="asset-role-action-occurred-at">
+        </label>
+        <label class="full-width">메모
+          <textarea id="asset-role-action-note" rows="4"></textarea>
+        </label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-asset-role-action">취소</button>
+    <button class="btn btn-primary" id="btn-save-asset-role-action">처리</button>
+  </div>
+</dialog>
+
+<!-- 자산 상세 편집 모달 -->
+<dialog id="modal-asset-detail-edit" class="modal modal-lg">
+  <h2 id="asset-detail-edit-title">자산 정보 수정</h2>
+  <p class="modal-desc" id="asset-detail-edit-desc">현재 탭의 자산 정보를 수정합니다.</p>
+  <form id="form-asset-detail-edit">
+    <div class="form-grid" id="asset-detail-edit-fields"></div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-asset-detail-edit">취소</button>
+    <button class="btn btn-primary" id="btn-save-asset-detail-edit">저장</button>
   </div>
 </dialog>
 {% endblock %}

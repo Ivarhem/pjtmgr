@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}카탈로그 정합성 관리{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/static/css/infra_common.css">{% endblock %}
+{% block content %}
+<div class="tab-nav">
+  <a href="/product-catalog" class="tab-btn">제품 카탈로그</a>
+  <a href="/catalog-management/vendors" class="tab-btn">제조사 관리</a>
+  <a href="/catalog-management/products" class="tab-btn">제품 관리</a>
+  <a href="/catalog-management/integrity" class="tab-btn active">정합성 관리</a>
+</div>
+
+<div class="page-header">
+  <h1>정합성 관리</h1>
+</div>
+
+<p class="data-note">제조사 표기 통일, 유사 모델명 정리, 속성 alias 관리를 한 곳에서 처리합니다. 현재 단계에서는 화면 골격과 탭 구조를 먼저 제공합니다.</p>
+
+<div class="catalog-integrity-layout">
+  <section class="catalog-integrity-sidebar">
+    <div class="catalog-integrity-sidebar-card">
+      <h2>작업 안내</h2>
+      <ul class="catalog-integrity-guide">
+        <li>제조사 정리: 표기가 다른 제조사명을 대표명으로 통일합니다.</li>
+        <li>제품명 유사 후보: 띄어쓰기, 대시, 축약으로 중복 등록된 모델 후보를 검토합니다.</li>
+        <li>속성 alias: 도메인, 제품군, 플랫폼 같은 속성값의 alias를 정리합니다.</li>
+      </ul>
+    </div>
+    <div class="catalog-integrity-sidebar-card">
+      <h2>예정 기능</h2>
+      <ul class="catalog-integrity-guide">
+        <li>영향 제품 수 기반 일괄 변경 preview</li>
+        <li>중복 후보 무시/처리 이력 저장</li>
+        <li>import 단계와 연결되는 alias 정규화</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="catalog-integrity-main">
+    <div class="catalog-tabs catalog-integrity-tabs" id="catalog-integrity-tabs">
+      <button class="catalog-tab active" type="button" data-integrity-tab="vendors">제조사 정리</button>
+      <button class="catalog-tab" type="button" data-integrity-tab="products">제품명 유사 후보</button>
+      <button class="catalog-tab" type="button" data-integrity-tab="aliases">속성 alias</button>
+    </div>
+
+    <div class="catalog-tab-panel active" id="catalog-integrity-tab-vendors">
+      <div class="catalog-integrity-panel-head">
+        <div>
+          <h2>제조사 정리</h2>
+          <p class="catalog-kind-lead">대표 제조사명과 alias를 관리하고, 영향 제품 수를 기준으로 정리 작업을 진행합니다.</p>
+        </div>
+        <div class="catalog-toolbar catalog-integrity-toolbar">
+          <input type="text" class="input-search" id="catalog-integrity-vendor-search" placeholder="제조사 검색">
+        </div>
+      </div>
+      <div class="catalog-integrity-placeholder">
+        <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz catalog-integrity-grid"></div>
+        <aside class="catalog-integrity-detail-placeholder" id="catalog-integrity-vendor-detail">
+          <h3>상세 / 일괄 적용</h3>
+          <p>대표 제조사와 alias 목록을 선택하면 여기서 확인할 수 있습니다.</p>
+        </aside>
+      </div>
+    </div>
+
+    <div class="catalog-tab-panel" id="catalog-integrity-tab-products">
+      <div class="catalog-integrity-panel-head">
+        <div>
+          <h2>제품명 유사 후보</h2>
+          <p class="catalog-kind-lead">정규화명과 토큰 유사도를 기준으로 중복 가능성이 높은 제품 후보를 검토합니다.</p>
+        </div>
+        <div class="catalog-toolbar catalog-integrity-toolbar">
+          <input type="text" class="input-search" id="catalog-integrity-product-search" placeholder="모델명 검색">
+          <select class="input-select" id="catalog-integrity-min-score">
+            <option value="75">유사도 75 이상</option>
+            <option value="80">유사도 80 이상</option>
+            <option value="90">유사도 90 이상</option>
+          </select>
+        </div>
+      </div>
+      <div class="catalog-integrity-placeholder">
+        <div id="grid-catalog-integrity-products" class="ag-theme-quartz catalog-integrity-grid"></div>
+        <aside class="catalog-integrity-detail-placeholder" id="catalog-integrity-product-detail">
+          <h3>비교 상세</h3>
+          <p>유사 후보를 선택하면 기준 제품과 후보 제품의 비교 정보가 표시됩니다.</p>
+        </aside>
+      </div>
+    </div>
+
+    <div class="catalog-tab-panel" id="catalog-integrity-tab-aliases">
+      <div class="catalog-integrity-panel-head">
+        <div>
+          <h2>속성 alias</h2>
+          <p class="catalog-kind-lead">domain, imp_type, product_family, platform 같은 분류/운영 속성값의 alias를 정리합니다.</p>
+        </div>
+        <div class="catalog-toolbar catalog-integrity-toolbar">
+          <select class="input-select" id="catalog-integrity-alias-attribute-filter">
+            <option value="">전체 속성</option>
+          </select>
+          <input type="text" class="input-search" id="catalog-integrity-alias-search" placeholder="alias 또는 대표값 검색">
+        </div>
+      </div>
+      <div class="catalog-integrity-placeholder">
+        <div id="grid-catalog-integrity-aliases" class="ag-theme-quartz catalog-integrity-grid"></div>
+        <aside class="catalog-integrity-detail-placeholder catalog-integrity-detail-form" id="catalog-integrity-alias-detail">
+          <div class="catalog-integrity-detail-head">
+            <h3>alias 상세</h3>
+            <button type="button" class="btn btn-secondary btn-sm" id="catalog-integrity-alias-new">새 alias</button>
+          </div>
+          <div class="catalog-integrity-form-grid">
+            <label>속성 키
+              <select class="input-select" id="catalog-integrity-alias-attribute">
+                <option value="">속성 선택</option>
+              </select>
+            </label>
+            <label>대표 속성값
+              <select class="input-select" id="catalog-integrity-alias-option">
+                <option value="">대표 속성값 선택</option>
+              </select>
+            </label>
+            <label>Alias
+              <input type="text" class="input-text" id="catalog-integrity-alias-value" placeholder="예: Paloalto / 팔로알토">
+            </label>
+            <label>정규화 키
+              <input type="text" class="input-text" id="catalog-integrity-alias-normalized" readonly>
+            </label>
+            <label>정렬순서
+              <input type="number" class="input-text" id="catalog-integrity-alias-sort-order" value="100">
+            </label>
+            <label class="catalog-integrity-checkbox">
+              <input type="checkbox" id="catalog-integrity-alias-active" checked>
+              활성
+            </label>
+          </div>
+          <div class="catalog-integrity-meta" id="catalog-integrity-alias-meta">
+            <p>선택한 alias가 없으면 새 등록 상태로 열립니다.</p>
+          </div>
+          <div class="catalog-integrity-form-actions">
+            <button type="button" class="btn btn-primary" id="catalog-integrity-alias-save">저장</button>
+            <button type="button" class="btn btn-danger" id="catalog-integrity-alias-delete">삭제</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/infra_catalog_integrity.js"></script>
+{% endblock %}

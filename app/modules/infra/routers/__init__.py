@@ -26,6 +26,23 @@ from app.modules.infra.routers.infra_dashboard import router as infra_dashboard_
 from app.modules.infra.routers.product_catalogs import router as product_catalog_router
 from app.modules.infra.routers.infra_excel import router as infra_excel_router
 from app.modules.infra.routers.asset_aliases import router as asset_aliases_router
+from app.modules.infra.routers.asset_events import router as asset_events_router
+from app.modules.infra.routers.asset_related_partners import (
+    router as asset_related_partners_router,
+)
+from app.modules.infra.routers.asset_roles import router as asset_roles_router
+from app.modules.infra.routers.centers import router as centers_router
+from app.modules.infra.routers.rooms import router as rooms_router
+from app.modules.infra.routers.racks import router as racks_router
+from app.modules.infra.routers.catalog_attributes import (
+    router as catalog_attributes_router,
+)
+from app.modules.infra.routers.classification_layouts import (
+    router as classification_layouts_router,
+)
+from app.modules.infra.routers.catalog_integrity import (
+    router as catalog_integrity_router,
+)
 from app.modules.infra.routers.pages import router as pages_router
 
 api_router = APIRouter(dependencies=[require_module_access("infra", "read")])
@@ -47,6 +64,15 @@ api_router.include_router(infra_dashboard_router)
 api_router.include_router(product_catalog_router)
 api_router.include_router(infra_excel_router)
 api_router.include_router(asset_aliases_router)
+api_router.include_router(asset_events_router)
+api_router.include_router(asset_related_partners_router)
+api_router.include_router(asset_roles_router)
+api_router.include_router(centers_router)
+api_router.include_router(rooms_router)
+api_router.include_router(racks_router)
+api_router.include_router(catalog_attributes_router)
+api_router.include_router(classification_layouts_router)
+api_router.include_router(catalog_integrity_router)
 api_router.include_router(pages_router)
 
 __all__ = ["api_router"]

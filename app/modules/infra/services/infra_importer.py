@@ -12,6 +12,7 @@ from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
 from app.modules.common.models.partner import Partner
+from app.modules.infra.services.catalog_alias_service import resolve_vendor_canonical
 
 # ── 파일 유효성 검증 ──
 
@@ -107,29 +108,6 @@ def _to_date(val):
         except ValueError:
             continue
     return None
-
-
-def _derive_asset_type(category: str) -> str:
-    """대분류(category)에서 asset_type을 유추. 매핑 없으면 'etc'."""
-    cat = category.lower() if category else ""
-    mapping = {
-        "서버": "server",
-        "server": "server",
-        "네트워크": "network",
-        "network": "network",
-        "스위치": "network",
-        "switch": "network",
-        "보안": "security",
-        "security": "security",
-        "방화벽": "security",
-        "firewall": "security",
-        "스토리지": "storage",
-        "storage": "storage",
-    }
-    for keyword, asset_type in mapping.items():
-        if keyword in cat:
-            return asset_type
-    return "etc"
 
 
 def _append_error(
@@ -249,10 +227,6 @@ def parse_inventory_sheet(file_bytes: bytes, partner_id: int) -> dict:
 
         asset_data["asset_name"] = asset_name
 
-        # asset_type 유추
-        category = asset_data.get("category", "") or ""
-        asset_data["asset_type"] = _derive_asset_type(category)
-
         # 상태 기본값
         asset_data["status"] = "active"
         asset_data["environment"] = "prod"
@@ -281,7 +255,6 @@ def parse_inventory_sheet(file_bytes: bytes, partner_id: int) -> dict:
             {
                 "row_num": excel_row,
                 "asset_name": asset_name,
-                "asset_type": asset_data["asset_type"],
                 "hostname": asset_data.get("hostname"),
                 "vendor": asset_data.get("vendor"),
                 "model": asset_data.get("model"),
@@ -351,6 +324,8 @@ def import_inventory(
 
     for row_data in parsed_rows:
         row_data["partner_id"] = partner_id
+        row_data["vendor"] = resolve_vendor_canonical(db, row_data.get("vendor")) or row_data.get("vendor")
+        row_data["maintenance_vendor"] = resolve_vendor_canonical(db, row_data.get("maintenance_vendor")) or row_data.get("maintenance_vendor")
         asset_name = row_data.get("asset_name", "")
         if not asset_name:
             continue

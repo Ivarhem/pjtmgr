@@ -27,7 +27,6 @@ class PeriodAssetRead(BaseModel):
     note: str | None
     # enriched
     asset_name: str | None = None
-    asset_type: str | None = None
     hostname: str | None = None
     period_label: str | None = None
     created_at: datetime

@@ -21,6 +21,9 @@ class AssetContactRead(BaseModel):
     id: int
     asset_id: int
     contact_id: int
+    contact_name: str | None = None
+    contact_phone: str | None = None
+    contact_email: str | None = None
     role: str | None
     created_at: datetime
     updated_at: datetime

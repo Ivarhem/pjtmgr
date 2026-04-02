@@ -49,6 +49,13 @@ def assets_page(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/asset-roles", response_class=HTMLResponse)
+def asset_roles_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_asset_roles.html", {"request": request}
+    )
+
+
 @router.get("/ip-inventory", response_class=HTMLResponse)
 def ip_inventory_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
@@ -60,6 +67,13 @@ def ip_inventory_page(request: Request) -> HTMLResponse:
 def port_maps_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
         "infra_port_maps.html", {"request": request}
+    )
+
+
+@router.get("/physical-layout", response_class=HTMLResponse)
+def physical_layout_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse(
+        "infra_physical_layout.html", {"request": request}
     )
 
 

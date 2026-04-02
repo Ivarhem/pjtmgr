@@ -59,7 +59,7 @@ accounting <-> infra   절대 금지
 - CRUD는 GET/POST/PATCH/DELETE를 사용하고 PUT은 사용하지 않는다
 - Upsert(생성-또는-갱신) 동작도 POST를 사용한다 (예: `POST /{부모}/{id}/{하위리소스}`)
 - 비-CRUD 동작은 `POST /{리소스}/{id}/{동작}` 패턴을 사용한다
-- 라우터는 `current_user`와 입력값을 service에 전달하고, access helper 호출과 권한 최종 판단은 service가 소유한다.
+- 라우터는 `current_user`와 입력값을 service에 전달한다. 권한 검사는 **라우터의 coarse gate + 서비스의 최종 재검증** 구조를 따른다.
 
 ## 도메인 용어 통일
 
@@ -84,6 +84,7 @@ accounting <-> infra   절대 금지
 
 - 서비스도 도메인 단위로 분리한다. 하나의 서비스 파일이 비대해지면(~500줄 이상) 엔티티별로 분리하고, 교차 도메인 공유 함수는 `_` 접두사 헬퍼 모듈(예: `_contract_helpers.py`)에 둔다.
 - 서비스에서 커스텀 예외를 발생시키고, 전역 핸들러(`app/core/app_factory.py`)가 HTTP 응답으로 자동 변환한다.
+- 라우터의 dependency(`require_admin`, `require_module_access`)는 1차 차단선일 뿐이고, **서비스가 source of truth**다. 직접 호출, 잘못된 path 조합, 누락된 상위 ID 같은 경우까지 서비스가 최종 검증한다.
 - 계약/기간 단위 조회/생성/수정/삭제의 접근 권한 검사는 서비스가 최종 책임진다. 라우터는 `current_user`와 입력값만 전달한다.
 - 서비스는 데이터 scope 권한과 기능 action 권한(예: 삭제 가능 여부)을 모두 최종 검증한다.
 - 단건 수정/삭제처럼 path에 상위 계약 ID가 없는 엔드포인트도 서비스에서 대상 리소스의 계약/소유 범위를 역추적해 권한을 확인한다.

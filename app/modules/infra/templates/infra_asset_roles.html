@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}자산 역할 뷰{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
+{% block content %}
+<div class="tab-nav">
+  <a href="/assets" class="tab-btn">자산 목록</a>
+  <a href="/asset-roles" class="tab-btn active">역할 기준 보기</a>
+  <a href="/ip-inventory" class="tab-btn">IP 인벤토리</a>
+  <a href="/port-maps" class="tab-btn">포트맵</a>
+  <a href="/physical-layout" class="tab-btn">물리배치</a>
+  <label class="chk-inline tab-nav-filter"><input type="checkbox" id="chk-project-filter"> 선택 프로젝트만</label>
+</div>
+
+<div class="page-header">
+  <h1>역할 기준 보기</h1>
+  <div class="page-header-actions">
+    <button class="btn btn-primary" id="btn-add-role">역할 등록</button>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <label>검색
+    <input type="text" id="filter-role-search" placeholder="역할명, 유형, 현재 자산명">
+  </label>
+  <label>상태
+    <select id="filter-role-status">
+      <option value="">전체</option>
+      <option value="active">활성</option>
+      <option value="inactive">비활성</option>
+      <option value="retired">종료</option>
+    </select>
+  </label>
+</div>
+
+<div class="card">
+  <div id="grid-asset-roles" class="ag-theme-quartz infra-grid infra-grid-480"></div>
+</div>
+
+<div id="asset-role-detail-panel" class="detail-panel hidden">
+  <div class="detail-header">
+    <span id="detail-role-name" class="detail-title"></span>
+    <div class="detail-header-actions">
+      <button class="btn btn-sm btn-secondary" id="btn-role-replacement">교체</button>
+      <button class="btn btn-sm btn-secondary" id="btn-role-failover">장애대체</button>
+      <button class="btn btn-sm btn-secondary" id="btn-role-repurpose">용도전환</button>
+      <button class="btn btn-sm btn-secondary" id="btn-add-role-assignment">할당 추가</button>
+      <button class="btn btn-sm btn-secondary" id="btn-edit-role">수정</button>
+      <button class="btn btn-sm btn-danger" id="btn-delete-role">삭제</button>
+      <button class="btn btn-sm" id="btn-close-role-detail" title="닫기">&times;</button>
+    </div>
+  </div>
+  <div class="detail-tabs">
+    <button class="tab-btn active" data-rtab="basic">기본 정보</button>
+    <button class="tab-btn" data-rtab="assignments">할당 이력</button>
+  </div>
+  <div id="asset-role-detail-content" class="detail-body"></div>
+</div>
+
+<dialog id="modal-asset-role" class="modal modal-md">
+  <h2 id="asset-role-modal-title">역할 등록</h2>
+  <p class="modal-desc">운영 관점에서 사용하는 논리 역할을 등록합니다.</p>
+  <form id="form-asset-role">
+    <input type="hidden" id="asset-role-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">역할 정보</legend>
+      <div class="form-grid">
+        <label>역할명 <span class="text-danger">*</span>
+          <input type="text" id="role-name" required placeholder="예: 내부망방화벽">
+        </label>
+        <label>유형
+          <input type="text" id="role-type" placeholder="예: firewall, db, app">
+        </label>
+        <label>귀속사업
+          <select id="role-period-id"></select>
+        </label>
+        <label>상태
+          <select id="role-status">
+            <option value="active">활성</option>
+            <option value="inactive">비활성</option>
+            <option value="retired">종료</option>
+          </select>
+        </label>
+        <label class="full-width">비고
+          <textarea id="role-note" rows="3"></textarea>
+        </label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-role">취소</button>
+    <button class="btn btn-primary" id="btn-save-role">저장</button>
+  </div>
+</dialog>
+
+<dialog id="modal-role-assignment" class="modal modal-md">
+  <h2 id="role-assignment-modal-title">역할 할당 추가</h2>
+  <p class="modal-desc">어떤 물리 자산이 이 역할을 맡는지 시간축으로 관리합니다.</p>
+  <form id="form-role-assignment">
+    <input type="hidden" id="role-assignment-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">할당 정보</legend>
+      <div class="form-grid">
+        <label class="full-width">자산
+          <select id="assignment-asset-id" required></select>
+        </label>
+        <label>할당 유형
+          <select id="assignment-type">
+            <option value="primary">주 담당</option>
+            <option value="secondary">보조</option>
+            <option value="backup">예비/대체</option>
+            <option value="temporary">임시</option>
+          </select>
+        </label>
+        <label>유효 시작일
+          <input type="date" id="assignment-valid-from">
+        </label>
+        <label>유효 종료일
+          <input type="date" id="assignment-valid-to">
+        </label>
+        <label class="chk-inline full-width"><input type="checkbox" id="assignment-is-current" checked> 현재 담당으로 표시</label>
+        <label class="full-width">비고
+          <input type="text" id="assignment-note" placeholder="교체, 백업, 임시 투입 등 메모">
+        </label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-role-assignment">취소</button>
+    <button class="btn btn-primary" id="btn-save-role-assignment">저장</button>
+  </div>
+</dialog>
+
+<dialog id="modal-role-action" class="modal modal-md">
+  <h2 id="role-action-modal-title">역할 액션</h2>
+  <p class="modal-desc" id="role-action-modal-desc">현재 담당 자산에 대한 전환 액션을 처리합니다.</p>
+  <form id="form-role-action">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">액션 정보</legend>
+      <div class="form-grid">
+        <label id="role-action-asset-wrap" class="full-width hidden">대상 자산
+          <select id="role-action-asset-id"></select>
+        </label>
+        <label id="role-action-new-role-name-wrap" class="full-width hidden">신규 역할명
+          <input type="text" id="role-action-new-role-name" placeholder="예: 개발 검증 방화벽">
+        </label>
+        <label id="role-action-new-role-type-wrap" class="hidden">신규 역할 유형
+          <input type="text" id="role-action-new-role-type" placeholder="예: firewall">
+        </label>
+        <label id="role-action-new-period-wrap" class="hidden">신규 귀속사업
+          <select id="role-action-new-period-id"></select>
+        </label>
+        <label>발생 시각
+          <input type="datetime-local" id="role-action-occurred-at">
+        </label>
+        <label class="full-width">메모
+          <textarea id="role-action-note" rows="4"></textarea>
+        </label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-role-action">취소</button>
+    <button class="btn btn-primary" id="btn-save-role-action">처리</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_asset_roles.js"></script>
+{% endblock %}

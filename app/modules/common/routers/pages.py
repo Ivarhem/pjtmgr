@@ -30,6 +30,26 @@ def product_catalog_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse("product_catalog.html", {"request": request})
 
 
+@router.get("/catalog-management/vendors", response_class=HTMLResponse)
+def catalog_vendor_management_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse("catalog_vendors.html", {"request": request})
+
+
+@router.get("/catalog-management/products", response_class=HTMLResponse)
+def catalog_product_management_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse("catalog_products.html", {"request": request})
+
+
+@router.get("/catalog-management/integrity", response_class=HTMLResponse)
+def catalog_integrity_management_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse("catalog_integrity.html", {"request": request})
+
+
+@router.get("/catalog-integrity", response_class=HTMLResponse)
+def catalog_integrity_page(request: Request) -> HTMLResponse:
+    return _templates(request).TemplateResponse("catalog_integrity.html", {"request": request})
+
+
 @router.get("/audit-logs", response_class=HTMLResponse)
 def audit_logs_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse("audit_logs.html", {"request": request})

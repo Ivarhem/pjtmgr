@@ -2,7 +2,9 @@ import os
 from collections.abc import Generator
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.database import Base
@@ -31,6 +33,10 @@ from app.modules.accounting.models import (  # noqa: F401
 )
 from app.modules.infra.models import (  # noqa: F401
     Asset,
+    AssetEvent,
+    AssetRelatedPartner,
+    AssetRole,
+    AssetRoleAssignment,
     AssetContact,
     AssetIP,
     AssetRelation,
@@ -48,6 +54,7 @@ from app.modules.infra.models import (  # noqa: F401
     PortMap,
     ProductCatalog,
 )
+from app.modules.common.services.contract_type_config import seed_defaults as seed_contract_type_defaults
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -55,13 +62,46 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
+def _normalize_test_db_url(db_url: str) -> str:
+    if db_url.startswith("postgresql://"):
+        return db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return db_url
+
+
+def _ensure_test_database_exists(db_url: str) -> None:
+    url = make_url(db_url)
+    database_name = url.database
+    if not database_name or not url.drivername.startswith("postgresql"):
+        return
+
+    admin_url = url.set(database="postgres")
+    admin_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT", pool_pre_ping=True)
+    try:
+        with admin_engine.connect() as conn:
+            exists = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :name"),
+                {"name": database_name},
+            ).scalar()
+            if not exists:
+                try:
+                    conn.execute(text(f'CREATE DATABASE "{database_name}"'))
+                except IntegrityError:
+                    pass
+    finally:
+        admin_engine.dispose()
+
+
 @pytest.fixture
 def db_session() -> Generator[Session, None, None]:
-    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+    test_db_url = _normalize_test_db_url(TEST_DATABASE_URL)
+    _ensure_test_database_exists(test_db_url)
+
+    engine = create_engine(test_db_url, pool_pre_ping=True)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
+        seed_contract_type_defaults(session)
         yield session
     finally:
         session.close()

@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}시스템 관리{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/static/css/system.css">
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>시스템 관리</h1>
+</div>
+<div class="tab-nav" id="system-tabs">
+  <button class="tab-btn active" data-tab="common">공통</button>
+  {% if "accounting" in enabled_modules %}
+  <button class="tab-btn" data-tab="accounting">영업관리</button>
+  {% endif %}
+  {% if "infra" in enabled_modules %}
+  <button class="tab-btn" data-tab="infra">프로젝트관리</button>
+  {% endif %}
+</div>
+
+<div id="tab-common">
+<p class="data-note">※ 시스템 전반 설정을 관리합니다. 조직명, 사업유형(MA/SI/HW 등)의 기본값, UI에 표시되는 용어를 커스터마이징할 수 있습니다.</p>
+
+<!-- 기본 설정 -->
+<div class="sys-section">
+  <h2 class="sys-section-title">기본 설정</h2>
+  <div class="form-grid form-grid-single">
+    <label>
+      조직명
+      <input type="text" id="input-org-name" placeholder="예: 홍길동팀">
+    </label>
+    <label>
+      비밀번호 최소 길이
+      <input type="number" id="input-password-min-length" min="8" max="64" placeholder="예: 8">
+    </label>
+  </div>
+  <div class="modal-actions">
+    <button id="btn-save-settings" class="btn btn-primary">저장</button>
+  </div>
+  <p class="data-note">설정된 조직명은 상단 브랜드명 앞에 표시됩니다. 비밀번호 최소 길이는 비밀번호 변경 화면과 서버 검증에 함께 적용됩니다.</p>
+</div>
+
+<!-- 용어 관리 -->
+<div class="sys-section">
+  <div class="sys-section-header">
+    <h2 class="sys-section-title">용어 관리</h2>
+    <button id="btn-add-term" class="btn btn-primary btn-sm">+ 추가</button>
+  </div>
+  <p class="data-note sys-note">화면에 표시되는 용어를 커스터마이징합니다. 예를 들어 '고객'이라는 용어를 조직에 맞게 '거래처'로 변경할 수 있습니다. 커스텀 표시명을 비워두면 기본값이 사용됩니다.</p>
+  <div class="sys-table-wrap">
+    <table class="sys-table" id="term-config-table">
+      <colgroup>
+        <col class="col-w50">
+        <col class="col-w130">
+        <col class="col-w80">
+        <col class="col-w80">
+        <col class="col-w80">
+        <col class="col-w50">
+        <col class="col-w80">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>키</th>
+          <th>표준명(한)</th>
+          <th>기본 표시명</th>
+          <th>커스텀 표시명</th>
+          <th>활성</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="term-config-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<div id="tab-accounting" style="display:none;">
+<!-- 사업유형 관리 -->
+<div class="sys-section">
+  <div class="sys-section-header">
+    <h2 class="sys-section-title">사업유형 관리</h2>
+    <button id="btn-add-contract-type" class="btn btn-primary btn-sm">+ 추가</button>
+  </div>
+  <p class="data-note sys-note">사업유형(예: MA=유지보수, SI=시스템구축, HW=하드웨어)과 기본 GP%, 검수일, 세금계산서 발행 규칙을 관리합니다. 여기서 설정한 기본값은 사업 등록 시 자동 적용됩니다. 비활성화하면 새 사업 등록 시 해당 유형을 선택할 수 없습니다.</p>
+  <div class="sys-table-wrap">
+    <table class="sys-table" id="contract-type-table">
+      <colgroup>
+        <col class="col-w60">
+        <col class="col-w80">
+        <col class="col-w50">
+        <col class="col-w55">
+        <col class="col-w55">
+        <col class="col-w90">
+        <col class="col-w50">
+        <col class="col-w60">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>코드</th>
+          <th>표시명</th>
+          <th>순서</th>
+          <th>GP%</th>
+          <th>검수일</th>
+          <th>계산서 발행</th>
+          <th>활성</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="contract-type-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<div id="tab-infra" style="display:none;">
+  <div class="sys-section">
+    <h2 class="sys-section-title">프로젝트관리 시스템 설정</h2>
+    <p class="data-note sys-note">카탈로그 기준관리와 제품 관리는 카탈로그 메인 화면에서 함께 처리합니다.</p>
+    <div class="modal-actions">
+      <a href="/product-catalog" class="btn btn-secondary">카탈로그로 이동</a>
+    </div>
+  </div>
+</div>
+
+<!-- 용어 추가/수정 모달 -->
+<dialog id="modal-term-config" class="modal modal-md">
+  <h2 id="modal-term-title">용어 추가</h2>
+
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">기본 정보</legend>
+    <div class="form-grid">
+      <label>키 <input type="text" id="tc-term-key" placeholder="예: contract" maxlength="50"></label>
+      <label>구분
+        <select id="tc-category">
+          <option value="entity">entity</option>
+          <option value="metric">metric</option>
+          <option value="report">report</option>
+        </select>
+      </label>
+      <label>영문 표준명 <input type="text" id="tc-standard-en" placeholder="예: Contract"></label>
+      <label>한글 표준명 <input type="text" id="tc-standard-ko" placeholder="예: 계약"></label>
+    </div>
+  </fieldset>
+
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">표시 설정</legend>
+    <div class="form-grid">
+      <label>기본 표시명 <input type="text" id="tc-default-label" placeholder="예: 계약"></label>
+      <label>커스텀 표시명 <input type="text" id="tc-custom-label" placeholder="비워두면 기본값 사용"></label>
+      <label>순서 <input type="number" id="tc-sort-order" value="0" min="0"></label>
+      <label class="full-width">
+        정의
+        <textarea id="tc-definition" rows="2" placeholder="용어 설명"></textarea>
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="modal-actions">
+    <button type="button" id="btn-tc-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-tc-submit" class="btn btn-primary">저장</button>
+  </div>
+</dialog>
+
+<!-- 사업유형 추가/수정 모달 -->
+<dialog id="modal-contract-type" class="modal modal-md">
+  <h2 id="modal-contract-type-title">사업유형 추가</h2>
+
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">기본 정보</legend>
+    <div class="form-grid">
+      <label>코드 <input type="text" id="dt-code" placeholder="예: MA" maxlength="30"></label>
+      <label>표시명 <input type="text" id="dt-label" placeholder="예: MA"></label>
+      <label>정렬 순서 <input type="number" id="dt-sort-order" value="0" min="0"></label>
+      <label>기본 GP% <input type="number" id="dt-gp-pct" placeholder="예: 40" min="0" max="100"></label>
+    </div>
+  </fieldset>
+
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">정산 설정</legend>
+    <div class="form-grid">
+      <label>기본 검수일 <input type="number" id="dt-inspection-day" placeholder="0=말일" min="0" max="31"></label>
+      <label>발행 기준월
+        <select id="dt-invoice-month-offset">
+          <option value="">미설정</option>
+          <option value="0">당월</option>
+          <option value="1">익월</option>
+        </select>
+      </label>
+      <label>발행일 유형
+        <select id="dt-invoice-day-type">
+          <option value="">미설정</option>
+          <option value="1일">1일</option>
+          <option value="말일">말일</option>
+          <option value="특정일">특정일</option>
+        </select>
+      </label>
+      <label>발행일 (특정일) <input type="number" id="dt-invoice-day" placeholder="예: 15" min="1" max="31"></label>
+      <label>휴일 조정
+        <select id="dt-invoice-holiday-adjust">
+          <option value="">미설정</option>
+          <option value="전">전</option>
+          <option value="후">후</option>
+        </select>
+      </label>
+    </div>
+  </fieldset>
+
+  <div class="modal-actions">
+    <button type="button" id="btn-dt-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-dt-submit" class="btn btn-primary">저장</button>
+  </div>
+</dialog>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/system.js"></script>
+{% endblock %}

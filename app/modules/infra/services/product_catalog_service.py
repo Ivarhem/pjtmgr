@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -541,13 +541,17 @@ def _populate_product_list_cache(db: Session, layout_id: int | None) -> None:
         )
     )
 
-    # Insert all
+    # Insert all (datetime/date → ISO string for JSONB)
     for product, data in zip(all_products, all_data):
+        clean_data = {
+            k: (v.isoformat() if isinstance(v, (datetime, date)) else v)
+            for k, v in data.items()
+        }
         db.add(
             ProductCatalogListCache(
                 product_id=product.id,
                 layout_id=layout_id,
-                data=data,
+                data=clean_data,
                 cached_at=now,
             )
         )

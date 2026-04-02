@@ -26,14 +26,18 @@ def _is_admin(user: User) -> bool:
     return bool(user.role_obj.permissions.get("admin", False))
 
 
+def _permissions(user: User) -> dict:
+    perms = getattr(user, "role_obj", None)
+    if perms is None:
+        return {}
+    return user.role_obj.permissions or {}
+
+
 def can_access_module(user: User, module_name: str) -> bool:
     """사용자가 특정 모듈에 접근 가능한지 반환."""
     if _is_admin(user):
         return True
-    perms = getattr(user, "role_obj", None)
-    if perms is None:
-        return False
-    modules = user.role_obj.permissions.get("modules", {})
+    modules = _permissions(user).get("modules", {})
     return modules.get(module_name) in ("read", "full")
 
 
@@ -41,10 +45,7 @@ def get_module_access_level(user: User, module_name: str) -> str | None:
     """사용자의 모듈 접근 수준 반환. None/read/full."""
     if _is_admin(user):
         return "full"
-    perms = getattr(user, "role_obj", None)
-    if perms is None:
-        return None
-    modules = user.role_obj.permissions.get("modules", {})
+    modules = _permissions(user).get("modules", {})
     level = modules.get(module_name)
     if level in ("read", "full"):
         return level
@@ -74,11 +75,15 @@ def can_delete_partner(user: User) -> bool:
 
 
 def can_manage_users(user: User) -> bool:
-    return _is_admin(user)
+    if _is_admin(user):
+        return True
+    return bool(_permissions(user).get("common", {}).get("manage", False))
 
 
 def can_manage_settings(user: User) -> bool:
-    return _is_admin(user)
+    if _is_admin(user):
+        return True
+    return bool(_permissions(user).get("common", {}).get("manage", False))
 
 
 def can_delete_transaction_line(user: User) -> bool:
@@ -95,14 +100,16 @@ def can_import(user: User) -> bool:
 
 def has_full_contract_scope(user: User) -> bool:
     """전체 사업 범위를 조회할 수 있는지 반환."""
-    return _is_admin(user)
+    if _is_admin(user):
+        return True
+    return _permissions(user).get("scopes", {}).get("accounting") == "all"
 
 
 def can_admin_create_contract(user: User) -> bool:
     """사업관리 화면에서 신규 등록 — 개발/정비용, 실 서비스 배포 시 비활성화."""
     from app.core.config import ENABLE_ADMIN_CONTRACT_CREATE
 
-    return _is_admin(user) and ENABLE_ADMIN_CONTRACT_CREATE
+    return has_full_contract_scope(user) and ENABLE_ADMIN_CONTRACT_CREATE
 
 
 def can_edit_inventory(user: User) -> bool:
@@ -110,6 +117,28 @@ def can_edit_inventory(user: User) -> bool:
     if _is_admin(user):
         return True
     return get_module_access_level(user, "infra") == "full"
+
+
+def can_manage_catalog_products(user: User) -> bool:
+    """카탈로그 제품/스펙/인터페이스 수정 권한."""
+    if _is_admin(user):
+        return True
+    perms = _permissions(user)
+    catalog = perms.get("catalog", {}) or {}
+    if "manage_products" in catalog:
+        return bool(catalog.get("manage_products"))
+    return can_edit_inventory(user)
+
+
+def can_manage_catalog_taxonomy(user: User) -> bool:
+    """카탈로그 기준체계(자산유형/분류체계/매핑) 수정 권한."""
+    if _is_admin(user):
+        return True
+    perms = _permissions(user)
+    catalog = perms.get("catalog", {}) or {}
+    if "manage_taxonomy" in catalog:
+        return bool(catalog.get("manage_taxonomy"))
+    return can_edit_inventory(user)
 
 
 def can_manage_policies(user: User) -> bool:
@@ -233,4 +262,6 @@ def get_permissions(user: User) -> dict[str, bool]:
         "can_export": can_export(user),
         "can_view_reports": can_view_reports(user),
         "can_admin_create_contract": can_admin_create_contract(user),
+        "can_manage_catalog_products": can_manage_catalog_products(user),
+        "can_manage_catalog_taxonomy": can_manage_catalog_taxonomy(user),
     }

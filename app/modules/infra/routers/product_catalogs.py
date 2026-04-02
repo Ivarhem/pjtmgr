@@ -7,14 +7,32 @@ from app.core.auth.dependencies import get_current_user
 from app.core.database import get_db
 from app.modules.common.models.user import User
 from app.modules.infra.schemas.product_catalog import (
+    ProductCatalogBulkUpsertRequest,
+    ProductCatalogBulkUpsertResponse,
     ProductCatalogCreate,
     ProductCatalogDetail,
     ProductCatalogRead,
     ProductCatalogUpdate,
 )
+from app.modules.infra.schemas.catalog_similarity import (
+    CatalogSimilarityCheckRequest,
+    CatalogSimilarityCheckResponse,
+)
 from app.modules.infra.schemas.hardware_spec import (
     HardwareSpecCreate,
     HardwareSpecRead,
+)
+from app.modules.infra.schemas.software_spec import (
+    SoftwareSpecCreate,
+    SoftwareSpecRead,
+)
+from app.modules.infra.schemas.model_spec import (
+    ModelSpecCreate,
+    ModelSpecRead,
+)
+from app.modules.infra.schemas.generic_catalog_profile import (
+    GenericCatalogProfileCreate,
+    GenericCatalogProfileRead,
 )
 from app.modules.infra.schemas.hardware_interface import (
     HardwareInterfaceCreate,
@@ -22,6 +40,7 @@ from app.modules.infra.schemas.hardware_interface import (
     HardwareInterfaceUpdate,
 )
 from app.modules.infra.services.product_catalog_service import (
+    bulk_upsert_products,
     create_interface,
     create_product,
     delete_interface,
@@ -29,10 +48,14 @@ from app.modules.infra.services.product_catalog_service import (
     get_product_detail,
     list_interfaces,
     list_products,
+    upsert_generic_profile,
+    upsert_model_spec,
+    upsert_software_spec,
     update_interface,
     update_product,
     upsert_spec,
 )
+from app.modules.infra.services.catalog_similarity_service import find_similar_products
 
 
 router = APIRouter(prefix="/api/v1/product-catalog", tags=["infra-product-catalog"])
@@ -45,12 +68,11 @@ router = APIRouter(prefix="/api/v1/product-catalog", tags=["infra-product-catalo
 def list_products_endpoint(
     vendor: str | None = None,
     product_type: str | None = None,
-    category: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[ProductCatalogRead]:
-    return list_products(db, vendor, product_type, category, q)
+    return list_products(db, vendor, product_type, q)
 
 
 @router.post(
@@ -62,6 +84,29 @@ def create_product_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> ProductCatalogRead:
     return create_product(db, payload, current_user)
+
+
+@router.post("/bulk-upsert", response_model=ProductCatalogBulkUpsertResponse)
+def bulk_upsert_products_endpoint(
+    payload: ProductCatalogBulkUpsertRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogBulkUpsertResponse:
+    return ProductCatalogBulkUpsertResponse(**bulk_upsert_products(db, payload.rows, current_user))
+
+
+@router.post("/similarity-check", response_model=CatalogSimilarityCheckResponse)
+def check_product_similarity_endpoint(
+    payload: CatalogSimilarityCheckRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CatalogSimilarityCheckResponse:
+    return CatalogSimilarityCheckResponse(**find_similar_products(
+        db,
+        vendor=payload.vendor,
+        name=payload.name,
+        exclude_product_id=payload.exclude_product_id,
+    ))
 
 
 @router.get("/{product_id}", response_model=ProductCatalogDetail)
@@ -104,6 +149,36 @@ def upsert_spec_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> HardwareSpecRead:
     return upsert_spec(db, product_id, payload, current_user)
+
+
+@router.post("/{product_id}/software-spec", response_model=SoftwareSpecRead)
+def upsert_software_spec_endpoint(
+    product_id: int,
+    payload: SoftwareSpecCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SoftwareSpecRead:
+    return upsert_software_spec(db, product_id, payload, current_user)
+
+
+@router.post("/{product_id}/model-spec", response_model=ModelSpecRead)
+def upsert_model_spec_endpoint(
+    product_id: int,
+    payload: ModelSpecCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ModelSpecRead:
+    return upsert_model_spec(db, product_id, payload, current_user)
+
+
+@router.post("/{product_id}/generic-profile", response_model=GenericCatalogProfileRead)
+def upsert_generic_profile_endpoint(
+    product_id: int,
+    payload: GenericCatalogProfileCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GenericCatalogProfileRead:
+    return upsert_generic_profile(db, product_id, payload, current_user)
 
 
 # ── HardwareInterface (1:N) ──

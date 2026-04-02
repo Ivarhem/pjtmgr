@@ -100,23 +100,33 @@ function confirmDelete(message, onConfirm) {
  * @param {number} duration - 표시 시간(ms), 기본 3000
  */
 function showToast(message, type = 'success', duration = 3000) {
-  let container = document.querySelector('.toast-container');
+  const openModal = document.querySelector('dialog[open]');
+  const containerHost = openModal || document.body;
+  let container = containerHost.querySelector('.toast-container');
   if (!container) {
     container = document.createElement('div');
     container.className = 'toast-container';
-    document.body.appendChild(container);
+    if (openModal) {
+      container.classList.add('toast-container-modal');
+    }
+    containerHost.appendChild(container);
   }
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
-  if (type === 'error') {
+  if (type === 'error' || type === 'warning') {
     container.prepend(toast);
   } else {
     container.appendChild(toast);
   }
   setTimeout(() => {
     toast.classList.add('toast-out');
-    toast.addEventListener('animationend', () => toast.remove());
+    toast.addEventListener('animationend', () => {
+      toast.remove();
+      if (container && !container.children.length) {
+        container.remove();
+      }
+    });
   }, duration);
 }
 
@@ -305,46 +315,6 @@ async function populateContractTypeSelect(selectId) {
     opt.textContent = dt.label;
     sel.appendChild(opt);
   });
-}
-
-// ── 자산유형 코드 ──────────────────────────────────────────
-let _assetTypeCodesCache = null;
-
-async function loadAssetTypeCodes() {
-  if (!_assetTypeCodesCache) {
-    _assetTypeCodesCache = await apiFetch('/api/v1/asset-type-codes');
-  }
-  return _assetTypeCodesCache;
-}
-
-// system.js에서 자산유형 CRUD 성공 후 반드시 호출
-function invalidateAssetTypeCodesCache() {
-  _assetTypeCodesCache = null;
-}
-
-async function populateAssetTypeSelect(selectId, includeAll) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  const types = await loadAssetTypeCodes();
-  sel.textContent = '';
-  if (includeAll) {
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = '전체';
-    sel.appendChild(opt);
-  }
-  types.forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t.type_key;
-    opt.textContent = t.label;
-    sel.appendChild(opt);
-  });
-}
-
-function getAssetTypeLabel(typeKey) {
-  if (!_assetTypeCodesCache) return typeKey;
-  const found = _assetTypeCodesCache.find(t => t.type_key === typeKey);
-  return found ? found.label : typeKey;
 }
 
 // ── 태그 입력 & 필터 ────────────────────────────────────────────────

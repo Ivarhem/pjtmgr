@@ -15,8 +15,9 @@ class Asset(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     partner_id: Mapped[int] = mapped_column(ForeignKey("partners.id"), index=True)
     asset_code: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
+    project_asset_number: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    customer_asset_number: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     asset_name: Mapped[str] = mapped_column(String(255), index=True)
-    asset_type: Mapped[str] = mapped_column(String(50))
     vendor: Mapped[str | None] = mapped_column(String(100), nullable=True)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     role: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -31,6 +32,15 @@ class Asset(TimestampMixin, Base):
     )
 
     # Equipment Spec
+    center_id: Mapped[int | None] = mapped_column(
+        ForeignKey("centers.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    rack_id: Mapped[int | None] = mapped_column(
+        ForeignKey("racks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     center: Mapped[str | None] = mapped_column(String(100), nullable=True)
     operation_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
     equipment_id: Mapped[str | None] = mapped_column(String(100), nullable=True)

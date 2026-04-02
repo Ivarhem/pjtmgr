@@ -14,7 +14,6 @@ class ImportErrorDetail(BaseModel):
 class ImportPreviewRow(BaseModel):
     row_num: int
     asset_name: str | None = None
-    asset_type: str | None = None
     hostname: str | None = None
     vendor: str | None = None
     model: str | None = None

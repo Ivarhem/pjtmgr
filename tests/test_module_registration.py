@@ -19,7 +19,7 @@ def _get_route_paths(app) -> set[str]:
 def _create_app_with_modules(enabled_modules: list[str]):
     """Create app with specific enabled modules, mocking DB-dependent startup."""
     with (
-        patch("app.core.config.get_enabled_modules", return_value=enabled_modules),
+        patch("app.core.app_factory.get_enabled_modules", return_value=enabled_modules),
         patch("app.core.config.ENABLED_MODULES", ",".join(enabled_modules)),
     ):
         from app.core.app_factory import create_app
@@ -31,7 +31,7 @@ def _create_app_with_modules(enabled_modules: list[str]):
 # Accounting-specific route paths (a subset for checking)
 _ACCOUNTING_ROUTES = {
     "/api/v1/dashboard/summary",
-    "/api/v1/contracts",
+    "/api/v1/ledger/periods",
     "/api/v1/reports/summary",
 }
 

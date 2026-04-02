@@ -21,7 +21,6 @@ from app.modules.infra.models.period_asset import PeriodAsset
 _INVENTORY_HEADERS = [
     ("Seq", None),
     ("자산명", "asset_name"),
-    ("자산유형", "asset_type"),
     ("상태", "status"),
     ("환경", "environment"),
     ("위치", "location"),

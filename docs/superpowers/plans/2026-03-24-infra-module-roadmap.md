@@ -1,399 +1,493 @@
-# 인프라모듈 전체 구현 로드맵
+# 인프라모듈 실행 로드맵
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 인프라모듈 구현의 **단일 실행 기준 문서**.
+> 세부 설계가 필요할 때만 관련 spec/plan을 참고하고, 실제 우선순위 판단과 세션 시작 기준은 이 문서를 따른다.
 
-**Goal:** 인프라모듈(프로젝트관리)의 자산/IP인벤토리/포트맵/배치도/Alias/업체 기능을 실제 사용 가능한 수준으로 완성한다.
+**Goal:** 인프라모듈을 `자산 원장 안정화 -> 자산 의존 기능 확장 -> 독립 기능 구현 -> 고도화` 순서로 완성한다.
 
-**Architecture:** 기존 코드 뼈대(모델/스키마/서비스/라우터/템플릿)는 유지. 각 Phase를 독립 세션으로 진행하며, Phase 완료 시마다 브라우저 E2E 검증 수행.
+**원칙**
+- 1차 목표는 “실제 업무 플로우가 끊기지 않게 구현하는 것”이다.
+- UI는 과도한 polish보다 **재작업 비용을 키우지 않을 정도의 표준화**를 우선한다.
+- 정규화, 파싱, 예외 케이스 확대, UX 세부 개선은 고도화 단계로 분리한다.
+- 자산은 다른 기능의 원장 역할을 하므로, 자산 영역은 다른 기능보다 더 높은 안정성 기준으로 닫고 넘어간다.
 
-**Tech Stack:** Python 3.11, FastAPI, SQLAlchemy 2.0, Alembic, Pydantic v2, Jinja2, Vanilla JS, AG Grid
-
-**관련 스펙:** `docs/superpowers/specs/2026-03-24-layout-and-alias-design.md`
-**관련 계획:** `docs/superpowers/plans/2026-03-24-layout-and-alias.md` (배치도/Alias DB+서비스 상세)
-
----
-
-## 현재 상태 (2026-03-24 최종)
-
-| 페이지 | 상태 | 비고 |
-| --- | --- | --- |
-| 프로젝트 목록 `/periods` | **동작** | AG Grid + CRUD 정상 |
-| 자산 목록 `/assets` | **동작** | 간소화 모달(4필드) + 카탈로그 연동 + 상세 패널 10탭 + 인라인 편집 + alias 태그 + 검색(alias/code 통합) |
-| IP 인벤토리 `/ip-inventory` | 부분 동작 | 서브넷 목록 미표시, IP 할당 CRUD 미검증 → **Phase 3** |
-| 포트맵 `/port-maps` | 부분 동작 | Import UI 있음, 배선 등록 미확인 → **Phase 4** |
-| 업체 `/contacts` | 부분 동작 | 프로젝트 미선택 시 빈 화면 → **Phase 6** |
-| 이력 `/audit-history` | **동작** | audit 로그 정상 |
-| 배치도 | 미구현 | → **Phase 5** |
-| 카탈로그 `/product-catalog` | **동작** | 자산 유형 컬럼/드롭다운 추가, placeholder 7개 시드 |
-
-**완료된 Phase:**
-- Phase 1: 자산 기본 CRUD ✅
-- Phase 2: 자산 부속 정보 (5탭 CRUD + Alias) ✅
-- 자산유형 코드 체계 ✅
-- 자산 등록 간소화 + 카탈로그 연동 ✅
+**관련 문서**
+- 세부 설계: `docs/superpowers/specs/2026-03-24-layout-and-alias-design.md`
+- 세부 참조 계획: `docs/superpowers/plans/2026-03-24-layout-and-alias.md`
+- 자산 등록 간소화 참조: `docs/superpowers/plans/2026-03-24-asset-registration-simplify.md`
+- 자산 모델 확장 계획: `docs/superpowers/plans/2026-03-24-asset-model-expansion.md`
+- 자산 원장/논리 역할 뷰 계획: `docs/superpowers/plans/2026-03-25-asset-ledger-and-role-view.md`
+- 자산 분류체계 계획: `docs/superpowers/plans/2026-03-26-asset-classification-scheme.md`
+- Excel 운영 기준문서: `input/template.xlsx`
+- 카탈로그 정제 기준문서: `input/spec.xlsx`
 
 ---
 
-## Phase 구성
+## 이 문서의 역할
 
-```
-Phase 1: 자산 기본 CRUD 완성 ← 최우선
-Phase 2: 자산 부속 정보 (소프트웨어/IP할당/담당자/관계/Alias)
-Phase 3: IP 인벤토리 완성
-Phase 4: 포트맵 완성
-Phase 5: 전산실 배치도 (신규)
-Phase 6: 업체 관리 + 참여업체-자산 연결
-```
-
-Phase 2의 Alias와 Phase 5는 독립적이므로 순서 조정 가능.
-각 Phase는 독립 세션에서 진행하며, 이전 Phase 완료를 전제하지 않는 항목은 병행 가능.
+- 이 문서는 **active roadmap**이다.
+- 다른 `docs/superpowers/plans/*.md` 문서는 다음 둘 중 하나로만 취급한다.
+  - reference: 특정 기능의 세부 설계/코드 뼈대 참고
+  - archive 후보: 방향 전환 전의 과거 계획
+- 새 세션에서 작업을 시작할 때는 먼저 이 문서를 읽고, 필요한 경우에만 세부 문서를 추가로 연다.
 
 ---
 
-## Phase 1: 자산 기본 CRUD 완성
+## 현재 판단 (2026-03-26)
 
-**목표:** 자산 목록 조회 → 등록 → 상세 보기 → 수정 → 삭제 → 검색/필터 전체 플로우가 실제로 동작.
+### 이미 어느 정도 갖춰진 것
 
-**기존 코드:**
-- 모델: `app/modules/infra/models/asset.py` (74 컬럼, 완성)
-- 스키마: `app/modules/infra/schemas/asset.py` (Create/Update/Read, 완성)
-- 서비스: `app/modules/infra/services/asset_service.py` (list/create/update/delete, 완성)
-- 라우터: `app/modules/infra/routers/assets.py` (CRUD 엔드포인트, 완성)
-- JS: `app/static/js/infra_assets.js` (AG Grid + 등록 모달, 부분 구현)
-- 템플릿: `app/modules/infra/templates/infra_assets.html`
+- 자산 목록 `/assets`
+  - 카탈로그 기반 등록
+  - 우측 상세 패널
+  - 기본 검색/필터
+  - 프로젝트 관리번호 / 고객 자산번호 / 귀속프로젝트 / 현재 역할 표시
+  - 분류 alias 기반 `대구분 / 중구분 / 소구분` 컬럼
+  - 소프트웨어/IP/담당자/관계/Alias/관련업체/이력 foundation
+- 카탈로그 `/product-catalog`
+  - 자산유형 코드 연동
+  - placeholder 시드
+  - kind 기반 typed detail / import preview-confirm foundation
+- 프로젝트 목록 `/periods`
+  - 기본 CRUD 동작
+  - 사업완료여부 중심 표시
+- 감사 이력 `/audit-history`
+  - 기본 조회 동작
+- 물리배치 `/physical-layout`
+  - `Center -> Room -> Rack` 기준 데이터 CRUD
+- 역할 기준 보기 `/asset-roles`
+  - 교체 / 장애대체 / 용도전환 액션
+- 분류체계
+  - 메인 메뉴 `분류체계`: 프로젝트별 분류체계 관리
+  - 시스템 관리 > 프로젝트관리: 글로벌 기본 분류체계 + 자산유형-분류 매핑
 
-### Task 1-1: 공통 이슈 수정
+### 아직 덜 닫힌 것
 
-**Files:**
-- Modify: `app/modules/infra/templates/infra_assets.html` 또는 `app/templates/base.html`
-- Modify: `app/static/js/utils.js`
+- 자산 원장으로서의 안정성
+  - 분류체계와 Import 연결이 아직 미완
+  - 자산 입력/수정 편의성 고도화가 더 필요
+- IP 인벤토리
+  - 부분 동작
+- 포트맵
+  - 부분 동작
+- 업체
+  - 프로젝트 미선택 상태 UX와 연결 흐름 미완
+- 배치도
+  - 미구현
 
-- [ ] utils.js 이중 로드 해결 (`_termLabelsCache has already been declared` 에러)
-- [ ] topbar 고객사 셀렉터 → `_ctxPartnerId` 초기화 타이밍 확인 및 수정
-- [ ] `ctx-changed` 이벤트 발생 시 자산 목록이 자동 reload 되는지 확인
-- [ ] 브라우저에서 자산 목록이 정상 표시되는지 검증
-- [ ] 커밋
+### 반복 수정이 생기는 실제 원인
 
-### Task 1-2: 자산 목록 표시 완성
-
-**Files:**
-- Modify: `app/static/js/infra_assets.js`
-
-- [ ] `loadAssets()` 호출이 페이지 로드 시 + `ctx-changed` 이벤트 시 모두 실행되는지 확인
-- [ ] AG Grid 컬럼 정의 검토 (현재 7개 → 필요 시 조정)
-- [ ] 행 클릭 → 자산 상세 패널/모달 열기 구현
-- [ ] 브라우저에서 더미 자산 등록 후 목록 표시 검증
-- [ ] 커밋
-
-### Task 1-3: 자산 상세 보기
-
-**Files:**
-- Modify: `app/static/js/infra_assets.js`
-- Modify: `app/modules/infra/templates/infra_assets.html`
-
-- [ ] 자산 상세 모달/사이드패널 구현 (등록 모달의 4개 섹션 재사용)
-- [ ] `GET /api/v1/assets/{id}` 호출로 전체 필드 표시
-- [ ] 읽기 전용 모드로 표시
-- [ ] 커밋
-
-### Task 1-4: 자산 수정/삭제
-
-**Files:**
-- Modify: `app/static/js/infra_assets.js`
-
-- [ ] 상세 모달에서 "수정" 버튼 → 편집 모드 전환
-- [ ] 수정 저장 → `PATCH /api/v1/assets/{id}` → 목록 새로고침
-- [ ] "삭제" 버튼 → 확인 다이얼로그 → `DELETE /api/v1/assets/{id}` → 목록 새로고침
-- [ ] 브라우저에서 수정/삭제 플로우 검증
-- [ ] 커밋
-
-### Task 1-5: 자산 검색/필터
-
-**Files:**
-- Modify: `app/static/js/infra_assets.js`
-- Modify: `app/modules/infra/services/asset_service.py` (이미 `q` 파라미터 지원)
-
-- [ ] 검색 입력 필드 추가 (asset_name, hostname, service_ip, equipment_id 통합 검색)
-- [ ] 유형/상태 필터 드롭다운 추가
-- [ ] "선택 프로젝트만" 체크박스 동작 확인 (이미 UI 존재)
-- [ ] 브라우저에서 검색/필터 검증
-- [ ] 커밋
-
-### Task 1-6: 자산 Import 검증
-
-**Files:**
-- Modify: `app/static/js/infra_assets.js` (Import 버튼 핸들러)
-
-- [ ] Import 버튼 클릭 → 파일 업로드 → `POST /api/v1/infra-excel/import` 동작 확인
-- [ ] Import 후 목록 새로고침 확인
-- [ ] 에러 시 사용자에게 피드백 표시 확인
-- [ ] 커밋
-
-**Phase 1 완료 기준:** 자산 등록→목록 표시→상세 보기→수정→삭제→검색 전체가 브라우저에서 동작.
+- active roadmap과 reference/archive 문서 구분이 약함
+- 페이지별 ad-hoc JS 비중이 높고 공통 UI 패턴이 약함
+- 자산, 귀속사업, Alias, 카탈로그, 검색이 강하게 연결돼 있음
+- 화면 단위 E2E/회귀 기준이 약해 변경 영향이 늦게 드러남
 
 ---
 
-## Phase 2: 자산 부속 정보
+## 추진 전략
 
-**목표:** 자산 상세에서 소프트웨어/IP할당/담당자/관계/Alias를 관리.
+### 1차 구현 목표
 
-**기존 코드:**
-- AssetSoftware: 모델/스키마/서비스/라우터 완성, UI 미구현
-- AssetIP: 모델/스키마/서비스/라우터 완성, UI 미구현
-- AssetContact: 모델/스키마/서비스/라우터 완성, UI 미구현
-- AssetRelation: 모델/스키마/서비스/라우터 완성, UI 미구현
-- AssetAlias: 신규 (layout-and-alias 계획에 상세 코드 있음)
+- 핵심 업무 플로우를 실제로 끝까지 수행할 수 있게 한다.
+- 공용 모달/그리드/상세패널/서브테이블 패턴을 최소 수준으로 통일한다.
+- 데이터 계약과 중심 엔티티 연결관계를 먼저 고정한다.
 
-### Task 2-1: AssetAlias DB 기반 구축
+### 2차 고도화 목표
 
-`docs/superpowers/plans/2026-03-24-layout-and-alias.md`의 Task 1(모델) + Task 2(Migration) + Task 3(스키마) + Task 4(서비스) + Task 5(라우터)에서 **AssetAlias 관련 부분만** 실행.
+- 정규화 규칙 확대
+- Excel 파서의 예외 대응 강화
+- 세부 메시지/에러 품질 개선
+- 화면별 UX polish
+- 시각화/자동화 기능 고도화
 
-- [ ] AssetAlias 모델 생성 + models/__init__.py 등록
-- [ ] Alembic migration (asset_aliases 테이블만)
-- [ ] AssetAlias 스키마 (Create/Update/Read + AliasType Enum)
-- [ ] asset_alias_service.py
-- [ ] asset_aliases.py 라우터 + routers/__init__.py 등록
-- [ ] 커밋
+### 지금 미루지 말아야 하는 것
 
-### Task 2-2: 자산 상세 — 탭/섹션 구조
+- 자산 CRUD와 핵심 연결관계
+- 귀속사업/카탈로그/Alias/검색 정합성
+- 다른 기능이 참조하는 필드 의미와 API 계약
+- 최소 브라우저 회귀 체크리스트
 
-**Files:**
-- Modify: `app/static/js/infra_assets.js`
-- Modify: `app/modules/infra/templates/infra_assets.html`
+### 지금 미뤄도 되는 것
 
-자산 상세 모달을 탭 구조로 확장:
+- 과도한 UI 세부 튜닝
+- 입력 정규화의 edge case 전부
+- Import 파서의 광범위한 예외 흡수
+- 보기 좋은 시각화 디테일
 
-```
-기본 정보 | 소프트웨어 | IP 할당 | 담당자 | 관계 | 별칭(Alias)
+---
+
+## 공통 표준화 범위
+
+생성기나 대규모 프레임워크화까지는 가지 않는다. 대신 아래 4개 패턴을 공용 기준으로 삼는다.
+
+1. 그리드
+- AG Grid 컬럼 정의 패턴
+- 검색/필터/ctx 연동 방식
+- 행 클릭 시 상세 패널 또는 편집 진입 방식
+
+2. 모달
+- 사이즈 클래스
+- `modal-desc`, `modal-group`, `form-grid`, `modal-actions`
+- 버튼 순서와 보조 액션 구조
+
+3. 상세 패널
+- 헤더 액션 구조
+- 탭 전환 패턴
+- 읽기/편집 모드 전환 방식
+
+4. 서브테이블/인라인 CRUD
+- 헤더 + 추가 버튼
+- 빈 상태 메시지
+- 행 액션 버튼 정렬
+
+이 범위를 넘는 프론트엔드 일반화는 1차 목표가 아니다.
+
+---
+
+## 우선순위 재편
+
+```text
+Track A. 자산 원장 안정화
+Track B. 자산 의존 기능 확장
+Track C. 독립 기능 구현
+Track D. 고도화
 ```
 
-- [ ] 탭 UI 프레임 구현 (기본 정보 탭은 Task 1-3에서 이미 구현)
-- [ ] 각 탭은 빈 컨테이너로 시작 (Phase 2 Task별로 채움)
-- [ ] 커밋
+### Track A. 자산 원장 안정화
 
-### Task 2-3: 소프트웨어 탭
+가장 먼저 끝내야 한다. 다른 기능이 자산을 믿고 참조할 수 있어야 한다.
 
-- [ ] `GET /api/v1/assets/{id}/software` 로 목록 조회
-- [ ] 소프트웨어 추가/수정/삭제 UI
-- [ ] 브라우저 검증
-- [ ] 커밋
+#### A1. 자산 목록/등록/상세 계약 고정
 
-### Task 2-4: IP 할당 탭
+- 목록 컬럼과 핵심 표시값 정리
+  - 프로젝트 관리번호, 고객 자산번호, 자산명(물리), 현재 역할명, 유형, 제조사, 모델, 귀속사업, 호스트명, 관리IP, 상태
+  - 시스템 내부 자산코드(`asset_code`)는 보조 컬럼으로 내리거나 기본 숨김 처리 검토
+- 등록 플로우 정리
+  - 카탈로그 선택
+  - 프로젝트 관리번호 / 고객 자산번호 / 자산명 / 호스트명 / 귀속사업
+  - 자산명 기반 역할명 추천은 허용하되, 자동 선택/자동 확정은 금지
+- 등록 후 상세 진입
+- 상세 패널 구조 정리
+  - 기본 정보 / 소프트웨어 / IP / 담당자 / 관계 / Alias
 
-- [ ] `GET /api/v1/assets/{id}/ips` 로 IP 목록 조회
-- [ ] IP 추가/수정/삭제 UI
-- [ ] 커밋
+**완료 기준**
+- 자산 생성 -> 목록 반영 -> 상세 진입 -> 수정 -> 삭제가 브라우저에서 안정적으로 동작
+- 귀속사업/카탈로그/Alias가 표시/저장/검색에서 일관됨
 
-### Task 2-5: 담당자 탭
+#### A2. 자산 핵심 연결관계 안정화
 
-- [ ] `GET /api/v1/assets/{id}/contacts` 로 담당자 목록 조회
-- [ ] 담당자 연결/해제 UI (partner_contacts에서 선택)
-- [ ] 커밋
+- 카탈로그 변경 시 동일 유형 제약 유지
+- 귀속사업(period) 연결 표시와 저장 정합성 확인
+- Alias 검색과 그리드 표시 정합성 확인
+- 상세 패널 탭별 최소 CRUD 검증
 
-### Task 2-6: 관계 탭
+**완료 기준**
+- 자산을 참조하는 다른 화면이 핵심 필드 의미 변경 때문에 계속 깨지지 않음
 
-- [ ] `GET /api/v1/assets/{id}/relations` 로 관계 목록 조회
-- [ ] 관계 추가/삭제 UI (관계 유형: HOSTS, INSTALLED_ON, PROTECTS 등)
-- [ ] 커밋
+#### A3. 자산 최소 회귀 체크리스트 확정
 
-### Task 2-7: Alias 탭
+- 목록 로드
+- 검색/필터
+- 등록
+- 수정
+- 삭제
+- 귀속사업 표시
+- Alias 검색
+- 상세 탭 기본 CRUD
 
-- [ ] `GET /api/v1/assets/{id}/aliases` 로 Alias 목록 조회
-- [ ] Alias 추가/수정/삭제 UI
-- [ ] source_partner_id 있으면 정상색, source_text만 있으면 회색 표시
-- [ ] 커밋
+**완료 기준**
+- 자산 영역 변경 시 항상 확인하는 브라우저 체크리스트가 문서 또는 작업 기록으로 유지됨
 
-### Task 2-8: 자산 검색에 Alias 통합
+#### A4. 자산 이력/관련업체 foundation
 
-- [ ] `asset_service.py`의 `list_assets()` 검색에 alias_name + asset_code 서브쿼리 추가
-- [ ] 브라우저에서 alias로 검색 검증
-- [ ] 커밋
+- 자산을 `물리 자산 원장(B뷰)`으로 유지
+- 교체/대체/전용을 수용할 `asset_events` foundation 도입
+- 관련업체 이력 모델 foundation 도입
+- 이후 `논리 역할(A뷰)`를 추가할 수 있도록 자산 정체성과 역할을 분리하는 기준 고정
 
-**Phase 2 완료 기준:** 자산 상세에서 6개 탭 모두 CRUD 동작. Alias 검색 통합 완료.
+**완료 기준**
+- 주요 변경(교체/대체/전용/업체 변경)을 이벤트 또는 이력 구조로 기록할 수 있음
+- 관련업체 정보를 단일 문자열이 아닌 이력 가능한 구조로 확장할 준비가 됨
 
----
+#### A5. 자산 분류체계 foundation
 
-## Phase 3: IP 인벤토리 완성
+- 글로벌 기본 분류체계 정의
+- 프로젝트별 분류체계 override 도입
+- 프로젝트 생성 시 글로벌 기본 체계 또는 같은 고객사의 기존 프로젝트 체계 복사 선택
+- 자산이 자유입력 분류 문자열이 아니라 분류 노드를 참조하도록 전환 준비
 
-**목표:** 서브넷 목록 + IP 할당 목록이 정상 표시되고 CRUD 동작.
+**완료 기준**
+- 프로젝트별로 서로 다른 분류 기준을 수용할 수 있음
+- 자산 상세와 Import가 같은 분류체계를 참조할 수 있음
+- 분류체계 설계 근거를 문서화할 수 있음
 
-**기존 코드:**
-- IpSubnet: 모델/스키마/서비스/라우터 완성
-- AssetIP: 모델/스키마/서비스/라우터 완성
-- JS: `app/static/js/infra_ip_inventory.js` (좌우 분할 UI, 부분 구현)
-- 템플릿: `app/modules/infra/templates/infra_ip_inventory.html`
+**현재 상태 (2026-03-26)**
+- [x] 글로벌 기본 분류체계 + 프로젝트별 override foundation
+- [x] 프로젝트 생성 시 글로벌 / 같은 고객사 기존 프로젝트 체계 복사
+- [x] 분류체계 트리 관리 UI
+- [x] 레벨 alias(`대구분/중구분/소구분` 등) 설정
+- [x] 자산유형-분류 매핑 foundation
+- [x] 자산목록 alias 컬럼 표시
+- [x] 자산 등록/상세 수정에서 최종 분류(leaf node) 선택
+- [ ] Import와 Export 양식 계약은 별도 설계 후 연결
 
-### Task 3-1: 서브넷 목록 표시 수정
+### Track A 실행 체크리스트
 
-- [ ] `loadSubnets()` 에서 `getCtxPartnerId()` 연동 확인/수정
-- [ ] 서브넷 목록 좌측 패널에 정상 표시
-- [ ] 서브넷 선택 → 우측 IP 할당 목록 필터링
-- [ ] 커밋
+아래 체크리스트는 자산 원장 안정화의 실제 작업 순서다. 가능한 한 이 순서대로 닫는다.
 
-### Task 3-2: 서브넷 CRUD
+#### A1 체크리스트: 자산 목록/등록/상세
 
-- [ ] "+ 대역 추가" → 서브넷 등록 모달 동작 확인
-- [ ] 수정/삭제 버튼 동작 확인
-- [ ] 커밋
+- [ ] 목록 컬럼이 핵심 원장 필드를 기준으로 고정돼 있는가
+  - 프로젝트 관리번호, 고객 자산번호, 자산명(물리), 현재 역할명, 유형, 제조사, 모델, 귀속사업, 호스트명, 관리IP, 상태
+  - 시스템 내부 자산코드는 보조 정보로 남아 있는가
+- [ ] 고객사 선택 후 자산 목록이 자동으로 로드되는가
+- [ ] 프로젝트 필터 체크 시 귀속사업 기준으로 목록이 좁혀지는가
+- [ ] 자산 등록 모달이 카탈로그 선택 + 프로젝트 관리번호 + 고객 자산번호 + 자산명 + 호스트명 + 귀속사업 흐름으로 동작하는가
+- [ ] 자산명 또는 카탈로그 기반으로 역할명 추천이 제안되되, 사용자가 직접 확정/수정하는 흐름인가
+- [ ] 분류는 대/중/소 전체 선택이 아니라 현재 프로젝트 체계의 최종 분류만 선택하는가
+- [ ] 원하는 분류가 없을 때 분류체계 메뉴로 이동할 수 있는가
+- [ ] 등록 후 새 자산이 목록에 보이고 상세 패널이 열리는가
+- [ ] 상세 패널의 탭 구조가 기본 정보 / 소프트웨어 / IP / 담당자 / 관계 / Alias 기준으로 유지되는가
+- [ ] 수정과 삭제가 상세 패널 기준으로 안정적으로 동작하는가
 
-### Task 3-3: IP 할당 CRUD
+#### A2 체크리스트: 자산 핵심 연결관계
 
-- [ ] "IP 등록" → IP 할당 등록 모달 (asset 선택 포함)
-- [ ] IP 할당 목록에서 수정/삭제
-- [ ] 커밋
+- [ ] 카탈로그에 자산유형이 없으면 자산 생성이 차단되는가
+- [ ] placeholder 카탈로그 선택 시 vendor/model 저장 규칙이 의도대로 유지되는가
+- [ ] 귀속사업(period) 연결 시 저장과 표시가 일치하는가
+- [ ] Alias 추가/수정/삭제 후 그리드 태그와 검색 결과가 일치하는가
+- [ ] 자산 검색이 자산명/호스트명/IP/장비ID/코드/Alias 기준으로 기대대로 동작하는가
+- [ ] 자산유형과 분류가 허용 범위 밖으로 저장되지 않는가
+- [ ] 소프트웨어/IP/담당자/관계/Alias 탭의 최소 CRUD가 저장 후 다시 조회될 때 보존되는가
 
-**Phase 3 완료 기준:** 서브넷 등록 → IP 할당 → 목록 표시 전체 동작.
+#### A3 체크리스트: 브라우저 회귀
 
----
-
-## Phase 4: 포트맵 완성
-
-**목표:** 포트맵(케이블 배선도) CRUD + Excel Import 동작.
-
-**기존 코드:**
-- PortMap: 모델/스키마/서비스/라우터 완성 (40+ 필드)
-- JS: `app/static/js/infra_port_maps.js` (부분 구현)
-- 템플릿: `app/modules/infra/templates/infra_port_maps.html`
-
-### Task 4-1: 포트맵 목록 표시 수정
-
-- [ ] `loadPortMaps()` partner_id 연동 확인/수정
-- [ ] AG Grid 컬럼 정의 검토 (출발/도착 호스트/포트/존 등)
-- [ ] 커밋
-
-### Task 4-2: 배선 등록/수정/삭제
-
-- [ ] "배선 등록" 모달 구현 (출발/도착 자산 선택, 포트/케이블 정보)
-- [ ] 행 클릭 → 상세/수정
+- [ ] 목록 첫 진입
+- [ ] 검색/필터
+- [ ] 등록
+- [ ] 수정
 - [ ] 삭제
-- [ ] 커밋
+- [ ] 귀속사업 표시
+- [ ] Alias 검색
+- [ ] 상세 탭 최소 CRUD
+- [ ] 최종 분류 선택과 경로 표시
 
-### Task 4-3: 포트맵 Excel Import
-
-- [ ] Import UI 동작 확인 (파일 선택 → Import 버튼)
-- [ ] `POST /api/v1/infra-excel/import` 포트맵 시트 처리 확인
-- [ ] Import 결과 토스트 표시
-- [ ] 커밋
-
-**Phase 4 완료 기준:** 포트맵 등록 + Excel Import + 목록 조회 동작.
+위 항목은 자산 관련 변경 후 기본 확인 항목으로 유지한다.
 
 ---
 
-## Phase 5: 전산실 배치도 (신규)
+## 현재 다음 우선순위 (2026-03-26)
 
-**목표:** 센터/전산실/Zone/Rack 공간 구조 정의 + 자산 매핑 시각화.
+1. 자산 입력/수정 편의성 추가 개선
+- 상세 수정 흐름 단축
+- 테이블 편집 범위와 검증 정리
+- 물리배치 / 역할 / 관련업체 입력 UX polish
 
-**상세 계획:** `docs/superpowers/plans/2026-03-24-layout-and-alias.md` 참조.
+2. Import/Export 양식 설계
+- 분류체계를 어떤 컬럼 구조로 export/import 할지 먼저 결정
+- alias 기반 표시와 실제 저장 키(최종 분류 노드) 사이의 계약 정의
+- 오류 / 미매핑 / 수동 보정 흐름 정의
 
-이 Phase는 DB 기반이 먼저 구축되어야 함. layout-and-alias 계획의 Task 1~7 중 배치도 관련 부분 실행.
-
-### Task 5-1: 배치도 DB 기반 (모델 + Migration + 스키마 + 서비스 + 라우터)
-
-layout-and-alias 계획의 Center/Room/RoomZone/RackPosition/AssetRackMapping 관련 전체 실행.
-
-- [ ] 5개 모델 생성 + migration
-- [ ] 5개 스키마 생성
-- [ ] center_service, room_service, layout_service 생성
-- [ ] 6개 라우터 생성 (centers, rooms, room_zones, rack_positions, asset_rack_mappings, layout)
-- [ ] 모델/라우터 등록
-- [ ] 커밋
-
-### Task 5-2: 사이드바 메뉴 + 페이지 라우트 + 기본 템플릿
-
-- [ ] `/layout` 페이지 라우트 추가
-- [ ] 사이드바에 "배치도" 메뉴 추가
-- [ ] 4개 탭 placeholder 템플릿
-- [ ] 커밋
-
-### Task 5-3: 센터/전산실 관리 탭
-
-- [ ] 센터 AG Grid CRUD
-- [ ] 전산실 AG Grid CRUD (선택 센터 하위)
-- [ ] 커밋
-
-### Task 5-4: 배치도 편집 — 그리드 캔버스
-
-- [ ] 센터/전산실 선택 → `GET /rooms/{id}/layout` → HTML table 그리드 렌더링
-- [ ] 편집/조회 모드 전환
-- [ ] 빈 셀 드래그 → zone 생성
-- [ ] 빈 셀 클릭 → 랙 등록 모달
-- [ ] 기존 zone/rack 편집/삭제
-- [ ] 커밋
-
-### Task 5-5: 자산 매핑 + 시각화
-
-- [ ] 자동 매핑 버튼 → `POST /rooms/{id}/auto-map`
-- [ ] 매핑 상태별 색상 (mapped=기본, unmapped=회색, empty=연한색, conflict=빨간색)
-- [ ] 미매핑 자산 목록 표시
-- [ ] 수동 매핑 (자산 → 랙 드래그 또는 모달 선택)
-- [ ] 커밋
-
-**Phase 5 완료 기준:** 센터/전산실 등록 → 그리드에 zone/rack 배치 → 자산 매핑 → 상태별 색상 시각화 동작.
+3. Import에 분류체계 연결
+- 위 양식 설계 확정 후 진행
+- 프로젝트 분류체계 기준 검증
+- 자산유형-분류 매핑 기반 기본 추천 / 허용 범위 검증
 
 ---
 
-## Phase 6: 업체 관리 + 참여업체-자산 연결
+### Track B. 자산 의존 기능 확장
 
-**목표:** 프로젝트별 참여업체 관리 완성 + 업체-자산 연결 기능 추가.
+자산 원장 안정화 이후 붙인다.
 
-**기존 코드:**
-- PeriodPartner/PeriodPartnerContact: 모델/스키마/서비스/라우터 완성
-- JS: 업체 페이지 부분 구현 (프로젝트 선택 필요)
-- 참여업체-자산 연결: KNOWN_ISSUES.md에 TODO 기록
+#### B1. IP 인벤토리
 
-### Task 6-1: 업체 페이지 프로젝트 의존성 개선
+- 서브넷 목록 표시
+- 서브넷 CRUD
+- IP 할당 CRUD
+- 자산과의 연결 확인
 
-- [ ] 프로젝트 미선택 시에도 고객사 스코프로 전체 업체 표시 (또는 명확한 안내)
-- [ ] 프로젝트 선택 시 해당 프로젝트 참여업체만 필터
-- [ ] 커밋
+**1차 범위**
+- 실제 등록/조회/수정/삭제가 된다
+- 자산 선택/연결이 된다
 
-### Task 6-2: 참여업체 CRUD 완성
+**고도화로 미루는 것**
+- 복잡한 네트워크 검증
+- 자동 추천/자동 정규화
 
-- [ ] 업체 연결 모달 (거래처 목록에서 선택 + 역할 지정)
-- [ ] 담당자 매핑 (PeriodPartnerContact)
-- [ ] 수정/해제
-- [ ] 커밋
+#### B2. 포트맵
 
-### Task 6-3: 참여업체-자산 연결 (신규)
+- 목록 표시
+- 배선 등록/수정/삭제
+- 자산 선택 연동
 
-- [ ] PeriodPartnerAsset 모델 생성 (period_partner_id, asset_id, role)
-- [ ] Migration
-- [ ] 스키마/서비스/라우터
-- [ ] 업체 상세에서 담당 자산 목록 표시 + 자산 연결/해제 UI
-- [ ] KNOWN_ISSUES.md에서 해당 TODO 삭제
-- [ ] 커밋
+**1차 범위**
+- 자산 간 포트 연결을 등록하고 조회할 수 있다
 
-**Phase 6 완료 기준:** 참여업체 연결/담당자 매핑/자산 연결이 모두 동작.
+**고도화로 미루는 것**
+- 고급 시각화
+- 강한 정합성 자동검증
+
+#### B3. Excel Import
+
+우선순위는 `자산 -> IP/네트워크 -> 포트맵` 순서다.
+
+**운영 기준문서**
+- `input/template.xlsx`는 현재 프로젝트 투입 시 사용하는 업무 기준문서다.
+- 시스템 구현은 이 문서의 업무 의미와 데이터 구조를 출발점으로 삼는다.
+- 다만 시스템화 과정에서 비효율적인 시트 구조, 컬럼 분리, 입력 방식은 더 효율적인 형태로 추가/수정/변경할 수 있다.
+- 목표는 엑셀 형식을 그대로 복제하는 것이 아니라, 업무 기준을 시스템 구조로 안정적으로 옮기는 것이다.
+
+**1차 범위**
+- 핵심 시트를 실제로 읽고 저장한다
+- 치명적 오류를 막고, 나머지는 경고로 넘긴다
+
+**1차 구현 우선 시트**
+- `01. Inventory`
+- `05. 네트워크 대역 정의`
+- `06. IP할당`
+- `03. Portmap`
+
+**참고 시트**
+- `98. IP마스터_Hostname`
+- `98. IP마스터_IP`
+- `02. 실장도`
+
+참고 시트는 1차에 모두 시스템 입력 대상으로 만들 필요는 없지만, 업무 의미 분석과 이후 구조 확장 시 기준으로 유지한다.
+
+**시스템화 원칙**
+- 원본 시트/컬럼의 업무 의미를 먼저 식별한다.
+- 시스템 필드가 더 적절하면 시트 구조를 그대로 복제하지 않는다.
+- 여러 시트에 중복된 정보가 있으면 시스템에서는 정규화된 단일 엔티티로 통합할 수 있다.
+- 엑셀 기준과 시스템 기준이 달라지는 경우, 매핑 규칙과 변경 이유를 문서 또는 작업 결과에 남긴다.
+
+**고도화로 미루는 것**
+- 모든 템플릿 시트 대응
+- 세부 정규화 규칙 확대
+- 사용자 친화 메시지 polish
+
+### B3-A. 카탈로그 정제 Import 범위
+
+- `input/spec.xlsx`는 현재 하드웨어 카탈로그 정제 기준으로 사용한다.
+- 현재 구현 범위는 다음이다.
+  - `SPEC` -> `product_catalog(kind=hardware)` + `hardware_spec`
+  - `EOSL` -> `product_catalog` lifecycle
+- `software`, `model`, `service`, `business_capability`, `dataset`는 현재 카탈로그 상세 화면 수동 입력을 1차 기준으로 둔다.
+
+즉, 카탈로그는 이미 범용 확장을 시작했지만, Import는 아직 하드웨어 우선이다. 이 분리는 의도된 상태로 본다.
+
+### B3-B. 카탈로그 Import 후속 순서
+
+1. hardware importer 안정화
+- preview/confirm/overwrite/audit 흐름 고정
+- `spec.xlsx` 기준 정합성 보강
+
+2. software/model 입력원 설계
+- kind별 입력 포맷 분리
+- typed detail과 직접 매핑
+
+3. service-like profile 입력원 설계
+- `generic_profile` 기준
+- 별도 기준문서 또는 외부 시스템 연계 검토
 
 ---
 
-## Phase 순서 권장
+### Track C. 독립 기능 구현
 
+자산 원장에 직접 묶이지 않거나, 의존성이 상대적으로 약한 기능이다.
+
+#### C1. 업체 관리
+
+- 프로젝트 미선택 시 기본 동작 정의
+- 참여업체 연결/해제
+- 담당자 매핑
+
+**후속 확장**
+- 참여업체-자산 직접 연결
+
+#### C2. 배치도
+
+- 센터/전산실/랙 기반 모델 및 기본 UI
+- 자산 매핑의 기본 흐름
+
+**주의**
+- 배치도는 별도 큰 기능이므로 1차는 foundation + 최소 usable 수준까지만 목표로 잡는다.
+- 시각화 품질과 자동 매핑 정교화는 고도화로 넘긴다.
+
+---
+
+### Track D. 고도화
+
+- 정규화 규칙 세분화
+- 파서/입력 예외 흡수 확대
+- UX polish
+- 시각화 개선
+- 더 넓은 회귀 자동화
+- 문서 archive 정리
+
+---
+
+## 권장 실행 순서
+
+```text
+Step 1. Track A1 자산 목록/등록/상세 계약 고정
+Step 2. Track A2 자산 핵심 연결관계 안정화
+Step 3. Track A3 자산 회귀 체크리스트 확정
+Step 4. Track A4 자산 이력/관련업체 foundation
+Step 5. Track B1 IP 인벤토리
+Step 6. Track B2 포트맵
+Step 7. Track B3 자산 중심 Excel Import
+Step 8. Track C1 업체 관리
+Step 9. Track C2 배치도 foundation + 최소 usable
+Step 10. Track D 고도화
 ```
-Phase 1 (자산 기본) ──→ Phase 2 (자산 부속)
-                                    ↓
-Phase 3 (IP인벤토리) ←──── Phase 2-4 (IP 할당 탭과 연동)
-Phase 4 (포트맵) ←── 독립
-Phase 5 (배치도) ←── Phase 1 완료 후 (자산 데이터 필요)
-Phase 6 (업체) ←── Phase 1 완료 후
-```
-
-- **Phase 1은 필수 선행.** 모든 기능이 자산 데이터에 의존.
-- **Phase 2-D (Alias)** 는 Phase 2의 다른 탭과 독립이므로 먼저 진행 가능.
-- **Phase 3, 4, 5, 6**은 Phase 1 이후 어떤 순서로든 진행 가능.
 
 ---
 
-## 세션 전환 가이드
+## 세션 운영 규칙
 
-각 Phase 시작 시:
-1. memory의 `project_active_plan.md` 읽기
-2. 이 로드맵 파일 읽기
-3. 해당 Phase의 기존 코드 파일 확인
-4. 서버 기동 + 브라우저 확인으로 현재 상태 파악
-5. Task 순차 진행, 완료 시 커밋
+### 새 세션 시작 시
 
-Phase 완료 시:
-1. 브라우저 E2E 검증
-2. memory 업데이트 (완료 Phase, 다음 Phase)
-3. 필요 시 이 로드맵의 현재 상태 표 갱신
+1. 이 문서를 먼저 읽는다.
+2. 현재 작업이 어느 Track/Step에 속하는지 명시한다.
+3. 필요한 경우에만 세부 plan/spec를 추가로 연다.
+4. 작업 시작 전 브라우저/코드 기준 현재 상태를 확인한다.
+
+### 작업 단위 규칙
+
+- 한 세션에서 너무 많은 화면을 동시에 손대지 않는다.
+- 가능하면 `백엔드 + 프론트 + 최소 검증`이 같이 닫히는 vertical slice로 자른다.
+- 자산 관련 작업은 가능한 한 자산 회귀 체크리스트를 같이 갱신한다.
+
+### Phase/Track 종료 시
+
+- 브라우저 기준 최소 검증 수행
+- 이 문서의 현재 상태 또는 완료 항목 갱신
+- 세부 plan은 필요 시에만 상태 주석 추가
+
+---
+
+## 세부 문서 사용 기준
+
+### active
+
+- `docs/superpowers/plans/2026-03-24-infra-module-roadmap.md`
+
+### reference
+
+- `docs/superpowers/plans/2026-03-24-asset-model-expansion.md`
+- `docs/superpowers/plans/2026-03-24-layout-and-alias.md`
+- `docs/superpowers/plans/2026-03-24-asset-registration-simplify.md`
+- 관련 spec 문서들
+
+### archive 후보
+
+- 현재 방향과 직접 연결되지 않는 과거 enhancement/migration/customer-centric plan들
+- 즉시 삭제하지는 않되, 후속 문서 정리 작업에서 상태 표기를 추가한다
+
+---
+
+## 당장 다음으로 할 일
+
+1. Track A1 기준으로 자산 화면의 “완료/미완” 항목을 다시 적는다.
+2. 자산 회귀 체크리스트를 짧게 만든다.
+3. 그 체크리스트를 통과할 때까지 자산 원장 안정화 작업을 우선한다.

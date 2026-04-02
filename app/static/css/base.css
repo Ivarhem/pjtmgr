@@ -668,15 +668,29 @@ label.chk-inline { flex-direction: row; align-items: center; gap: 8px; cursor: p
   margin-bottom: 16px;
   background: var(--surface-color);
 }
-.modal-group legend.modal-group-title {
+.modal-group legend.modal-group-title,
+.modal-group .modal-group-title {
+  display: block;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-color-secondary);
+}
+.modal-group legend.modal-group-title {
   padding: 0 6px;
+}
+.modal-group .modal-group-title {
+  margin-bottom: 10px;
 }
 .modal-group .form-grid {
   margin-bottom: 0;
   gap: 14px;
+}
+.modal-group .modal-desc {
+  margin: 0 0 14px;
+}
+.modal-group .modal-hint {
+  margin: 12px 0 0;
+  line-height: 1.45;
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .modal-xs { max-width: 320px; }

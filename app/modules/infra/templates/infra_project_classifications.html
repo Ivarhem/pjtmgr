@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}프로젝트 분류체계{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css?v=20260326-classification-scroll">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>프로젝트 분류체계</h1>
+  <div class="page-header-actions">
+    <button class="btn btn-secondary" id="btn-refresh-classification">새로고침</button>
+    <button class="btn btn-secondary" id="btn-edit-classification-scheme">체계 수정</button>
+    <button class="btn btn-primary" id="btn-init-classification">체계 초기화</button>
+    <button class="btn btn-primary" id="btn-add-classification-root">최상위 분류 추가</button>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <label>검색
+    <input type="text" id="filter-classification-search" placeholder="코드, 이름, 경로 검색">
+  </label>
+  <label class="chk-inline"><input type="checkbox" id="chk-classification-active-only" checked> 활성 항목만</label>
+</div>
+
+<div id="classification-page-empty" class="card classification-empty hidden">
+  프로젝트를 먼저 선택하세요. 선택한 프로젝트의 분류체계를 이 화면에서 관리합니다.
+</div>
+
+<div id="classification-layout" class="classification-layout hidden">
+  <section class="card physical-panel">
+    <div class="classification-summary" id="classification-summary"></div>
+    <div class="classification-toolbar">
+      <div class="classification-level-controls" id="classification-level-controls"></div>
+      <div class="classification-actions">
+        <button class="btn btn-secondary" id="btn-add-classification-child">하위 분류 추가</button>
+        <button class="btn btn-secondary" id="btn-edit-classification-node">분류 수정</button>
+        <button class="btn btn-danger" id="btn-delete-classification-node">분류 삭제</button>
+      </div>
+    </div>
+    <div id="classification-node-tree" class="classification-tree"></div>
+  </section>
+
+  <div class="classification-splitter" id="classification-splitter" aria-hidden="true"></div>
+
+  <section class="card physical-panel">
+    <h2 id="classification-detail-title">분류 상세</h2>
+    <p class="classification-panel-help" id="classification-detail-help">분류를 선택하면 코드, 경로, 비고를 볼 수 있습니다.</p>
+    <div id="classification-detail-empty" class="classification-empty">
+      왼쪽 목록에서 분류를 선택하세요.
+    </div>
+    <div id="classification-detail-content" class="hidden">
+      <dl class="classification-detail-grid">
+        <dt id="classification-detail-code-label">코드</dt>
+        <dd id="classification-detail-code"></dd>
+        <dt id="classification-detail-name-label">분류명</dt>
+        <dd id="classification-detail-name"></dd>
+        <dt id="classification-detail-level-label">분류 단계</dt>
+        <dd id="classification-detail-level"></dd>
+        <dt id="classification-detail-status-label">상태</dt>
+        <dd id="classification-detail-status"></dd>
+        <dt id="classification-detail-sort-order-label">정렬순서</dt>
+        <dd id="classification-detail-sort-order"></dd>
+        <dt id="classification-detail-parent-label">상위분류</dt>
+        <dd id="classification-detail-parent"></dd>
+        <dt id="classification-detail-project-label">프로젝트</dt>
+        <dd id="classification-detail-project"></dd>
+        <dt id="classification-detail-note-label">비고</dt>
+        <dd id="classification-detail-note"></dd>
+      </dl>
+      <p class="classification-path" id="classification-detail-path"></p>
+      <p class="classification-inline-note">프로젝트별 분류체계는 현재 프로젝트 범위에서만 유효합니다. 자산 입력과 Import 검증은 이 체계를 참조합니다.</p>
+    </div>
+  </section>
+</div>
+
+<dialog id="modal-classification-init" class="modal modal-lg">
+  <h2>프로젝트 분류체계 초기화</h2>
+  <p class="modal-desc">현재 프로젝트의 분류체계를 글로벌 기본 체계 또는 같은 고객사의 기존 프로젝트 체계에서 복사합니다.</p>
+  <form class="form-grid-single">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">초기화 정보</legend>
+      <div class="form-grid">
+        <label>시작 방식
+          <select id="classification-init-mode">
+            <option value="global">글로벌 기본 체계 복사</option>
+            <option value="partner_project">같은 고객사 기존 프로젝트 체계 복사</option>
+          </select>
+        </label>
+        <label>복사 원본
+          <select id="classification-init-source"></select>
+        </label>
+        <label class="full-width">새 분류체계 이름
+          <input type="text" id="classification-init-name" placeholder="미입력 시 기본 이름 사용">
+        </label>
+      </div>
+      <p class="modal-hint" id="classification-init-hint">글로벌 기본 체계 또는 같은 고객사의 기존 프로젝트 체계를 복사해 시작할 수 있습니다.</p>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-classification-init">취소</button>
+    <button class="btn btn-primary" id="btn-save-classification-init">초기화</button>
+  </div>
+</dialog>
+
+<dialog id="modal-classification-scheme" class="modal modal-lg">
+  <h2>분류체계 수정</h2>
+  <p class="modal-desc">현재 프로젝트 분류체계의 이름과 설명을 수정합니다.</p>
+  <form class="form-grid-single">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">체계 정보</legend>
+      <div class="form-grid">
+        <label>분류체계명
+          <input type="text" id="classification-scheme-name" required>
+        </label>
+        <label>상태
+          <select id="classification-scheme-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">설명
+          <textarea id="classification-scheme-description" rows="3"></textarea>
+        </label>
+        <label>1레벨 별칭
+          <input type="text" id="classification-scheme-level-1-alias" placeholder="예: 대구분">
+        </label>
+        <label>2레벨 별칭
+          <input type="text" id="classification-scheme-level-2-alias" placeholder="예: 중구분">
+        </label>
+        <label>3레벨 별칭
+          <input type="text" id="classification-scheme-level-3-alias" placeholder="예: 소구분">
+        </label>
+        <label>4레벨 별칭
+          <input type="text" id="classification-scheme-level-4-alias" placeholder="예: 세구분">
+        </label>
+        <label>5레벨 별칭
+          <input type="text" id="classification-scheme-level-5-alias" placeholder="예: 상세구분">
+        </label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-classification-scheme">취소</button>
+    <button class="btn btn-primary" id="btn-save-classification-scheme">저장</button>
+  </div>
+</dialog>
+
+<dialog id="modal-classification-node" class="modal modal-lg">
+  <h2 id="classification-node-modal-title">분류 등록</h2>
+  <p class="modal-desc">프로젝트 자산/Import가 참조할 분류 트리 노드를 등록합니다.</p>
+  <form class="form-grid-single">
+    <input type="hidden" id="classification-node-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">분류 정보</legend>
+      <div class="form-grid">
+        <label>코드
+          <input type="text" id="classification-node-code" required>
+        </label>
+        <label>분류명
+          <input type="text" id="classification-node-name" required>
+        </label>
+        <label>상위분류
+          <select id="classification-node-parent"></select>
+        </label>
+        <label>정렬순서
+          <input type="number" id="classification-node-sort-order" value="100">
+        </label>
+        <label>상태
+          <select id="classification-node-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">비고
+          <textarea id="classification-node-note" rows="3"></textarea>
+        </label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-classification-node">취소</button>
+    <button class="btn btn-primary" id="btn-save-classification-node">저장</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_project_classifications.js"></script>
+{% endblock %}

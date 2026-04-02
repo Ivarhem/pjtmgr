@@ -8,7 +8,8 @@
 ## 모듈화 마이그레이션 — 코드 구조 완료, 런타임 E2E 검증 미완
 
 - 코드 구조 마이그레이션 완료: `app/core/`, `app/modules/{common,accounting,infra}/` 구조로 전환됨
-- 인프라모듈 전체 구현 완료 (고객사 중심 구조, 자산/IP/포트맵/정책/대시보드/Import/Export/업체연결/감사로그)
+- 인프라모듈은 골격과 일부 핵심 화면이 동작하지만, 전체 구현은 아직 진행 중
+- 최신 인프라 진행 상태는 `docs/superpowers/plans/2026-03-24-infra-module-roadmap.md` 기준
 - 업체 중심 구조 전환 완료 (Migration 0005): Asset/IpSubnet/PortMap/PolicyAssignment → partner_id FK, topbar 2단 셀렉터
 - 런타임 통합 테스트 (실제 서버 기동, 브라우저 E2E) 미수행 — 마이그레이션 예외 조항(CLAUDE.md §8)은 런타임 검증 완료 시 삭제 예정
 - Standalone 배포용 데이터 Export/Import CLI 미구현 (`app/cli/export_standalone.py`, `app/cli/import_standalone.py` placeholder만 존재)
@@ -33,6 +34,8 @@
 
 - RBAC 기본 구현 완료 (Role 모델 + permissions JSONB + 기본 역할 4종 + require_module_access)
 - 풀 RBAC 확장(resource x action 조합)은 향후 구현 예정 (permissions.resources 플레이스홀더 존재)
+- 사용자관리 1차 UI는 체크박스 권한 조합을 내부적으로 커스텀 Role로 매핑하는 방식이다.
+  - 현재는 사용자 화면에서 빠른 권한 부여가 목적이며, 역할 자체를 직접 편집/비교/정리하는 전용 역할 관리 화면은 아직 없다.
 
 ## 참여업체-자산 연결 (TODO)
 

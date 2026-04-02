@@ -14,7 +14,10 @@
 {% block content %}
 <div class="page-header">
   <h1>프로젝트 목록</h1>
-  <button class="btn btn-primary" id="btn-add-project">프로젝트 등록</button>
+  <div class="infra-inline-actions">
+    <label class="chk-inline"><input type="checkbox" id="chk-active-projects" checked> 완료되지 않은 사업만</label>
+    <button class="btn btn-primary" id="btn-add-project">프로젝트 등록</button>
+  </div>
 </div>
 
 <div class="card mb-md">
@@ -27,31 +30,48 @@
   <form id="form-project" class="form-grid">
     <input type="hidden" id="project-id">
     <input type="hidden" id="project-code">
-    <label>
-      사업명
-      <input type="text" id="project-name" required>
-    </label>
-    <label>
-      상태
-      <select id="project-status">
-        <option value="planned">계획</option>
-        <option value="active">진행중</option>
-        <option value="on_hold">보류</option>
-        <option value="completed">완료</option>
-      </select>
-    </label>
-    <label>
-      시작일
-      <input type="date" id="start-date">
-    </label>
-    <label>
-      종료일
-      <input type="date" id="end-date">
-    </label>
-    <label class="full-width">
-      설명
-      <textarea id="project-desc" rows="3"></textarea>
-    </label>
+    <div class="modal-group full-width">
+      <div class="modal-group-title">기본 정보</div>
+      <div class="form-grid">
+        <label>
+          사업명
+          <input type="text" id="project-name" required>
+        </label>
+        <label>
+          사업완료여부
+          <label class="chk-inline">
+            <input type="checkbox" id="project-completed">
+            완료
+          </label>
+        </label>
+        <label>
+          시작일
+          <input type="date" id="start-date">
+        </label>
+        <label>
+          종료일
+          <input type="date" id="end-date">
+        </label>
+        <label class="full-width">
+          설명
+          <textarea id="project-desc" rows="3"></textarea>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-group full-width" id="project-classification-group">
+      <div class="modal-group-title">카탈로그 레이아웃 프리셋</div>
+      <p class="modal-desc">신규 프로젝트에서 자산 분류를 표시할 기본 레이아웃 프리셋을 선택합니다.</p>
+      <div class="form-grid">
+        <label class="full-width" id="project-classification-source-wrap">
+          레이아웃 프리셋
+          <select id="project-classification-source"></select>
+        </label>
+      </div>
+      <p class="modal-hint" id="project-classification-hint">
+        선택한 프리셋은 프로젝트별 분류 경로 표시 기준으로 사용됩니다. 필요하면 나중에 프로젝트 설정에서 다시 바꿀 수 있습니다.
+      </p>
+    </div>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-project">취소</button>

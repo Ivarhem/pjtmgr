@@ -114,7 +114,6 @@ def _enrich(db: Session, links: list[PeriodAsset]) -> list[dict]:
         a = assets.get(l.asset_id)
         p = periods.get(l.contract_period_id)
         d["asset_name"] = a.asset_name if a else None
-        d["asset_type"] = a.asset_type if a else None
         d["hostname"] = a.hostname if a else None
         d["period_label"] = p.period_label if p else None
         result.append(d)
