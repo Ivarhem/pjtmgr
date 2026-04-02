@@ -33,7 +33,6 @@ let _catalogClassificationSearchQuery = "";
 const _catalogAttributeOptionCache = new Map();
 let _productSimilarityTimer = null;
 let _catalogClassificationSchemeEditing = false;
-let _catalogPresetJustChanged = false;
 
 const CATALOG_LABEL_LANG_PREF_KEY = "catalog.label_lang";
 let _catalogLabelLang = "ko";
@@ -518,8 +517,13 @@ function saveCatalogClassificationCollapsedState() {
   );
 }
 
+function _catalogGridStateKey() {
+  const presetId = localStorage.getItem(CATALOG_LAYOUT_PRESET_KEY) || "default";
+  return CATALOG_GRID_COLUMN_STATE_KEY + ":" + presetId;
+}
+
 function getStoredCatalogGridColumnState() {
-  const raw = localStorage.getItem(CATALOG_GRID_COLUMN_STATE_KEY);
+  const raw = localStorage.getItem(_catalogGridStateKey());
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -534,11 +538,10 @@ function hasStoredCatalogGridColumnState() {
 }
 
 function saveCatalogGridColumnState() {
-  if (_catalogPresetJustChanged) return;
   if (!catalogGridApi?.getColumnState) return;
   const state = catalogGridApi.getColumnState();
   if (!Array.isArray(state) || !state.length) return;
-  localStorage.setItem(CATALOG_GRID_COLUMN_STATE_KEY, JSON.stringify(state));
+  localStorage.setItem(_catalogGridStateKey(), JSON.stringify(state));
 }
 
 function restoreCatalogGridColumnState() {
@@ -653,12 +656,8 @@ function applyCatalogClassificationAliases() {
   if (treeTitle) treeTitle.textContent = getCatalogLeafAlias();
   if (catalogGridApi) {
     catalogGridApi.setGridOption("columnDefs", catalogColDefs);
-    if (!_catalogPresetJustChanged) {
-      const restored = restoreCatalogGridColumnState();
-      if (!restored) fitCatalogGridColumnsIfNeeded();
-    } else {
-      fitCatalogGridColumnsIfNeeded();
-    }
+    const restored = restoreCatalogGridColumnState();
+    if (!restored) fitCatalogGridColumnsIfNeeded();
   }
 }
 
@@ -2642,12 +2641,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("catalog-layout-preset-select").addEventListener("change", async (event) => {
     const layoutId = Number(event.target.value || 0);
     if (!layoutId) return;
-    _catalogPresetJustChanged = true;
-    localStorage.removeItem(CATALOG_GRID_COLUMN_STATE_KEY);
     localStorage.setItem(CATALOG_LAYOUT_PRESET_KEY, String(layoutId));
     await loadCatalogTaxonomyContext();
     await loadCatalog();
-    _catalogPresetJustChanged = false;
   });
   document.getElementById("btn-catalog-classification-add-root").addEventListener("click", () => openCatalogClassificationNodeModal("add_root").catch((err) => showToast(err.message, "error")));
   document.getElementById("btn-catalog-classification-add-child").addEventListener("click", () => openCatalogClassificationNodeModal("add_child").catch((err) => showToast(err.message, "error")));
