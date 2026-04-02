@@ -22,7 +22,7 @@
 <p class="data-note">※ 시스템 전반 설정을 관리합니다. 조직명, 사업유형(MA/SI/HW 등)의 기본값, UI에 표시되는 용어를 커스터마이징할 수 있습니다.</p>
 
 <!-- 기본 설정 -->
-<div class="sys-section sys-section-narrow">
+<div class="sys-section">
   <h2 class="sys-section-title">기본 설정</h2>
   <div class="form-grid form-grid-single">
     <label>
@@ -75,7 +75,7 @@
 </div>
 </div>
 
-<div id="tab-accounting" class="hidden">
+<div id="tab-accounting" class="is-hidden">
 <!-- 사업유형 관리 -->
 <div class="sys-section">
   <div class="sys-section-header">
@@ -113,28 +113,12 @@
 </div>
 </div>
 
-<div id="tab-infra" class="hidden">
+<div id="tab-infra" class="is-hidden">
   <div class="sys-section">
-    <div class="sys-section-header">
-      <h2 class="sys-section-title">자산유형 관리</h2>
-      <button id="btn-add-asset-type" class="btn btn-primary btn-sm">+ 추가</button>
-    </div>
-    <p class="data-note sys-note">자산유형 코드(예: SVR=서버, NET=네트워크)를 관리합니다. 자산 등록 시 유형에 따라 자동으로 코드가 부여됩니다.</p>
-    <div class="sys-table-wrap">
-      <table class="sys-table" id="asset-type-table">
-        <colgroup>
-          <col class="col-w80">
-          <col class="col-w60">
-          <col class="col-w80">
-          <col class="col-w50">
-          <col class="col-w50">
-          <col class="col-w60">
-        </colgroup>
-        <thead>
-          <tr><th>키</th><th>코드</th><th>표시명</th><th>순서</th><th>활성</th><th></th></tr>
-        </thead>
-        <tbody id="asset-type-tbody"></tbody>
-      </table>
+    <h2 class="sys-section-title">프로젝트관리 시스템 설정</h2>
+    <p class="data-note sys-note">카탈로그 기준관리와 제품 관리는 카탈로그 메인 화면에서 함께 처리합니다.</p>
+    <div class="modal-actions">
+      <a href="/product-catalog" class="btn btn-secondary">카탈로그로 이동</a>
     </div>
   </div>
 </div>
@@ -228,29 +212,6 @@
   </div>
 </dialog>
 
-<!-- 자산유형 추가/수정 모달 -->
-<dialog id="modal-asset-type" class="modal modal-md">
-  <h2 id="modal-at-title">자산유형 추가</h2>
-  <fieldset class="modal-group">
-    <legend class="modal-group-title">유형 정보</legend>
-    <div class="form-grid">
-      <label>키 <input type="text" id="at-type-key" required pattern="[a-z][a-z0-9_]*" placeholder="예: server" maxlength="30"></label>
-      <label>코드 <input type="text" id="at-code" required pattern="[A-Z]{3}" maxlength="3" placeholder="예: SVR" style="text-transform:uppercase"></label>
-      <label>표시명 <input type="text" id="at-label" required placeholder="예: 서버"></label>
-      <label>정렬순서 <input type="number" id="at-sort-order" value="0" min="0"></label>
-      <label>활성
-        <select id="at-is-active">
-          <option value="true">활성</option>
-          <option value="false">비활성</option>
-        </select>
-      </label>
-    </div>
-  </fieldset>
-  <div class="modal-actions">
-    <button type="button" id="btn-at-cancel" class="btn btn-secondary">취소</button>
-    <button type="button" id="btn-at-submit" class="btn btn-primary">저장</button>
-  </div>
-</dialog>
 {% endblock %}
 
 {% block scripts %}

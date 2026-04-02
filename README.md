@@ -3,11 +3,12 @@
 영업부서의 매입매출 관리(회계모듈)와 SI 프로젝트 기술 인벤토리 관리(인프라모듈)를
 하나의 웹 애플리케이션에서 통합 운영하는 사내 전용 플랫폼.
 
-> **현재 상태**: 코드 구조 마이그레이션 완료, 런타임 E2E 검증 대기 (v0.4)
+> **현재 상태**: 코드 구조 마이그레이션 완료, 기능 구현 진행 중 (v0.4)
 >
 > **문서 안내** — 코딩 규칙은 `CLAUDE.md`, 작업 지침은 `docs/guidelines/`, 아키텍처 결정은 `docs/DECISIONS.md`,
 > 알려진 제약은 `docs/KNOWN_ISSUES.md`, 프로젝트 배경은 `docs/PROJECT_CONTEXT.md` 참조.
 > 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델의 1차 기준은 소스 코드(`app/core/startup/`, `app/modules/*/routers/`, `app/modules/*/models/`)다.
+> 인프라모듈의 세부 진행 상태와 우선순위는 `docs/superpowers/plans/2026-03-24-infra-module-roadmap.md`를 기준으로 본다.
 
 ---
 
@@ -15,9 +16,9 @@
 
 | 모듈 | 설명 | 상태 |
 | ---- | ---- | ---- |
-| **공통 (common)** | 사용자, 업체, 인증, 시스템 설정 | 구현 완료 |
-| **회계 (accounting)** | 사업 원장, 매입매출 실적, 입금/배분, 대시보드, 보고서, Excel | 구현 완료 |
-| **인프라 (infra)** | 프로젝트, 자산, IP 인벤토리, 포트맵, 정책, 현황판, Excel Import/Export | 구현 완료 |
+| **공통 (common)** | 사용자, 업체, 인증, 시스템 설정 | 동작 중 |
+| **회계 (accounting)** | 사업 원장, 매입매출 실적, 입금/배분, 대시보드, 보고서, Excel | 핵심 기능 동작, 보강 진행 중 |
+| **인프라 (infra)** | 프로젝트, 자산, IP 인벤토리, 포트맵, 정책(예정), 현황판, Excel Import/Export | 부분 동작, 단계별 구현 진행 중 |
 
 ---
 
@@ -52,7 +53,7 @@
 │   ├── PortMap 연결
 │   ├── 정책 적용 상태 연결
 │   └── 담당자 연결
-├── 제품 카탈로그 (글로벌 HW 제품, SPEC/EOSL Excel Import)
+├── 제품 카탈로그 (글로벌 제품 + 분류 메타 연결, SPEC/EOSL Excel Import)
 ├── 프로젝트 단위 Excel Export (자산/IP/포트맵 3시트)
 ├── 감사 로그 (CRUD 변경이력 기록 + 변경이력 탭)
 └── 현황판 (고객사 컨텍스트 기준 프로젝트별 자산/IP/정책/산출물 요약)
@@ -193,22 +194,23 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 
 ---
 
-## 구현 완료 기능
+## 현재 구현 범위
 
-| 영역 | 주요 기능 | 모듈 |
+| 영역 | 현재 상태 | 모듈 |
 | ---- | -------- | ---- |
-| **사업 관리** | 사업/기간 CRUD, 담당자 매핑, 검수일/발행일 규칙 | accounting |
-| **Forecast / 실적 / 입금** | 월별 Forecast, 실적 원장, 입금과 배분, 미수금/선수금 계산 | accounting |
-| **업체 / 사용자** | 업체와 담당자 관리, 사용자 관리, 권한 범위, CSV 일괄 등록 | common |
-| **Excel / 보고** | 3단계 Import, 대시보드/보고서 조회, Excel Export | accounting |
-| **시스템** | 전역 예외 처리, 설정 관리, 감사 로그 인프라 | common |
-| **프로젝트 관리** | 프로젝트 CRUD, 단계, 산출물, Pin 프로젝트, 업체/담당자 연결 | infra |
-| **기술 자산** | Asset CRUD, N:M 프로젝트 연결, 자산 간 관계, 횡단 검색 | infra |
-| **네트워크** | IP 인벤토리, 포트맵 CRUD, Excel Import | infra |
-| **정책** | 정책 정의, 프로젝트/자산별 적용 상태 | infra |
-| **제품 카탈로그** | 글로벌 HW 제품/스펙/인터페이스 관리, 자산 연결, SPEC/EOSL Excel Import | infra |
-| **자산 소프트웨어** | 자산별 설치/연동 SW 관리 | infra |
-| **인프라 공통** | Excel Export, 현황판, 감사 로그 연동, 변경이력 탭 | infra |
+| **사업 관리** | 사업/기간 CRUD, 담당자 매핑, 기본 회계 흐름 동작 | accounting |
+| **Forecast / 실적 / 입금** | 핵심 계산과 CRUD 동작, 회귀 테스트 존재 | accounting |
+| **업체 / 사용자 / 시스템** | 사용자, 업체, 설정, 역할 관리 동작 | common |
+| **자산** | 목록/등록/상세/부속 정보(Alias 포함) 중심 기능 동작 | infra |
+| **IP 인벤토리 / 포트맵 / 업체** | 화면과 API 뼈대는 있으나 일부만 검증됨 | infra |
+| **정책 / 배치도** | DB/API 일부 또는 스켈레톤만 존재, UI는 미구현 또는 비활성 | infra |
+| **제품 카탈로그** | CRUD, 최종분류/분류 메타 연결, 자산 연동 동작 | infra |
+
+인프라모듈의 세부 페이지 상태는 로드맵 문서 기준으로 다음과 같다.
+
+- `/periods`, `/assets`, `/audit-history`, `/product-catalog` 는 동작
+- `/ip-inventory`, `/port-maps`, `/contacts` 는 부분 동작
+- 배치도는 미구현
 
 ---
 
@@ -220,3 +222,4 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 - 동시 편집 충돌 방지(낙관적 잠금) 미구현
 - 발행일 휴일 조정 미적용
 - 대량 데이터(1000행 이상) Excel Import 성능 미검증
+- 인프라모듈의 일부 화면은 placeholder 또는 부분 구현 상태

@@ -27,6 +27,7 @@
 - `docs/PROJECT_STRUCTURE.md`: 파일 단위 프로젝트 구조와 모듈별 역할
 - 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델의 1차 기준은 코드다 (`app/main.py`, `app/core/app_factory.py`, `app/core/startup/`, `app/modules/*/routers/`, `app/modules/*/models/`).
 - README나 guideline은 코드의 세부 inventory를 중복 소유하지 않는다. 코드 경로를 안내하거나, 변경 판단 기준만 제공한다.
+- `README.md`는 외부 사용자가 알아야 하는 안정 정보만 유지한다. 내부 리팩터링, 파일 이동, 세부 API/모델 변경만 있었고 실행/운영/현재 상태 의미가 바뀌지 않았다면 기본적으로 수정하지 않는다.
 
 ---
 
@@ -45,6 +46,10 @@
 ## 2. 핵심 코드 규칙
 
 - **코드 일관성을 기능 추가 속도보다 우선한다.** 동일 문제 해결 시 기존 패턴을 우선 사용한다.
+- 기존 화면/컴포넌트를 수정할 때는 touched 영역을 현재 공용 패턴에 맞춘다. 기능만 덧붙이고 기존과 다른 UI 구조, 클래스 체계, 버튼/모달 스타일을 그대로 방치하지 않는다.
+- 사용자가 직접 조정할 수 있는 화면 상태는 기본적으로 저장/복원 대상이다.
+  - 예: 좌우 패널 너비, 트리 펼침/접힘, 마지막 선택 항목, 상세 패널 열림/닫힘
+  - 별도 예외가 없다면 새 화면에도 같은 기준을 적용한다.
 - Python 3.11+, PostgreSQL 16, 포매터 `black`, 린터 `ruff`
 - 타입 힌트를 모든 함수에 명시한다.
 - 서비스 레이어에 비즈니스 로직을 집중시키고, 라우터는 얇게 유지한다.
@@ -84,10 +89,13 @@ app/
 | --------- | --------- |
 | 회계 비즈니스 규칙 변경 | `docs/guidelines/accounting.md` |
 | 인프라 비즈니스 규칙 변경 | `docs/guidelines/infra.md` |
+| 분류체계 / 카탈로그 속성·레이아웃 변경 | `docs/guidelines/infra.md` |
 | 코딩 패턴/규칙 변경 | `docs/guidelines/backend.md` |
 | 테스트 전략/회귀 범위 변경 | CLAUDE.md SS3 테스트/확장성 |
 | 권한 변경 | `docs/guidelines/auth.md` |
+| 사용자관리 권한 부여 UX 변경 | `docs/guidelines/auth.md`, `docs/KNOWN_ISSUES.md` |
 | 프론트엔드 패턴 변경 | `docs/guidelines/frontend.md` |
+| 레이아웃 상태 저장/복원 패턴 변경 | `docs/guidelines/frontend.md`, 필요 시 해당 모듈 guideline |
 | Excel Import/Export 변경 | `docs/guidelines/excel.md` |
 | startup/bootstrap/migration 변경 | `docs/DECISIONS.md`, 필요 시 `README.md` |
 | 공개 엔드포인트/인증 흐름 변경 | `docs/guidelines/auth.md`, 필요 시 `README.md` |
@@ -131,23 +139,14 @@ app/
 - [ ] 비즈니스 규칙을 변경했는가? → 해당 모듈 guideline 확인
 - [ ] 권한 로직을 변경했는가? → `docs/guidelines/auth.md` 확인
 - [ ] 프론트엔드 패턴을 변경/추가했는가? → `docs/guidelines/frontend.md` 확인
+- [ ] 기존 화면의 모달/패널/액션바/테이블을 수정했다면, touched 영역이 현재 공용 UI 패턴과 클래스 체계에 맞는가?
 - [ ] Excel Import/Export를 변경했는가? → `docs/guidelines/excel.md` 확인
 - [ ] startup/bootstrap/migration을 변경했는가? → `docs/DECISIONS.md`, 필요 시 `README.md` 확인
 - [ ] 문서에 적은 경로/엔드포인트/권한명이 실제 코드와 일치하는가?
 
-### 세션 컨텍스트 관리
-
-장시간 작업 시 대화 컨텍스트가 커져 API 과부하(529 에러)나 성능 저하가 발생할 수 있다. 다음 규칙을 적용한다:
-
-- **API 529 에러가 2회 연속 발생하면** 즉시 작업을 중단하고 세션 전환을 제안한다.
-- **에이전트는 항상 1개씩 순차 파견**한다. 병렬 파견은 API 부하를 가중시킨다.
-- **단순 HTML/JS/CSS 수정은 에이전트 파견 대신 직접 처리**한다.
-- **대규모 Task 3개 이상 완료 후** 에이전트 파견 전에 컨텍스트 크기를 고려하고, 필요 시 세션 전환을 제안한다.
-- 세션 전환 시: memory에 진행 상태(`project_active_plan.md`)를 저장하고, 사용자에게 새 세션 시작을 안내한다. 새 세션에서는 plan 파일과 memory를 읽어 이어서 진행한다.
-
 ### 마이그레이션 기간 예외 (런타임 E2E 검증 완료 후 삭제)
 
-코드 구조 마이그레이션은 완료되었다 (common/accounting/infra 모듈 분리, 인프라모듈 전체 구현 완료). 런타임 E2E 통합 테스트(실제 서버 기동, 브라우저 검증)가 미수행이므로 이 예외 섹션을 유지한다.
+코드 구조 마이그레이션은 완료되었다 (common/accounting/infra 모듈 분리). 다만 기능 구현은 계속 진행 중이며, 인프라모듈도 부분구현/미구현 영역이 남아 있다. 런타임 E2E 통합 테스트(실제 서버 기동, 브라우저 검증)가 미수행이므로 이 예외 섹션을 유지한다.
 
 - 코드-문서 경로 불일치가 있더라도, 마이그레이션 계획에 따른 의도적 불일치이면 문서를 되돌리지 않는다.
 - 미구현/부분구현 코드를 근거로 지침을 수정하지 않는다. 단, 지침 간 상호 모순 또는 지침이 구현을 차단하는 경우에 한해 충돌을 보고하고 사용자 확인을 요청할 수 있다.
