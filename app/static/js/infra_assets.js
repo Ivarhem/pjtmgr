@@ -153,12 +153,127 @@ const GRID_EDITABLE_FIELDS = new Set([
   "project_asset_number",
   "asset_name",
   "current_role_id",
-  "category",
   "hostname",
   "model",
   "operation_type",
   "status",
 ]);
+
+/* ── CatalogCellEditor (AG Grid 셀 에디터) ── */
+class CatalogCellEditor {
+  init(params) {
+    this.params = params;
+    this.selectedModelId = null;
+
+    this.container = document.createElement("div");
+    this.container.className = "ag-cell-catalog-editor";
+
+    this.input = document.createElement("input");
+    this.input.type = "text";
+    this.input.value = params.value || "";
+    this.input.className = "ag-cell-input-editor";
+    this.input.placeholder = "제조사 또는 모델명 검색";
+    this.container.appendChild(this.input);
+
+    this.dropdown = document.createElement("div");
+    this.dropdown.className = "ag-cell-catalog-dropdown is-hidden";
+    document.body.appendChild(this.dropdown);
+
+    this._searchTimer = null;
+    this.input.addEventListener("input", () => this._search());
+    this.input.addEventListener("focus", () => this._search());
+    this.input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const first = this.dropdown.querySelector(".catalog-cell-option");
+        if (first) first.focus();
+      }
+      if (e.key === "Escape") {
+        setElementHidden(this.dropdown, true);
+        this.params.stopEditing();
+      }
+    });
+  }
+
+  _search() {
+    const q = this.input.value.trim();
+    if (!q) { setElementHidden(this.dropdown, true); return; }
+    clearTimeout(this._searchTimer);
+    this._searchTimer = setTimeout(async () => {
+      try {
+        const items = await apiFetch("/api/v1/product-catalog?q=" + encodeURIComponent(q));
+        this._renderDropdown(items);
+      } catch (e) { showToast(e.message, "error"); }
+    }, 300);
+  }
+
+  _renderDropdown(items) {
+    this.dropdown.textContent = "";
+    items.forEach((item) => {
+      const div = document.createElement("div");
+      const label = ((item.vendor || "") + " " + (item.name || "")).trim();
+      const kindLabel = CATALOG_KIND_LABELS[item.product_type] || item.product_type || "미지정";
+      div.textContent = "[" + kindLabel + "] " + label;
+
+      if (!buildCatalogClassificationPath(item)) {
+        div.className = "catalog-cell-option disabled";
+        const warn = document.createElement("span");
+        warn.textContent = " (분류 미설정)";
+        warn.className = "catalog-warning-note";
+        div.appendChild(warn);
+      } else {
+        div.className = "catalog-cell-option" + (item.is_placeholder ? " placeholder" : "");
+        div.tabIndex = -1;
+        div.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          this._selectItem(item);
+        });
+        div.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") this._selectItem(item);
+          if (e.key === "ArrowDown" && div.nextElementSibling) { e.preventDefault(); div.nextElementSibling.focus(); }
+          if (e.key === "ArrowUp" && div.previousElementSibling) { e.preventDefault(); div.previousElementSibling.focus(); }
+          if (e.key === "Escape") { setElementHidden(this.dropdown, true); this.params.stopEditing(); }
+        });
+      }
+      this.dropdown.appendChild(div);
+    });
+
+    const addDiv = document.createElement("div");
+    addDiv.className = "catalog-cell-option-new";
+    addDiv.textContent = "+ 새 제품 등록";
+    addDiv.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      setElementHidden(this.dropdown, true);
+      this.params.stopEditing();
+      openInlineCatalogForm();
+    });
+    this.dropdown.appendChild(addDiv);
+
+    const rect = this.input.getBoundingClientRect();
+    this.dropdown.style.left = rect.left + "px";
+    this.dropdown.style.top = rect.bottom + "px";
+    this.dropdown.style.width = Math.max(rect.width, 320) + "px";
+    setElementHidden(this.dropdown, false);
+  }
+
+  _selectItem(item) {
+    this.selectedModelId = item.id;
+    this.input.value = ((item.vendor || "") + " " + (item.name || "")).trim();
+    setElementHidden(this.dropdown, true);
+    this.params.stopEditing();
+  }
+
+  getGui() { return this.container; }
+  afterGuiAttached() { this.input.focus(); this.input.select(); }
+  getValue() {
+    if (this.selectedModelId) {
+      return { _catalogModelId: this.selectedModelId, display: this.input.value };
+    }
+    return this.params.value;
+  }
+  destroy() { this.dropdown.remove(); }
+  isPopup() { return true; }
+}
 
 function isGridFieldEditable(field) {
   return _gridEditMode && GRID_EDITABLE_FIELDS.has(field);
@@ -252,9 +367,18 @@ const columnDefs = [
   { field: "classification_level_1_name", headerName: "대구분", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_1_name", p.data) },
   { field: "classification_level_2_name", headerName: "중구분", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_2_name", p.data) },
   { field: "classification_level_3_name", headerName: "소구분", width: 140, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_3_name", p.data) },
-  { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("category"), cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+  { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
   { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
-  { field: "model", headerName: "모델명", width: 190, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("model"), cellClass: (p) => getGridCellClass(p.colDef.field) },
+  {
+    field: "model", headerName: "모델명", width: 190,
+    valueFormatter: (p) => {
+      if (p.value && typeof p.value === "object") return p.value.display || "—";
+      return p.value || "—";
+    },
+    editable: () => isGridFieldEditable("model"),
+    cellEditor: CatalogCellEditor,
+    cellClass: (p) => getGridCellClass(p.colDef.field),
+  },
   { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("operation_type"), cellClass: (p) => getGridCellClass(p.colDef.field) },
   {
     field: "status",
@@ -604,6 +728,18 @@ async function handleGridCellValueChanged(event) {
         method: "PATCH",
         body: { asset_role_id: row.current_role_id || null },
       });
+    } else if (field === "model") {
+      const val = event.newValue;
+      if (!val || !val._catalogModelId) {
+        row.model = event.oldValue;
+        gridApi?.refreshCells({ rowNodes: [event.node], force: true });
+        return;
+      }
+      updated = await apiFetch(`/api/v1/assets/${row.id}`, {
+        method: "PATCH",
+        body: { model_id: val._catalogModelId },
+      });
+      row.model = updated.model;
     } else {
       updated = await apiFetch(`/api/v1/assets/${row.id}`, {
         method: "PATCH",
@@ -724,8 +860,7 @@ const DETAIL_EDIT_FIELDS = {
     ["고객 자산번호", "customer_asset_number"],
     ["자산명", "asset_name"],
     ["귀속사업", "period_id"],
-    ["제조사", "vendor"],
-    ["모델", "model"],
+    ["카탈로그 제품", "model_id"],
     ["시리얼", "serial_no"],
     ["장비 ID", "equipment_id"],
     ["자산 번호", "asset_number"],
@@ -1638,6 +1773,72 @@ async function buildDetailEditFields(tab) {
         opt.selected = true;
         input.appendChild(opt);
       }
+    } else if (key === "model_id") {
+      // 카탈로그 검색 위젯
+      const wrap = document.createElement("div");
+      wrap.className = "catalog-search-wrap";
+
+      input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "제조사 또는 모델명 검색";
+      const currentDisplay = [_selectedAsset.vendor, _selectedAsset.model].filter(Boolean).join(" ");
+      input.value = currentDisplay;
+      input.autocomplete = "off";
+      wrap.appendChild(input);
+
+      const hiddenId = document.createElement("input");
+      hiddenId.type = "hidden";
+      hiddenId.value = _selectedAsset.model_id || "";
+      hiddenId.dataset.field = "model_id";
+      wrap.appendChild(hiddenId);
+
+      const dd = document.createElement("div");
+      dd.className = "catalog-dropdown hidden";
+      wrap.appendChild(dd);
+
+      let searchTimer = null;
+      input.addEventListener("input", () => {
+        const q = input.value.trim();
+        if (!q) { dd.classList.add("hidden"); return; }
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(async () => {
+          try {
+            const items = await apiFetch("/api/v1/product-catalog?q=" + encodeURIComponent(q));
+            dd.textContent = "";
+            items.forEach((item) => {
+              const div = document.createElement("div");
+              const itemLabel = ((item.vendor || "") + " " + (item.name || "")).trim();
+              const kindLabel = CATALOG_KIND_LABELS[item.product_type] || item.product_type || "미지정";
+              div.textContent = "[" + kindLabel + "] " + itemLabel;
+              if (!buildCatalogClassificationPath(item)) {
+                div.className = "catalog-dropdown-item disabled";
+                const warn = document.createElement("span");
+                warn.textContent = " (분류 미설정)";
+                warn.className = "catalog-warning-note";
+                div.appendChild(warn);
+              } else {
+                div.className = "catalog-dropdown-item" + (item.is_placeholder ? " placeholder" : "");
+                div.addEventListener("click", () => {
+                  hiddenId.value = item.id;
+                  input.value = itemLabel;
+                  dd.classList.add("hidden");
+                });
+              }
+              dd.appendChild(div);
+            });
+            const addDiv = document.createElement("div");
+            addDiv.className = "catalog-dropdown-add";
+            addDiv.textContent = "+ 새 제품 등록";
+            addDiv.addEventListener("click", () => { dd.classList.add("hidden"); openInlineCatalogForm(); });
+            dd.appendChild(addDiv);
+            dd.classList.remove("hidden");
+          } catch (e) { showToast(e.message, "error"); }
+        }, 300);
+      });
+
+      fieldWrap.appendChild(wrap);
+      container.appendChild(fieldWrap);
+      continue;
     } else if (key === "center_id") {
       input = document.createElement("select");
       const centers = await loadLayoutCenters(_selectedAsset.partner_id);
@@ -1787,6 +1988,10 @@ async function saveDetailEdit(tab) {
     if (key === "period_id") {
       const parsed = val === "" ? null : Number(val);
       if (parsed !== original) changes[key] = parsed;
+    } else if (key === "model_id") {
+      const parsed = val === "" ? null : Number(val);
+      const original = _selectedAsset.model_id;
+      if (parsed !== original && parsed !== null) changes.model_id = parsed;
     } else if (["center_id", "room_id", "rack_id"].includes(key)) {
       const parsed = val === "" ? null : Number(val);
       if (parsed !== original) changes[key] = parsed;
@@ -2522,7 +2727,7 @@ async function saveAsset() {
   if (!name) { showToast("자산명을 입력하세요.", "warning"); return; }
   const payload = {
     partner_id: cid,
-    hardware_model_id: Number(catalogId),
+    model_id: Number(catalogId),
     project_asset_number: document.getElementById("asset-project-code").value.trim() || null,
     customer_asset_number: document.getElementById("asset-customer-code").value.trim() || null,
     asset_name: name,
