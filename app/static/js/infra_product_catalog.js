@@ -778,14 +778,20 @@ async function rebuildCatalogClassificationTree(rows) {
   applyCatalogClassificationAliases();
   const treeMap = new Map();
   const nodeList = [];
-  const levelDefinitions = [];
+  const levelKeys = [];
   for (let levelNo = 1; levelNo <= (_catalogLayoutDetail?.depth_count || 3); levelNo += 1) {
     const attributeKey = getCatalogConfiguredLevelKey(levelNo);
     if (!attributeKey) break;
-    const options = await loadCatalogAttributeOptions(attributeKey, true);
-    const optionMap = new Map(options.map((item) => [item.option_key, item]));
-    levelDefinitions.push({ levelNo, attributeKey, optionMap });
+    levelKeys.push({ levelNo, attributeKey });
   }
+  const levelOptionArrays = await Promise.all(
+    levelKeys.map(({ attributeKey }) => loadCatalogAttributeOptions(attributeKey, true)),
+  );
+  const levelDefinitions = levelKeys.map(({ levelNo, attributeKey }, idx) => ({
+    levelNo,
+    attributeKey,
+    optionMap: new Map(levelOptionArrays[idx].map((item) => [item.option_key, item])),
+  }));
 
   function ensureNode(levelNo, optionKey, optionLabel, parentNode = null, optionData = null) {
     const codePath = [...(parentNode?.code_path || []), optionKey];
@@ -1043,18 +1049,22 @@ function getProductAttributeValueMap(attributes = []) {
 
 async function buildCatalogAttributeOptionMaps() {
   const maps = new Map();
-  /* 레이아웃 레벨 키 (트리 호환) */
+  const keys = new Set();
   for (let levelNo = 1; levelNo <= 5; levelNo += 1) {
-    const attributeKey = getCatalogPrimaryLevelKey(levelNo);
-    if (!attributeKey) continue;
-    const options = await loadCatalogAttributeOptions(attributeKey, true);
-    maps.set(attributeKey, new Map(options.map((item) => [item.option_key, { label: item.label, label_kr: item.label_kr }])));
+    const k = getCatalogPrimaryLevelKey(levelNo);
+    if (k) keys.add(k);
   }
-  /* 나머지 displayable 속성 */
   for (const attr of getDisplayableCatalogAttributes()) {
-    if (maps.has(attr.attribute_key)) continue;
-    const options = await loadCatalogAttributeOptions(attr.attribute_key, true);
-    maps.set(attr.attribute_key, new Map(options.map((item) => [item.option_key, { label: item.label, label_kr: item.label_kr }])));
+    keys.add(attr.attribute_key);
+  }
+  const entries = await Promise.all(
+    [...keys].map(async (attributeKey) => {
+      const options = await loadCatalogAttributeOptions(attributeKey, true);
+      return [attributeKey, new Map(options.map((item) => [item.option_key, { label: item.label, label_kr: item.label_kr }]))];
+    }),
+  );
+  for (const [key, optionMap] of entries) {
+    maps.set(key, optionMap);
   }
   return maps;
 }
