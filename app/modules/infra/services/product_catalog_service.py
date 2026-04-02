@@ -149,7 +149,7 @@ def create_product(
     db.refresh(product)
     if attribute_payload is not None:
         replace_product_attributes(db, product.id, attribute_payload, current_user)
-    invalidate_product_list_cache(db, product.id)
+    invalidate_product_list_cache(db)
     return _serialize_product(db, product)
 
 
@@ -184,7 +184,7 @@ def update_product(
     db.refresh(product)
     if attribute_payload is not None:
         replace_product_attributes(db, product.id, attribute_payload, current_user)
-    invalidate_product_list_cache(db, product.id)
+    invalidate_product_list_cache(db)
     return _serialize_product(db, product)
 
 
@@ -205,7 +205,7 @@ def delete_product(db: Session, product_id: int, current_user: User) -> None:
     )
     db.delete(product)
     db.commit()
-    invalidate_product_list_cache(db, product_id)
+    invalidate_product_list_cache(db)
 
 
 def bulk_upsert_products(
@@ -501,6 +501,9 @@ def _read_product_list_cache(
         )
     )
     if not cache_count:
+        return None
+    product_count = db.scalar(select(func.count(ProductCatalog.id)))
+    if cache_count != product_count:
         return None
 
     stmt = (
