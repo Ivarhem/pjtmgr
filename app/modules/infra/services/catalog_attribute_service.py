@@ -17,6 +17,7 @@ from app.modules.infra.schemas.catalog_attribute_option import (
 )
 from app.modules.infra.models.catalog_attribute_option_alias import CatalogAttributeOptionAlias
 from app.modules.infra.services.catalog_alias_service import normalize_catalog_alias, resolve_attribute_option_canonical
+from app.modules.infra.services.product_catalog_service import invalidate_product_list_cache
 
 
 def list_attributes(db: Session, active_only: bool = False) -> list[CatalogAttributeDef]:
@@ -132,6 +133,7 @@ def create_attribute_option(
     db.commit()
     db.refresh(option)
     _enrich_option_scope(option)
+    invalidate_product_list_cache(db)
     return option
 
 
@@ -180,6 +182,7 @@ def update_attribute_option(
     db.commit()
     db.refresh(option)
     _enrich_option_scope(option)
+    invalidate_product_list_cache(db)
     return option
 
 
@@ -189,6 +192,7 @@ def delete_attribute_option(db: Session, option_id: int, current_user: User) -> 
     _guard_option_delete(db, option_id)
     db.delete(option)
     db.commit()
+    invalidate_product_list_cache(db)
 
 
 def _sync_label_kr_auto_alias(db: Session, option: CatalogAttributeOption) -> None:

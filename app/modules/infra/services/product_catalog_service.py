@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from sqlalchemy import or_, select
+from datetime import datetime, timezone
+
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.auth.authorization import can_manage_catalog_products
@@ -24,6 +26,7 @@ from app.modules.infra.models.software_spec import SoftwareSpec
 from app.modules.infra.models.model_spec import ModelSpec
 from app.modules.infra.models.generic_catalog_profile import GenericCatalogProfile
 from app.modules.infra.models.hardware_interface import HardwareInterface
+from app.modules.infra.models.product_catalog_list_cache import ProductCatalogListCache
 from app.modules.infra.schemas.product_catalog import (
     ProductCatalogBulkUpsertRow,
     ProductCatalogCreate,
@@ -58,6 +61,13 @@ def list_products(
     product_type: str | None = None,
     q: str | None = None,
 ) -> list[dict]:
+    layout_id = _get_default_layout_id(db)
+
+    cached = _read_product_list_cache(db, layout_id, vendor, product_type, q)
+    if cached is not None:
+        return cached
+
+    # Cache miss — compute via bulk, populate cache, return
     stmt = select(ProductCatalog).order_by(
         ProductCatalog.vendor.asc(), ProductCatalog.name.asc()
     )
@@ -71,7 +81,12 @@ def list_products(
             or_(ProductCatalog.name.ilike(like), ProductCatalog.vendor.ilike(like))
         )
     rows = list(db.scalars(stmt))
-    return _serialize_products_bulk(db, rows)
+    results = _serialize_products_bulk(db, rows)
+
+    # Populate cache (all products, not just filtered)
+    _populate_product_list_cache(db, layout_id)
+
+    return results
 
 
 def get_product(db: Session, product_id: int) -> ProductCatalog:
@@ -134,6 +149,7 @@ def create_product(
     db.refresh(product)
     if attribute_payload is not None:
         replace_product_attributes(db, product.id, attribute_payload, current_user)
+    invalidate_product_list_cache(db, product.id)
     return _serialize_product(db, product)
 
 
@@ -168,6 +184,7 @@ def update_product(
     db.refresh(product)
     if attribute_payload is not None:
         replace_product_attributes(db, product.id, attribute_payload, current_user)
+    invalidate_product_list_cache(db, product.id)
     return _serialize_product(db, product)
 
 
@@ -188,6 +205,7 @@ def delete_product(db: Session, product_id: int, current_user: User) -> None:
     )
     db.delete(product)
     db.commit()
+    invalidate_product_list_cache(db, product_id)
 
 
 def bulk_upsert_products(
@@ -452,6 +470,102 @@ def delete_interface(
         raise NotFoundError("Interface not found")
 
     db.delete(iface)
+    db.commit()
+
+
+# ── Cache helpers ──
+
+
+def _get_default_layout_id(db: Session) -> int | None:
+    layout = db.scalar(
+        select(ClassificationLayout.id).where(
+            ClassificationLayout.scope_type == "global",
+            ClassificationLayout.is_active.is_(True),
+            ClassificationLayout.is_default.is_(True),
+        ).order_by(ClassificationLayout.id.asc())
+    )
+    return layout
+
+
+def _read_product_list_cache(
+    db: Session,
+    layout_id: int | None,
+    vendor: str | None = None,
+    product_type: str | None = None,
+    q: str | None = None,
+) -> list[dict] | None:
+    """캐시에서 제품 목록 조회. 캐시 미스 시 None 반환."""
+    cache_count = db.scalar(
+        select(func.count(ProductCatalogListCache.product_id)).where(
+            ProductCatalogListCache.layout_id == layout_id
+        )
+    )
+    if not cache_count:
+        return None
+
+    stmt = (
+        select(ProductCatalogListCache.data)
+        .join(ProductCatalog, ProductCatalog.id == ProductCatalogListCache.product_id)
+        .where(ProductCatalogListCache.layout_id == layout_id)
+        .order_by(ProductCatalog.vendor.asc(), ProductCatalog.name.asc())
+    )
+    if vendor is not None:
+        stmt = stmt.where(ProductCatalog.vendor == vendor)
+    if product_type is not None:
+        stmt = stmt.where(ProductCatalog.product_type == product_type)
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.where(
+            or_(ProductCatalog.name.ilike(like), ProductCatalog.vendor.ilike(like))
+        )
+    return [row for row in db.scalars(stmt)]
+
+
+def _populate_product_list_cache(db: Session, layout_id: int | None) -> None:
+    """전체 제품의 캐시를 재구축한다."""
+    all_products = list(
+        db.scalars(
+            select(ProductCatalog).order_by(
+                ProductCatalog.vendor.asc(), ProductCatalog.name.asc()
+            )
+        )
+    )
+    all_data = _serialize_products_bulk(db, all_products)
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Clear existing cache for this layout
+    db.execute(
+        delete(ProductCatalogListCache).where(
+            ProductCatalogListCache.layout_id == layout_id
+        )
+    )
+
+    # Insert all
+    for product, data in zip(all_products, all_data):
+        db.add(
+            ProductCatalogListCache(
+                product_id=product.id,
+                layout_id=layout_id,
+                data=data,
+                cached_at=now,
+            )
+        )
+    db.commit()
+
+
+def invalidate_product_list_cache(
+    db: Session, product_id: int | None = None
+) -> None:
+    """캐시 무효화. product_id가 주어지면 해당 제품만, 아니면 전체."""
+    if product_id is not None:
+        db.execute(
+            delete(ProductCatalogListCache).where(
+                ProductCatalogListCache.product_id == product_id
+            )
+        )
+    else:
+        db.execute(delete(ProductCatalogListCache))
     db.commit()
 
 

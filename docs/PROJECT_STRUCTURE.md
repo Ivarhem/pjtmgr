@@ -183,6 +183,7 @@ app/modules/infra/
 │   ├── classification_layout.py # ClassificationLayout (분류 레이아웃)
 │   ├── classification_layout_level.py # ClassificationLayoutLevel (분류 레벨 정의)
 │   ├── classification_layout_level_key.py # ClassificationLayoutLevelKey (레벨 키 매핑)
+│   ├── product_catalog_list_cache.py # ProductCatalogListCache (제품 목록 캐시)
 │   ├── center.py                # Center (데이터센터)
 │   ├── room.py                  # Room (전산실)
 │   └── rack.py                  # Rack (랙)
