@@ -582,7 +582,7 @@ def invalidate_product_list_cache(
 def _guard_asset_references(db: Session, product_id: int) -> None:
     from app.modules.infra.models.asset import Asset
     count = db.scalar(
-        select(Asset.id).where(Asset.hardware_model_id == product_id).limit(1)
+        select(Asset.id).where(Asset.model_id == product_id).limit(1)
     )
     if count is not None:
         raise BusinessRuleError(

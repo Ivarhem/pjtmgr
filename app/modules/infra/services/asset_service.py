@@ -83,7 +83,7 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
         return []
 
     asset_ids = [a.id for a in assets]
-    catalog_ids = {a.hardware_model_id for a in assets if a.hardware_model_id}
+    catalog_ids = {a.model_id for a in assets}
     alias_rows = list(db.execute(
         select(AssetAlias.asset_id, AssetAlias.alias_name)
         .where(AssetAlias.asset_id.in_(asset_ids))
@@ -132,7 +132,7 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
     for asset in assets:
         d = {c.key: getattr(asset, c.key) for c in Asset.__table__.columns}
         d["aliases"] = alias_map.get(asset.id, [])
-        d["catalog_kind"] = catalog_map.get(asset.hardware_model_id)
+        d["catalog_kind"] = catalog_map.get(asset.model_id)
         current_roles = role_map.get(asset.id, [])
         d["current_role_names"] = [role["name"] for role in current_roles]
         d["current_role_id"] = current_roles[0]["id"] if current_roles else None
@@ -143,7 +143,7 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
         d["rack_is_fallback_text"] = bool(not asset.rack_id and asset.rack_no)
         classification_info = _build_classification_info(
             db,
-            catalog_entity_map.get(asset.hardware_model_id),
+            catalog_entity_map.get(asset.model_id),
             category=asset.category,
             subcategory=asset.subcategory,
         )
@@ -170,7 +170,7 @@ def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
         return []
 
     asset_ids = [a.id for a in assets]
-    catalog_ids = {a.hardware_model_id for a in assets if a.hardware_model_id}
+    catalog_ids = {a.model_id for a in assets}
     # Load PeriodAsset links for these assets
     pa_rows = list(
         db.execute(
@@ -243,7 +243,7 @@ def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
         d["period_id"] = period_id
         d["period_label"] = period.period_label if period else None
         d["contract_name"] = period.contract.contract_name if period and period.contract else None
-        d["catalog_kind"] = catalog_map.get(a.hardware_model_id)
+        d["catalog_kind"] = catalog_map.get(a.model_id)
         current_roles = role_map.get(a.id, [])
         d["current_role_names"] = [role["name"] for role in current_roles]
         d["current_role_id"] = current_roles[0]["id"] if current_roles else None
@@ -254,7 +254,7 @@ def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
         d["rack_is_fallback_text"] = bool(not a.rack_id and a.rack_no)
         classification_info = _build_classification_info(
             db,
-            catalog_entity_map.get(a.hardware_model_id),
+            catalog_entity_map.get(a.model_id),
             period_id=period_id,
             category=a.category,
             subcategory=a.subcategory,
@@ -287,12 +287,9 @@ def enrich_asset_with_catalog_kind(db: Session, asset: Asset) -> dict:
     d["catalog_kind"] = None
     d["current_role_names"] = []
     d["current_role_id"] = None
-    if asset.hardware_model_id:
-        catalog = db.get(ProductCatalog, asset.hardware_model_id)
-        if catalog is not None:
-            d["catalog_kind"] = catalog.product_type
-    else:
-        catalog = None
+    catalog = db.get(ProductCatalog, asset.model_id)
+    if catalog is not None:
+        d["catalog_kind"] = catalog.product_type
     if asset.center_id:
         center = db.get(Center, asset.center_id)
         if center is not None:
@@ -373,7 +370,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     )
 
     # 카탈로그 조회
-    catalog = db.get(ProductCatalog, payload.hardware_model_id)
+    catalog = db.get(ProductCatalog, payload.model_id)
     if catalog is None:
         raise NotFoundError("Product catalog entry not found")
     catalog_type_meta = _get_catalog_asset_type_meta(db, catalog, period_id=payload.period_id)
@@ -396,7 +393,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
 
     data = {
         "partner_id": payload.partner_id,
-        "hardware_model_id": payload.hardware_model_id,
+        "model_id": payload.model_id,
         "project_asset_number": payload.project_asset_number,
         "customer_asset_number": payload.customer_asset_number,
         "asset_name": payload.asset_name,
@@ -445,7 +442,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
         asset=asset,
         event_type="create",
         summary="자산이 등록되었습니다.",
-        detail=f"카탈로그 #{payload.hardware_model_id} 기반으로 자산이 생성되었습니다.",
+        detail=f"카탈로그 #{payload.model_id} 기반으로 자산이 생성되었습니다.",
         created_by_user_id=current_user.id,
     )
     db.commit()
@@ -478,8 +475,8 @@ def update_asset(
     if target_partner_id != asset.partner_id or target_asset_name != asset.asset_name:
         _ensure_asset_name_unique(db, target_partner_id, target_asset_name, asset.id)
 
-    if "hardware_model_id" in changes and changes["hardware_model_id"] is not None:
-        new_catalog = db.get(ProductCatalog, changes["hardware_model_id"])
+    if "model_id" in changes and changes["model_id"] is not None:
+        new_catalog = db.get(ProductCatalog, changes["model_id"])
         if new_catalog is None:
             raise NotFoundError("Product catalog entry not found")
         period_id_for_layout = (
