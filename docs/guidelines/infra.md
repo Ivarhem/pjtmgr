@@ -93,6 +93,8 @@
 - `PeriodPhase.status`, `PeriodPhase.submission_status`, `PolicyAssignment.status`, `PortMap.status`:
   - 스키마에서 허용값 제한을 우선 적용한다.
   - 집계 로직(`infra_metrics` 등)에서 특정 상태값 문자열에 의존하는 경우, 상태 추가/변경 시 같은 변경 세트에서 함께 갱신한다.
+- `CatalogAttributeOption.label`: 영문 기본 라벨. 한글(완성형·자모) 포함 불가.
+- `CatalogAttributeOption.label_kr`: 한글 보조 라벨. 저장 시 `label_kr_auto` alias 자동 동기화.
 - 사용자 표시 라벨(한글)과 DB/API 값(영문 또는 정규화된 문자열)은 분리한다. DB/API 값을 UI 문구 변경에 맞춰 같이 바꾸지 않는다.
 - 분류체계의 레벨 alias는 표시용 메타데이터다.
   - 자산 목록 헤더(`대구분/중구분/소구분`)와 입력 라벨은 alias를 사용한다.

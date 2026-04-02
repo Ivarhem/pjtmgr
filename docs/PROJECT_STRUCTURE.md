@@ -502,7 +502,9 @@ alembic/
     ├── 0050_add_vendor_aliases_and_vendor_series_options.py # 제조사 별칭, 시리즈 옵션
     ├── 0051_normalize_existing_vendor_names.py # 기존 제조사명 정규화
     ├── 0052_add_catalog_attribute_option_aliases.py # 속성 옵션 별칭 추가
-    └── 0053_add_domain_scope_to_product_family.py # 제품군 도메인 scope 추가
+    ├── 0053_add_domain_scope_to_product_family.py # 제품군 도메인 scope 추가
+    ├── 0054_expand_catalog_seeds.py              # 카탈로그 시드 확장 (속성 옵션, 벤더 별칭, 제품)
+    └── 0055_option_label_kr.py                   # 속성 옵션 label_kr 컬럼 추가 + 한/영 backfill
 ```
 
 ## 문서
