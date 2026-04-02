@@ -158,7 +158,13 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
     return result
 
 
-def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
+def enrich_assets_with_period(
+    db: Session,
+    assets: list[Asset],
+    *,
+    layout_id: int | None = None,
+    lang: str | None = None,
+) -> list[dict]:
     """Attach period_label via PeriodAsset for inventory view."""
     from app.modules.common.models.contract_period import ContractPeriod
     from app.modules.infra.models.period_asset import PeriodAsset
@@ -258,6 +264,8 @@ def enrich_assets_with_period(db: Session, assets: list[Asset]) -> list[dict]:
             period_id=period_id,
             category=a.category,
             subcategory=a.subcategory,
+            layout_id=layout_id,
+            lang=lang,
         )
         d["classification_path"] = classification_info["path"]
         d["classification_is_fallback_text"] = classification_info["is_fallback_text"]
@@ -800,6 +808,8 @@ def _build_classification_info(
     period_id: int | None = None,
     category: str | None = None,
     subcategory: str | None = None,
+    layout_id: int | None = None,
+    lang: str | None = None,
 ) -> dict[str, str | list[str | None] | bool | None]:
     if catalog is None:
         levels: list[str | None] = [None, None, None, None, None]
@@ -813,13 +823,14 @@ def _build_classification_info(
         path = " > ".join(parts) if parts else None
         return {"path": path, "levels": levels, "is_fallback_text": bool(path)}
 
+    use_kr = lang != "en"
     attrs = _get_catalog_attribute_map(db, catalog.id)
-    layout = _get_effective_classification_layout(db, period_id=period_id)
+    layout = _get_effective_classification_layout(db, period_id=period_id, layout_id=layout_id)
     levels: list[str | None] = [None, None, None, None, None]
     if layout is None or not attrs:
         ordered = [attrs.get("domain"), attrs.get("imp_type"), attrs.get("product_family"), attrs.get("platform")]
         parts = [
-            (item.get("label_kr") or item["label"])
+            (item.get("label_kr") or item["label"]) if use_kr else item["label"]
             for item in ordered
             if item and item.get("label")
         ]
@@ -834,7 +845,7 @@ def _build_classification_info(
         for attribute_key in level["attribute_keys"]:
             item = attrs.get(attribute_key)
             if item and item.get("label"):
-                labels.append(item.get("label_kr") or item["label"])
+                labels.append((item.get("label_kr") or item["label"]) if use_kr else item["label"])
         if labels:
             part = joiner.join(labels)
             levels[idx] = part
@@ -1014,14 +1025,19 @@ def _get_catalog_attribute_map(db: Session, catalog_id: int) -> dict[str, dict[s
     }
 
 
-def _get_effective_classification_layout(db: Session, *, period_id: int | None) -> dict | None:
+def _get_effective_classification_layout(
+    db: Session,
+    *,
+    period_id: int | None,
+    layout_id: int | None = None,
+) -> dict | None:
     from app.modules.common.models.contract_period import ContractPeriod
     from app.modules.infra.models.classification_layout import ClassificationLayout
     from app.modules.infra.models.classification_layout_level import ClassificationLayoutLevel
     from app.modules.infra.models.classification_layout_level_key import ClassificationLayoutLevelKey
 
-    layout_id = None
-    if period_id is not None:
+    # layout_id가 명시적으로 전달되면 우선 사용
+    if layout_id is None and period_id is not None:
         period = db.get(ContractPeriod, period_id)
         if period is not None:
             layout_id = period.classification_layout_id

@@ -564,9 +564,14 @@ async function loadClassificationLevelAliases() {
   _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
   try {
     const layouts = await apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true");
-    const defaultLayout = (Array.isArray(layouts) ? layouts : []).find((l) => l.is_default) || layouts?.[0];
-    if (defaultLayout?.id) {
-      const detail = await apiFetch(`/api/v1/classification-layouts/${defaultLayout.id}`);
+    const allLayouts = Array.isArray(layouts) ? layouts : [];
+    // 카탈로그 메뉴와 동일한 프리셋 선택 로직 (localStorage 공유)
+    const preferredId = Number(localStorage.getItem("catalog_layout_preset_id") || 0);
+    const targetLayout = allLayouts.find((l) => Number(l.id) === preferredId)
+      || allLayouts.find((l) => l.is_default)
+      || allLayouts[0];
+    if (targetLayout?.id) {
+      const detail = await apiFetch(`/api/v1/classification-layouts/${targetLayout.id}`);
       if (detail?.levels?.length) {
         detail.levels.forEach((level) => {
           const idx = Math.max(Number(level.level_no || 1) - 1, 0);
@@ -628,6 +633,11 @@ async function loadAssets() {
   const q = document.getElementById("filter-search").value.trim();
   if (statusFilter) url += "&status=" + statusFilter;
   if (q) url += "&q=" + encodeURIComponent(q);
+  // 카탈로그 프리셋 + 한/영 설정 전달
+  const layoutId = localStorage.getItem("catalog_layout_preset_id");
+  if (layoutId) url += "&layout_id=" + layoutId;
+  const labelLang = localStorage.getItem("catalog.label_lang");
+  if (labelLang) url += "&lang=" + labelLang;
 
   try {
     const data = await apiFetch(url);

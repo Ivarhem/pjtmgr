@@ -41,12 +41,14 @@ def list_assets_inventory(
     period_id: int | None = None,
     status: str | None = None,
     q: str | None = None,
+    layout_id: int | None = None,
+    lang: str | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[AssetRead]:
     """Partner-scoped asset inventory with period info enrichment."""
     assets = list_assets(db, partner_id, period_id, status, q)
-    return enrich_assets_with_period(db, assets)
+    return enrich_assets_with_period(db, assets, layout_id=layout_id, lang=lang)
 
 
 @router.post("", response_model=AssetRead, status_code=status.HTTP_201_CREATED)
