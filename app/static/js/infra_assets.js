@@ -427,6 +427,7 @@ const ASSET_DETAIL_OPEN_KEY = "infra_assets_detail_open";
 const ASSET_DETAIL_LAST_ID_KEY = "infra_assets_detail_last_id";
 const ASSET_DETAIL_LAST_PARTNER_KEY = "infra_assets_detail_last_partner_id";
 const ASSET_GRID_COLUMN_STATE_KEY = "infra_assets_grid_column_state_v1";
+const ASSET_LAST_LAYOUT_PRESET_KEY = "infra_assets_last_layout_preset_id";
 const CLASSIFICATION_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 let _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
 
@@ -562,15 +563,16 @@ function applyClassificationLevelHeaders() {
 
 async function loadClassificationLevelAliases() {
   _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
+  let activePresetId = null;
   try {
     const layouts = await apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true");
     const allLayouts = Array.isArray(layouts) ? layouts : [];
-    // 카탈로그 메뉴와 동일한 프리셋 선택 로직 (localStorage 공유)
     const preferredId = Number(localStorage.getItem("catalog_layout_preset_id") || 0);
     const targetLayout = allLayouts.find((l) => Number(l.id) === preferredId)
       || allLayouts.find((l) => l.is_default)
       || allLayouts[0];
     if (targetLayout?.id) {
+      activePresetId = String(targetLayout.id);
       const detail = await apiFetch(`/api/v1/classification-layouts/${targetLayout.id}`);
       if (detail?.levels?.length) {
         detail.levels.forEach((level) => {
@@ -580,6 +582,12 @@ async function loadClassificationLevelAliases() {
       }
     }
   } catch { /* 기본값 유지 */ }
+  // 프리셋이 변경되었으면 저장된 컬럼 순서 리셋
+  const lastPresetId = localStorage.getItem(ASSET_LAST_LAYOUT_PRESET_KEY);
+  if (activePresetId && lastPresetId !== activePresetId) {
+    localStorage.removeItem(ASSET_GRID_COLUMN_STATE_KEY);
+    localStorage.setItem(ASSET_LAST_LAYOUT_PRESET_KEY, activePresetId);
+  }
   applyClassificationLevelHeaders();
 }
 
