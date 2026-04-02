@@ -27,8 +27,8 @@ class Asset(TimestampMixin, Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Product Catalog 연동
-    hardware_model_id: Mapped[int | None] = mapped_column(
-        ForeignKey("product_catalog.id", ondelete="SET NULL"), nullable=True, index=True
+    model_id: Mapped[int] = mapped_column(
+        ForeignKey("product_catalog.id", ondelete="RESTRICT"), nullable=False, index=True
     )
 
     # Equipment Spec

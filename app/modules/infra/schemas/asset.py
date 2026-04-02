@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class AssetCreate(BaseModel):
     partner_id: int
-    hardware_model_id: int          # 필수 — 카탈로그 제품
+    model_id: int                   # 필수 — 카탈로그 제품
     project_asset_number: str | None = None
     customer_asset_number: str | None = None
     asset_name: str
@@ -25,14 +25,12 @@ class AssetUpdate(BaseModel):
     project_asset_number: str | None = None
     customer_asset_number: str | None = None
     asset_name: str | None = None
-    vendor: str | None = None
-    model: str | None = None
     role: str | None = None
     environment: str | None = None
     location: str | None = None
     status: str | None = None
     note: str | None = None
-    hardware_model_id: int | None = None
+    model_id: int | None = None
     # Equipment Spec
     center_id: int | None = None
     room_id: int | None = None
@@ -44,7 +42,6 @@ class AssetUpdate(BaseModel):
     rack_unit: str | None = None
     phase: str | None = None
     received_date: date | None = None
-    category: str | None = None
     subcategory: str | None = None
     serial_no: str | None = None
     # Logical Config
@@ -92,7 +89,7 @@ class AssetRead(BaseModel):
     location: str | None
     status: str
     note: str | None
-    hardware_model_id: int | None = None
+    model_id: int
     # Equipment Spec
     center_id: int | None = None
     room_id: int | None = None
