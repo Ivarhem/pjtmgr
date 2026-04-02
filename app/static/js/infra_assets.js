@@ -438,6 +438,19 @@ function applyClassificationLevelHeaders() {
 
 async function loadClassificationLevelAliases() {
   _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
+  try {
+    const layouts = await apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true");
+    const defaultLayout = (Array.isArray(layouts) ? layouts : []).find((l) => l.is_default) || layouts?.[0];
+    if (defaultLayout?.id) {
+      const detail = await apiFetch(`/api/v1/classification-layouts/${defaultLayout.id}`);
+      if (detail?.levels?.length) {
+        detail.levels.forEach((level) => {
+          const idx = Math.max(Number(level.level_no || 1) - 1, 0);
+          if (level.alias) _classificationLevelAliases[idx] = level.alias;
+        });
+      }
+    }
+  } catch { /* 기본값 유지 */ }
   applyClassificationLevelHeaders();
 }
 
