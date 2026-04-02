@@ -97,10 +97,6 @@ def list_attribute_options(
     options = list(db.scalars(stmt))
     for option in options:
         _enrich_option_scope(option)
-        option.aliases = [
-            {"id": a.id, "alias_value": a.alias_value, "match_type": a.match_type}
-            for a in (option.aliases or [])
-        ]
     return options
 
 
@@ -274,10 +270,6 @@ def _get_option(db: Session, option_id: int) -> CatalogAttributeOption:
     if option is None:
         raise NotFoundError("속성값을 찾을 수 없습니다.")
     _enrich_option_scope(option)
-    option.aliases = [
-        {"id": a.id, "alias_value": a.alias_value, "match_type": a.match_type}
-        for a in (option.aliases or [])
-    ]
     return option
 
 

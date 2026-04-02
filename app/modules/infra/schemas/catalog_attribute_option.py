@@ -56,3 +56,16 @@ class CatalogAttributeOptionRead(CatalogAttributeOptionBase):
     label_kr: str | None = None
     domain_option_label_kr: str | None = None
     aliases: list[dict] = Field(default_factory=list)
+
+    @field_validator("aliases", mode="before")
+    @classmethod
+    def serialize_aliases(cls, v: list) -> list[dict]:
+        if not v:
+            return []
+        first = v[0] if v else None
+        if isinstance(first, dict):
+            return v
+        return [
+            {"id": a.id, "alias_value": a.alias_value, "match_type": a.match_type}
+            for a in v
+        ]
