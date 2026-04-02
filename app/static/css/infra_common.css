@@ -1473,6 +1473,42 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   font-size: 12px;
 }
 
+/* CatalogCellEditor 드롭다운 (AG Grid 셀 에디터) */
+.ag-cell-catalog-dropdown {
+  position: fixed;
+  z-index: 9999;
+  background: var(--surface-color, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.catalog-cell-option {
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-color-light, #f1f5f9);
+  color: var(--text-color, #1e293b);
+}
+.catalog-cell-option:hover { background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color)); }
+.catalog-cell-option:focus { background: var(--info-soft-bg, #e0f2fe); outline: none; }
+.catalog-cell-option.disabled {
+  color: var(--text-muted, #94a3b8);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.catalog-cell-option.placeholder { font-style: italic; opacity: 0.8; }
+.catalog-cell-option-new {
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--primary-color, #3b82f6);
+  font-weight: 600;
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+.catalog-cell-option-new:hover { background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color)); }
+
 .modal-actions-compact {
   margin-top: 8px;
 }
