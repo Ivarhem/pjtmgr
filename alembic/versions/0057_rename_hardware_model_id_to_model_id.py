@@ -72,7 +72,9 @@ def upgrade() -> None:
         )
     """)
     op.execute("""
-        DELETE FROM port_maps WHERE asset_id IN (
+        DELETE FROM port_maps WHERE src_asset_id IN (
+            SELECT id FROM assets WHERE hardware_model_id IS NULL
+        ) OR dst_asset_id IN (
             SELECT id FROM assets WHERE hardware_model_id IS NULL
         )
     """)
