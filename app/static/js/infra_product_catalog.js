@@ -2636,6 +2636,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("catalog-layout-preset-select").addEventListener("change", async (event) => {
     const layoutId = Number(event.target.value || 0);
     if (!layoutId) return;
+    localStorage.removeItem(CATALOG_GRID_COLUMN_STATE_KEY);
     localStorage.setItem(CATALOG_LAYOUT_PRESET_KEY, String(layoutId));
     await loadCatalogTaxonomyContext();
     await loadCatalog();
