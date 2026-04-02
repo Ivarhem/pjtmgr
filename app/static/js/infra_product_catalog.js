@@ -34,15 +34,26 @@ const _catalogAttributeOptionCache = new Map();
 let _productSimilarityTimer = null;
 let _catalogClassificationSchemeEditing = false;
 
-const CATALOG_LABEL_LANG_KEY = "catalog_label_lang";
+const CATALOG_LABEL_LANG_PREF_KEY = "catalog.label_lang";
+let _catalogLabelLang = "ko";
 
 function getCatalogLabelLang() {
-  const lang = localStorage.getItem(CATALOG_LABEL_LANG_KEY);
-  return lang === "en" ? "en" : "ko";
+  return _catalogLabelLang;
 }
 
 function setCatalogLabelLang(lang) {
-  localStorage.setItem(CATALOG_LABEL_LANG_KEY, lang === "en" ? "en" : "ko");
+  _catalogLabelLang = lang === "en" ? "en" : "ko";
+  apiFetch(`/api/v1/preferences/${CATALOG_LABEL_LANG_PREF_KEY}`, {
+    method: "PATCH",
+    body: { value: _catalogLabelLang },
+  }).catch(() => {});
+}
+
+async function loadCatalogLabelLangPreference() {
+  try {
+    const pref = await apiFetch(`/api/v1/preferences/${CATALOG_LABEL_LANG_PREF_KEY}`);
+    if (pref?.value === "en" || pref?.value === "ko") _catalogLabelLang = pref.value;
+  } catch { /* 기본값 ko 유지 */ }
 }
 
 function getCatalogOptionDisplayLabel(option) {
@@ -2589,6 +2600,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindProductSimilarityInputs();
   setCatalogDetailOpen(localStorage.getItem(CATALOG_DETAIL_OPEN_KEY) === "1");
   applyCatalogPermissionState();
+  await loadCatalogLabelLangPreference();
   const langToggleBtn = document.getElementById("btn-catalog-lang-toggle");
   if (langToggleBtn) langToggleBtn.textContent = getCatalogLabelLang() === "ko" ? "한" : "EN";
   await loadCatalog();
