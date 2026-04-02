@@ -45,9 +45,9 @@ def upgrade() -> None:
         )
     """)
     op.execute("""
-        DELETE FROM asset_relations WHERE source_asset_id IN (
+        DELETE FROM asset_relations WHERE src_asset_id IN (
             SELECT id FROM assets WHERE hardware_model_id IS NULL
-        ) OR target_asset_id IN (
+        ) OR dst_asset_id IN (
             SELECT id FROM assets WHERE hardware_model_id IS NULL
         )
     """)
