@@ -429,6 +429,7 @@ const ASSET_DETAIL_LAST_PARTNER_KEY = "infra_assets_detail_last_partner_id";
 const ASSET_GRID_COLUMN_STATE_KEY = "infra_assets_grid_column_state_v1";
 const CLASSIFICATION_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 let _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
+let _catalogLabelLang = "ko";
 
 const INLINE_CATALOG_ATTRIBUTE_OPTIONS = {
   domain: [
@@ -568,7 +569,11 @@ function applyClassificationLevelHeaders() {
 async function loadClassificationLevelAliases() {
   _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
   try {
-    const layouts = await apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true");
+    const [layouts, langPref] = await Promise.all([
+      apiFetch("/api/v1/classification-layouts?scope_type=global&active_only=true"),
+      apiFetch("/api/v1/preferences/catalog.label_lang").catch(() => null),
+    ]);
+    if (langPref?.value === "en" || langPref?.value === "ko") _catalogLabelLang = langPref.value;
     const allLayouts = Array.isArray(layouts) ? layouts : [];
     const preferredId = Number(localStorage.getItem("catalog_layout_preset_id") || 0);
     const targetLayout = allLayouts.find((l) => Number(l.id) === preferredId)
@@ -640,8 +645,7 @@ async function loadAssets() {
   // 카탈로그 프리셋 + 한/영 설정 전달
   const layoutId = localStorage.getItem("catalog_layout_preset_id");
   if (layoutId) url += "&layout_id=" + layoutId;
-  const labelLang = localStorage.getItem("catalog.label_lang");
-  if (labelLang) url += "&lang=" + labelLang;
+  if (_catalogLabelLang) url += "&lang=" + _catalogLabelLang;
 
   try {
     const data = await apiFetch(url);
