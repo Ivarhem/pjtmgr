@@ -1665,6 +1665,19 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 
 .vendor-apply-row.is-hidden { display: none; }
 
+.catalog-integrity-alias-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.catalog-integrity-alias-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
 .catalog-integrity-sidebar {
   display: flex;
   flex-direction: column;

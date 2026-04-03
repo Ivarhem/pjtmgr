@@ -451,16 +451,11 @@ function applyCatalogPermissionState() {
   setButtonAvailability("btn-save-generic-profile", canProducts, "카탈로그 제품 관리 권한이 없습니다.");
   setButtonAvailability("btn-save-eosl", canProducts, "카탈로그 제품 관리 권한이 없습니다.");
   setButtonAvailability("btn-add-interface", canProducts, "카탈로그 제품 관리 권한이 없습니다.");
-  setButtonAvailability("btn-open-layout-items", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
   setButtonAvailability("btn-catalog-classification-edit-toggle", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
   setButtonAvailability("btn-catalog-classification-edit-scheme", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
   setButtonAvailability("btn-catalog-classification-add-root", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
   setButtonAvailability("btn-catalog-classification-add-child", canTaxonomy && !!getSelectedCatalogClassificationNode(), "카탈로그 기준 관리 권한이 없습니다.");
   setButtonAvailability("btn-catalog-classification-scheme-save-preset", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
-  setButtonAvailability("btn-catalog-layout-item-save-attribute", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
-  setButtonAvailability("btn-catalog-layout-item-add", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
-  const attributeDesc = document.getElementById("catalog-layout-item-attribute-description");
-  if (attributeDesc) attributeDesc.disabled = !canTaxonomy;
   const editToolbar = document.getElementById("catalog-classification-edit-toolbar");
   if (editToolbar) editToolbar.classList.toggle("hidden", !_catalogClassificationEditMode || !canTaxonomy);
   const editToggle = document.getElementById("btn-catalog-classification-edit-toggle");
@@ -1936,7 +1931,9 @@ function initIfaceGrid() {
 }
 
 function initCatalogLayoutItemGrid() {
-  layoutItemGridApi = agGrid.createGrid(document.getElementById("grid-catalog-layout-items"), {
+  const target = document.getElementById("grid-catalog-layout-items");
+  if (!target) return;
+  layoutItemGridApi = agGrid.createGrid(target, {
     columnDefs: layoutItemColDefs,
     rowData: [],
     defaultColDef: { resizable: true, sortable: true },
@@ -2634,9 +2631,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     setCatalogClassificationEditMode(!_catalogClassificationEditMode);
   });
-  document.getElementById("btn-open-layout-items").addEventListener("click", () => {
-    openCatalogLayoutItemsModal().catch((err) => showToast(err.message, "error"));
-  });
   document.getElementById("btn-catalog-classification-edit-scheme").addEventListener("click", openCatalogClassificationSchemeModal);
   document.getElementById("catalog-layout-preset-select").addEventListener("change", async (event) => {
     const layoutId = Number(event.target.value || 0);
@@ -2651,7 +2645,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     _catalogClassificationSchemeEditing = false;
     document.getElementById("modal-catalog-classification-scheme").close();
   });
-  document.getElementById("btn-catalog-layout-items-close").addEventListener("click", () => document.getElementById("modal-catalog-layout-items").close());
   document.getElementById("btn-catalog-classification-scheme-save-preset").addEventListener("click", () => saveCatalogClassificationSchemeAsPreset().catch((err) => showToast(err.message, "error")));
   document.getElementById("btn-catalog-classification-scheme-submit").addEventListener("click", () => saveCatalogClassificationScheme().catch((err) => showToast(err.message, "error")));
   document.getElementById("btn-catalog-classification-node-cancel").addEventListener("click", () => document.getElementById("modal-catalog-classification-node").close());
@@ -2662,12 +2655,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateCatalogLayoutLevelVisibility();
     });
   }
-  document.getElementById("catalog-layout-item-attribute-key").addEventListener("change", () => {
+  document.getElementById("catalog-layout-item-attribute-key")?.addEventListener("change", () => {
     updateCatalogLayoutItemAttributeDescription();
     refreshCatalogLayoutItems().catch((err) => showToast(err.message, "error"));
   });
-  document.getElementById("btn-catalog-layout-item-save-attribute").addEventListener("click", () => saveCatalogLayoutItemAttributeDescription().catch((err) => showToast(err.message, "error")));
-  document.getElementById("btn-catalog-layout-item-add").addEventListener("click", () => {
+  document.getElementById("btn-catalog-layout-item-save-attribute")?.addEventListener("click", () => saveCatalogLayoutItemAttributeDescription().catch((err) => showToast(err.message, "error")));
+  document.getElementById("btn-catalog-layout-item-add")?.addEventListener("click", () => {
     const attributeKey = document.getElementById("catalog-layout-item-attribute-key").value || "";
     openCatalogClassificationNodeModal("add_root", null, null, attributeKey).catch((err) => showToast(err.message, "error"));
   });

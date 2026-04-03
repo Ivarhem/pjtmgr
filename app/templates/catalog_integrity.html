@@ -28,7 +28,7 @@
     <div class="catalog-tabs catalog-integrity-tabs" id="catalog-integrity-tabs">
       <button class="catalog-tab active" type="button" data-integrity-tab="vendors">제조사</button>
       <button class="catalog-tab" type="button" data-integrity-tab="products">제품</button>
-      <button class="catalog-tab" type="button" data-integrity-tab="aliases">별칭</button>
+      <button class="catalog-tab" type="button" data-integrity-tab="aliases">속성</button>
     </div>
 
     <div class="catalog-tab-panel active" id="catalog-integrity-tab-vendors">
@@ -107,54 +107,59 @@
     <div class="catalog-tab-panel" id="catalog-integrity-tab-aliases">
       <div class="catalog-integrity-panel-head">
         <div>
-          <h2>별칭</h2>
-          <p class="catalog-kind-lead">domain, imp_type, product_family, platform 같은 분류/운영 속성값의 alias를 정리합니다.</p>
+          <h2>속성</h2>
+          <p class="catalog-kind-lead">분류 속성의 아이템과 alias를 관리합니다. 속성 키를 선택하고 아이템을 추가/편집하세요.</p>
         </div>
         <div class="catalog-toolbar catalog-integrity-toolbar">
-          <select class="input-select" id="catalog-integrity-alias-attribute-filter">
-            <option value="">전체 속성</option>
+          <select class="input-select" id="catalog-integrity-attr-key-filter">
+            <option value="">속성 키 선택</option>
           </select>
-          <input type="text" class="input-search" id="catalog-integrity-alias-search" placeholder="alias 또는 대표값 검색">
+          <input type="text" class="input-search" id="catalog-integrity-attr-search" placeholder="아이템 검색">
+          <button type="button" class="btn btn-primary btn-sm attr-write-only" id="btn-integrity-attr-add">+ 아이템 추가</button>
         </div>
       </div>
       <div class="catalog-integrity-placeholder">
-        <div id="grid-catalog-integrity-aliases" class="ag-theme-quartz catalog-integrity-grid"></div>
-        <aside class="catalog-integrity-detail-placeholder catalog-integrity-detail-form" id="catalog-integrity-alias-detail">
-          <div class="catalog-integrity-detail-head">
-            <h3>alias 상세</h3>
-            <button type="button" class="btn btn-secondary btn-sm" id="catalog-integrity-alias-new">새 alias</button>
+        <div id="grid-catalog-integrity-attrs" class="ag-theme-quartz catalog-integrity-grid"></div>
+        <aside class="catalog-integrity-detail-placeholder catalog-integrity-detail-form" id="catalog-integrity-attr-detail">
+          <div id="integrity-attr-empty">
+            <h3>아이템 편집</h3>
+            <p>좌측에서 아이템을 선택하거나 새 아이템을 추가하세요.</p>
           </div>
-          <div class="catalog-integrity-form-grid">
-            <label>속성 키
-              <select class="input-select" id="catalog-integrity-alias-attribute">
-                <option value="">속성 선택</option>
-              </select>
-            </label>
-            <label>대표 속성값
-              <select class="input-select" id="catalog-integrity-alias-option">
-                <option value="">대표 속성값 선택</option>
-              </select>
-            </label>
-            <label>Alias
-              <input type="text" class="input-text" id="catalog-integrity-alias-value" placeholder="예: Paloalto / 팔로알토">
-            </label>
-            <label>정규화 키
-              <input type="text" class="input-text" id="catalog-integrity-alias-normalized" readonly>
-            </label>
-            <label>정렬순서
-              <input type="number" class="input-text" id="catalog-integrity-alias-sort-order" value="100">
-            </label>
-            <label class="catalog-integrity-checkbox">
-              <input type="checkbox" id="catalog-integrity-alias-active" checked>
-              활성
-            </label>
-          </div>
-          <div class="catalog-integrity-meta" id="catalog-integrity-alias-meta">
-            <p>선택한 alias가 없으면 새 등록 상태로 열립니다.</p>
-          </div>
-          <div class="catalog-integrity-form-actions">
-            <button type="button" class="btn btn-primary" id="catalog-integrity-alias-save">저장</button>
-            <button type="button" class="btn btn-danger" id="catalog-integrity-alias-delete">삭제</button>
+          <div id="integrity-attr-form" class="is-hidden">
+            <div class="catalog-integrity-detail-head">
+              <h3 id="integrity-attr-title">아이템 편집</h3>
+              <button type="button" class="btn btn-secondary btn-sm attr-write-only" id="btn-integrity-attr-new">새 아이템</button>
+            </div>
+            <div class="catalog-integrity-form-grid">
+              <label>아이템 키
+                <input type="text" class="input-text" id="integrity-attr-option-key" placeholder="예: fw, l3_switch (영소문자+숫자+밑줄)">
+              </label>
+              <label>아이템명 (영문)
+                <input type="text" class="input-text" id="integrity-attr-option-label" placeholder="예: Firewall, L3 Switch">
+              </label>
+              <label>아이템명 (한글)
+                <input type="text" class="input-text" id="integrity-attr-option-label-kr" placeholder="예: 방화벽, L3 스위치">
+              </label>
+              <label>정렬순서
+                <input type="number" class="input-text" id="integrity-attr-sort-order" value="100">
+              </label>
+              <label class="catalog-integrity-checkbox">
+                <input type="checkbox" id="integrity-attr-active" checked>
+                활성
+              </label>
+            </div>
+            <div class="catalog-integrity-form-actions">
+              <button type="button" class="btn btn-primary attr-write-only" id="btn-integrity-attr-save">저장</button>
+              <button type="button" class="btn btn-danger attr-write-only is-hidden" id="btn-integrity-attr-delete">삭제</button>
+              <button type="button" class="btn btn-secondary" id="btn-integrity-attr-cancel">취소</button>
+            </div>
+            <div class="catalog-integrity-alias-section" id="integrity-attr-alias-section">
+              <h4>Alias 목록</h4>
+              <div class="tag-input-wrap">
+                <span class="tag-list" id="integrity-attr-alias-list"></span>
+                <input type="text" class="tag-input-field attr-write-only" id="integrity-attr-alias-input" placeholder="alias 입력 후 Enter">
+              </div>
+            </div>
           </div>
         </aside>
       </div>
