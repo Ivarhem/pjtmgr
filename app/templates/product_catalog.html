@@ -217,53 +217,41 @@
   <h2 id="modal-product-title">제품 등록</h2>
   <form id="form-product" class="form-grid">
     <input type="hidden" id="product-id">
-    <label>제조사 <input type="text" id="product-vendor" required></label>
-    <label>모델명 <input type="text" id="product-name" required></label>
+    <input type="hidden" id="product-type" value="hardware">
+    <input type="hidden" id="product-attr-domain" value="">
+    <label class="product-field-required">제조사
+      <div class="modal-combobox" id="product-vendor-combo">
+        <input type="text" id="product-vendor" autocomplete="off" placeholder="제조사 검색" required>
+        <input type="hidden" id="product-vendor-value">
+        <div class="modal-combobox-dropdown is-hidden" id="product-vendor-dropdown"></div>
+      </div>
+    </label>
+    <label class="product-field-required">모델명 <input type="text" id="product-name" required></label>
     <div class="catalog-similarity-box hidden full-width" id="product-similarity-box">
       <strong class="catalog-similarity-title" id="product-similarity-title">유사한 제품 후보가 있습니다.</strong>
       <ul class="catalog-similarity-list" id="product-similarity-list"></ul>
     </div>
+    <label class="product-field-required">제품군
+      <div class="modal-combobox" id="product-family-combo">
+        <input type="text" id="product-family-input" autocomplete="off" placeholder="미선택 시 Generic" required>
+        <input type="hidden" id="product-attr-product-family">
+        <div class="modal-combobox-dropdown is-hidden" id="product-family-dropdown"></div>
+      </div>
+    </label>
+    <label class="product-field-required" data-product-attr-label="imp_type"><span class="catalog-field-label-text">구현형태</span>
+      <select id="product-attr-imp-type" required>
+        <option value="">미선택 시 자동</option>
+      </select>
+    </label>
+    <hr class="full-width product-optional-divider">
     <label>버전 <input type="text" id="product-version" placeholder="선택 사항"></label>
-    <label>상위 분류
-      <select id="product-type">
-        <option value="hardware">Hardware</option>
-        <option value="software">Software</option>
-        <option value="service">Service</option>
-        <option value="model">Model</option>
-        <option value="business_capability">Business Capability</option>
-        <option value="dataset">Dataset</option>
-      </select>
-    </label>
-    <div class="full-width catalog-primary-attribute-group">
-      <div class="catalog-primary-attribute-head">
-        <strong>핵심 분류 기준</strong>
-        <span>도메인과 구현형태는 카탈로그 분류와 자산 구분에 공통으로 사용하는 기준축입니다.</span>
-      </div>
-      <div class="catalog-primary-attribute-grid">
-        <label data-product-attr-label="domain"><span class="catalog-field-label-text">도메인 (기준축)</span>
-          <select id="product-attr-domain" required>
-            <option value="">-- 도메인 선택 --</option>
-          </select>
-        </label>
-        <label data-product-attr-label="imp_type"><span class="catalog-field-label-text">구현형태 (기준축)</span>
-          <select id="product-attr-imp-type" required>
-            <option value="">-- 구현형태 선택 --</option>
-          </select>
-        </label>
-      </div>
-    </div>
-    <label>제품군
-      <select id="product-attr-product-family" required>
-        <option value="">-- 제품군 선택 --</option>
-      </select>
-    </label>
     <label>플랫폼
       <select id="product-attr-platform">
         <option value="">-- 플랫폼 선택 --</option>
       </select>
     </label>
-    <p class="modal-hint full-width" id="product-classification-hint">필수 속성 3개와 선택 속성 1개를 입력하면 카탈로그 트리 분류가 자동 계산됩니다.</p>
     <label class="full-width">참조 URL <input type="url" id="product-reference-url" placeholder="https://..."></label>
+    <p class="modal-hint full-width" id="product-classification-hint"></p>
   </form>
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-product">취소</button>

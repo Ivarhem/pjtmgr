@@ -34,10 +34,6 @@ async function loadSystemAttrDefs() {
   if (!select) return;
   const current = select.value || "";
   select.textContent = "";
-  const emptyOpt = document.createElement("option");
-  emptyOpt.value = "";
-  emptyOpt.textContent = "속성 키 선택";
-  select.appendChild(emptyOpt);
   _systemAttrDefs
     .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100) || String(a.label || "").localeCompare(String(b.label || ""), "ko-KR"))
     .forEach((attr) => {
@@ -48,8 +44,8 @@ async function loadSystemAttrDefs() {
     });
   if (_systemAttrDefs.some((a) => a.attribute_key === current)) {
     select.value = current;
-  } else if (select.options.length > 1) {
-    select.value = select.options[1].value;
+  } else if (select.options.length > 0) {
+    select.value = select.options[0].value;
   }
 }
 
@@ -111,6 +107,7 @@ function initSystemAttrGrid() {
       },
     ],
     rowSelection: { mode: "singleRow" },
+    domLayout: "autoHeight",
     defaultColDef: { sortable: true, filter: true, resizable: true },
     onRowClicked: (event) => {
       setSystemAttrEditMode(event.data);
@@ -318,6 +315,10 @@ async function deleteSystemAttrAlias(aliasId, idx) {
 
 function bindSystemAttrActions() {
   document.getElementById("system-attr-key-filter")?.addEventListener("change", () => {
+    const key = document.getElementById("system-attr-key-filter")?.value || "";
+    if (systemAttrGridApi) {
+      systemAttrGridApi.setColumnsVisible(["domain_option_label"], isSystemAttrDomainDependent(key));
+    }
     loadSystemAttrOptions().catch((err) => console.error(err));
     setSystemAttrEmptyMode();
   });
@@ -380,6 +381,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     initSystemAttrGrid();
     loadSystemAttrPermissions().then(() => {
       loadSystemAttrDefs().then(() => {
+        const initKey = document.getElementById("system-attr-key-filter")?.value || "";
+        if (systemAttrGridApi) {
+          systemAttrGridApi.setColumnsVisible(["domain_option_label"], isSystemAttrDomainDependent(initKey));
+        }
         loadSystemAttrOptions().catch((err) => console.error(err));
       }).catch((err) => console.error(err));
     });

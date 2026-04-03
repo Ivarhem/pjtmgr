@@ -120,9 +120,7 @@
   <p class="data-note">분류 속성의 아이템과 alias를 관리합니다. 속성 키를 선택하고 아이템을 추가/편집하세요.</p>
   <div class="sys-section">
     <div class="catalog-toolbar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-      <select class="input-select" id="system-attr-key-filter">
-        <option value="">속성 키 선택</option>
-      </select>
+      <select class="input-select" id="system-attr-key-filter"></select>
       <input type="text" class="input-search" id="system-attr-search" placeholder="아이템 검색">
       <button type="button" class="btn btn-primary btn-sm attr-write-only" id="btn-system-attr-add">+ 아이템 추가</button>
     </div>
@@ -133,10 +131,9 @@
           <h3>아이템 편집</h3>
           <p>좌측에서 아이템을 선택하거나 새 아이템을 추가하세요.</p>
         </div>
-        <div id="system-attr-form" class="is-hidden">
+        <div id="system-attr-form" class="is-hidden catalog-integrity-detail-form">
           <div class="catalog-integrity-detail-head">
             <h3 id="system-attr-title">아이템 편집</h3>
-            <button type="button" class="btn btn-secondary btn-sm attr-write-only" id="btn-system-attr-new">새 아이템</button>
           </div>
           <div class="catalog-integrity-form-grid">
             <label>아이템 키
@@ -157,14 +154,9 @@
               <input type="number" class="input-text" id="system-attr-sort-order" value="100">
             </label>
             <label class="catalog-integrity-checkbox">
-              <input type="checkbox" id="system-attr-active" checked>
               활성
+              <input type="checkbox" id="system-attr-active" checked>
             </label>
-          </div>
-          <div class="catalog-integrity-form-actions">
-            <button type="button" class="btn btn-primary attr-write-only" id="btn-system-attr-save">저장</button>
-            <button type="button" class="btn btn-danger attr-write-only is-hidden" id="btn-system-attr-delete">삭제</button>
-            <button type="button" class="btn btn-secondary" id="btn-system-attr-cancel">취소</button>
           </div>
           <div class="catalog-integrity-alias-section" id="system-attr-alias-section">
             <h4>Alias 목록</h4>
@@ -172,6 +164,12 @@
               <span class="tag-list" id="system-attr-alias-list"></span>
               <input type="text" class="tag-input-field attr-write-only" id="system-attr-alias-input" placeholder="alias 입력 후 Enter">
             </div>
+          </div>
+          <div class="catalog-integrity-form-actions">
+            <button type="button" class="btn btn-primary attr-write-only" id="btn-system-attr-save">저장</button>
+            <button type="button" class="btn btn-secondary" id="btn-system-attr-cancel">취소</button>
+            <span class="catalog-integrity-form-actions-spacer"></span>
+            <button type="button" class="btn btn-danger attr-write-only is-hidden" id="btn-system-attr-delete">삭제</button>
           </div>
         </div>
       </aside>

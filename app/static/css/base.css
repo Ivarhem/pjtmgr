@@ -51,6 +51,7 @@
   --primary-soft-bg: #e8f0fe;
   --primary-soft-border: #c5d7f7;
   --bg-color-secondary: #f0f0f0;
+  --bg-primary: #ffffff;
 
   /* Cell / status semantic colors */
   --cell-negative-color: #e53e3e;
@@ -130,6 +131,7 @@ body.dark-mode {
   --primary-soft-bg: #1c2a3a;
   --primary-soft-border: #2f4d6d;
   --bg-color-secondary: #2a2a2a;
+  --bg-primary: #1e1e1e;
 
   --cell-negative-color: #ff7b7b;
   --cell-positive-color: #68d391;
