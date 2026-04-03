@@ -103,7 +103,7 @@ DELETE /api/v1/catalog-integrity/vendors/{vendor_canonical}
 
 - 연결된 ProductCatalog 레코드 수 확인
 - 0이면: 해당 vendor_canonical의 모든 CatalogVendorAlias 삭제, 204 반환
-- 0 초과: 409 Conflict 반환, body에 `{ "detail": "연결된 제품 N개가 있어 삭제할 수 없습니다", "product_count": N }`
+- 0 초과: 409 Conflict 반환 (`BusinessRuleError(status_code=409)`), detail 메시지에 제품 수 포함
 
 ### 3. 서비스 함수 추가
 
