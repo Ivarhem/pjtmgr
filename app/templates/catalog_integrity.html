@@ -8,57 +8,57 @@
 </div>
 
 <div class="mdm-layout">
-  <!-- 좌: 제조사 목록 -->
-  <section class="mdm-list-panel">
-    <div class="mdm-list-toolbar">
+  <!-- 좌: 제조사 편집 -->
+  <section class="mdm-edit-panel">
+    <div id="integrity-vendor-empty" class="mdm-edit-empty">
+      <p>제조사를 선택하거나<br>새 제조사를 추가하세요.</p>
+    </div>
+    <div id="integrity-vendor-detail" class="is-hidden">
+      <h3 id="integrity-vendor-title">제조사 편집</h3>
+      <div class="catalog-integrity-form-grid">
+        <label id="integrity-vendor-source-label">원래 제조사명
+          <input type="text" class="input-text" id="integrity-vendor-source" readonly>
+        </label>
+        <label>정식 제조사명
+          <input type="text" class="input-text" id="integrity-vendor-canonical" placeholder="대표 제조사명 입력">
+        </label>
+        <label class="catalog-integrity-checkbox vendor-apply-row is-hidden" id="integrity-vendor-apply-row">
+          <input type="checkbox" id="integrity-vendor-apply-products" checked>
+          기존 제품의 제조사명도 일괄 변경
+        </label>
+        <label>Alias 목록</label>
+        <div class="tag-input-wrap">
+          <span class="tag-list" id="integrity-vendor-alias-list"></span>
+          <input type="text" class="tag-input-field vendor-write-only" id="integrity-vendor-alias-input" placeholder="alias 입력 후 Enter">
+        </div>
+      </div>
+      <div class="catalog-integrity-form-actions">
+        <button type="button" class="btn btn-primary vendor-write-only" id="btn-integrity-vendor-save">저장</button>
+        <button type="button" class="btn btn-danger vendor-write-only is-hidden" id="btn-integrity-vendor-delete">삭제</button>
+        <button type="button" class="btn btn-secondary" id="btn-integrity-vendor-cancel">취소</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 중: 제조사 목록 -->
+  <section class="mdm-vendor-panel">
+    <div class="mdm-panel-toolbar">
       <input type="text" class="input-search" id="catalog-integrity-vendor-search" placeholder="제조사 검색">
       <button type="button" class="btn btn-primary btn-sm vendor-write-only" id="btn-integrity-vendor-add">+ 신규</button>
     </div>
-    <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz mdm-list-grid"></div>
+    <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz mdm-vendor-grid"></div>
   </section>
 
-  <!-- 우: 제조사 상세 + 제품 목록 -->
-  <section class="mdm-detail-panel">
-    <div id="integrity-vendor-empty" class="mdm-detail-empty">
-      <p>좌측에서 제조사를 선택하거나<br>새 제조사를 추가하세요.</p>
-    </div>
-    <div id="integrity-vendor-detail" class="is-hidden">
-      <!-- 제조사 정보 -->
-      <div class="mdm-detail-card">
-        <h3 id="integrity-vendor-title">제조사 편집</h3>
-        <div class="catalog-integrity-form-grid">
-          <label id="integrity-vendor-source-label">원래 제조사명
-            <input type="text" class="input-text" id="integrity-vendor-source" readonly>
-          </label>
-          <label>정식 제조사명
-            <input type="text" class="input-text" id="integrity-vendor-canonical" placeholder="대표 제조사명 입력">
-          </label>
-          <label class="catalog-integrity-checkbox vendor-apply-row is-hidden" id="integrity-vendor-apply-row">
-            <input type="checkbox" id="integrity-vendor-apply-products" checked>
-            기존 제품의 제조사명도 일괄 변경
-          </label>
-          <label>Alias 목록</label>
-          <div class="tag-input-wrap">
-            <span class="tag-list" id="integrity-vendor-alias-list"></span>
-            <input type="text" class="tag-input-field vendor-write-only" id="integrity-vendor-alias-input" placeholder="alias 입력 후 Enter">
-          </div>
-        </div>
-        <div class="catalog-integrity-form-actions">
-          <button type="button" class="btn btn-primary vendor-write-only" id="btn-integrity-vendor-save">저장</button>
-          <button type="button" class="btn btn-danger vendor-write-only is-hidden" id="btn-integrity-vendor-delete">삭제</button>
-          <button type="button" class="btn btn-secondary" id="btn-integrity-vendor-cancel">취소</button>
-        </div>
-      </div>
+  <!-- 스플리터 -->
+  <div class="mdm-splitter"></div>
 
-      <!-- 해당 제조사의 제품 목록 -->
-      <div class="mdm-detail-card">
-        <div class="mdm-product-header">
-          <h3 id="integrity-product-title">제품 목록</h3>
-          <input type="text" class="input-search" id="integrity-product-search" placeholder="제품 검색">
-        </div>
-        <div id="grid-integrity-products" class="ag-theme-quartz mdm-product-grid"></div>
-      </div>
+  <!-- 우: 해당 제조사의 제품 목록 -->
+  <section class="mdm-product-panel">
+    <div class="mdm-panel-toolbar">
+      <h3 id="integrity-product-title">제품 목록</h3>
+      <input type="text" class="input-search" id="integrity-product-search" placeholder="제품 검색">
     </div>
+    <div id="grid-integrity-products" class="ag-theme-quartz mdm-product-grid"></div>
   </section>
 </div>
 {% endblock %}
