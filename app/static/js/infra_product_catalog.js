@@ -1,6 +1,6 @@
 /* ── 제품 카탈로그 ── */
 
-let catalogGridApi, ifaceGridApi, layoutItemGridApi;
+let catalogGridApi, ifaceGridApi;
 let currentProductId = null;
 let currentProductType = null;
 let _currentProductIsPlaceholder = false;
@@ -363,72 +363,6 @@ function updateCatalogLayoutLevelVisibility() {
   if (savePresetButton) savePresetButton.disabled = !_catalogClassificationSchemeEditing;
   const submitButton = document.getElementById("btn-catalog-classification-scheme-submit");
   if (submitButton) submitButton.textContent = _catalogClassificationSchemeEditing ? "저장" : "편집";
-  refreshCatalogLayoutItemAttributeOptions();
-}
-
-function refreshCatalogLayoutItemAttributeOptions() {
-  const select = document.getElementById("catalog-layout-item-attribute-key");
-  if (!select) return;
-  const current = select.value || "";
-  const entries = (_catalogAttributeDefs || [])
-    .filter((item) => item.is_active !== false && item.value_type === "option" && isCatalogClassificationAttributeKey(item.attribute_key))
-    .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100) || String(a.label || "").localeCompare(String(b.label || ""), "ko-KR"));
-  select.textContent = "";
-  entries.forEach((entry) => {
-    const option = document.createElement("option");
-    option.value = entry.attribute_key;
-    option.textContent = `${getCatalogAttributeDisplayLabel(entry.attribute_key, entry.label)} (${entry.attribute_key})`;
-    select.appendChild(option);
-  });
-  select.value = entries.some((item) => item.attribute_key === current) ? current : (select.options[0]?.value || "");
-  updateCatalogLayoutItemAttributeDescription();
-  refreshCatalogLayoutItems().catch((err) => showToast(err.message, "error"));
-}
-
-function updateCatalogLayoutItemAttributeDescription() {
-  const attributeKey = document.getElementById("catalog-layout-item-attribute-key")?.value || "";
-  const textarea = document.getElementById("catalog-layout-item-attribute-description");
-  if (!textarea) return;
-  textarea.value = getCatalogAttributeDescription(attributeKey);
-}
-
-async function saveCatalogLayoutItemAttributeDescription() {
-  const attributeKey = document.getElementById("catalog-layout-item-attribute-key")?.value || "";
-  const textarea = document.getElementById("catalog-layout-item-attribute-description");
-  const attribute = getCatalogAttributeDef(attributeKey);
-  if (!attribute || !textarea) {
-    showToast("먼저 대상 키를 선택하세요.", "warning");
-    return;
-  }
-  await apiFetch(`/api/v1/catalog-attributes/${attribute.id}`, {
-    method: "PATCH",
-    body: { description: textarea.value.trim() || null },
-  });
-  await loadCatalogTaxonomyContext();
-  syncCatalogLayoutKeyOptions();
-  updateCatalogLayoutItemAttributeDescription();
-  showToast("키 설명을 저장했습니다.");
-}
-
-async function refreshCatalogLayoutItems() {
-  const attributeKey = document.getElementById("catalog-layout-item-attribute-key")?.value || "";
-  if (!layoutItemGridApi) return;
-  const attribute = getCatalogAttributeDef(attributeKey);
-  if (!attributeKey || !attribute) {
-    layoutItemGridApi.setGridOption("rowData", []);
-    layoutItemGridApi.setGridOption("overlayNoRowsTemplate", '<span class="ag-overlay-loading-center">먼저 대상 키를 선택하세요.</span>');
-    layoutItemGridApi.showNoRowsOverlay();
-    return;
-  }
-  const items = await loadCatalogAttributeOptions(attributeKey, false);
-  if (!items.length) {
-    layoutItemGridApi.setGridOption("rowData", []);
-    layoutItemGridApi.setGridOption("overlayNoRowsTemplate", '<span class="ag-overlay-loading-center">등록된 아이템이 없습니다.</span>');
-    layoutItemGridApi.showNoRowsOverlay();
-    return;
-  }
-  layoutItemGridApi.setGridOption("rowData", items.map((item) => ({ ...item, attribute_key: attributeKey })));
-  layoutItemGridApi.hideOverlay();
 }
 
 function setButtonAvailability(id, enabled, disabledTitle = "권한이 없습니다.") {
@@ -1336,17 +1270,6 @@ function openCatalogClassificationSchemeModal() {
   document.getElementById("modal-catalog-classification-scheme").showModal();
 }
 
-async function openCatalogLayoutItemsModal() {
-  if (!_catalogPermissions.canManageCatalogTaxonomy) {
-    showToast("카탈로그 기준 관리 권한이 없습니다.", "warning");
-    return;
-  }
-  refreshCatalogLayoutItemAttributeOptions();
-  await updateCatalogLayoutItemAttributeDescription();
-  await refreshCatalogLayoutItems();
-  document.getElementById("modal-catalog-layout-items").showModal();
-}
-
 async function openCatalogClassificationNodeModal(mode, forcedLevelNo = null, forcedOptionId = null, forcedAttributeKey = "") {
   if (!_catalogPermissions.canManageCatalogTaxonomy) {
     showToast("카탈로그 기준 관리 권한이 없습니다.", "warning");
@@ -1526,7 +1449,6 @@ async function saveCatalogClassificationNode() {
   invalidateCatalogAttributeOptionCache(attributeKey);
   await loadCatalogTaxonomyContext();
   await rebuildCatalogClassificationTree(_catalogRows || []);
-  await refreshCatalogLayoutItems();
   applyFilter();
 }
 
@@ -1549,7 +1471,6 @@ async function deleteCatalogClassificationNode() {
   _selectedCatalogClassificationCode = "";
   await loadCatalogTaxonomyContext();
   await rebuildCatalogClassificationTree(_catalogRows || []);
-  await refreshCatalogLayoutItems();
   applyFilter();
 }
 
@@ -1871,55 +1792,6 @@ const ifaceColDefs = [
   },
 ];
 
-const layoutItemColDefs = [
-  { field: "option_key", headerName: "키", width: 120, cellRenderer: (p) => `<span class="cell-code">${escapeHtml(p.value || "")}</span>` },
-  { field: "label", headerName: "아이템명", flex: 1, minWidth: 180 },
-  { field: "domain_option_label", headerName: "도메인", width: 110, valueFormatter: (p) => p.value || "-" },
-  { field: "sort_order", headerName: "정렬", width: 90 },
-  {
-    field: "is_active",
-    headerName: "활성",
-    width: 90,
-    cellRenderer: (p) => p.value ? '<span class="badge-active">활성</span>' : '<span class="badge-inactive">비활성</span>',
-  },
-  {
-    headerName: "",
-    width: 120,
-    sortable: false,
-    filter: false,
-    cellRenderer: (params) => {
-      const wrap = document.createElement("div");
-      wrap.className = "gap-sm infra-inline-flex";
-      const editBtn = document.createElement("button");
-      editBtn.type = "button";
-      editBtn.className = "btn btn-xs btn-secondary";
-      editBtn.textContent = "수정";
-      editBtn.addEventListener("click", () => {
-        openCatalogClassificationNodeModal("edit", null, Number(params.data.id || 0), params.data.attribute_key || "")
-          .catch((err) => showToast(err.message, "error"));
-      });
-      const deleteBtn = document.createElement("button");
-      deleteBtn.type = "button";
-      deleteBtn.className = "btn btn-xs btn-danger";
-      deleteBtn.textContent = "삭제";
-      deleteBtn.addEventListener("click", () => {
-        confirmDelete(`아이템 "${params.data.label}"을(를) 삭제하시겠습니까?`, async () => {
-          await apiFetch(`/api/v1/catalog-attributes/options/${params.data.id}`, { method: "DELETE" });
-          invalidateCatalogAttributeOptionCache(params.data.attribute_key || "");
-          await loadCatalogTaxonomyContext();
-          await rebuildCatalogClassificationTree(_catalogRows || []);
-          await refreshCatalogLayoutItems();
-          applyFilter();
-          showToast("아이템을 삭제했습니다.");
-        });
-      });
-      wrap.appendChild(editBtn);
-      wrap.appendChild(deleteBtn);
-      return wrap;
-    },
-  },
-];
-
 function initIfaceGrid() {
   ifaceGridApi = agGrid.createGrid(document.getElementById("grid-interfaces"), {
     columnDefs: ifaceColDefs,
@@ -1927,19 +1799,6 @@ function initIfaceGrid() {
     defaultColDef: { resizable: true, sortable: true },
     animateRows: true,
     domLayout: "autoHeight",
-  });
-}
-
-function initCatalogLayoutItemGrid() {
-  const target = document.getElementById("grid-catalog-layout-items");
-  if (!target) return;
-  layoutItemGridApi = agGrid.createGrid(target, {
-    columnDefs: layoutItemColDefs,
-    rowData: [],
-    defaultColDef: { resizable: true, sortable: true },
-    animateRows: true,
-    domLayout: "normal",
-    overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">먼저 대상 키를 선택하세요.</span>',
   });
 }
 
@@ -2600,7 +2459,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   ]);
   initCatalogGrid();
   initIfaceGrid();
-  initCatalogLayoutItemGrid();
   initTabs();
   activateCatalogTab("info");
   initCategorySplitter();
@@ -2655,15 +2513,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       updateCatalogLayoutLevelVisibility();
     });
   }
-  document.getElementById("catalog-layout-item-attribute-key")?.addEventListener("change", () => {
-    updateCatalogLayoutItemAttributeDescription();
-    refreshCatalogLayoutItems().catch((err) => showToast(err.message, "error"));
-  });
-  document.getElementById("btn-catalog-layout-item-save-attribute")?.addEventListener("click", () => saveCatalogLayoutItemAttributeDescription().catch((err) => showToast(err.message, "error")));
-  document.getElementById("btn-catalog-layout-item-add")?.addEventListener("click", () => {
-    const attributeKey = document.getElementById("catalog-layout-item-attribute-key").value || "";
-    openCatalogClassificationNodeModal("add_root", null, null, attributeKey).catch((err) => showToast(err.message, "error"));
-  });
   for (let levelNo = 1; levelNo <= 5; levelNo += 1) {
     document.getElementById(`catalog-classification-scheme-level-${levelNo}-key`)?.addEventListener("change", () => {
       if (levelNo === 1) {
@@ -2671,8 +2520,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         syncCatalogLayoutKeyOptions();
       }
-      updateCatalogLayoutItemAttributeDescription();
-      refreshCatalogLayoutItems().catch((err) => showToast(err.message, "error"));
     });
   }
   document.getElementById("btn-clear-classification-filter").addEventListener("click", () => {
