@@ -15,6 +15,8 @@ class CatalogVendorSummary(BaseModel):
     product_count: int
     alias_count: int
     aliases: list[CatalogVendorAliasItem]
+    name_ko: str | None = None
+    memo: str | None = None
 
 
 class CatalogVendorBulkUpsertRow(BaseModel):
@@ -23,6 +25,8 @@ class CatalogVendorBulkUpsertRow(BaseModel):
     aliases: list[str] = []
     apply_to_products: bool = True
     is_active: bool = True
+    name_ko: str | None = None
+    memo: str | None = None
 
 
 class CatalogVendorBulkUpsertRequest(BaseModel):

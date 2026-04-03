@@ -264,6 +264,11 @@ body.dark-mode .chk-drop-btn {
   font-weight: bold;
 }
 .tag-chip-x:hover { color: var(--danger-color); }
+.tag-chip-sm {
+  padding: 1px 6px;
+  font-size: 11px;
+  border-radius: 10px;
+}
 
 /* 텍스트 필터 입력 (필터바 내 인라인) */
 .filter-text-sm {

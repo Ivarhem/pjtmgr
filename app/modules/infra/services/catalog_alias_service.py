@@ -13,6 +13,7 @@ from app.modules.infra.models.catalog_attribute_def import CatalogAttributeDef
 from app.modules.infra.models.catalog_attribute_option import CatalogAttributeOption
 from app.modules.infra.models.catalog_attribute_option_alias import CatalogAttributeOptionAlias
 from app.modules.infra.models.catalog_vendor_alias import CatalogVendorAlias
+from app.modules.infra.models.catalog_vendor_meta import CatalogVendorMeta
 from app.modules.infra.models.product_catalog_attribute_value import ProductCatalogAttributeValue
 from app.modules.infra.schemas.catalog_attribute_option_alias import (
     CatalogAttributeOptionAliasCreate,
@@ -115,13 +116,13 @@ def resolve_attribute_option_canonical(
 def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]:
     from app.modules.infra.models.product_catalog import ProductCatalog
 
-    stmt = (
+    # 1) ProductCatalog 기반 제조사 + 제품 수
+    product_stmt = (
         select(
             ProductCatalog.vendor.label("vendor"),
             func.count(ProductCatalog.id).label("product_count"),
         )
         .group_by(ProductCatalog.vendor)
-        .order_by(func.count(ProductCatalog.id).desc(), ProductCatalog.vendor.asc())
     )
     if q:
         like = f"%{q.strip()}%"
@@ -131,12 +132,16 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
                 CatalogVendorAlias.is_active.is_(True),
             )
         ).all()
-        stmt = stmt.where(
+        product_stmt = product_stmt.where(
             ProductCatalog.vendor.ilike(like)
             | ProductCatalog.vendor.in_(alias_vendors)
         )
-    vendor_rows = db.execute(stmt).mappings().all()
-    alias_rows = db.execute(
+    vendor_product_map: dict[str, int] = {}
+    for row in db.execute(product_stmt).mappings().all():
+        vendor_product_map[row["vendor"]] = int(row["product_count"] or 0)
+
+    # 2) CatalogVendorAlias 기반 alias 정보
+    alias_stmt = (
         select(
             CatalogVendorAlias.id,
             CatalogVendorAlias.vendor_canonical,
@@ -146,10 +151,9 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
         )
         .where(CatalogVendorAlias.is_active.is_(True))
         .order_by(CatalogVendorAlias.vendor_canonical.asc(), CatalogVendorAlias.sort_order.asc())
-    ).mappings().all()
-
+    )
     alias_map: dict[str, list[dict]] = {}
-    for row in alias_rows:
+    for row in db.execute(alias_stmt).mappings().all():
         alias_map.setdefault(row["vendor_canonical"], []).append(
             {
                 "id": row["id"],
@@ -159,18 +163,43 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
             }
         )
 
+    # 3) 메타 정보 (한글명, 메모)
+    meta_rows = db.execute(
+        select(CatalogVendorMeta.vendor_canonical, CatalogVendorMeta.name_ko, CatalogVendorMeta.memo)
+    ).mappings().all()
+    meta_map: dict[str, dict] = {
+        row["vendor_canonical"]: {"name_ko": row["name_ko"], "memo": row["memo"]}
+        for row in meta_rows
+    }
+
+    # 4) 두 소스를 합쳐 전체 제조사 목록 구성
+    all_vendors = set(vendor_product_map.keys()) | set(alias_map.keys()) | set(meta_map.keys())
+    if q:
+        like_lower = q.strip().lower()
+        all_vendors = {
+            v for v in all_vendors
+            if like_lower in (v or "").lower()
+            or like_lower in (meta_map.get(v, {}).get("name_ko") or "").lower()
+            or any(like_lower in a["alias_value"].lower() for a in alias_map.get(v, []))
+        }
+
     results: list[dict] = []
-    for row in vendor_rows:
-        vendor = row["vendor"]
-        aliases = alias_map.get(vendor, [])
+    for vendor in all_vendors:
+        all_aliases = alias_map.get(vendor, [])
+        # self-alias(제조사명과 동일한 alias)는 표시 목록에서 제외
+        display_aliases = [a for a in all_aliases if a["alias_value"] != vendor]
+        meta = meta_map.get(vendor, {})
         results.append(
             {
                 "vendor": vendor,
-                "product_count": int(row["product_count"] or 0),
-                "alias_count": len(aliases),
-                "aliases": aliases,
+                "product_count": vendor_product_map.get(vendor, 0),
+                "alias_count": len(display_aliases),
+                "aliases": display_aliases,
+                "name_ko": meta.get("name_ko"),
+                "memo": meta.get("memo"),
             }
         )
+    results.sort(key=lambda r: (r["vendor"] or "").lower())
     return results
 
 
@@ -337,6 +366,16 @@ def bulk_upsert_vendor_aliases(
                     .values(vendor_canonical=canonical_vendor)
                 )
 
+            # 기존 alias 중 제출 목록에 없는 것 제거
+            existing_aliases = db.scalars(
+                select(CatalogVendorAlias).where(
+                    CatalogVendorAlias.vendor_canonical == canonical_vendor,
+                )
+            ).all()
+            for ea in existing_aliases:
+                if ea.normalized_alias not in seen_aliases:
+                    db.delete(ea)
+
             for alias_value, normalized_alias in alias_values:
                 existing = db.scalar(
                     select(CatalogVendorAlias).where(
@@ -357,6 +396,36 @@ def bulk_upsert_vendor_aliases(
                 else:
                     existing.alias_value = alias_value
                     existing.is_active = row.is_active
+
+            # alias가 하나도 없으면 자기 자신을 alias로 등록 (목록 노출 보장)
+            has_any = db.scalar(
+                select(CatalogVendorAlias.id).where(
+                    CatalogVendorAlias.vendor_canonical == canonical_vendor,
+                ).limit(1)
+            )
+            if not has_any:
+                self_normalized = normalize_vendor_name(canonical_vendor)
+                if self_normalized:
+                    db.add(
+                        CatalogVendorAlias(
+                            vendor_canonical=canonical_vendor,
+                            alias_value=canonical_vendor,
+                            normalized_alias=self_normalized,
+                            sort_order=0,
+                            is_active=True,
+                        )
+                    )
+
+            # 메타 정보 (한글명, 메모) upsert
+            meta = db.get(CatalogVendorMeta, canonical_vendor)
+            if meta is None:
+                meta = CatalogVendorMeta(vendor_canonical=canonical_vendor)
+                db.add(meta)
+            if row.name_ko is not None:
+                meta.name_ko = row.name_ko.strip() or None
+            if row.memo is not None:
+                meta.memo = row.memo.strip() or None
+
             db.commit()
             updated += 1
             results.append(
@@ -409,6 +478,10 @@ def delete_vendor_and_aliases(db: Session, vendor_canonical: str, current_user: 
     db.query(CatalogVendorAlias).filter(
         CatalogVendorAlias.vendor_canonical == canonical
     ).delete(synchronize_session="fetch")
+    # 메타 정보도 함께 삭제
+    meta = db.get(CatalogVendorMeta, canonical)
+    if meta:
+        db.delete(meta)
     db.commit()
 
 

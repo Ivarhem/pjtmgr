@@ -30,6 +30,7 @@ from app.modules.infra.models.catalog_attribute_def import CatalogAttributeDef
 from app.modules.infra.models.catalog_attribute_option import CatalogAttributeOption
 from app.modules.infra.models.catalog_attribute_option_alias import CatalogAttributeOptionAlias
 from app.modules.infra.models.catalog_vendor_alias import CatalogVendorAlias
+from app.modules.infra.models.catalog_vendor_meta import CatalogVendorMeta
 from app.modules.infra.models.product_catalog_attribute_value import ProductCatalogAttributeValue
 from app.modules.infra.models.classification_layout import ClassificationLayout
 from app.modules.infra.models.classification_layout_level import ClassificationLayoutLevel

@@ -1696,6 +1696,7 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   flex-direction: column;
   padding: 12px;
   background: var(--bg-primary);
+  transition: width 0.2s ease, min-width 0.2s ease;
 }
 
 .mdm-panel-toolbar {
@@ -1705,7 +1706,16 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   margin-bottom: 10px;
 }
 
-.mdm-panel-toolbar .input-search { flex: 1; min-width: 0; }
+.mdm-panel-toolbar .input-search {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-color);
+}
 .mdm-panel-toolbar h3 { margin: 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
 
 .mdm-list-grid {
@@ -1742,8 +1752,16 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   min-width: 360px;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   background: var(--bg-primary);
+}
+
+.mdm-detail-panel > div:not(.mdm-detail-empty) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .mdm-detail-empty {
@@ -1768,7 +1786,95 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 }
 
 .mdm-vendor-info {
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: 45%;
   border-bottom: 1px solid var(--border-color);
+}
+
+.mdm-vendor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mdm-vendor-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.mdm-vendor-header-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mdm-vendor-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+}
+
+.mdm-vendor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mdm-field-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mdm-field-row-top { align-items: flex-start; }
+.mdm-field-row-top .mdm-field-label { padding-top: 6px; }
+
+.mdm-field-label {
+  flex-shrink: 0;
+  width: 120px;
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+.mdm-field-label .required {
+  color: var(--danger-color);
+}
+
+.mdm-field-row .input-text,
+.mdm-field-row .tag-input-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.mdm-vendor-fields .input-text {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-color);
+}
+
+.mdm-vendor-memo {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-color);
+  padding-left: 16px;
+}
+
+.mdm-vendor-memo textarea {
+  flex: 1;
+  resize: none;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-color);
 }
 
 .mdm-product-section {
@@ -1794,6 +1900,41 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
     min-width: 0;
   }
   .mdm-splitter { display: none; }
+}
+
+/* 목록 패널 자동 접힘 */
+.mdm-list-collapsed .mdm-list-panel {
+  width: 44px !important;
+  min-width: 44px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.mdm-list-collapsed .mdm-list-panel .mdm-panel-toolbar,
+.mdm-list-collapsed .mdm-list-panel .mdm-list-grid {
+  opacity: 0;
+  pointer-events: none;
+}
+.mdm-list-collapsed .mdm-splitter { display: none; }
+.mdm-list-collapsed .mdm-list-panel::after {
+  content: '▶';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+  color: var(--text-color-tertiary);
+}
+.mdm-list-collapsed .mdm-list-panel {
+  position: relative;
+  border-right: 1px solid var(--border-color);
+  transition: width 0.2s ease;
+}
+
+/* 토글 버튼 active 상태 */
+#btn-mdm-auto-collapse.active {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
 }
 
 .catalog-integrity-alias-section {
@@ -1925,6 +2066,11 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   gap: 6px;
   font-size: 13px;
   color: var(--text-color);
+}
+
+.catalog-integrity-form-grid .required {
+  color: var(--danger-color);
+  margin-left: 2px;
 }
 
 .catalog-integrity-checkbox {
