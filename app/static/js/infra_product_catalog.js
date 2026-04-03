@@ -2696,7 +2696,7 @@ function initSplitter() {
   const mainPanel = document.querySelector(".catalog-main-panel");
   if (!splitter || !listPanel || !mainPanel) return;
   const storedWidth = Number(localStorage.getItem(CATALOG_LIST_WIDTH_KEY) || 0);
-  if (storedWidth >= 28 && storedWidth <= 70) {
+  if (storedWidth >= 15 && storedWidth <= 80) {
     mainPanel.style.setProperty("--catalog-list-width", `${storedWidth}%`);
   }
   let dragging = false;
@@ -2709,9 +2709,8 @@ function initSplitter() {
     if (!dragging) return;
     const rect = mainPanel.getBoundingClientRect();
     const pct = ((e.clientX - rect.left) / rect.width) * 100;
-    if (pct > 28 && pct < 70) {
+    if (pct > 15 && pct < 80) {
       mainPanel.style.setProperty("--catalog-list-width", `${pct}%`);
-      listPanel.style.width = `${pct}%`;
     }
   });
   document.addEventListener("mouseup", () => {
