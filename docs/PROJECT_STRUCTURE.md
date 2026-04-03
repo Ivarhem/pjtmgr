@@ -356,8 +356,7 @@ app/static/
 │   ├── infra_policy_definitions.js # 정책 정의 관리
 │   ├── infra_port_maps.js       # 인프라 포트맵
 │   ├── infra_product_catalog.js # 제품 카탈로그
-│   ├── infra_catalog_management.js # 카탈로그 제조사/제품 관리
-│   ├── infra_catalog_integrity.js # 카탈로그 정합성
+│   ├── infra_catalog_integrity.js # 카탈로그 기준정보 관리 (제조사·제품·별칭)
 │   ├── infra_project_classifications.js # 프로젝트 분류체계
 │   ├── infra_projects.js        # 인프라 계약단위 목록
 │   ├── infra_project_detail.js  # 인프라 계약단위 상세
@@ -391,9 +390,7 @@ app/templates/                   # 공통 및 회계 템플릿
 ├── system.html                  # 시스템 설정
 ├── audit_logs.html              # 감사 로그 (placeholder)
 ├── product_catalog.html         # 제품 카탈로그 (글로벌 리소스)
-├── catalog_vendors.html         # 카탈로그 제조사 관리
-├── catalog_products.html        # 카탈로그 제품 관리
-├── catalog_integrity.html       # 카탈로그 정합성
+├── catalog_integrity.html       # 카탈로그 기준정보 관리 (제조사·제품·별칭)
 └── {components}/
     └── _modal_add_contract.html # 사업 추가 모달
 ```
