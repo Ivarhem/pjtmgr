@@ -3,6 +3,20 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
+class CatalogVendorAliasItem(BaseModel):
+    id: int
+    alias_value: str
+    normalized_alias: str
+    is_active: bool
+
+
+class CatalogVendorSummary(BaseModel):
+    vendor: str
+    product_count: int
+    alias_count: int
+    aliases: list[CatalogVendorAliasItem]
+
+
 class CatalogVendorBulkUpsertRow(BaseModel):
     source_vendor: str | None = None
     canonical_vendor: str
