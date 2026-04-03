@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.infra.models.product_catalog import ProductCatalog
 from app.modules.infra.services.catalog_alias_service import (
+    delete_vendor_and_aliases,
     get_attribute_option_alias,
     list_attribute_option_aliases,
     list_vendor_alias_summaries,
@@ -79,3 +80,7 @@ def list_similar_catalog_products(
 
     rows.sort(key=lambda item: (-item["score"], item["base_vendor"], item["base_name"], item["candidate_name"]))
     return rows[:limit]
+
+
+def delete_catalog_vendor_integrity(db: Session, vendor_canonical: str, current_user) -> None:
+    delete_vendor_and_aliases(db, vendor_canonical, current_user)

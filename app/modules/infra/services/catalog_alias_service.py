@@ -125,13 +125,24 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
     )
     if q:
         like = f"%{q.strip()}%"
-        stmt = stmt.where(ProductCatalog.vendor.ilike(like))
+        alias_vendors = db.scalars(
+            select(CatalogVendorAlias.vendor_canonical).where(
+                CatalogVendorAlias.alias_value.ilike(like),
+                CatalogVendorAlias.is_active.is_(True),
+            )
+        ).all()
+        stmt = stmt.where(
+            ProductCatalog.vendor.ilike(like)
+            | ProductCatalog.vendor.in_(alias_vendors)
+        )
     vendor_rows = db.execute(stmt).mappings().all()
     alias_rows = db.execute(
         select(
+            CatalogVendorAlias.id,
             CatalogVendorAlias.vendor_canonical,
             CatalogVendorAlias.alias_value,
             CatalogVendorAlias.normalized_alias,
+            CatalogVendorAlias.is_active,
         )
         .where(CatalogVendorAlias.is_active.is_(True))
         .order_by(CatalogVendorAlias.vendor_canonical.asc(), CatalogVendorAlias.sort_order.asc())
@@ -141,8 +152,10 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
     for row in alias_rows:
         alias_map.setdefault(row["vendor_canonical"], []).append(
             {
+                "id": row["id"],
                 "alias_value": row["alias_value"],
                 "normalized_alias": row["normalized_alias"],
+                "is_active": row["is_active"],
             }
         )
 
@@ -374,6 +387,29 @@ def bulk_upsert_vendor_aliases(
         "failed": failed,
         "rows": results,
     }
+
+
+def delete_vendor_and_aliases(db: Session, vendor_canonical: str, current_user: User) -> None:
+    from app.modules.infra.models.product_catalog import ProductCatalog
+
+    _require_taxonomy_edit(current_user)
+    canonical = vendor_canonical.strip()
+    if not canonical:
+        raise BusinessRuleError("제조사명이 비어 있습니다.")
+
+    product_count = db.scalar(
+        select(func.count(ProductCatalog.id)).where(ProductCatalog.vendor == canonical)
+    ) or 0
+    if product_count > 0:
+        raise BusinessRuleError(
+            f"연결된 제품 {product_count}개가 있어 삭제할 수 없습니다.",
+            status_code=409,
+        )
+
+    db.query(CatalogVendorAlias).filter(
+        CatalogVendorAlias.vendor_canonical == canonical
+    ).delete(synchronize_session="fetch")
+    db.commit()
 
 
 def _resolve_alias_target_option(
