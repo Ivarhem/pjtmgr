@@ -313,6 +313,45 @@ function getIntegrityAttrDef(attributeKey) {
   return _integrityAttrDefs.find((a) => a.attribute_key === attributeKey) || null;
 }
 
+function isIntegrityAttrDomainDependent(attributeKey) {
+  return attributeKey === "product_family";
+}
+
+let _integrityDomainOptions = null;
+
+async function loadIntegrityDomainOptions() {
+  if (_integrityDomainOptions) return _integrityDomainOptions;
+  const domainAttr = getIntegrityAttrDef("domain");
+  if (!domainAttr) return [];
+  _integrityDomainOptions = await apiFetch(`/api/v1/catalog-attributes/${domainAttr.id}/options?active_only=true`);
+  return _integrityDomainOptions;
+}
+
+async function populateIntegrityDomainSelect(selectedId) {
+  const select = document.getElementById("integrity-attr-domain-option");
+  const label = document.getElementById("integrity-attr-domain-label");
+  const attributeKey = document.getElementById("catalog-integrity-attr-key-filter")?.value || "";
+  if (!select || !label) return;
+  if (!isIntegrityAttrDomainDependent(attributeKey)) {
+    label.classList.add("is-hidden");
+    return;
+  }
+  label.classList.remove("is-hidden");
+  const options = await loadIntegrityDomainOptions();
+  select.textContent = "";
+  const emptyOpt = document.createElement("option");
+  emptyOpt.value = "";
+  emptyOpt.textContent = "선택 안 함";
+  select.appendChild(emptyOpt);
+  options.forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = String(item.id);
+    opt.textContent = `${item.label} (${item.option_key})`;
+    select.appendChild(opt);
+  });
+  select.value = selectedId ? String(selectedId) : "";
+}
+
 function initIntegrityAttrGrid() {
   const target = document.getElementById("grid-catalog-integrity-attrs");
   if (!target) return;
@@ -321,6 +360,7 @@ function initIntegrityAttrGrid() {
       { field: "option_key", headerName: "키", width: 130 },
       { field: "label", headerName: "아이템명", flex: 1, minWidth: 160 },
       { field: "label_kr", headerName: "한글명", width: 130, valueFormatter: (p) => p.value || "-" },
+      { field: "domain_option_label", headerName: "도메인", width: 110, valueFormatter: (p) => p.value || "-" },
       { field: "alias_count", headerName: "alias", width: 80, valueGetter: (p) => (p.data.aliases || []).length },
       { field: "sort_order", headerName: "정렬", width: 80 },
       {
@@ -390,6 +430,7 @@ function setIntegrityAttrNewMode() {
   document.getElementById("integrity-attr-active").checked = true;
   document.getElementById("btn-integrity-attr-delete")?.classList.add("is-hidden");
   document.getElementById("integrity-attr-alias-section")?.classList.add("is-hidden");
+  populateIntegrityDomainSelect(null);
   renderIntegrityAttrAliasChips();
 }
 
@@ -416,6 +457,7 @@ function setIntegrityAttrEditMode(option) {
     normalized_alias: a.normalized_alias,
   }));
   document.getElementById("integrity-attr-alias-section")?.classList.remove("is-hidden");
+  populateIntegrityDomainSelect(option.domain_option_id || null);
   renderIntegrityAttrAliasChips();
 }
 
@@ -459,8 +501,10 @@ async function saveIntegrityAttrOption() {
   if (!optionKey) { showToast("아이템 키를 입력하세요.", "warning"); return; }
   if (!label) { showToast("아이템명을 입력하세요.", "warning"); return; }
 
+  const domainOptionId = Number(document.getElementById("integrity-attr-domain-option")?.value || 0) || null;
+
   if (_integrityAttrMode === "new") {
-    const payload = { option_key: optionKey, label, label_kr: labelKr, sort_order: sortOrder, is_active: isActive };
+    const payload = { option_key: optionKey, label, label_kr: labelKr, sort_order: sortOrder, is_active: isActive, domain_option_id: domainOptionId };
     const saved = await apiFetch(`/api/v1/catalog-attributes/${attr.id}/options`, { method: "POST", body: payload });
     showToast("아이템을 등록했습니다.", "success");
     await loadIntegrityAttrOptions();
@@ -468,7 +512,7 @@ async function saveIntegrityAttrOption() {
     const newOption = findIntegrityAttrOptionInGrid(saved.id);
     if (newOption) setIntegrityAttrEditMode(newOption);
   } else if (_integrityAttrMode === "edit" && _integrityAttrCurrentOption) {
-    const payload = { label, label_kr: labelKr, sort_order: sortOrder, is_active: isActive };
+    const payload = { label, label_kr: labelKr, sort_order: sortOrder, is_active: isActive, domain_option_id: domainOptionId };
     await apiFetch(`/api/v1/catalog-attributes/options/${_integrityAttrCurrentOption.id}`, { method: "PATCH", body: payload });
     showToast("아이템을 수정했습니다.", "success");
     await loadIntegrityAttrOptions();
