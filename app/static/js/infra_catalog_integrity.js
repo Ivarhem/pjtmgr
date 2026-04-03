@@ -1,5 +1,5 @@
 let catalogIntegrityVendorGridApi = null;
-let catalogIntegrityProductGridApi = null;
+let integrityProductGridApi = null;
 let _integrityVendorAliases = [];
 let _integrityVendorMode = "empty";
 let _integrityVendorOriginal = null;
@@ -33,7 +33,7 @@ function setIntegrityVendorEmptyMode() {
   _integrityVendorOriginal = null;
   _integrityVendorAliases = [];
   document.getElementById("integrity-vendor-empty")?.classList.remove("is-hidden");
-  document.getElementById("integrity-vendor-form")?.classList.add("is-hidden");
+  document.getElementById("integrity-vendor-detail")?.classList.add("is-hidden");
 }
 
 function setIntegrityVendorNewMode() {
@@ -42,7 +42,7 @@ function setIntegrityVendorNewMode() {
   _integrityVendorAliases = [];
 
   document.getElementById("integrity-vendor-empty")?.classList.add("is-hidden");
-  document.getElementById("integrity-vendor-form")?.classList.remove("is-hidden");
+  document.getElementById("integrity-vendor-detail")?.classList.remove("is-hidden");
   document.getElementById("integrity-vendor-title").textContent = "새 제조사 등록";
   document.getElementById("integrity-vendor-source-label")?.classList.add("is-hidden");
   document.getElementById("integrity-vendor-source").value = "";
@@ -50,6 +50,8 @@ function setIntegrityVendorNewMode() {
   document.getElementById("integrity-vendor-canonical").readOnly = false;
   document.getElementById("integrity-vendor-apply-row")?.classList.add("is-hidden");
   document.getElementById("btn-integrity-vendor-delete")?.classList.add("is-hidden");
+  document.getElementById("integrity-product-title").textContent = "제품 목록";
+  if (integrityProductGridApi) integrityProductGridApi.setGridOption("rowData", []);
   renderIntegrityVendorAliasChips();
 }
 
@@ -59,7 +61,7 @@ function setIntegrityVendorEditMode(vendor, aliases) {
   _integrityVendorAliases = (aliases || []).map((a) => a.alias_value);
 
   document.getElementById("integrity-vendor-empty")?.classList.add("is-hidden");
-  document.getElementById("integrity-vendor-form")?.classList.remove("is-hidden");
+  document.getElementById("integrity-vendor-detail")?.classList.remove("is-hidden");
   document.getElementById("integrity-vendor-title").textContent = "제조사 편집";
   document.getElementById("integrity-vendor-source-label")?.classList.remove("is-hidden");
   document.getElementById("integrity-vendor-source").value = vendor;
@@ -70,6 +72,7 @@ function setIntegrityVendorEditMode(vendor, aliases) {
     document.getElementById("btn-integrity-vendor-delete")?.classList.remove("is-hidden");
   }
   renderIntegrityVendorAliasChips();
+  loadIntegrityVendorProducts(vendor);
 }
 
 function renderIntegrityVendorAliasChips() {
@@ -152,45 +155,6 @@ async function deleteIntegrityVendor() {
   }
 }
 
-function renderProductDetail(row) {
-  const panel = document.getElementById("catalog-integrity-product-detail");
-  if (!panel) return;
-  if (!row) {
-    panel.textContent = "";
-    const h = document.createElement("h3");
-    h.textContent = "비교 상세";
-    const p = document.createElement("p");
-    p.textContent = "유사 후보를 선택하면 기준 제품과 후보 제품의 비교 정보가 표시됩니다.";
-    panel.appendChild(h);
-    panel.appendChild(p);
-    return;
-  }
-  panel.textContent = "";
-  const h = document.createElement("h3");
-  h.textContent = `유사도 ${row.score}`;
-  panel.appendChild(h);
-
-  const pBase = document.createElement("p");
-  const strongBase = document.createElement("strong");
-  strongBase.textContent = "기준";
-  pBase.appendChild(strongBase);
-  pBase.appendChild(document.createElement("br"));
-  pBase.appendChild(document.createTextNode(`${row.base_vendor} ${row.base_name}`));
-  panel.appendChild(pBase);
-
-  const pCand = document.createElement("p");
-  const strongCand = document.createElement("strong");
-  strongCand.textContent = "후보";
-  pCand.appendChild(strongCand);
-  pCand.appendChild(document.createElement("br"));
-  pCand.appendChild(document.createTextNode(`${row.candidate_vendor} ${row.candidate_name}`));
-  panel.appendChild(pCand);
-
-  const pNorm = document.createElement("p");
-  pNorm.textContent = `정규화 기준: ${row.normalized_vendor} / ${row.normalized_name}`;
-  panel.appendChild(pNorm);
-}
-
 function initCatalogIntegrityVendorGrid() {
   const target = document.getElementById("grid-catalog-integrity-vendors");
   if (!target) return;
@@ -214,24 +178,18 @@ function initCatalogIntegrityVendorGrid() {
   });
 }
 
-function initCatalogIntegrityProductGrid() {
-  const target = document.getElementById("grid-catalog-integrity-products");
+function initIntegrityProductGrid() {
+  const target = document.getElementById("grid-integrity-products");
   if (!target) return;
-  catalogIntegrityProductGridApi = agGrid.createGrid(target, {
+  integrityProductGridApi = agGrid.createGrid(target, {
     columnDefs: [
-      { field: "base_vendor", headerName: "기준 제조사", width: 140 },
-      { field: "base_name", headerName: "기준 제품명", flex: 1, minWidth: 220 },
-      { field: "candidate_vendor", headerName: "후보 제조사", width: 140 },
-      { field: "candidate_name", headerName: "후보 제품명", flex: 1, minWidth: 220 },
-      { field: "score", headerName: "유사도", width: 100, sort: "desc" },
+      { field: "name", headerName: "제품명", flex: 1, minWidth: 200 },
+      { field: "product_type", headerName: "유형", width: 100 },
+      { field: "classification_level_1_name", headerName: "분류", width: 130 },
     ],
     rowSelection: { mode: "singleRow" },
-    defaultColDef: {
-      sortable: true,
-      filter: true,
-      resizable: true,
-    },
-    overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">유사 후보가 없습니다.</span>',
+    defaultColDef: { sortable: true, filter: true, resizable: true },
+    overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">제조사를 선택하세요.</span>',
   });
 }
 
@@ -244,19 +202,29 @@ async function loadCatalogIntegrityVendors() {
   else catalogIntegrityVendorGridApi.hideOverlay();
 }
 
-async function loadCatalogIntegrityProducts() {
-  if (!catalogIntegrityProductGridApi) return;
-  const q = document.getElementById("catalog-integrity-product-search")?.value?.trim() || "";
-  const minScore = document.getElementById("catalog-integrity-min-score")?.value || "75";
-  const rows = await apiFetch(`/api/v1/catalog-integrity/similar-products?min_score=${encodeURIComponent(minScore)}${q ? `&q=${encodeURIComponent(q)}` : ""}`);
-  catalogIntegrityProductGridApi.setGridOption("rowData", rows);
-  if (!rows.length) catalogIntegrityProductGridApi.showNoRowsOverlay();
-  else catalogIntegrityProductGridApi.hideOverlay();
+async function loadIntegrityVendorProducts(vendor) {
+  if (!integrityProductGridApi || !vendor) return;
+  document.getElementById("integrity-product-title").textContent = `${vendor} 제품 목록`;
+  const q = document.getElementById("integrity-product-search")?.value?.trim() || "";
+  let url = `/api/v1/product-catalog?vendor=${encodeURIComponent(vendor)}`;
+  if (q) url += `&q=${encodeURIComponent(q)}`;
+  try {
+    const rows = await apiFetch(url);
+    integrityProductGridApi.setGridOption("rowData", rows);
+    if (!rows.length) {
+      integrityProductGridApi.setGridOption("overlayNoRowsTemplate", '<span class="ag-overlay-loading-center">등록된 제품이 없습니다.</span>');
+      integrityProductGridApi.showNoRowsOverlay();
+    } else {
+      integrityProductGridApi.hideOverlay();
+    }
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   initCatalogIntegrityVendorGrid();
-  initCatalogIntegrityProductGrid();
+  initIntegrityProductGrid();
   document.getElementById("catalog-integrity-vendor-search")?.addEventListener("input", () => {
     loadCatalogIntegrityVendors().catch((err) => console.error(err));
   });
@@ -299,14 +267,12 @@ document.addEventListener("DOMContentLoaded", () => {
       renderIntegrityVendorAliasChips();
     }
   });
-  document.getElementById("catalog-integrity-product-search")?.addEventListener("input", () => {
-    loadCatalogIntegrityProducts().catch((err) => console.error(err));
-  });
-  document.getElementById("catalog-integrity-min-score")?.addEventListener("change", () => {
-    loadCatalogIntegrityProducts().catch((err) => console.error(err));
+  document.getElementById("integrity-product-search")?.addEventListener("input", () => {
+    if (_integrityVendorOriginal) {
+      loadIntegrityVendorProducts(_integrityVendorOriginal).catch((err) => console.error(err));
+    }
   });
   loadIntegrityPermissions().then(() => {
     loadCatalogIntegrityVendors().catch((err) => console.error(err));
   });
-  loadCatalogIntegrityProducts().catch((err) => console.error(err));
 });
