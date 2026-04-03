@@ -17,6 +17,13 @@ from app.modules.infra.schemas.product_catalog import (
 from app.modules.infra.schemas.catalog_similarity import (
     CatalogSimilarityCheckRequest,
     CatalogSimilarityCheckResponse,
+    ProductMergeRequest,
+    ProductMergeResponse,
+    ProductDismissRequest,
+)
+from app.modules.infra.services.catalog_merge_service import (
+    merge_products,
+    dismiss_similarity,
 )
 from app.modules.infra.schemas.hardware_spec import (
     HardwareSpecCreate,
@@ -107,6 +114,31 @@ def check_product_similarity_endpoint(
         name=payload.name,
         exclude_product_id=payload.exclude_product_id,
     ))
+
+
+@router.post("/merge", response_model=ProductMergeResponse)
+def merge_products_endpoint(
+    payload: ProductMergeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductMergeResponse:
+    result = merge_products(
+        db,
+        source_id=payload.source_id,
+        target_id=payload.target_id,
+        current_user=current_user,
+    )
+    return ProductMergeResponse(**result)
+
+
+@router.post("/similarity-dismiss", status_code=status.HTTP_204_NO_CONTENT)
+def dismiss_similarity_endpoint(
+    payload: ProductDismissRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    dismiss_similarity(db, product_id_a=payload.product_id_a, product_id_b=payload.product_id_b)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/{product_id}", response_model=ProductCatalogDetail)
