@@ -167,6 +167,12 @@
       if (a.getAttribute('href') === _activePath) a.classList.add('active');
     });
 
+    // Scope filter: restore saved value on every page load
+    (function() {
+      const sf = document.getElementById('ctx-scope-filter');
+      if (sf) sf.value = localStorage.getItem('infra_scope_filter') || 'all';
+    })();
+
     // Module dropdown toggle
     (function() {
       const btn = document.getElementById('module-dropdown-btn');
