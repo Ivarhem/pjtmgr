@@ -1,78 +1,40 @@
+/* ── 제조사 관리 ──────────────────────────────────────────── */
+
 let catalogVendorGridApi = null;
-let catalogProductManageGridApi = null;
-
-function parseCatalogManagementBool(value, fallback = true) {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (!normalized) return fallback;
-  return !["false", "0", "n", "no"].includes(normalized);
-}
-
-function splitCatalogManagementAliases(value) {
-  return String(value || "")
-    .split(/[\n,]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function setCatalogManagementResult(targetId, text) {
-  const target = document.getElementById(targetId);
-  if (target) target.textContent = text;
-}
-
-function formatCatalogManagementRows(summary) {
-  if (!summary?.rows?.length) return "반영 결과가 없습니다.";
-  const lines = [`총 ${summary.total}건`, `실패 ${summary.failed}건`, ""];
-  if (summary.created != null) lines.splice(1, 0, `생성 ${summary.created}건`, `수정 ${summary.updated}건`);
-  if (summary.created == null) lines.splice(1, 0, `처리 ${summary.updated}건`);
-  summary.rows.forEach((row) => {
-    const prefix = row.status === "error" ? `[실패 ${row.row_no}]` : `[완료 ${row.row_no}]`;
-    lines.push(`${prefix} ${row.canonical_vendor || row.vendor || "-"} ${row.name || ""} ${row.message || row.action || ""}`.trim());
-  });
-  return lines.join("\n");
-}
-
-function parseCatalogManagementTsv(text) {
-  const lines = String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length < 2) throw new Error("헤더와 데이터 행이 필요합니다.");
-  const headers = lines[0].split("\t").map((item) => item.trim());
-  return lines.slice(1).map((line) => {
-    const values = line.split("\t");
-    const row = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] ?? "";
-    });
-    return row;
-  });
-}
+let _vendorAliases = [];
+let _vendorMode = "empty";
+let _vendorOriginal = null;
+let _canManageVendor = false;
 
 function initCatalogVendorGrid() {
   const target = document.getElementById("grid-catalog-vendors");
   if (!target || catalogVendorGridApi) return;
   catalogVendorGridApi = agGrid.createGrid(target, {
     columnDefs: [
-      { field: "vendor", headerName: "대표 제조사", flex: 1, minWidth: 180 },
+      { field: "vendor", headerName: "제조사명", flex: 1, minWidth: 180 },
       { field: "product_count", headerName: "제품 수", width: 100 },
       { field: "alias_count", headerName: "alias 수", width: 100 },
-      {
-        field: "aliases",
-        headerName: "alias",
-        flex: 1.2,
-        minWidth: 220,
-        valueFormatter: (params) => (params.value || []).map((item) => item.alias_value).join(", "),
-      },
     ],
     rowSelection: { mode: "singleRow" },
     animateRows: true,
     defaultColDef: { sortable: true, filter: true, resizable: true },
     onRowClicked: (event) => {
       const row = event.data || {};
-      const sourceInput = document.getElementById("catalog-vendor-source");
-      const canonicalInput = document.getElementById("catalog-vendor-canonical");
-      const aliasesInput = document.getElementById("catalog-vendor-aliases");
-      if (sourceInput) sourceInput.value = row.vendor || "";
-      if (canonicalInput) canonicalInput.value = row.vendor || "";
-      if (aliasesInput) aliasesInput.value = (row.aliases || []).map((item) => item.alias_value).join(", ");
+      setVendorEditMode(row.vendor, row.aliases || []);
     },
+  });
+}
+
+async function loadCatalogVendorPermissions() {
+  try {
+    const me = window.__me || await apiFetch("/api/v1/auth/me");
+    window.__me = me;
+    _canManageVendor = !!me?.permissions?.can_manage_catalog_taxonomy;
+  } catch (_) {
+    _canManageVendor = false;
+  }
+  document.querySelectorAll(".vendor-write-only").forEach((el) => {
+    el.style.display = _canManageVendor ? "" : "none";
   });
 }
 
@@ -83,45 +45,134 @@ async function loadCatalogVendorManagement() {
   catalogVendorGridApi.setGridOption("rowData", rows);
 }
 
-async function saveCatalogVendorManagementRow() {
-  const canonicalVendor = document.getElementById("catalog-vendor-canonical")?.value?.trim() || "";
-  if (!canonicalVendor) {
-    showToast("대표 제조사명을 입력하세요.", "warning");
+function setVendorEmptyMode() {
+  _vendorMode = "empty";
+  _vendorOriginal = null;
+  _vendorAliases = [];
+  document.getElementById("vendor-detail-empty")?.classList.remove("is-hidden");
+  document.getElementById("vendor-detail-content")?.classList.add("is-hidden");
+}
+
+function setVendorNewMode() {
+  _vendorMode = "new";
+  _vendorOriginal = null;
+  _vendorAliases = [];
+
+  document.getElementById("vendor-detail-empty")?.classList.add("is-hidden");
+  document.getElementById("vendor-detail-content")?.classList.remove("is-hidden");
+  document.getElementById("vendor-detail-title").textContent = "새 제조사 등록";
+  document.getElementById("vendor-source-label")?.classList.add("is-hidden");
+  document.getElementById("catalog-vendor-source").value = "";
+  document.getElementById("catalog-vendor-canonical").value = "";
+  document.getElementById("catalog-vendor-canonical").readOnly = false;
+  document.getElementById("vendor-apply-row")?.classList.add("is-hidden");
+  document.getElementById("btn-catalog-vendor-delete")?.classList.add("is-hidden");
+  renderVendorAliasChips();
+}
+
+function setVendorEditMode(vendor, aliases) {
+  _vendorMode = "edit";
+  _vendorOriginal = vendor;
+  _vendorAliases = (aliases || []).map((a) => a.alias_value);
+
+  document.getElementById("vendor-detail-empty")?.classList.add("is-hidden");
+  document.getElementById("vendor-detail-content")?.classList.remove("is-hidden");
+  document.getElementById("vendor-detail-title").textContent = "제조사 편집";
+  document.getElementById("vendor-source-label")?.classList.remove("is-hidden");
+  document.getElementById("catalog-vendor-source").value = vendor;
+  document.getElementById("catalog-vendor-canonical").value = vendor;
+  document.getElementById("catalog-vendor-canonical").readOnly = false;
+  document.getElementById("vendor-apply-row")?.classList.add("is-hidden");
+  if (_canManageVendor) {
+    document.getElementById("btn-catalog-vendor-delete")?.classList.remove("is-hidden");
+  }
+  renderVendorAliasChips();
+}
+
+function renderVendorAliasChips() {
+  const listEl = document.getElementById("vendor-alias-tag-list");
+  if (!listEl) return;
+  listEl.textContent = "";
+  _vendorAliases.forEach((alias, idx) => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.textContent = alias;
+    if (_canManageVendor) {
+      const xBtn = document.createElement("span");
+      xBtn.className = "tag-chip-x";
+      xBtn.dataset.idx = idx;
+      xBtn.textContent = "\u00d7";
+      xBtn.addEventListener("click", () => {
+        if (confirm(`별칭 '${alias}'을(를) 삭제하시겠습니까?`)) {
+          _vendorAliases.splice(idx, 1);
+          renderVendorAliasChips();
+        }
+      });
+      chip.appendChild(xBtn);
+    }
+    listEl.appendChild(chip);
+  });
+}
+
+function onVendorCanonicalChange() {
+  const canonical = document.getElementById("catalog-vendor-canonical")?.value?.trim() || "";
+  const applyRow = document.getElementById("vendor-apply-row");
+  if (_vendorMode === "edit" && canonical && canonical !== _vendorOriginal) {
+    applyRow?.classList.remove("is-hidden");
+  } else {
+    applyRow?.classList.add("is-hidden");
+  }
+}
+
+async function saveCatalogVendor() {
+  const canonical = document.getElementById("catalog-vendor-canonical")?.value?.trim() || "";
+  if (!canonical) {
+    showToast("정식 제조사명을 입력하세요.", "warning");
     return;
   }
   const payload = {
     rows: [
       {
-        source_vendor: document.getElementById("catalog-vendor-source")?.value?.trim() || null,
-        canonical_vendor: canonicalVendor,
-        aliases: splitCatalogManagementAliases(document.getElementById("catalog-vendor-aliases")?.value || ""),
-        apply_to_products: !!document.getElementById("catalog-vendor-apply-products")?.checked,
+        source_vendor: _vendorMode === "edit" ? _vendorOriginal : null,
+        canonical_vendor: canonical,
+        aliases: [..._vendorAliases],
+        apply_to_products: _vendorMode === "edit" && canonical !== _vendorOriginal
+          ? !!document.getElementById("catalog-vendor-apply-products")?.checked
+          : false,
         is_active: true,
       },
     ],
   };
-  const result = await apiFetch("/api/v1/catalog-integrity/vendors/bulk-upsert", { method: "POST", body: payload });
-  setCatalogManagementResult("catalog-vendor-result", formatCatalogManagementRows(result));
-  showToast("제조사 기준을 반영했습니다.", "success");
+  await apiFetch("/api/v1/catalog-integrity/vendors/bulk-upsert", { method: "POST", body: payload });
+  showToast("제조사를 저장했습니다.", "success");
   await loadCatalogVendorManagement();
+  setVendorEditMode(canonical, _vendorAliases.map((v) => ({ alias_value: v })));
 }
 
-async function saveCatalogVendorManagementBulk() {
-  const rawRows = parseCatalogManagementTsv(document.getElementById("catalog-vendor-bulk")?.value || "");
-  const payload = {
-    rows: rawRows.map((row) => ({
-      source_vendor: String(row.source_vendor || "").trim() || null,
-      canonical_vendor: String(row.canonical_vendor || "").trim(),
-      aliases: splitCatalogManagementAliases(row.aliases || ""),
-      apply_to_products: parseCatalogManagementBool(row.apply_to_products, true),
-      is_active: true,
-    })),
-  };
-  const result = await apiFetch("/api/v1/catalog-integrity/vendors/bulk-upsert", { method: "POST", body: payload });
-  setCatalogManagementResult("catalog-vendor-result", formatCatalogManagementRows(result));
-  showToast("제조사 TSV 반영이 완료되었습니다.", result.failed ? "warning" : "success");
-  await loadCatalogVendorManagement();
+async function deleteCatalogVendor() {
+  if (!_vendorOriginal) return;
+  const rows = [];
+  catalogVendorGridApi?.forEachNode((node) => rows.push(node.data));
+  const vendorRow = rows.find((r) => r.vendor === _vendorOriginal);
+  if (vendorRow && vendorRow.product_count > 0) {
+    alert(`연결된 제품 ${vendorRow.product_count}개가 있어 삭제할 수 없습니다.`);
+    return;
+  }
+  if (!confirm(`제조사 '${_vendorOriginal}'과(와) 모든 별칭을 삭제하시겠습니까?`)) return;
+  try {
+    await apiFetch(`/api/v1/catalog-integrity/vendors/${encodeURIComponent(_vendorOriginal)}`, { method: "DELETE" });
+    showToast("제조사를 삭제했습니다.", "success");
+    await loadCatalogVendorManagement();
+    setVendorEmptyMode();
+  } catch (err) {
+    alert(err.message || "삭제에 실패했습니다.");
+  }
 }
+
+
+/* ── 제품 관리 ──────────────────────────────────────────── */
+
+let catalogProductManageGridApi = null;
 
 function initCatalogProductManageGrid() {
   const target = document.getElementById("grid-catalog-products-manage");
@@ -175,52 +226,120 @@ function buildCatalogProductBulkRow(raw) {
   return row;
 }
 
+function parseCatalogManagementTsv(text) {
+  const lines = String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) throw new Error("헤더와 데이터 행이 필요합니다.");
+  const headers = lines[0].split("\t").map((item) => item.trim());
+  return lines.slice(1).map((line) => {
+    const values = line.split("\t");
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] ?? "";
+    });
+    return row;
+  });
+}
+
+function parseCatalogManagementBool(value, fallback = true) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return fallback;
+  return !["false", "0", "n", "no"].includes(normalized);
+}
+
 async function saveCatalogProductManagementBulk() {
   const rawRows = parseCatalogManagementTsv(document.getElementById("catalog-product-bulk")?.value || "");
   const payload = {
     rows: rawRows.map((row) => buildCatalogProductBulkRow(row)),
   };
   const result = await apiFetch("/api/v1/product-catalog/bulk-upsert", { method: "POST", body: payload });
-  setCatalogManagementResult("catalog-product-result", formatCatalogManagementRows(result));
+  const target = document.getElementById("catalog-product-result");
+  if (target) {
+    const lines = [`총 ${result.total}건`, `실패 ${result.failed}건`];
+    if (result.created != null) lines.splice(1, 0, `생성 ${result.created}건`, `수정 ${result.updated}건`);
+    if (result.created == null) lines.splice(1, 0, `처리 ${result.updated}건`);
+    if (result.rows?.length) {
+      lines.push("");
+      result.rows.forEach((row) => {
+        const prefix = row.status === "error" ? `[실패 ${row.row_no}]` : `[완료 ${row.row_no}]`;
+        lines.push(`${prefix} ${row.canonical_vendor || row.vendor || "-"} ${row.name || ""} ${row.message || row.action || ""}`.trim());
+      });
+    }
+    target.textContent = lines.join("\n");
+  }
   showToast("제품 TSV 반영이 완료되었습니다.", result.failed ? "warning" : "success");
   await loadCatalogProductManagement();
 }
+
+
+/* ── 초기화 ──────────────────────────────────────────── */
 
 document.addEventListener("DOMContentLoaded", () => {
   initCatalogVendorGrid();
   initCatalogProductManageGrid();
 
   if (catalogVendorGridApi) {
-    loadCatalogVendorManagement().catch((error) => {
-      console.error(error);
-      showToast(error.message || "제조사 목록을 불러오지 못했습니다.", "error");
+    loadCatalogVendorPermissions().then(() => {
+      loadCatalogVendorManagement().catch((error) => {
+        console.error(error);
+        showToast(error.message || "제조사 목록을 불러오지 못했습니다.", "error");
+      });
+    });
+
+    document.getElementById("btn-catalog-vendor-refresh")?.addEventListener("click", () => {
+      loadCatalogVendorManagement().catch((error) => showToast(error.message, "error"));
+    });
+    document.getElementById("catalog-vendor-search")?.addEventListener("input", () => {
+      loadCatalogVendorManagement().catch((error) => showToast(error.message, "error"));
+    });
+    document.getElementById("btn-catalog-vendor-add")?.addEventListener("click", () => {
+      setVendorNewMode();
+    });
+    document.getElementById("btn-catalog-vendor-save")?.addEventListener("click", () => {
+      saveCatalogVendor().catch((error) => {
+        console.error(error);
+        showToast(error.message || "저장에 실패했습니다.", "error");
+      });
+    });
+    document.getElementById("btn-catalog-vendor-delete")?.addEventListener("click", () => {
+      deleteCatalogVendor().catch((error) => {
+        console.error(error);
+        showToast(error.message || "삭제에 실패했습니다.", "error");
+      });
+    });
+    document.getElementById("btn-catalog-vendor-cancel")?.addEventListener("click", () => {
+      setVendorEmptyMode();
+    });
+    document.getElementById("catalog-vendor-canonical")?.addEventListener("input", () => {
+      onVendorCanonicalChange();
+    });
+
+    document.getElementById("vendor-alias-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        const input = e.target;
+        const val = input.value.replace(/,/g, "").trim();
+        if (val && !_vendorAliases.includes(val)) {
+          _vendorAliases.push(val);
+          renderVendorAliasChips();
+        }
+        input.value = "";
+      }
+      if (e.key === "Backspace" && e.target.value === "" && _vendorAliases.length > 0) {
+        const removed = _vendorAliases[_vendorAliases.length - 1];
+        if (confirm(`별칭 '${removed}'을(를) 삭제하시겠습니까?`)) {
+          _vendorAliases.pop();
+          renderVendorAliasChips();
+        }
+      }
     });
   }
+
   if (catalogProductManageGridApi) {
     loadCatalogProductManagement().catch((error) => {
       console.error(error);
       showToast(error.message || "제품 목록을 불러오지 못했습니다.", "error");
     });
   }
-
-  document.getElementById("btn-catalog-vendor-refresh")?.addEventListener("click", () => {
-    loadCatalogVendorManagement().catch((error) => showToast(error.message, "error"));
-  });
-  document.getElementById("catalog-vendor-search")?.addEventListener("input", () => {
-    loadCatalogVendorManagement().catch((error) => showToast(error.message, "error"));
-  });
-  document.getElementById("btn-catalog-vendor-save")?.addEventListener("click", () => {
-    saveCatalogVendorManagementRow().catch((error) => {
-      console.error(error);
-      showToast(error.message || "제조사 반영에 실패했습니다.", "error");
-    });
-  });
-  document.getElementById("btn-catalog-vendor-bulk-apply")?.addEventListener("click", () => {
-    saveCatalogVendorManagementBulk().catch((error) => {
-      console.error(error);
-      showToast(error.message || "제조사 TSV 반영에 실패했습니다.", "error");
-    });
-  });
 
   document.getElementById("btn-catalog-product-refresh")?.addEventListener("click", () => {
     loadCatalogProductManagement().catch((error) => showToast(error.message, "error"));
