@@ -115,6 +115,7 @@ def check_product_similarity_endpoint(
         vendor=payload.vendor,
         name=payload.name,
         exclude_product_id=payload.exclude_product_id,
+        include_dismissed=payload.include_dismissed,
     ))
 
 

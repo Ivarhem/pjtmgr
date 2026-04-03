@@ -51,6 +51,7 @@ def find_similar_products(
     name: str,
     exclude_product_id: int | None = None,
     limit: int = 5,
+    include_dismissed: bool = False,
 ) -> dict:
     from app.modules.infra.models.asset import Asset
     from app.modules.infra.services.catalog_merge_service import get_dismissed_pairs
@@ -77,10 +78,12 @@ def find_similar_products(
 
     exact_matches: list[dict] = []
     similar_matches: list[dict] = []
+    dismissed_matches: list[dict] = []
     for candidate in candidates:
         if exclude_product_id is not None and candidate.id == exclude_product_id:
             continue
-        if candidate.id in dismissed_ids:
+        is_dismissed = candidate.id in dismissed_ids
+        if is_dismissed and not include_dismissed:
             continue
         score = score_product_similarity(
             normalized_vendor=normalized_vendor,
@@ -102,18 +105,23 @@ def find_similar_products(
                 and candidate.normalized_vendor == normalized_vendor
                 and candidate.normalized_name == normalized_name
             ),
+            "is_dismissed": is_dismissed,
         }
-        if payload["exact_normalized"]:
+        if is_dismissed:
+            dismissed_matches.append(payload)
+        elif payload["exact_normalized"]:
             exact_matches.append(payload)
         elif score >= 75:
             similar_matches.append(payload)
     exact_matches.sort(key=lambda item: (-item["score"], item["vendor"], item["name"], item["id"]))
     similar_matches.sort(key=lambda item: (-item["score"], item["vendor"], item["name"], item["id"]))
+    dismissed_matches.sort(key=lambda item: (-item["score"], item["vendor"], item["name"], item["id"]))
     return {
         "normalized_vendor": normalized_vendor,
         "normalized_name": normalized_name,
         "exact_matches": exact_matches[:limit],
         "similar_matches": similar_matches[:limit],
+        "dismissed_matches": dismissed_matches[:limit] if include_dismissed else [],
     }
 
 

@@ -140,6 +140,19 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
     for row in db.execute(product_stmt).mappings().all():
         vendor_product_map[row["vendor"]] = int(row["product_count"] or 0)
 
+    # similar_count > 0인 제품 수 (제조사별)
+    similar_stmt = (
+        select(
+            ProductCatalog.vendor.label("vendor"),
+            func.count(ProductCatalog.id).label("similar_product_count"),
+        )
+        .where(ProductCatalog.similar_count > 0)
+        .group_by(ProductCatalog.vendor)
+    )
+    vendor_similar_map: dict[str, int] = {}
+    for row in db.execute(similar_stmt).mappings().all():
+        vendor_similar_map[row["vendor"]] = int(row["similar_product_count"] or 0)
+
     # 2) CatalogVendorAlias 기반 alias 정보
     alias_stmt = (
         select(
@@ -197,6 +210,7 @@ def list_vendor_alias_summaries(db: Session, q: str | None = None) -> list[dict]
                 "aliases": display_aliases,
                 "name_ko": meta.get("name_ko"),
                 "memo": meta.get("memo"),
+                "similar_product_count": vendor_similar_map.get(vendor, 0),
             }
         )
     results.sort(key=lambda r: (r["vendor"] or "").lower())

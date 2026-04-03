@@ -7,6 +7,7 @@ class CatalogSimilarityCheckRequest(BaseModel):
     vendor: str
     name: str
     exclude_product_id: int | None = None
+    include_dismissed: bool = False
 
 
 class CatalogSimilarityCandidate(BaseModel):
@@ -16,6 +17,7 @@ class CatalogSimilarityCandidate(BaseModel):
     score: int
     exact_normalized: bool = False
     asset_count: int = 0
+    is_dismissed: bool = False
 
 
 class CatalogSimilarityCheckResponse(BaseModel):
@@ -23,6 +25,7 @@ class CatalogSimilarityCheckResponse(BaseModel):
     normalized_name: str
     exact_matches: list[CatalogSimilarityCandidate]
     similar_matches: list[CatalogSimilarityCandidate]
+    dismissed_matches: list[CatalogSimilarityCandidate] = []
 
 
 class ProductMergeRequest(BaseModel):

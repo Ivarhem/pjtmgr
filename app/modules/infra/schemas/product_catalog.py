@@ -76,6 +76,7 @@ class ProductCatalogRead(BaseModel):
     classification_level_4_name: str | None = None
     classification_level_5_name: str | None = None
     is_placeholder: bool
+    similar_count: int = 0
     created_at: datetime
     updated_at: datetime
 

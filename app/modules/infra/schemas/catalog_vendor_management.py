@@ -17,6 +17,7 @@ class CatalogVendorSummary(BaseModel):
     aliases: list[CatalogVendorAliasItem]
     name_ko: str | None = None
     memo: str | None = None
+    similar_product_count: int = 0
 
 
 class CatalogVendorBulkUpsertRow(BaseModel):
