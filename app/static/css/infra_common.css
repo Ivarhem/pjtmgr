@@ -1678,20 +1678,20 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 
 .vendor-apply-row.is-hidden { display: none; }
 
-/* ── 기준정보 관리 (MDM) 3패널 레이아웃 ── */
-/* 배치: [제조사 목록 | 스플리터 | 제품 목록 | 편집폼] */
+/* ── 기준정보 관리 (MDM) 2패널 레이아웃 ── */
+/* 배치: [제조사 목록 | 스플리터 | 상세(편집 + 제품)] */
 .mdm-layout {
-  --mdm-vendor-width: 480px;
+  --mdm-list-width: 480px;
   display: flex;
   gap: 0;
   height: calc(100vh - 160px);
 }
 
 /* 좌: 제조사 목록 */
-.mdm-vendor-panel {
-  width: var(--mdm-vendor-width);
+.mdm-list-panel {
+  width: var(--mdm-list-width);
   min-width: 320px;
-  max-width: 640px;
+  max-width: 50vw;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -1708,7 +1708,7 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 .mdm-panel-toolbar .input-search { flex: 1; min-width: 0; }
 .mdm-panel-toolbar h3 { margin: 0; font-size: 14px; font-weight: 600; white-space: nowrap; }
 
-.mdm-vendor-grid {
+.mdm-list-grid {
   flex: 1;
   min-height: 0;
 }
@@ -1736,41 +1736,17 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 
 .mdm-splitter:hover::after { background: var(--text-color-tertiary); height: 48px; }
 
-/* 중: 제품 목록 */
-.mdm-product-panel {
+/* 우: 상세 영역 */
+.mdm-detail-panel {
   flex: 1;
-  min-width: 280px;
+  min-width: 360px;
   display: flex;
   flex-direction: column;
-  padding: 12px;
-  background: var(--bg-primary);
-}
-
-.mdm-product-grid {
-  flex: 1;
-  min-height: 0;
-}
-
-/* 우: 제조사 편집 */
-.mdm-edit-panel {
-  width: 300px;
-  min-width: 240px;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--border-color);
-  padding: 14px;
   overflow-y: auto;
   background: var(--bg-primary);
 }
 
-.mdm-edit-panel h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.mdm-edit-empty {
+.mdm-detail-empty {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1781,16 +1757,41 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   line-height: 1.8;
 }
 
+.mdm-detail-section {
+  padding: 14px;
+}
+
+.mdm-detail-section h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mdm-vendor-info {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mdm-product-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.mdm-product-grid {
+  flex: 1;
+  min-height: 200px;
+}
+
 @media (max-width: 1080px) {
   .mdm-layout {
     flex-direction: column;
     height: auto;
   }
-  .mdm-edit-panel, .mdm-vendor-panel, .mdm-product-panel {
+  .mdm-list-panel {
     width: 100%;
     max-width: none;
     min-width: 0;
-    border-left: none;
   }
   .mdm-splitter { display: none; }
 }

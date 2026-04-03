@@ -278,9 +278,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 스플리터 드래그
   const splitter = document.getElementById("mdm-splitter");
-  const vendorPanel = document.getElementById("mdm-vendor-panel");
+  const vendorPanel = document.getElementById("mdm-list-panel");
   if (splitter && vendorPanel) {
-    const STORAGE_KEY = "mdm_vendor_panel_width";
+    const STORAGE_KEY = "mdm_list_panel_width";
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) vendorPanel.style.width = saved + "px";
 
