@@ -52,15 +52,35 @@ def find_similar_products(
     exclude_product_id: int | None = None,
     limit: int = 5,
 ) -> dict:
+    from app.modules.infra.models.asset import Asset
+    from app.modules.infra.services.catalog_merge_service import get_dismissed_pairs
+
     normalized_vendor = normalize_vendor_name(vendor)
     normalized_name = normalize_product_name(name)
     tokens = tokenize_product_name(name)
     stmt = select(ProductCatalog).order_by(ProductCatalog.vendor.asc(), ProductCatalog.name.asc())
     candidates = list(db.scalars(stmt))
+
+    # dismissal 필터
+    dismissed_ids: set[int] = set()
+    if exclude_product_id is not None:
+        dismissed_ids = get_dismissed_pairs(db, exclude_product_id)
+
+    # 자산 수 일괄 조회
+    asset_count_map: dict[int, int] = {}
+    if candidates:
+        from sqlalchemy import func
+        rows = db.execute(
+            select(Asset.model_id, func.count()).group_by(Asset.model_id)
+        ).all()
+        asset_count_map = {r[0]: r[1] for r in rows}
+
     exact_matches: list[dict] = []
     similar_matches: list[dict] = []
     for candidate in candidates:
         if exclude_product_id is not None and candidate.id == exclude_product_id:
+            continue
+        if candidate.id in dismissed_ids:
             continue
         score = score_product_similarity(
             normalized_vendor=normalized_vendor,
@@ -75,6 +95,7 @@ def find_similar_products(
             "vendor": candidate.vendor,
             "name": candidate.name,
             "score": score,
+            "asset_count": asset_count_map.get(candidate.id, 0),
             "exact_normalized": bool(
                 normalized_vendor
                 and normalized_name
