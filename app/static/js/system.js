@@ -54,20 +54,20 @@ function bindSettingsActions() {
   document.getElementById("btn-save-settings").addEventListener("click", async () => {
     const orgName = document.getElementById("input-org-name").value.trim();
     const passwordMinLength = parseInt(document.getElementById("input-password-min-length").value, 10);
-    const res = await fetch("/api/v1/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        org_name: orgName || null,
-        password_min_length: Number.isNaN(passwordMinLength) ? null : passwordMinLength,
+    const [res] = await Promise.all([
+      fetch("/api/v1/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          org_name: orgName || null,
+          password_min_length: Number.isNaN(passwordMinLength) ? null : passwordMinLength,
+        }),
       }),
-    });
-    // Save catalog label lang preference
-    const langValue = document.getElementById("input-catalog-label-lang")?.value || "ko";
-    await apiFetch("/api/v1/preferences/catalog.label_lang", {
-      method: "PATCH",
-      body: { value: langValue },
-    });
+      apiFetch("/api/v1/preferences/catalog.label_lang", {
+        method: "PATCH",
+        body: { value: document.getElementById("input-catalog-label-lang")?.value || "ko" },
+      }).catch(() => {}),
+    ]);
 
     if (res.ok) {
       const updated = await res.json();
