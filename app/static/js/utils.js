@@ -604,23 +604,38 @@ async function initContextSelectors() {
 async function getPinnedProjectId() { return _ctxProjectId ? String(_ctxProjectId) : null; }
 async function getPinnedPartnerId() { return _ctxPartnerId ? String(_ctxPartnerId) : null; }
 
-// ── 글로벌 프로젝트 필터 (자산 탭 공유) ──────────────────────────────
-const _PROJECT_FILTER_KEY = "infra_project_filter";
+// ── 글로벌 범위 필터 (topbar 드롭다운, 자산 탭 공유) ──────────────────
+const _SCOPE_FILTER_KEY = "infra_scope_filter";
 
-/** 프로젝트 필터 체크박스 초기화 (localStorage 연동) */
-function initProjectFilterCheckbox(onChangeCallback) {
-  const chk = document.getElementById("chk-project-filter");
-  if (!chk) return;
-  chk.checked = localStorage.getItem(_PROJECT_FILTER_KEY) === "1";
-  chk.addEventListener("change", () => {
-    localStorage.setItem(_PROJECT_FILTER_KEY, chk.checked ? "1" : "0");
+/** 범위 필터 드롭다운 초기화 (localStorage 연동) */
+function initScopeFilter(onChangeCallback) {
+  const select = document.getElementById("ctx-scope-filter");
+  if (!select) return;
+  select.value = localStorage.getItem(_SCOPE_FILTER_KEY) || "all";
+  select.addEventListener("change", () => {
+    localStorage.setItem(_SCOPE_FILTER_KEY, select.value);
     if (onChangeCallback) onChangeCallback();
   });
 }
 
-/** 프로젝트 필터가 활성 상태인지 반환 */
+/** 현재 범위 필터 값 반환: "all" | "partner" | "project" */
+function getScopeFilter() {
+  return localStorage.getItem(_SCOPE_FILTER_KEY) || "all";
+}
+
+/** 프로젝트 필터가 활성 상태인지 반환 (하위호환) */
 function isProjectFilterActive() {
-  return localStorage.getItem(_PROJECT_FILTER_KEY) === "1";
+  return getScopeFilter() === "project";
+}
+
+/** 고객사 필터가 활성 상태인지 반환 */
+function isPartnerFilterActive() {
+  return getScopeFilter() === "partner";
+}
+
+/** @deprecated 하위호환용. initScopeFilter 사용 권장 */
+function initProjectFilterCheckbox(onChangeCallback) {
+  initScopeFilter(onChangeCallback);
 }
 
 // ── END 고객 피커 (필터링 + 신규 등록) ──────────────────────────────
