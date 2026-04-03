@@ -30,16 +30,22 @@ function activateCatalogIntegrityTab(tabId) {
   });
 }
 
-async function loadIntegrityVendorPermissions() {
+async function loadIntegrityPermissions() {
   try {
     const me = window.__me || await apiFetch("/api/v1/auth/me");
     window.__me = me;
-    _canManageVendor = !!me?.permissions?.can_manage_catalog_taxonomy;
+    const canManage = !!me?.permissions?.can_manage_catalog_taxonomy;
+    _canManageVendor = canManage;
+    _canManageAttr = canManage;
   } catch (_) {
     _canManageVendor = false;
+    _canManageAttr = false;
   }
   document.querySelectorAll(".vendor-write-only").forEach((el) => {
     el.style.display = _canManageVendor ? "" : "none";
+  });
+  document.querySelectorAll(".attr-write-only").forEach((el) => {
+    el.style.display = _canManageAttr ? "" : "none";
   });
 }
 
@@ -273,23 +279,7 @@ async function loadCatalogIntegrityProducts() {
 
 /* ── 속성 탭 ── */
 
-async function loadIntegrityAttrPermissions() {
-  // Reuse vendor permission if already loaded
-  if (window.__me) {
-    _canManageAttr = !!window.__me?.permissions?.can_manage_catalog_taxonomy;
-  } else {
-    try {
-      const me = await apiFetch("/api/v1/auth/me");
-      window.__me = me;
-      _canManageAttr = !!me?.permissions?.can_manage_catalog_taxonomy;
-    } catch (_) {
-      _canManageAttr = false;
-    }
-  }
-  document.querySelectorAll(".attr-write-only").forEach((el) => {
-    el.style.display = _canManageAttr ? "" : "none";
-  });
-}
+/* loadIntegrityPermissions()에서 통합 처리 */
 
 async function loadIntegrityAttrDefs() {
   const attrs = await apiFetch("/api/v1/catalog-attributes?active_only=true");
@@ -641,17 +631,14 @@ document.addEventListener("DOMContentLoaded", () => {
       input.value = "";
     }
   });
-  loadIntegrityVendorPermissions().then(() => {
-    loadCatalogIntegrityVendors().catch((err) => console.error(err));
-  });
-  loadCatalogIntegrityProducts().catch((err) => console.error(err));
-  // 속성 탭 초기화
   initIntegrityAttrGrid();
-  loadIntegrityAttrPermissions().then(() => {
+  loadIntegrityPermissions().then(() => {
+    loadCatalogIntegrityVendors().catch((err) => console.error(err));
     loadIntegrityAttrDefs().then(() => {
       loadIntegrityAttrOptions().catch((err) => console.error(err));
     }).catch((err) => console.error(err));
   });
+  loadCatalogIntegrityProducts().catch((err) => console.error(err));
 
   // URL query param으로 탭 자동 선택
   const urlParams = new URLSearchParams(window.location.search);
