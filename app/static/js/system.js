@@ -3,6 +3,365 @@ let editingTermKey = null;
 
 const CATEGORY_LABELS = { entity: "엔티티", metric: "지표", report: "보고서" };
 
+/* ── 속성 관리 (프로젝트관리 탭) ── */
+let systemAttrGridApi = null;
+let _systemAttrDefs = [];
+let _systemAttrMode = "empty";
+let _systemAttrCurrentOption = null;
+let _systemAttrAliases = [];
+let _canManageAttr = false;
+let _systemDomainOptions = null;
+
+async function loadSystemAttrPermissions() {
+  try {
+    const me = window.__me || await apiFetch("/api/v1/auth/me");
+    window.__me = me;
+    _canManageAttr = !!me?.permissions?.can_manage_catalog_taxonomy;
+  } catch (_) {
+    _canManageAttr = false;
+  }
+  document.querySelectorAll(".attr-write-only").forEach((el) => {
+    el.style.display = _canManageAttr ? "" : "none";
+  });
+}
+
+async function loadSystemAttrDefs() {
+  const attrs = await apiFetch("/api/v1/catalog-attributes?active_only=true");
+  _systemAttrDefs = Array.isArray(attrs)
+    ? attrs.filter((a) => a.value_type === "option" && a.attribute_key !== "vendor_series" && a.attribute_key !== "license_model")
+    : [];
+  const select = document.getElementById("system-attr-key-filter");
+  if (!select) return;
+  const current = select.value || "";
+  select.textContent = "";
+  const emptyOpt = document.createElement("option");
+  emptyOpt.value = "";
+  emptyOpt.textContent = "속성 키 선택";
+  select.appendChild(emptyOpt);
+  _systemAttrDefs
+    .sort((a, b) => (a.sort_order ?? 100) - (b.sort_order ?? 100) || String(a.label || "").localeCompare(String(b.label || ""), "ko-KR"))
+    .forEach((attr) => {
+      const opt = document.createElement("option");
+      opt.value = attr.attribute_key;
+      opt.textContent = `${attr.label} (${attr.attribute_key})`;
+      select.appendChild(opt);
+    });
+  if (_systemAttrDefs.some((a) => a.attribute_key === current)) {
+    select.value = current;
+  } else if (select.options.length > 1) {
+    select.value = select.options[1].value;
+  }
+}
+
+function getSystemAttrDef(attributeKey) {
+  return _systemAttrDefs.find((a) => a.attribute_key === attributeKey) || null;
+}
+
+function isSystemAttrDomainDependent(attributeKey) {
+  return attributeKey === "product_family";
+}
+
+async function loadSystemDomainOptions() {
+  if (_systemDomainOptions) return _systemDomainOptions;
+  const domainAttr = getSystemAttrDef("domain");
+  if (!domainAttr) return [];
+  _systemDomainOptions = await apiFetch(`/api/v1/catalog-attributes/${domainAttr.id}/options?active_only=true`);
+  return _systemDomainOptions;
+}
+
+async function populateSystemDomainSelect(selectedId) {
+  const select = document.getElementById("system-attr-domain-option");
+  const label = document.getElementById("system-attr-domain-label");
+  const attributeKey = document.getElementById("system-attr-key-filter")?.value || "";
+  if (!select || !label) return;
+  if (!isSystemAttrDomainDependent(attributeKey)) {
+    label.classList.add("is-hidden");
+    return;
+  }
+  label.classList.remove("is-hidden");
+  const options = await loadSystemDomainOptions();
+  select.textContent = "";
+  const emptyOpt = document.createElement("option");
+  emptyOpt.value = "";
+  emptyOpt.textContent = "선택 안 함";
+  select.appendChild(emptyOpt);
+  options.forEach((item) => {
+    const opt = document.createElement("option");
+    opt.value = String(item.id);
+    opt.textContent = `${item.label} (${item.option_key})`;
+    select.appendChild(opt);
+  });
+  select.value = selectedId ? String(selectedId) : "";
+}
+
+function initSystemAttrGrid() {
+  const target = document.getElementById("grid-system-attrs");
+  if (!target) return;
+  systemAttrGridApi = agGrid.createGrid(target, {
+    columnDefs: [
+      { field: "option_key", headerName: "키", width: 130 },
+      { field: "label", headerName: "아이템명", flex: 1, minWidth: 160 },
+      { field: "label_kr", headerName: "한글명", width: 130, valueFormatter: (p) => p.value || "-" },
+      { field: "domain_option_label", headerName: "도메인", width: 110, valueFormatter: (p) => p.value || "-" },
+      { field: "alias_count", headerName: "alias", width: 80, valueGetter: (p) => (p.data.aliases || []).length },
+      { field: "sort_order", headerName: "정렬", width: 80 },
+      {
+        field: "is_active", headerName: "활성", width: 80,
+        valueFormatter: (p) => p.value ? "Y" : "N",
+      },
+    ],
+    rowSelection: { mode: "singleRow" },
+    defaultColDef: { sortable: true, filter: true, resizable: true },
+    onRowClicked: (event) => {
+      setSystemAttrEditMode(event.data);
+    },
+    overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">속성 키를 선택하세요.</span>',
+  });
+}
+
+async function loadSystemAttrOptions() {
+  if (!systemAttrGridApi) return;
+  const attributeKey = document.getElementById("system-attr-key-filter")?.value || "";
+  const attr = getSystemAttrDef(attributeKey);
+  if (!attributeKey || !attr) {
+    systemAttrGridApi.setGridOption("rowData", []);
+    systemAttrGridApi.showNoRowsOverlay();
+    setSystemAttrEmptyMode();
+    return;
+  }
+  const q = document.getElementById("system-attr-search")?.value?.trim() || "";
+  let items = await apiFetch(`/api/v1/catalog-attributes/${attr.id}/options?active_only=false`);
+  if (q) {
+    const lower = q.toLowerCase();
+    items = items.filter((item) =>
+      (item.option_key || "").toLowerCase().includes(lower) ||
+      (item.label || "").toLowerCase().includes(lower) ||
+      (item.label_kr || "").toLowerCase().includes(lower)
+    );
+  }
+  systemAttrGridApi.setGridOption("rowData", items);
+  if (!items.length) {
+    systemAttrGridApi.setGridOption("overlayNoRowsTemplate", '<span class="ag-overlay-loading-center">등록된 아이템이 없습니다.</span>');
+    systemAttrGridApi.showNoRowsOverlay();
+  } else {
+    systemAttrGridApi.hideOverlay();
+  }
+}
+
+function setSystemAttrEmptyMode() {
+  _systemAttrMode = "empty";
+  _systemAttrCurrentOption = null;
+  _systemAttrAliases = [];
+  document.getElementById("system-attr-empty")?.classList.remove("is-hidden");
+  document.getElementById("system-attr-form")?.classList.add("is-hidden");
+}
+
+function setSystemAttrNewMode() {
+  _systemAttrMode = "new";
+  _systemAttrCurrentOption = null;
+  _systemAttrAliases = [];
+
+  document.getElementById("system-attr-empty")?.classList.add("is-hidden");
+  document.getElementById("system-attr-form")?.classList.remove("is-hidden");
+  document.getElementById("system-attr-title").textContent = "새 아이템 등록";
+  document.getElementById("system-attr-option-key").value = "";
+  document.getElementById("system-attr-option-key").readOnly = false;
+  document.getElementById("system-attr-option-label").value = "";
+  document.getElementById("system-attr-option-label-kr").value = "";
+  document.getElementById("system-attr-sort-order").value = "100";
+  document.getElementById("system-attr-active").checked = true;
+  document.getElementById("btn-system-attr-delete")?.classList.add("is-hidden");
+  document.getElementById("system-attr-alias-section")?.classList.add("is-hidden");
+  populateSystemDomainSelect(null);
+  renderSystemAttrAliasChips();
+}
+
+function setSystemAttrEditMode(option) {
+  _systemAttrMode = "edit";
+  _systemAttrCurrentOption = option;
+
+  document.getElementById("system-attr-empty")?.classList.add("is-hidden");
+  document.getElementById("system-attr-form")?.classList.remove("is-hidden");
+  document.getElementById("system-attr-title").textContent = "아이템 편집";
+  document.getElementById("system-attr-option-key").value = option.option_key || "";
+  document.getElementById("system-attr-option-key").readOnly = true;
+  document.getElementById("system-attr-option-label").value = option.label || "";
+  document.getElementById("system-attr-option-label-kr").value = option.label_kr || "";
+  document.getElementById("system-attr-sort-order").value = option.sort_order ?? 100;
+  document.getElementById("system-attr-active").checked = option.is_active !== false;
+  if (_canManageAttr) {
+    document.getElementById("btn-system-attr-delete")?.classList.remove("is-hidden");
+  }
+  _systemAttrAliases = (option.aliases || []).map((a) => ({
+    id: a.id,
+    alias_value: a.alias_value,
+    normalized_alias: a.normalized_alias,
+  }));
+  document.getElementById("system-attr-alias-section")?.classList.remove("is-hidden");
+  populateSystemDomainSelect(option.domain_option_id || null);
+  renderSystemAttrAliasChips();
+}
+
+function renderSystemAttrAliasChips() {
+  const listEl = document.getElementById("system-attr-alias-list");
+  if (!listEl) return;
+  listEl.textContent = "";
+  _systemAttrAliases.forEach((alias, idx) => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.textContent = alias.alias_value;
+    if (_canManageAttr) {
+      const xBtn = document.createElement("span");
+      xBtn.className = "tag-chip-x";
+      xBtn.dataset.idx = idx;
+      xBtn.textContent = "\u00d7";
+      xBtn.addEventListener("click", () => {
+        if (confirm(`별칭 '${alias.alias_value}'을(를) 삭제하시겠습니까?`)) {
+          deleteSystemAttrAlias(alias.id, idx);
+        }
+      });
+      chip.appendChild(xBtn);
+    }
+    listEl.appendChild(chip);
+  });
+}
+
+async function saveSystemAttrOption() {
+  const attributeKey = document.getElementById("system-attr-key-filter")?.value || "";
+  const attr = getSystemAttrDef(attributeKey);
+  if (!attr) {
+    showToast("속성 키를 먼저 선택하세요.", "warning");
+    return;
+  }
+  const optionKey = document.getElementById("system-attr-option-key")?.value?.trim() || "";
+  const label = document.getElementById("system-attr-option-label")?.value?.trim() || "";
+  const labelKr = document.getElementById("system-attr-option-label-kr")?.value?.trim() || null;
+  const sortOrder = Number(document.getElementById("system-attr-sort-order")?.value || 100);
+  const isActive = !!document.getElementById("system-attr-active")?.checked;
+
+  if (!optionKey) { showToast("아이템 키를 입력하세요.", "warning"); return; }
+  if (!label) { showToast("아이템명을 입력하세요.", "warning"); return; }
+
+  const domainOptionId = Number(document.getElementById("system-attr-domain-option")?.value || 0) || null;
+
+  if (_systemAttrMode === "new") {
+    const payload = { option_key: optionKey, label, label_kr: labelKr, sort_order: sortOrder, is_active: isActive, domain_option_id: domainOptionId };
+    const saved = await apiFetch(`/api/v1/catalog-attributes/${attr.id}/options`, { method: "POST", body: payload });
+    showToast("아이템을 등록했습니다.", "success");
+    await loadSystemAttrOptions();
+    const newOption = findSystemAttrOptionInGrid(saved.id);
+    if (newOption) setSystemAttrEditMode(newOption);
+  } else if (_systemAttrMode === "edit" && _systemAttrCurrentOption) {
+    const payload = { label, label_kr: labelKr, sort_order: sortOrder, is_active: isActive, domain_option_id: domainOptionId };
+    await apiFetch(`/api/v1/catalog-attributes/options/${_systemAttrCurrentOption.id}`, { method: "PATCH", body: payload });
+    showToast("아이템을 수정했습니다.", "success");
+    await loadSystemAttrOptions();
+    const updated = findSystemAttrOptionInGrid(_systemAttrCurrentOption.id);
+    if (updated) setSystemAttrEditMode(updated);
+  }
+}
+
+function findSystemAttrOptionInGrid(optionId) {
+  if (!systemAttrGridApi) return null;
+  let found = null;
+  systemAttrGridApi.forEachNode((node) => {
+    if (node.data?.id === optionId) found = node.data;
+  });
+  return found;
+}
+
+async function deleteSystemAttrOption() {
+  if (!_systemAttrCurrentOption) return;
+  if (!confirm(`아이템 '${_systemAttrCurrentOption.label}'을(를) 삭제하시겠습니까?`)) return;
+  try {
+    await apiFetch(`/api/v1/catalog-attributes/options/${_systemAttrCurrentOption.id}`, { method: "DELETE" });
+    showToast("아이템을 삭제했습니다.", "success");
+    await loadSystemAttrOptions();
+    setSystemAttrEmptyMode();
+  } catch (err) {
+    alert(err.message || "삭제에 실패했습니다.");
+  }
+}
+
+async function addSystemAttrAlias(aliasValue) {
+  if (!_systemAttrCurrentOption) return;
+  const attributeKey = document.getElementById("system-attr-key-filter")?.value || "";
+  const payload = {
+    attribute_key: attributeKey,
+    option_id: _systemAttrCurrentOption.id,
+    alias_value: aliasValue,
+    sort_order: 100,
+    is_active: true,
+    match_type: "normalized_exact",
+  };
+  try {
+    await apiFetch("/api/v1/catalog-integrity/attribute-aliases", { method: "POST", body: payload });
+    await loadSystemAttrOptions();
+    const updated = findSystemAttrOptionInGrid(_systemAttrCurrentOption.id);
+    if (updated) setSystemAttrEditMode(updated);
+    showToast("alias를 추가했습니다.", "success");
+  } catch (err) {
+    showToast(err.message || "alias 추가에 실패했습니다.", "error");
+  }
+}
+
+async function deleteSystemAttrAlias(aliasId, idx) {
+  try {
+    await apiFetch(`/api/v1/catalog-integrity/attribute-aliases/${aliasId}`, { method: "DELETE" });
+    _systemAttrAliases.splice(idx, 1);
+    renderSystemAttrAliasChips();
+    showToast("alias를 삭제했습니다.", "success");
+  } catch (err) {
+    showToast(err.message || "alias 삭제에 실패했습니다.", "error");
+  }
+}
+
+function bindSystemAttrActions() {
+  document.getElementById("system-attr-key-filter")?.addEventListener("change", () => {
+    loadSystemAttrOptions().catch((err) => console.error(err));
+    setSystemAttrEmptyMode();
+  });
+  document.getElementById("system-attr-search")?.addEventListener("input", () => {
+    loadSystemAttrOptions().catch((err) => console.error(err));
+  });
+  document.getElementById("btn-system-attr-add")?.addEventListener("click", () => {
+    const attributeKey = document.getElementById("system-attr-key-filter")?.value || "";
+    if (!attributeKey) { showToast("속성 키를 먼저 선택하세요.", "warning"); return; }
+    setSystemAttrNewMode();
+  });
+  document.getElementById("btn-system-attr-new")?.addEventListener("click", () => {
+    const attributeKey = document.getElementById("system-attr-key-filter")?.value || "";
+    if (!attributeKey) { showToast("속성 키를 먼저 선택하세요.", "warning"); return; }
+    setSystemAttrNewMode();
+  });
+  document.getElementById("btn-system-attr-save")?.addEventListener("click", () => {
+    saveSystemAttrOption().catch((err) => {
+      console.error(err);
+      showToast(err.message || "저장에 실패했습니다.", "error");
+    });
+  });
+  document.getElementById("btn-system-attr-delete")?.addEventListener("click", () => {
+    deleteSystemAttrOption().catch((err) => {
+      console.error(err);
+      showToast(err.message || "삭제에 실패했습니다.", "error");
+    });
+  });
+  document.getElementById("btn-system-attr-cancel")?.addEventListener("click", () => {
+    setSystemAttrEmptyMode();
+  });
+  document.getElementById("system-attr-alias-input")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const input = e.target;
+      const val = input.value.replace(/,/g, "").trim();
+      if (val && _systemAttrCurrentOption) {
+        addSystemAttrAlias(val);
+      }
+      input.value = "";
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   bindSystemTabs();
   await loadSettings();
@@ -14,6 +373,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadContractTypeTable();
   }
   await loadTermConfigTable();
+
+  // 속성 관리 (프로젝트관리 탭)
+  if (document.getElementById("grid-system-attrs")) {
+    bindSystemAttrActions();
+    initSystemAttrGrid();
+    loadSystemAttrPermissions().then(() => {
+      loadSystemAttrDefs().then(() => {
+        loadSystemAttrOptions().catch((err) => console.error(err));
+      }).catch((err) => console.error(err));
+    });
+  }
 });
 
 function bindSystemTabs() {
