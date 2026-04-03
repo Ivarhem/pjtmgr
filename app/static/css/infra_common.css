@@ -1679,47 +1679,19 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 .vendor-apply-row.is-hidden { display: none; }
 
 /* ── 기준정보 관리 (MDM) 3패널 레이아웃 ── */
+/* 배치: [제조사 목록 | 스플리터 | 제품 목록 | 편집폼] */
 .mdm-layout {
+  --mdm-vendor-width: 480px;
   display: flex;
   gap: 0;
   height: calc(100vh - 160px);
 }
 
-/* 좌: 제조사 편집 패널 */
-.mdm-edit-panel {
-  width: 280px;
-  min-width: 220px;
-  max-width: 380px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border-color);
-  padding: 14px;
-  overflow-y: auto;
-  background: var(--bg-primary);
-}
-
-.mdm-edit-panel h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.mdm-edit-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  text-align: center;
-  color: var(--text-color-tertiary);
-  font-size: 14px;
-  line-height: 1.8;
-}
-
-/* 중: 제조사 목록 */
+/* 좌: 제조사 목록 */
 .mdm-vendor-panel {
-  width: 340px;
-  min-width: 260px;
-  max-width: 480px;
+  width: var(--mdm-vendor-width);
+  min-width: 320px;
+  max-width: 640px;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -1764,10 +1736,10 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 
 .mdm-splitter:hover::after { background: var(--text-color-tertiary); height: 48px; }
 
-/* 우: 제품 목록 */
+/* 중: 제품 목록 */
 .mdm-product-panel {
   flex: 1;
-  min-width: 300px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
   padding: 12px;
@@ -1779,6 +1751,36 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   min-height: 0;
 }
 
+/* 우: 제조사 편집 */
+.mdm-edit-panel {
+  width: 300px;
+  min-width: 240px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border-color);
+  padding: 14px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+}
+
+.mdm-edit-panel h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mdm-edit-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  color: var(--text-color-tertiary);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
 @media (max-width: 1080px) {
   .mdm-layout {
     flex-direction: column;
@@ -1788,7 +1790,7 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
     width: 100%;
     max-width: none;
     min-width: 0;
-    border-right: none;
+    border-left: none;
   }
   .mdm-splitter { display: none; }
 }

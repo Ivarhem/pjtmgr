@@ -8,8 +8,29 @@
 </div>
 
 <div class="mdm-layout">
-  <!-- 좌: 제조사 편집 -->
-  <section class="mdm-edit-panel">
+  <!-- 좌: 제조사 목록 -->
+  <section class="mdm-vendor-panel" id="mdm-vendor-panel">
+    <div class="mdm-panel-toolbar">
+      <input type="text" class="input-search" id="catalog-integrity-vendor-search" placeholder="제조사 검색">
+      <button type="button" class="btn btn-primary btn-sm vendor-write-only" id="btn-integrity-vendor-add">+ 신규</button>
+    </div>
+    <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz mdm-vendor-grid"></div>
+  </section>
+
+  <!-- 스플리터 -->
+  <div class="mdm-splitter" id="mdm-splitter"></div>
+
+  <!-- 중: 제품 목록 -->
+  <section class="mdm-product-panel">
+    <div class="mdm-panel-toolbar">
+      <h3 id="integrity-product-title">제품 목록</h3>
+      <input type="text" class="input-search" id="integrity-product-search" placeholder="제품 검색">
+    </div>
+    <div id="grid-integrity-products" class="ag-theme-quartz mdm-product-grid"></div>
+  </section>
+
+  <!-- 우: 제조사 편집 -->
+  <section class="mdm-edit-panel" id="mdm-edit-panel">
     <div id="integrity-vendor-empty" class="mdm-edit-empty">
       <p>제조사를 선택하거나<br>새 제조사를 추가하세요.</p>
     </div>
@@ -38,27 +59,6 @@
         <button type="button" class="btn btn-secondary" id="btn-integrity-vendor-cancel">취소</button>
       </div>
     </div>
-  </section>
-
-  <!-- 중: 제조사 목록 -->
-  <section class="mdm-vendor-panel">
-    <div class="mdm-panel-toolbar">
-      <input type="text" class="input-search" id="catalog-integrity-vendor-search" placeholder="제조사 검색">
-      <button type="button" class="btn btn-primary btn-sm vendor-write-only" id="btn-integrity-vendor-add">+ 신규</button>
-    </div>
-    <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz mdm-vendor-grid"></div>
-  </section>
-
-  <!-- 스플리터 -->
-  <div class="mdm-splitter"></div>
-
-  <!-- 우: 해당 제조사의 제품 목록 -->
-  <section class="mdm-product-panel">
-    <div class="mdm-panel-toolbar">
-      <h3 id="integrity-product-title">제품 목록</h3>
-      <input type="text" class="input-search" id="integrity-product-search" placeholder="제품 검색">
-    </div>
-    <div id="grid-integrity-products" class="ag-theme-quartz mdm-product-grid"></div>
   </section>
 </div>
 {% endblock %}

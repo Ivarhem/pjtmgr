@@ -275,4 +275,31 @@ document.addEventListener("DOMContentLoaded", () => {
   loadIntegrityPermissions().then(() => {
     loadCatalogIntegrityVendors().catch((err) => console.error(err));
   });
+
+  // 스플리터 드래그
+  const splitter = document.getElementById("mdm-splitter");
+  const vendorPanel = document.getElementById("mdm-vendor-panel");
+  if (splitter && vendorPanel) {
+    const STORAGE_KEY = "mdm_vendor_panel_width";
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) vendorPanel.style.width = saved + "px";
+
+    splitter.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startW = vendorPanel.getBoundingClientRect().width;
+      const onMove = (ev) => {
+        const newW = Math.max(320, Math.min(startW + ev.clientX - startX, window.innerWidth * 0.5));
+        vendorPanel.style.width = newW + "px";
+      };
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        localStorage.setItem(STORAGE_KEY, Math.round(vendorPanel.getBoundingClientRect().width));
+        if (catalogIntegrityVendorGridApi) catalogIntegrityVendorGridApi.sizeColumnsToFit();
+      };
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    });
+  }
 });
