@@ -41,6 +41,13 @@ async function loadSettings() {
   const data = await res.json();
   document.getElementById("input-org-name").value = data.org_name ?? "";
   document.getElementById("input-password-min-length").value = data.password_min_length ?? 8;
+
+  // Load catalog label lang preference
+  try {
+    const langPref = await apiFetch("/api/v1/preferences/catalog.label_lang");
+    const langInput = document.getElementById("input-catalog-label-lang");
+    if (langInput && langPref?.value) langInput.value = langPref.value;
+  } catch (_) {}
 }
 
 function bindSettingsActions() {
@@ -55,6 +62,13 @@ function bindSettingsActions() {
         password_min_length: Number.isNaN(passwordMinLength) ? null : passwordMinLength,
       }),
     });
+    // Save catalog label lang preference
+    const langValue = document.getElementById("input-catalog-label-lang")?.value || "ko";
+    await apiFetch("/api/v1/preferences/catalog.label_lang", {
+      method: "PATCH",
+      body: { value: langValue },
+    });
+
     if (res.ok) {
       const updated = await res.json();
       document.getElementById("input-password-min-length").value = updated.password_min_length;

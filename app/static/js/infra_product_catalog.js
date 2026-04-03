@@ -2466,22 +2466,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindProductSimilarityInputs();
   setCatalogDetailOpen(localStorage.getItem(CATALOG_DETAIL_OPEN_KEY) === "1");
   applyCatalogPermissionState();
-  const langToggleBtn = document.getElementById("btn-catalog-lang-toggle");
-  if (langToggleBtn) langToggleBtn.textContent = getCatalogLabelLang() === "ko" ? "한" : "EN";
   await loadCatalog();
 
   // 이벤트 바인딩
   document.getElementById("btn-open-import").addEventListener("click", openCatalogImport);
-  document.getElementById("btn-catalog-lang-toggle")?.addEventListener("click", async () => {
-    const current = getCatalogLabelLang();
-    const next = current === "ko" ? "en" : "ko";
-    setCatalogLabelLang(next);
-    document.getElementById("btn-catalog-lang-toggle").textContent = next === "ko" ? "한" : "EN";
-    applyCatalogClassificationAliases();
-    const projected = await projectCatalogRowsForCurrentLayout(_catalogRows || []);
-    if (catalogGridApi) catalogGridApi.setGridOption("rowData", projected);
-    await rebuildCatalogClassificationTree(_catalogRows || []);
-  });
   document.getElementById("btn-catalog-classification-edit-toggle").addEventListener("click", () => {
     if (!_catalogPermissions.canManageCatalogTaxonomy) {
       showToast("카탈로그 기준 관리 권한이 없습니다.", "warning");
