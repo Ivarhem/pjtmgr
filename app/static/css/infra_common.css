@@ -48,14 +48,14 @@
 }
 
 .tab-btn {
-  padding: 0 16px;
+  padding: 0 12px;
   height: 48px;
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 13px;
   font-family: inherit;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-color-secondary);
   text-decoration: none;
   display: flex;
@@ -63,14 +63,16 @@
   gap: 6px;
   border-bottom: 3px solid transparent;
   margin-bottom: -2px;
-  letter-spacing: -0.5px;
-  transition: color 0.2s, border-bottom-color 0.2s;
+  letter-spacing: -0.2px;
+  transition: color 0.2s, font-size 0.2s, border-bottom-color 0.2s;
 }
 
 .tab-btn:hover { color: var(--text-color); }
 .tab-btn.active {
   color: var(--primary-color);
+  font-size: 22px;
   font-weight: 700;
+  letter-spacing: -0.5px;
   border-bottom-color: var(--primary-color);
 }
 
