@@ -172,3 +172,47 @@ def _normalize_text(value: str | None) -> str:
     normalized = _SEPARATOR_RE.sub("", normalized)
     normalized = _NON_ALNUM_RE.sub("", normalized)
     return normalized
+
+
+def recalc_similar_counts(db: Session, product_ids: list[int]) -> None:
+    """주어진 product_ids의 similar_count를 재계산한다."""
+    if not product_ids:
+        return
+    from app.modules.infra.services.catalog_merge_service import get_dismissed_pairs
+
+    all_products = list(db.scalars(
+        select(ProductCatalog).order_by(ProductCatalog.id)
+    ))
+    product_map = {p.id: p for p in all_products}
+
+    for pid in product_ids:
+        product = product_map.get(pid)
+        if not product:
+            continue
+        dismissed = get_dismissed_pairs(db, pid)
+        n_vendor = normalize_vendor_name(product.vendor)
+        n_name = normalize_product_name(product.name)
+        tokens = tokenize_product_name(product.name)
+
+        count = 0
+        for candidate in all_products:
+            if candidate.id == pid or candidate.id in dismissed:
+                continue
+            score = score_product_similarity(
+                normalized_vendor=n_vendor,
+                normalized_name=n_name,
+                source_tokens=tokens,
+                candidate=candidate,
+            )
+            if score >= 75:
+                count += 1
+        product.similar_count = count
+
+    db.commit()
+
+
+def recalc_all_similar_counts(db: Session) -> int:
+    """전체 제품의 similar_count를 재계산한다. 초기 데이터 채움용."""
+    all_ids = list(db.scalars(select(ProductCatalog.id)))
+    recalc_similar_counts(db, all_ids)
+    return len(all_ids)
