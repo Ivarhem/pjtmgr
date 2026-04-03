@@ -100,9 +100,6 @@
       <a class="theme-toggle admin-only is-hidden" href="/users" title="사용자 관리">
         <i data-lucide="user-cog"></i>
       </a>
-      <a class="theme-toggle admin-only is-hidden" href="/system" title="시스템 관리">
-        <i data-lucide="settings"></i>
-      </a>
       <span class="topbar-user" id="topbar-user"></span>
       <button class="btn-logout" onclick="doLogout()">로그아웃</button>
     </div>
@@ -154,6 +151,7 @@
         <li><a href="/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
         <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">제품 카탈로그·기준정보 관리</small></span></a></li>
         <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
+        <li class="admin-only is-hidden"><a href="/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
       </ul>
     </nav>
   </div>
