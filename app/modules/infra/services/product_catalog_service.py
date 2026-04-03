@@ -150,6 +150,7 @@ def create_product(
     if attribute_payload is not None:
         replace_product_attributes(db, product.id, attribute_payload, current_user)
     invalidate_product_list_cache(db)
+    _recalc_product_similarity(db, product.id)
     return _serialize_product(db, product)
 
 
@@ -185,6 +186,8 @@ def update_product(
     if attribute_payload is not None:
         replace_product_attributes(db, product.id, attribute_payload, current_user)
     invalidate_product_list_cache(db)
+    if "vendor" in changes or "name" in changes:
+        _recalc_product_similarity(db, product.id)
     return _serialize_product(db, product)
 
 
@@ -203,9 +206,13 @@ def delete_product(db: Session, product_id: int, current_user: User) -> None:
         entity_id=product.id, summary=f"제품 삭제: {product.vendor} {product.name}",
         module="infra",
     )
+    affected_ids = _collect_similar_peer_ids(db, product_id)
     db.delete(product)
     db.commit()
     invalidate_product_list_cache(db)
+    if affected_ids:
+        from app.modules.infra.services.catalog_similarity_service import recalc_similar_counts
+        recalc_similar_counts(db, affected_ids)
 
 
 def bulk_upsert_products(
@@ -577,6 +584,28 @@ def invalidate_product_list_cache(
 
 
 # ── Private helpers ──
+
+
+def _collect_similar_peer_ids(db: Session, product_id: int) -> list[int]:
+    """재계산이 필요한 유사 상대 product_id 목록을 반환."""
+    from app.modules.infra.services.catalog_similarity_service import find_similar_products
+    product = db.get(ProductCatalog, product_id)
+    if not product:
+        return []
+    result = find_similar_products(
+        db, vendor=product.vendor, name=product.name, exclude_product_id=product_id
+    )
+    ids = [m["id"] for m in result.get("exact_matches", [])]
+    ids += [m["id"] for m in result.get("similar_matches", [])]
+    return ids
+
+
+def _recalc_product_similarity(db: Session, product_id: int) -> None:
+    """제품과 그 유사 상대들의 similar_count를 재계산."""
+    from app.modules.infra.services.catalog_similarity_service import recalc_similar_counts
+    peer_ids = _collect_similar_peer_ids(db, product_id)
+    all_ids = [product_id] + peer_ids
+    recalc_similar_counts(db, all_ids)
 
 
 def _guard_asset_references(db: Session, product_id: int) -> None:

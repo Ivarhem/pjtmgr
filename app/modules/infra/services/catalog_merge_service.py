@@ -65,6 +65,11 @@ def merge_products(
     db.commit()
     invalidate_product_list_cache(db)
 
+    from app.modules.infra.services.catalog_similarity_service import recalc_similar_counts
+    from app.modules.infra.services.product_catalog_service import _collect_similar_peer_ids
+    peer_ids = _collect_similar_peer_ids(db, target_id)
+    recalc_similar_counts(db, [target_id] + peer_ids)
+
     return result
 
 
@@ -88,6 +93,8 @@ def dismiss_similarity(
 
     db.add(ProductSimilarityDismissal(product_id_a=a, product_id_b=b))
     db.commit()
+    from app.modules.infra.services.catalog_similarity_service import recalc_similar_counts
+    recalc_similar_counts(db, [a, b])
 
 
 def restore_similarity(
