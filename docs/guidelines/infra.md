@@ -36,7 +36,9 @@
 - `Asset`을 중심으로 `AssetIP`, `PortMap`, `AssetContact`, `AssetSoftware`가 연결된다.
 - `Asset.hardware_model_id` FK로 `ProductCatalog`와 연결 (nullable, SET NULL). 기존 vendor/model 컬럼은 하위호환 유지.
 - `ProductCatalog`는 글로벌 리소스 (partner_id 없음). `HardwareSpec` 1:1, `HardwareInterface` 1:N 하위 리소스.
-- `ProductCatalog`는 사용자 입장에서 제품 관리와 기준 트리 관리를 함께 처리하는 메인 화면으로 동작한다.
+- `ProductCatalog`는 사용자 입장에서 제품 등록/조회/편집을 처리하는 메인 화면으로 동작한다.
+- **기준정보(마스터 데이터) CRUD는 기준정보 관리 페이지(`/catalog-management/integrity`)에 집중한다.** 제조사 정규화, 속성 아이템, 속성 alias가 여기에 해당한다. 개별 페이지에서 기준정보 편집이 필요하면 기준정보 관리 페이지로 네비게이션 링크를 제공한다 (모달/인라인 폼을 중복 구현하지 않는다).
+- 카탈로그 관련 페이지는 2탭 구조: `[제품 카탈로그]` (제품 CRUD) + `[기준정보 관리]` (제조사/제품유사도/속성). 기준정보 관리 내부 탭: 제조사 / 제품 / 속성.
 - 카탈로그는 글로벌 기본 분류체계의 **최종 분류 노드**에 직접 연결할 수 있다. 자유입력 `category`는 하위호환 텍스트로만 남기고, 신규 입력은 분류 노드 연결을 우선한다.
 - `ProductCatalog` 삭제 시 참조하는 자산이 있으면 409로 차단.
 - `Asset`은 계약단위와 `PeriodAsset` N:M으로만 연결한다 (`project_id` FK는 제거됨).
