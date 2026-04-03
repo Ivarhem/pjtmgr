@@ -318,18 +318,17 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const input = e.target;
         const val = input.value.replace(/,/g, "").trim();
-        if (val && !_vendorAliases.includes(val)) {
+        const normalizedVal = val.toLowerCase().replace(/[\s\-_./(),]+/g, "");
+        const isDuplicate = _vendorAliases.some((a) => a.toLowerCase().replace(/[\s\-_./(),]+/g, "") === normalizedVal);
+        if (val && !isDuplicate) {
           _vendorAliases.push(val);
           renderVendorAliasChips();
         }
         input.value = "";
       }
       if (e.key === "Backspace" && e.target.value === "" && _vendorAliases.length > 0) {
-        const removed = _vendorAliases[_vendorAliases.length - 1];
-        if (confirm(`별칭 '${removed}'을(를) 삭제하시겠습니까?`)) {
-          _vendorAliases.pop();
-          renderVendorAliasChips();
-        }
+        _vendorAliases.pop();
+        renderVendorAliasChips();
       }
     });
   }
