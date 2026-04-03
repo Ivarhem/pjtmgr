@@ -90,6 +90,25 @@ def dismiss_similarity(
     db.commit()
 
 
+def restore_similarity(
+    db: Session,
+    *,
+    product_id_a: int,
+    product_id_b: int,
+) -> None:
+    a, b = min(product_id_a, product_id_b), max(product_id_a, product_id_b)
+    from sqlalchemy import delete as sa_delete
+    db.execute(
+        sa_delete(ProductSimilarityDismissal).where(
+            ProductSimilarityDismissal.product_id_a == a,
+            ProductSimilarityDismissal.product_id_b == b,
+        )
+    )
+    db.commit()
+    from app.modules.infra.services.catalog_similarity_service import recalc_similar_counts
+    recalc_similar_counts(db, [a, b])
+
+
 def get_dismissed_pairs(db: Session, product_id: int) -> set[int]:
     """주어진 product_id와 무시 관계에 있는 상대 product_id 집합을 반환."""
     rows = db.execute(

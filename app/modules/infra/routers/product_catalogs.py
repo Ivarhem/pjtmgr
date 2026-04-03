@@ -20,10 +20,12 @@ from app.modules.infra.schemas.catalog_similarity import (
     ProductMergeRequest,
     ProductMergeResponse,
     ProductDismissRequest,
+    ProductRestoreRequest,
 )
 from app.modules.infra.services.catalog_merge_service import (
     merge_products,
     dismiss_similarity,
+    restore_similarity,
 )
 from app.modules.infra.schemas.hardware_spec import (
     HardwareSpecCreate,
@@ -138,6 +140,16 @@ def dismiss_similarity_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> Response:
     dismiss_similarity(db, product_id_a=payload.product_id_a, product_id_b=payload.product_id_b)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/similarity-restore", status_code=status.HTTP_204_NO_CONTENT)
+def restore_similarity_endpoint(
+    payload: ProductRestoreRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    restore_similarity(db, product_id_a=payload.product_id_a, product_id_b=payload.product_id_b)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

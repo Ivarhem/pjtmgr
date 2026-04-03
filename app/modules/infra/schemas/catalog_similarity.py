@@ -41,3 +41,8 @@ class ProductMergeResponse(BaseModel):
 class ProductDismissRequest(BaseModel):
     product_id_a: int
     product_id_b: int
+
+
+class ProductRestoreRequest(BaseModel):
+    product_id_a: int
+    product_id_b: int
