@@ -1549,6 +1549,10 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   min-height: calc(100vh - 240px);
 }
 
+.catalog-integrity-no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .catalog-management-nav {
   display: flex;
   gap: 10px;
