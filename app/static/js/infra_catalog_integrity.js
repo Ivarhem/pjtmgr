@@ -231,7 +231,6 @@ function initCatalogIntegrityProductGrid() {
       filter: true,
       resizable: true,
     },
-    onRowClicked: (event) => renderProductDetail(event.data),
     overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">유사 후보가 없습니다.</span>',
   });
 }
@@ -253,7 +252,6 @@ async function loadCatalogIntegrityProducts() {
   catalogIntegrityProductGridApi.setGridOption("rowData", rows);
   if (!rows.length) catalogIntegrityProductGridApi.showNoRowsOverlay();
   else catalogIntegrityProductGridApi.hideOverlay();
-  renderProductDetail(rows[0] || null);
 }
 
 document.addEventListener("DOMContentLoaded", () => {

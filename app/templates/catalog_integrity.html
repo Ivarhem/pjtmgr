@@ -7,69 +7,58 @@
   <a href="/catalog-management/integrity" class="tab-btn active">기준정보 관리</a>
 </div>
 
-<p class="data-note">제조사 표기 통일과 유사 제품 정리를 통해 카탈로그 데이터 품질을 관리합니다.</p>
-
-<div class="catalog-integrity-layout catalog-integrity-no-sidebar">
-  <section class="catalog-integrity-main">
-
-    <!-- 제조사 정리 -->
-    <div class="catalog-integrity-section">
-      <div class="catalog-integrity-panel-head">
-        <div>
-          <h2>제조사 정리</h2>
-          <p class="catalog-kind-lead">대표 제조사명과 alias를 관리합니다. 제조사를 선택하면 우측에서 편집할 수 있습니다.</p>
+<div class="mdm-layout">
+  <!-- 좌: 제조사 편집 패널 -->
+  <aside class="mdm-edit-panel">
+    <div id="integrity-vendor-empty" class="mdm-edit-empty">
+      <p>우측에서 제조사를 선택하거나<br>새 제조사를 추가하세요.</p>
+    </div>
+    <div id="integrity-vendor-form" class="is-hidden">
+      <h3 id="integrity-vendor-title">제조사 편집</h3>
+      <div class="catalog-integrity-form-grid">
+        <label id="integrity-vendor-source-label">원래 제조사명
+          <input type="text" class="input-text" id="integrity-vendor-source" readonly>
+        </label>
+        <label>정식 제조사명
+          <input type="text" class="input-text" id="integrity-vendor-canonical" placeholder="대표 제조사명 입력">
+        </label>
+        <label class="catalog-integrity-checkbox vendor-apply-row is-hidden" id="integrity-vendor-apply-row">
+          <input type="checkbox" id="integrity-vendor-apply-products" checked>
+          기존 제품의 제조사명도 일괄 변경
+        </label>
+        <label>Alias 목록</label>
+        <div class="tag-input-wrap">
+          <span class="tag-list" id="integrity-vendor-alias-list"></span>
+          <input type="text" class="tag-input-field vendor-write-only" id="integrity-vendor-alias-input" placeholder="alias 입력 후 Enter">
         </div>
-        <div class="catalog-toolbar catalog-integrity-toolbar">
+      </div>
+      <div class="catalog-integrity-form-actions">
+        <button type="button" class="btn btn-primary vendor-write-only" id="btn-integrity-vendor-save">저장</button>
+        <button type="button" class="btn btn-danger vendor-write-only is-hidden" id="btn-integrity-vendor-delete">삭제</button>
+        <button type="button" class="btn btn-secondary" id="btn-integrity-vendor-cancel">취소</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 우: 그리드들 -->
+  <div class="mdm-grids">
+    <!-- 제조사 그리드 -->
+    <section class="mdm-grid-section">
+      <div class="mdm-grid-header">
+        <h2>제조사</h2>
+        <div class="mdm-grid-toolbar">
           <input type="text" class="input-search" id="catalog-integrity-vendor-search" placeholder="제조사명 또는 alias 검색">
           <button type="button" class="btn btn-primary btn-sm vendor-write-only" id="btn-integrity-vendor-add">+ 신규</button>
         </div>
       </div>
-      <div class="catalog-integrity-placeholder">
-        <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz catalog-integrity-grid"></div>
-        <aside class="catalog-integrity-detail-placeholder catalog-integrity-detail-form" id="catalog-integrity-vendor-detail">
-          <div id="integrity-vendor-empty">
-            <h3>제조사 편집</h3>
-            <p>좌측에서 제조사를 선택하거나 새 제조사를 추가하세요.</p>
-          </div>
-          <div id="integrity-vendor-form" class="is-hidden">
-            <div class="catalog-integrity-detail-head">
-              <h3 id="integrity-vendor-title">제조사 편집</h3>
-            </div>
-            <div class="catalog-integrity-form-grid">
-              <label id="integrity-vendor-source-label">원래 제조사명
-                <input type="text" class="input-text" id="integrity-vendor-source" readonly>
-              </label>
-              <label>정식 제조사명
-                <input type="text" class="input-text" id="integrity-vendor-canonical" placeholder="대표 제조사명 입력">
-              </label>
-              <label class="catalog-integrity-checkbox vendor-apply-row is-hidden" id="integrity-vendor-apply-row">
-                <input type="checkbox" id="integrity-vendor-apply-products" checked>
-                기존 제품의 제조사명도 일괄 변경
-              </label>
-              <label>Alias 목록</label>
-              <div class="tag-input-wrap">
-                <span class="tag-list" id="integrity-vendor-alias-list"></span>
-                <input type="text" class="tag-input-field vendor-write-only" id="integrity-vendor-alias-input" placeholder="alias 입력 후 Enter">
-              </div>
-            </div>
-            <div class="catalog-integrity-form-actions">
-              <button type="button" class="btn btn-primary vendor-write-only" id="btn-integrity-vendor-save">저장</button>
-              <button type="button" class="btn btn-danger vendor-write-only is-hidden" id="btn-integrity-vendor-delete">삭제</button>
-              <button type="button" class="btn btn-secondary" id="btn-integrity-vendor-cancel">취소</button>
-            </div>
-          </div>
-        </aside>
-      </div>
-    </div>
+      <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz mdm-grid"></div>
+    </section>
 
-    <!-- 유사 제품 -->
-    <div class="catalog-integrity-section" style="margin-top: 24px;">
-      <div class="catalog-integrity-panel-head">
-        <div>
-          <h2>유사 제품</h2>
-          <p class="catalog-kind-lead">정규화명과 토큰 유사도를 기준으로 중복 가능성이 높은 제품 후보를 검토합니다.</p>
-        </div>
-        <div class="catalog-toolbar catalog-integrity-toolbar">
+    <!-- 유사 제품 그리드 -->
+    <section class="mdm-grid-section">
+      <div class="mdm-grid-header">
+        <h2>유사 제품</h2>
+        <div class="mdm-grid-toolbar">
           <input type="text" class="input-search" id="catalog-integrity-product-search" placeholder="모델명 검색">
           <select class="input-select" id="catalog-integrity-min-score">
             <option value="75">유사도 75 이상</option>
@@ -78,16 +67,9 @@
           </select>
         </div>
       </div>
-      <div class="catalog-integrity-placeholder">
-        <div id="grid-catalog-integrity-products" class="ag-theme-quartz catalog-integrity-grid"></div>
-        <aside class="catalog-integrity-detail-placeholder" id="catalog-integrity-product-detail">
-          <h3>비교 상세</h3>
-          <p>유사 후보를 선택하면 기준 제품과 후보 제품의 비교 정보가 표시됩니다.</p>
-        </aside>
-      </div>
-    </div>
-
-  </section>
+      <div id="grid-catalog-integrity-products" class="ag-theme-quartz mdm-grid mdm-grid-sm"></div>
+    </section>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}

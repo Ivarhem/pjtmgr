@@ -1678,6 +1678,93 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 
 .vendor-apply-row.is-hidden { display: none; }
 
+/* ── 기준정보 관리 (MDM) 레이아웃 ── */
+.mdm-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  min-height: calc(100vh - 200px);
+}
+
+.mdm-edit-panel {
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.96));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  align-self: start;
+  position: sticky;
+  top: 80px;
+}
+
+.mdm-edit-panel h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mdm-edit-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  text-align: center;
+  color: var(--text-color-tertiary);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.mdm-grids {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mdm-grid-section {
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.96));
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.mdm-grid-section h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mdm-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mdm-grid-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mdm-grid {
+  min-height: 360px;
+}
+
+.mdm-grid-sm {
+  min-height: 240px;
+}
+
+@media (max-width: 1080px) {
+  .mdm-layout {
+    grid-template-columns: 1fr;
+  }
+  .mdm-edit-panel {
+    position: static;
+  }
+}
+
 .catalog-integrity-alias-section {
   margin-top: 16px;
   padding-top: 14px;
