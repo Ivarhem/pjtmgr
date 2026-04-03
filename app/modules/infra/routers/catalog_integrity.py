@@ -14,6 +14,7 @@ from app.modules.infra.schemas.catalog_attribute_option_alias import (
 from app.modules.infra.schemas.catalog_vendor_management import (
     CatalogVendorBulkUpsertRequest,
     CatalogVendorBulkUpsertResponse,
+    CatalogVendorSummary,
 )
 from app.modules.infra.services.catalog_alias_service import (
     bulk_upsert_vendor_aliases,
@@ -22,6 +23,7 @@ from app.modules.infra.services.catalog_alias_service import (
     update_attribute_option_alias,
 )
 from app.modules.infra.services.catalog_integrity_service import (
+    delete_catalog_vendor_integrity,
     get_catalog_attribute_alias_integrity,
     list_catalog_attribute_alias_integrity,
     list_catalog_vendor_integrity,
@@ -32,12 +34,12 @@ from app.modules.infra.services.catalog_integrity_service import (
 router = APIRouter(prefix="/api/v1/catalog-integrity", tags=["infra-catalog-integrity"])
 
 
-@router.get("/vendors")
+@router.get("/vendors", response_model=list[CatalogVendorSummary])
 def list_catalog_integrity_vendors(
     q: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> list[dict]:
+) -> list[CatalogVendorSummary]:
     return list_catalog_vendor_integrity(db, q=q)
 
 
@@ -48,6 +50,16 @@ def bulk_upsert_catalog_integrity_vendors(
     current_user: User = Depends(get_current_user),
 ) -> CatalogVendorBulkUpsertResponse:
     return CatalogVendorBulkUpsertResponse(**bulk_upsert_vendor_aliases(db, payload.rows, current_user))
+
+
+@router.delete("/vendors/{vendor_canonical}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_catalog_integrity_vendor(
+    vendor_canonical: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    delete_catalog_vendor_integrity(db, vendor_canonical, current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/similar-products")
