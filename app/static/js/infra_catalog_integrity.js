@@ -260,6 +260,21 @@ function initCatalogIntegrityVendorGrid() {
         },
       },
       { field: "product_count", headerName: "제품 수", width: 90 },
+      {
+        field: "similar_product_count",
+        headerName: "중복",
+        width: 70,
+        sortable: true,
+        filter: false,
+        cellRenderer: (params) => {
+          const count = params.value || 0;
+          if (!count) return "";
+          const span = document.createElement("span");
+          span.className = "mdm-warning-badge";
+          span.textContent = "\u26A0 " + count;
+          return span;
+        },
+      },
     ],
     rowSelection: { mode: "singleRow" },
     defaultColDef: {
@@ -288,6 +303,21 @@ function initIntegrityProductGrid() {
           const d = params.data || {};
           const parts = [d.classification_level_2_name, d.classification_level_3_name].filter(Boolean);
           return parts.join(" > ") || d.product_type || "";
+        },
+      },
+      {
+        field: "similar_count",
+        headerName: "중복",
+        width: 70,
+        sortable: true,
+        filter: false,
+        cellRenderer: (params) => {
+          const count = params.value || 0;
+          if (!count) return "";
+          const span = document.createElement("span");
+          span.className = "mdm-warning-badge";
+          span.textContent = "\u26A0 " + count;
+          return span;
         },
       },
     ],
@@ -364,10 +394,16 @@ async function openMdmSimilarPanel(product) {
   const classPath = parts.join(" > ") || product.product_type || "";
   if (metaEl) metaEl.textContent = classPath;
 
+  const toggleBtn = document.getElementById("btn-mdm-dismissed-toggle");
+  if (toggleBtn) {
+    toggleBtn.classList.remove("active");
+    toggleBtn.dataset.showing = "false";
+  }
+
   await loadMdmSimilarProducts(product);
 }
 
-async function loadMdmSimilarProducts(product) {
+async function loadMdmSimilarProducts(product, showDismissed = false) {
   const listEl = document.getElementById("mdm-similar-list");
   const emptyEl = document.getElementById("mdm-similar-empty");
   if (!listEl || !emptyEl) return;
@@ -382,6 +418,7 @@ async function loadMdmSimilarProducts(product) {
         vendor: product.vendor || "",
         name: product.name || "",
         exclude_product_id: product.id,
+        include_dismissed: showDismissed,
       },
     });
 
@@ -393,6 +430,13 @@ async function loadMdmSimilarProducts(product) {
 
     for (const item of items) {
       listEl.appendChild(renderMdmSimilarCard(item, product));
+    }
+
+    const dismissedItems = result.dismissed_matches || [];
+    if (showDismissed && dismissedItems.length) {
+      for (const item of dismissedItems) {
+        listEl.appendChild(renderMdmSimilarCard(item, product, true));
+      }
     }
   } catch (err) {
     console.error("similarity check failed:", err);
@@ -407,8 +451,9 @@ function _createEl(tag, className, textContent) {
   return el;
 }
 
-function renderMdmSimilarCard(item, targetProduct) {
+function renderMdmSimilarCard(item, targetProduct, isDismissed = false) {
   const card = _createEl("div", "mdm-similar-card");
+  if (isDismissed) card.classList.add("mdm-similar-card-dismissed");
 
   const header = _createEl("div", "mdm-similar-card-header");
   const nameSpan = _createEl("span", "mdm-similar-card-name", (item.vendor || "") + " " + (item.name || ""));
@@ -423,49 +468,77 @@ function renderMdmSimilarCard(item, targetProduct) {
 
   const actions = _createEl("div", "mdm-similar-card-actions");
 
-  const mergeBtn = _createEl("button", "btn btn-primary btn-sm btn-merge vendor-write-only", "\u2190 \ubcd1\ud569");
-  mergeBtn.type = "button";
-  mergeBtn.addEventListener("click", async () => {
-    const sourceLabel = (item.vendor || "") + " " + (item.name || "");
-    const targetLabel = ((targetProduct.vendor || "") + " " + (targetProduct.name || "")).trim();
-    const msg = "\uc81c\ud488 '" + sourceLabel + "'(\uc790\uc0b0 " + (item.asset_count ?? 0) + "\uac74)\uc744 '" + targetLabel + "'\uc73c\ub85c \ubcd1\ud569\ud569\ub2c8\ub2e4.\n\n\uc790\uc0b0\uc774 \ub300\uc0c1 \uc81c\ud488\uc73c\ub85c \uc774\uc804\ub418\uace0, \uc6d0\ubcf8 \uc81c\ud488\uc740 \uc0ad\uc81c\ub429\ub2c8\ub2e4.";
-    if (!confirm(msg)) return;
-
-    try {
-      const result = await apiFetch("/api/v1/product-catalog/merge", {
-        method: "POST",
-        body: { source_id: item.id, target_id: targetProduct.id },
-      });
-      showToast("\ubcd1\ud569 \uc644\ub8cc: \uc790\uc0b0 " + result.merged_asset_count + "\uac74 \uc774\uc804", "success");
-      if (_integrityVendorOriginal) {
-        await loadIntegrityVendorProducts(_integrityVendorOriginal);
+  if (isDismissed) {
+    const restoreBtn = _createEl("button", "btn btn-secondary btn-sm vendor-write-only", "\ubcf5\uc6d0");
+    restoreBtn.type = "button";
+    restoreBtn.addEventListener("click", async () => {
+      try {
+        await apiFetch("/api/v1/product-catalog/similarity-restore", {
+          method: "POST",
+          body: { product_id_a: targetProduct.id, product_id_b: item.id },
+        });
+        showToast("\uc720\uc0ac \uad00\uacc4\ub97c \ubcf5\uc6d0\ud588\uc2b5\ub2c8\ub2e4.", "success");
+        const showingDismissed = document.getElementById("btn-mdm-dismissed-toggle")?.dataset.showing === "true";
+        await loadMdmSimilarProducts(targetProduct, showingDismissed);
+        if (_integrityVendorOriginal) {
+          await loadIntegrityVendorProducts(_integrityVendorOriginal);
+          await loadCatalogIntegrityVendors();
+        }
+      } catch (err) {
+        showToast(err.message || "\ubcf5\uc6d0\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.", "error");
       }
-      await loadMdmSimilarProducts(targetProduct);
-    } catch (err) {
-      showToast(err.message || "\ubcd1\ud569\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.", "error");
-    }
-  });
-  actions.appendChild(mergeBtn);
+    });
+    actions.appendChild(restoreBtn);
+  } else {
+    const mergeBtn = _createEl("button", "btn btn-primary btn-sm btn-merge vendor-write-only", "\u2190 \ubcd1\ud569");
+    mergeBtn.type = "button";
+    mergeBtn.addEventListener("click", async () => {
+      const sourceLabel = (item.vendor || "") + " " + (item.name || "");
+      const targetLabel = ((targetProduct.vendor || "") + " " + (targetProduct.name || "")).trim();
+      const msg = "\uc81c\ud488 '" + sourceLabel + "'(\uc790\uc0b0 " + (item.asset_count ?? 0) + "\uac74)\uc744 '" + targetLabel + "'\uc73c\ub85c \ubcd1\ud569\ud569\ub2c8\ub2e4.\n\n\uc790\uc0b0\uc774 \ub300\uc0c1 \uc81c\ud488\uc73c\ub85c \uc774\uc804\ub418\uace0, \uc6d0\ubcf8 \uc81c\ud488\uc740 \uc0ad\uc81c\ub429\ub2c8\ub2e4.";
+      if (!confirm(msg)) return;
 
-  const dismissBtn = _createEl("button", "btn btn-secondary btn-sm btn-dismiss vendor-write-only", "\ubb34\uc2dc");
-  dismissBtn.type = "button";
-  dismissBtn.addEventListener("click", async () => {
-    try {
-      await apiFetch("/api/v1/product-catalog/similarity-dismiss", {
-        method: "POST",
-        body: { product_id_a: targetProduct.id, product_id_b: item.id },
-      });
-      card.remove();
-      const listEl = document.getElementById("mdm-similar-list");
-      if (listEl && !listEl.children.length) {
-        document.getElementById("mdm-similar-empty")?.classList.remove("hidden");
+      try {
+        const result = await apiFetch("/api/v1/product-catalog/merge", {
+          method: "POST",
+          body: { source_id: item.id, target_id: targetProduct.id },
+        });
+        showToast("\ubcd1\ud569 \uc644\ub8cc: \uc790\uc0b0 " + result.merged_asset_count + "\uac74 \uc774\uc804", "success");
+        if (_integrityVendorOriginal) {
+          await loadIntegrityVendorProducts(_integrityVendorOriginal);
+        }
+        await loadCatalogIntegrityVendors();
+        await loadMdmSimilarProducts(targetProduct);
+      } catch (err) {
+        showToast(err.message || "\ubcd1\ud569\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.", "error");
       }
-      showToast("\uc720\uc0ac \uad00\uacc4\ub97c \ubb34\uc2dc\ud588\uc2b5\ub2c8\ub2e4.", "success");
-    } catch (err) {
-      showToast(err.message || "\ubb34\uc2dc \ucc98\ub9ac\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.", "error");
-    }
-  });
-  actions.appendChild(dismissBtn);
+    });
+    actions.appendChild(mergeBtn);
+
+    const dismissBtn = _createEl("button", "btn btn-secondary btn-sm btn-dismiss vendor-write-only", "\ubb34\uc2dc");
+    dismissBtn.type = "button";
+    dismissBtn.addEventListener("click", async () => {
+      try {
+        await apiFetch("/api/v1/product-catalog/similarity-dismiss", {
+          method: "POST",
+          body: { product_id_a: targetProduct.id, product_id_b: item.id },
+        });
+        card.remove();
+        const listEl = document.getElementById("mdm-similar-list");
+        if (listEl && !listEl.children.length) {
+          document.getElementById("mdm-similar-empty")?.classList.remove("hidden");
+        }
+        showToast("\uc720\uc0ac \uad00\uacc4\ub97c \ubb34\uc2dc\ud588\uc2b5\ub2c8\ub2e4.", "success");
+        if (_integrityVendorOriginal) {
+          await loadIntegrityVendorProducts(_integrityVendorOriginal);
+          await loadCatalogIntegrityVendors();
+        }
+      } catch (err) {
+        showToast(err.message || "\ubb34\uc2dc \ucc98\ub9ac\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.", "error");
+      }
+    });
+    actions.appendChild(dismissBtn);
+  }
 
   card.appendChild(actions);
 
@@ -522,6 +595,20 @@ document.addEventListener("DOMContentLoaded", () => {
       closeMdmSimilarPanel();
     } else if (_mdmSimilarProductId) {
       setMdmSimilarPanelOpen(true);
+    }
+  });
+  document.getElementById("btn-mdm-dismissed-toggle")?.addEventListener("click", async () => {
+    const btn = document.getElementById("btn-mdm-dismissed-toggle");
+    if (!btn || !_mdmSimilarProductId) return;
+    const showing = btn.dataset.showing === "true";
+    btn.dataset.showing = showing ? "false" : "true";
+    btn.classList.toggle("active", !showing);
+    let currentProduct = null;
+    integrityProductGridApi?.forEachNode((node) => {
+      if (node.data?.id === _mdmSimilarProductId) currentProduct = node.data;
+    });
+    if (currentProduct) {
+      await loadMdmSimilarProducts(currentProduct, !showing);
     }
   });
   document.getElementById("catalog-integrity-vendor-search")?.addEventListener("input", () => {
