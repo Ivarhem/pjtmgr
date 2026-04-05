@@ -423,7 +423,9 @@ async function loadMdmSimilarProducts(product, showDismissed = false) {
     });
 
     const items = [...(result.exact_matches || []), ...(result.similar_matches || [])];
-    if (!items.length) {
+    const dismissedItems = (showDismissed && result.dismissed_matches) ? result.dismissed_matches : [];
+
+    if (!items.length && !dismissedItems.length) {
       emptyEl.classList.remove("hidden");
       return;
     }
@@ -432,11 +434,8 @@ async function loadMdmSimilarProducts(product, showDismissed = false) {
       listEl.appendChild(renderMdmSimilarCard(item, product));
     }
 
-    const dismissedItems = result.dismissed_matches || [];
-    if (showDismissed && dismissedItems.length) {
-      for (const item of dismissedItems) {
-        listEl.appendChild(renderMdmSimilarCard(item, product, true));
-      }
+    for (const item of dismissedItems) {
+      listEl.appendChild(renderMdmSimilarCard(item, product, true));
     }
   } catch (err) {
     console.error("similarity check failed:", err);
