@@ -355,6 +355,7 @@ app/static/
 │   ├── infra_policies.js        # 인프라 정책
 │   ├── infra_policy_definitions.js # 정책 정의 관리
 │   ├── infra_port_maps.js       # 인프라 포트맵
+│   ├── modal_combobox.js       # 검색 가능 드롭다운 (ModalCombobox) 공용 클래스
 │   ├── infra_product_catalog.js # 제품 카탈로그
 │   ├── infra_catalog_integrity.js # 카탈로그 기준정보 관리 (제조사·제품·별칭)
 │   ├── infra_project_classifications.js # 프로젝트 분류체계
