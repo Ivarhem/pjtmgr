@@ -40,6 +40,7 @@ class ModalCombobox {
 
   _filter() {
     if (this.skipLocalFilter) {
+      if (!this.items.length) { this._close(); return; }
       this._render(this.items);
       return;
     }
