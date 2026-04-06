@@ -64,6 +64,10 @@ function initGrid() {
     columnDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     rowSelection: "single", animateRows: true, enableCellTextSelection: true,
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openEditModal(data),
+    }),
   });
   loadPortMaps();
 }

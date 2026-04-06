@@ -62,6 +62,7 @@ function initGrid() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
   });
   loadPolicies();
 }

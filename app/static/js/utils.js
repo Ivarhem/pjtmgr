@@ -1137,12 +1137,13 @@ function buildContractGridOptions(opts) {
     animateRows: false,
     onColumnMoved: opts.onColChange,
     onColumnResized: (e) => { if (e.finished) opts.onColChange(); },
-    onCellClicked: (e) => {
-      if (e.column.getColId() !== '0' && e.data?.id) {
+    ...buildStandardGridBehavior({
+      type: 'navigate',
+      onEdit: (d) => {
         sessionStorage.setItem('contract-back', opts.backPath);
-        window.location.href = `/contracts/${e.data.id}`;
-      }
-    },
+        window.location.href = `/contracts/${d.id}`;
+      },
+    }),
     isExternalFilterPresent: () => getPartnerFilter() !== '' || getNameFilter() !== '',
     doesExternalFilterPass: (node) => {
       const d = node.data;
@@ -1294,4 +1295,71 @@ function initColChooser(gridApi, columnDefs, colStateKey, saveColStateFn) {
 
   document.addEventListener('click', () => { setElementHidden(menu, true); });
   menu.addEventListener('click', e => e.stopPropagation());
+}
+
+// ── ag-Grid 표준 상호작용 ────────────────────────────────────────
+
+/**
+ * ag-Grid 표준 상호작용 옵션을 생성한다.
+ * 싱글클릭: 행 선택 / 상세 패널, 더블클릭: 편집 / 이동.
+ *
+ * @param {Object} opts
+ * @param {'detail-panel'|'navigate'|'inline-edit'|'readonly'|'modal-edit'} opts.type
+ * @param {Function} [opts.onSelect] - 싱글클릭 콜백 (data, event)
+ * @param {Function} [opts.onEdit] - 더블클릭 콜백 (data, event)
+ * @param {Function} [opts.onCellValueChanged] - 셀 값 변경 콜백
+ * @returns {Object} agGrid 옵션에 스프레드할 객체
+ */
+function buildStandardGridBehavior(opts = {}) {
+  const { type = 'readonly', onSelect, onEdit, onCellValueChanged } = opts;
+  const result = {};
+
+  result.singleClickEdit = false;
+  result.stopEditingWhenCellsLoseFocus = true;
+
+  switch (type) {
+    case 'detail-panel':
+      result.onRowClicked = (e) => { if (e.data && onSelect) onSelect(e.data, e); };
+      if (onEdit) {
+        result.onRowDoubleClicked = (e) => { if (e.data) onEdit(e.data, e); };
+      }
+      if (onCellValueChanged) {
+        result.onCellValueChanged = onCellValueChanged;
+      }
+      break;
+
+    case 'navigate':
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      result.onRowDoubleClicked = (e) => { if (e.data && onEdit) onEdit(e.data, e); };
+      break;
+
+    case 'inline-edit':
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      if (onCellValueChanged) {
+        result.onCellValueChanged = onCellValueChanged;
+      }
+      break;
+
+    case 'modal-edit':
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      if (onEdit) {
+        result.onRowDoubleClicked = (e) => { if (e.data) onEdit(e.data, e); };
+      }
+      break;
+
+    case 'readonly':
+    default:
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      break;
+  }
+
+  return result;
 }

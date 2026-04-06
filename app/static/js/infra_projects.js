@@ -69,16 +69,15 @@ function initListGrids() {
     columnDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     rowSelection: "single", animateRows: true, enableCellTextSelection: true,
-    onRowClicked: (e) => {
-      const d = e.data;
-      if (d && d.id) {
-        // context 설정 후 상세 페이지로 이동
+    ...buildStandardGridBehavior({
+      type: 'navigate',
+      onEdit: (d) => {
         if (window.setCtxProject) {
           window.setCtxProject(d.id, d.period_code, d.contract_name);
         }
         window.location.href = "/periods/" + d.id;
-      }
-    },
+      },
+    }),
   });
 }
 

@@ -89,6 +89,10 @@ function initGrid() {
     columnDefs: assignColDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     rowSelection: "single", animateRows: true, enableCellTextSelection: true,
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openEditAssignment(data),
+    }),
   });
   loadDropdowns();
   loadAssignments();

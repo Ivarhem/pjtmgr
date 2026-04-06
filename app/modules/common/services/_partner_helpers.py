@@ -329,6 +329,9 @@ def list_partner_financials(db: Session, partner_id: int, current_user: User | N
         {"summary": {total_revenue, total_cost, ar}, "lines": [...]}
         lines: 사업 그룹 행(_is_group=True) + period 디테일 행
     """
+    transaction_lines = _get_table(db, "transaction_lines")
+    receipt_matches = _get_table(db, "receipt_matches")
+
     partner = db.get(Partner, partner_id)
     if not partner:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
@@ -469,6 +472,10 @@ def list_partner_receipts(db: Session, partner_id: int, current_user: User | Non
     Returns:
         {"summary": {total_receipt, ar_balance}, "receipts": [...]}
     """
+    transaction_lines = _get_table(db, "transaction_lines")
+    receipt_matches = _get_table(db, "receipt_matches")
+    receipts_table = _get_table(db, "receipts")
+
     partner = db.get(Partner, partner_id)
     if not partner:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
@@ -584,22 +591,25 @@ def list_partner_receipts(db: Session, partner_id: int, current_user: User | Non
 
     # 미수금 잔액: 매출 확정 - ReceiptMatch 합계
     confirmed_revenue = (
-        db.query(func.coalesce(func.sum(TransactionLine.supply_amount), 0))
+        db.query(func.coalesce(func.sum(transaction_lines.c.supply_amount), 0))
         .filter(
-            TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.partner_id == partner_id,
-            TransactionLine.line_type == "revenue",
-            TransactionLine.status == "확정",
+            transaction_lines.c.contract_id.in_(contract_ids),
+            transaction_lines.c.partner_id == partner_id,
+            transaction_lines.c.line_type == "revenue",
+            transaction_lines.c.status == "확정",
         )
         .scalar()
     )
     matched_total = (
-        db.query(func.coalesce(func.sum(ReceiptMatch.matched_amount), 0))
-        .join(ReceiptMatch.transaction_line)
+        db.query(func.coalesce(func.sum(receipt_matches.c.matched_amount), 0))
+        .join(
+            transaction_lines,
+            transaction_lines.c.id == receipt_matches.c.transaction_line_id,
+        )
         .filter(
-            TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.partner_id == partner_id,
-            TransactionLine.line_type == "revenue",
+            transaction_lines.c.contract_id.in_(contract_ids),
+            transaction_lines.c.partner_id == partner_id,
+            transaction_lines.c.line_type == "revenue",
         )
         .scalar()
     )
@@ -609,10 +619,3 @@ def list_partner_receipts(db: Session, partner_id: int, current_user: User | Non
         "summary": {"total_receipt": total_receipt, "ar_balance": ar_balance},
         "receipts": receipts,
     }
-    transaction_lines = _get_table(db, "transaction_lines")
-    contract_contacts = _get_table(db, "contract_contacts")
-
-    transaction_lines = _get_table(db, "transaction_lines")
-    receipt_matches = _get_table(db, "receipt_matches")
-
-    receipts_table = _get_table(db, "receipts")

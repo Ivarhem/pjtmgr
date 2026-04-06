@@ -321,6 +321,10 @@ function initGrids() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openEditPhase(data),
+    }),
   });
 
   deliverableGridApi = agGrid.createGrid(document.getElementById("grid-deliverables"), {
@@ -330,6 +334,10 @@ function initGrids() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openEditDeliverable(data),
+    }),
   });
 
   loadProjectInfo();
@@ -517,6 +525,7 @@ function initAssetsTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/assets?partner_id=${_PROJECT_PARTNER_ID}&contract_period_id=${PROJECT_ID}`);
@@ -584,6 +593,10 @@ function initRelationsTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openRelationModal(data),
+    }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/asset-relations?partner_id=${_PROJECT_PARTNER_ID}`);
@@ -721,6 +734,7 @@ function initIpTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/ip-subnets?partner_id=${_PROJECT_PARTNER_ID}`);
@@ -747,6 +761,7 @@ function initIpTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/ip-inventory?partner_id=${_PROJECT_PARTNER_ID}`);
@@ -790,6 +805,7 @@ function initPortmapTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/port-maps?partner_id=${_PROJECT_PARTNER_ID}&contract_period_id=${PROJECT_ID}`);
@@ -826,6 +842,7 @@ function initPolicyTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/policy-assignments?partner_id=${_PROJECT_PARTNER_ID}&contract_period_id=${PROJECT_ID}`);
@@ -857,6 +874,7 @@ function initContactsTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/assets?partner_id=${_PROJECT_PARTNER_ID}&contract_period_id=${PROJECT_ID}`);
@@ -1125,6 +1143,7 @@ function initHistoryTab() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
     onGridReady: async (params) => {
       try {
         const data = await apiFetch(`/api/v1/infra-dashboard/audit-log`);
@@ -1172,6 +1191,7 @@ function initLinkedContracts() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
   });
 
   loadLinkedContracts();

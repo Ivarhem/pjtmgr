@@ -103,6 +103,7 @@ function initGrid() {
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
   });
   loadProjectFilter().then(() => loadInventory());
 }

@@ -59,7 +59,11 @@ async function initRoleGrid() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
-    onRowClicked: (e) => showRoleDetail(e.data),
+    ...buildStandardGridBehavior({
+      type: 'detail-panel',
+      onSelect: (data) => showRoleDetail(data),
+      onEdit: (data) => openRoleModal(data),
+    }),
   });
   if (getCtxPartnerId()) loadAssetRoles();
 }

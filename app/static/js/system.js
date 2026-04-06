@@ -109,9 +109,10 @@ function initSystemAttrGrid() {
     rowSelection: { mode: "singleRow" },
     domLayout: "autoHeight",
     defaultColDef: { sortable: true, filter: true, resizable: true },
-    onRowClicked: (event) => {
-      setSystemAttrEditMode(event.data);
-    },
+    ...buildStandardGridBehavior({
+      type: 'detail-panel',
+      onSelect: (data) => setSystemAttrEditMode(data),
+    }),
     overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">속성 키를 선택하세요.</span>',
   });
 }

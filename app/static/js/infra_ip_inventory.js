@@ -154,6 +154,10 @@ function initPage() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openEditIp(data),
+    }),
   });
   loadSubnets();
   loadIps();

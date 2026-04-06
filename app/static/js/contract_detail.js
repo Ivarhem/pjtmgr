@@ -1140,7 +1140,6 @@ function initForecastGrid(forecasts) {
     enableCellTextSelection: true,
     ensureDomOrder: true,
     domLayout: 'autoHeight',
-    singleClickEdit: true,
     stopEditingWhenCellsLoseFocus: true,
     onCellValueChanged: () => { dirtyForecast = true; _updateDirtyIndicators(); updateForecastTotals(); },
   });
@@ -1489,7 +1488,6 @@ function initLedgerGrid(ledgerRows) {
     ensureDomOrder: true,
     rowSelection: 'multiple',
     suppressRowClickSelection: true,
-    singleClickEdit: true,
     stopEditingWhenCellsLoseFocus: true,
     getRowClass: p => {
       if (p.data.type === '매출') return 'ledger-row-sales';
@@ -2749,7 +2747,6 @@ function initReceiptGrid(receipts) {
     ensureDomOrder: true,
     rowSelection: 'multiple',
     suppressRowClickSelection: true,
-    singleClickEdit: true,
     stopEditingWhenCellsLoseFocus: true,
     onCellValueChanged: () => { dirtyReceipt = true; _updateDirtyIndicators(); refreshReceiptSummary(); },
     isExternalFilterPresent: () => _hasReceiptFilter(),

@@ -609,7 +609,11 @@ function initCatalogGrid() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
-    onRowClicked: (e) => selectProduct(e.data),
+    ...buildStandardGridBehavior({
+      type: 'detail-panel',
+      onSelect: (data) => selectProduct(data),
+      onEdit: (data) => openEditProduct(),
+    }),
     onColumnMoved: saveCatalogGridColumnState,
     onColumnVisible: saveCatalogGridColumnState,
     onDragStopped: saveCatalogGridColumnState,

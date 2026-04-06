@@ -288,10 +288,13 @@ function initCatalogIntegrityVendorGrid() {
       filter: true,
       resizable: true,
     },
-    onRowClicked: (event) => {
-      const row = event.data || {};
-      setIntegrityVendorEditMode(row.vendor, row.aliases || [], row);
-    },
+    ...buildStandardGridBehavior({
+      type: 'detail-panel',
+      onSelect: (data) => {
+        const row = data || {};
+        setIntegrityVendorEditMode(row.vendor, row.aliases || [], row);
+      },
+    }),
     overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">제조사 데이터가 없습니다.</span>',
   });
 }
@@ -329,12 +332,14 @@ function initIntegrityProductGrid() {
     ],
     rowSelection: { mode: "singleRow" },
     defaultColDef: { sortable: true, filter: true, resizable: true },
-    onRowClicked: (event) => {
-      const row = event.data;
-      if (row && row.id) {
-        openMdmSimilarPanel(row);
-      }
-    },
+    ...buildStandardGridBehavior({
+      type: 'detail-panel',
+      onSelect: (data) => {
+        if (data && data.id) {
+          openMdmSimilarPanel(data);
+        }
+      },
+    }),
     overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">제조사를 선택하세요.</span>',
   });
 }

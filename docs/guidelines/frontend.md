@@ -225,4 +225,20 @@
 - `base.html`에서 `enabled_modules` Jinja2 global 변수를 사용하여 네비게이션 동적 렌더링
 - accounting 활성 시: 내 사업, 사업 관리, 대시보드, 보고서
 - infra 활성 시: 프로젝트, 자산, 업체, 이력
-- 공통 메뉴 (항상, 구분선 아래): 거래처 관리, 제조사/제품 관리, 로그
+- 공통 메뉴 (항상, 구분선 아래): 거래처 관리, 카탈로그, 로그
+
+### ag-Grid 상호작용 표준
+
+모든 ag-Grid는 `buildStandardGridBehavior()` 헬퍼(utils.js)를 사용하여 일관된 클릭 동작을 적용한다.
+
+| 그리드 유형 | type 값 | 싱글클릭 | 더블클릭 |
+|------------|---------|----------|----------|
+| 마스터-디테일 | `detail-panel` | 상세 패널 열기 | 편집 (인라인 또는 모달) |
+| 네비게이션 | `navigate` | 행 하이라이트 | 상세 페이지 이동 |
+| 인라인 편집 | `inline-edit` | 행 선택 | 셀 인라인 편집 |
+| 모달 편집 | `modal-edit` | 행 선택 | 편집 모달 열기 |
+| 읽기 전용 | `readonly` | 행 선택 | 없음 |
+
+- `singleClickEdit: true`는 사용하지 않는다. 모든 인라인 편집은 더블클릭으로 시작.
+- 새 그리드를 추가할 때 반드시 `buildStandardGridBehavior()`를 사용한다.
+- `onRowClicked`, `onRowDoubleClicked`를 직접 설정하지 않고 헬퍼를 통해 설정한다.

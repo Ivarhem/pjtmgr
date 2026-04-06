@@ -43,9 +43,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     enableCellTextSelection: true,
     ensureDomOrder: true,
     rowSelection: 'single',
-    onRowClicked: (e) => {
-      if (e.data?.id) selectPartner(e.data.id);
-    },
+    ...buildStandardGridBehavior({
+      type: 'detail-panel',
+      onSelect: (data) => selectPartner(data.id),
+    }),
     isExternalFilterPresent: () => partnerFilterTags.length > 0,
     doesExternalFilterPass: (node) => {
       const name = (node.data.name || '').toLowerCase();
@@ -613,7 +614,6 @@ function renderContractContactGrid(contacts) {
     enableCellTextSelection: true,
     ensureDomOrder: true,
     domLayout: 'autoHeight',
-    singleClickEdit: true,
     stopEditingWhenCellsLoseFocus: true,
     isExternalFilterPresent: () => activeOnlyFilter,
     doesExternalFilterPass: (node) => !node.data.is_completed,
