@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.port_map import (
     PortMapCreate,
@@ -27,7 +28,7 @@ def list_port_maps_endpoint(
     partner_id: int,
     period_id: int | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[PortMapRead]:
     return list_port_maps(db, partner_id, period_id)
 
@@ -40,7 +41,7 @@ def list_port_maps_endpoint(
 def create_port_map_endpoint(
     payload: PortMapCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PortMapRead:
     return create_port_map(db, payload, current_user)
 
@@ -49,7 +50,7 @@ def create_port_map_endpoint(
 def get_port_map_endpoint(
     port_map_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PortMapRead:
     return get_port_map(db, port_map_id)
 
@@ -59,7 +60,7 @@ def update_port_map_endpoint(
     port_map_id: int,
     payload: PortMapUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PortMapRead:
     return update_port_map(db, port_map_id, payload, current_user)
 
@@ -68,7 +69,7 @@ def update_port_map_endpoint(
 def delete_port_map_endpoint(
     port_map_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_port_map(db, port_map_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

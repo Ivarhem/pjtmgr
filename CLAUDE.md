@@ -40,6 +40,7 @@
 | 업체 (Partner) | 고객사, 수행사, 유지보수사, 통신사, 벤더 등. 회계/인프라 모듈이 공유 |
 | 업체 담당자 (PartnerContact) | 업체 소속 담당자 |
 | 역할 (Role) | RBAC 역할. permissions JSON으로 모듈별 접근 수준 관리 |
+| 자산 역할 (AssetRole) | 인프라 운영 관점의 논리 역할 (예: 인터넷방화벽#1). 하나의 역할에 여러 자산을 시간축으로 할당 |
 
 > 모듈별 용어는 `docs/guidelines/accounting.md`, `docs/guidelines/infra.md` 참조.
 

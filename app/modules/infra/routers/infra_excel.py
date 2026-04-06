@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.core.exceptions import ValidationError
 from app.modules.infra.models.product_catalog import ProductCatalog
@@ -133,7 +134,7 @@ async def import_preview(
     domain: str = Form(default="inventory"),
     on_duplicate: str = Form(default="skip"),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """파일 업로드 + 파싱 결과 반환 (저장 안 함)."""
     validate_xlsx(file.filename, file.content_type)
@@ -172,7 +173,7 @@ async def import_confirm(
     domain: str = Form(default="inventory"),
     on_duplicate: str = Form(default="skip"),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     """파싱 후 DB 저장."""
     validate_xlsx(file.filename, file.content_type)
@@ -234,7 +235,7 @@ def export_partner_xlsx(
     partner_id: int = Query(...),
     period_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     """업체 단위 Excel Export (자산/IP대역/포트맵). 기간 필터 옵션."""
     content = export_partner(db, partner_id, period_id)
@@ -249,7 +250,7 @@ def export_partner_xlsx(
 @router.get("/template/{domain}")
 def download_sample_template(
     domain: str,
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     """도메인별 Import 샘플 양식 다운로드."""
     if domain not in _DOMAIN_MAP:

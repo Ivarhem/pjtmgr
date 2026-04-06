@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.period_partner_contact import (
     PeriodPartnerContactCreate,
@@ -23,7 +24,7 @@ def list_period_partner_contacts(
     period_partner_id: int | None = None,
     contract_period_id: int | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[PeriodPartnerContactRead]:
     if contract_period_id:
         return svc.list_by_period(db, contract_period_id)
@@ -38,7 +39,7 @@ def list_period_partner_contacts(
 def create_period_partner_contact(
     payload: PeriodPartnerContactCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     ppc = svc.create_period_partner_contact(db, payload, current_user)
     enriched = svc.list_by_period_partner(db, ppc.period_partner_id)
@@ -50,7 +51,7 @@ def update_period_partner_contact(
     link_id: int,
     payload: PeriodPartnerContactUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     ppc = svc.update_period_partner_contact(db, link_id, payload, current_user)
     enriched = svc.list_by_period_partner(db, ppc.period_partner_id)
@@ -61,6 +62,6 @@ def update_period_partner_contact(
 def delete_period_partner_contact(
     link_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     svc.delete_period_partner_contact(db, link_id, current_user)

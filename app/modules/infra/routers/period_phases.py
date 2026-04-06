@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.period_phase import (
     PeriodPhaseCreate,
@@ -29,7 +30,7 @@ router = APIRouter(tags=["infra-period-phases"])
 def list_phases_endpoint(
     contract_period_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[PeriodPhaseRead]:
     return list_phases(db, contract_period_id)
 
@@ -43,7 +44,7 @@ def create_phase_endpoint(
     contract_period_id: int,
     payload: PeriodPhaseCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PeriodPhaseRead:
     payload.contract_period_id = contract_period_id
     return create_phase(db, payload, current_user)
@@ -56,7 +57,7 @@ def create_phase_endpoint(
 def get_phase_endpoint(
     phase_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PeriodPhaseRead:
     return get_phase(db, phase_id)
 
@@ -69,7 +70,7 @@ def update_phase_endpoint(
     phase_id: int,
     payload: PeriodPhaseUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PeriodPhaseRead:
     return update_phase(db, phase_id, payload, current_user)
 
@@ -81,7 +82,7 @@ def update_phase_endpoint(
 def delete_phase_endpoint(
     phase_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_phase(db, phase_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

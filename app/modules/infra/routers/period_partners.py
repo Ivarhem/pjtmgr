@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.period_partner import (
     PeriodPartnerCreate,
@@ -19,7 +20,7 @@ router = APIRouter(prefix="/api/v1/period-partners", tags=["infra-period-partner
 def list_period_partners(
     contract_period_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[PeriodPartnerRead]:
     return svc.list_by_period(db, contract_period_id)
 
@@ -28,7 +29,7 @@ def list_period_partners(
 def create_period_partner(
     payload: PeriodPartnerCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     pp = svc.create_period_partner(db, payload, current_user)
     enriched = svc.list_by_period(db, pp.contract_period_id)
@@ -40,7 +41,7 @@ def update_period_partner(
     link_id: int,
     payload: PeriodPartnerUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     pp = svc.update_period_partner(db, link_id, payload, current_user)
     enriched = svc.list_by_period(db, pp.contract_period_id)
@@ -51,6 +52,6 @@ def update_period_partner(
 def delete_period_partner(
     link_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     svc.delete_period_partner(db, link_id, current_user)

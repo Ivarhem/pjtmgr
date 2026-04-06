@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.ip_subnet import (
     IpSubnetCreate,
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/api/v1/ip-subnets", tags=["infra-ip-subnets"])
 def list_subnets_endpoint(
     partner_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[IpSubnetRead]:
     return list_subnets(db, partner_id)
 
@@ -39,7 +40,7 @@ def list_subnets_endpoint(
 def create_subnet_endpoint(
     payload: IpSubnetCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> IpSubnetRead:
     return create_subnet(db, payload, current_user)
 
@@ -48,7 +49,7 @@ def create_subnet_endpoint(
 def get_subnet_endpoint(
     subnet_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> IpSubnetRead:
     return get_subnet(db, subnet_id)
 
@@ -58,7 +59,7 @@ def update_subnet_endpoint(
     subnet_id: int,
     payload: IpSubnetUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> IpSubnetRead:
     return update_subnet(db, subnet_id, payload, current_user)
 
@@ -67,7 +68,7 @@ def update_subnet_endpoint(
 def delete_subnet_endpoint(
     subnet_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_subnet(db, subnet_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

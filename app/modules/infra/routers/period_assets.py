@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.period_asset import (
     PeriodAssetCreate,
@@ -20,7 +21,7 @@ def list_period_assets(
     contract_period_id: int | None = None,
     asset_id: int | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[PeriodAssetRead]:
     if contract_period_id:
         return svc.list_by_period(db, contract_period_id)
@@ -33,7 +34,7 @@ def list_period_assets(
 def create_period_asset(
     payload: PeriodAssetCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     pa = svc.create_period_asset(db, payload, current_user)
     enriched = svc.list_by_period(db, pa.contract_period_id)
@@ -45,7 +46,7 @@ def update_period_asset(
     link_id: int,
     payload: PeriodAssetUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     pa = svc.update_period_asset(db, link_id, payload, current_user)
     enriched = svc.list_by_period(db, pa.contract_period_id)
@@ -56,6 +57,6 @@ def update_period_asset(
 def delete_period_asset(
     link_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     svc.delete_period_asset(db, link_id, current_user)

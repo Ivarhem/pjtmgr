@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.asset_alias import (
     AssetAliasCreate,
@@ -28,7 +29,7 @@ router = APIRouter(tags=["infra-asset-aliases"])
 def list_asset_aliases_endpoint(
     asset_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetAliasRead]:
     return list_asset_aliases(db, asset_id)
 
@@ -42,7 +43,7 @@ def create_asset_alias_endpoint(
     asset_id: int,
     payload: AssetAliasCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetAliasRead:
     payload.asset_id = asset_id
     return create_asset_alias(db, payload, current_user)
@@ -56,7 +57,7 @@ def update_asset_alias_endpoint(
     alias_id: int,
     payload: AssetAliasUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetAliasRead:
     return update_asset_alias(db, alias_id, payload, current_user)
 
@@ -68,7 +69,7 @@ def update_asset_alias_endpoint(
 def delete_asset_alias_endpoint(
     alias_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_asset_alias(db, alias_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

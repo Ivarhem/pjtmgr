@@ -124,7 +124,7 @@ async function initDropdownFilters(me = null) {
   const autoCheckDept = !me?.permissions?.can_manage_users ? me?.department : null;
   depts.forEach(dept => {
     const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" value="${dept}"> ${dept}`;
+    label.innerHTML = `<input type="checkbox" value="${escapeHtml(dept)}"> ${escapeHtml(dept)}`;
     if (autoCheckDept && dept === autoCheckDept) label.querySelector('input').checked = true;
     deptMenu.appendChild(label);
   });
@@ -136,7 +136,7 @@ async function initDropdownFilters(me = null) {
   ownerMenu.innerHTML = '';
   users.filter(u => u.is_active).sort((a, b) => a.name.localeCompare(b.name)).forEach(u => {
     const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" value="${u.id}"> ${u.name}`;
+    label.innerHTML = `<input type="checkbox" value="${u.id}"> ${escapeHtml(u.name)}`;
     ownerMenu.appendChild(label);
   });
   updateDropLabel(document.getElementById('drop-owner'));

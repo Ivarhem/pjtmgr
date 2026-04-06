@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.services.infra_metrics import (
     get_non_compliant_assignments,
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/api/v1/infra-dashboard", tags=["infra-dashboard"])
 def dashboard_summary(
     partner_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     return list_periods_summary(db, partner_id=partner_id)
 
@@ -30,7 +31,7 @@ def dashboard_summary(
 def period_summary(
     contract_period_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     return get_period_summary(db, contract_period_id)
 
@@ -39,7 +40,7 @@ def period_summary(
 def unsubmitted_deliverables(
     partner_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     return get_unsubmitted_deliverables(db, partner_id=partner_id)
 
@@ -48,7 +49,7 @@ def unsubmitted_deliverables(
 def non_compliant_policies(
     partner_id: int | None = Query(default=None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     return get_non_compliant_assignments(db, partner_id=partner_id)
 
@@ -58,7 +59,7 @@ def audit_log_list(
     contract_period_id: int | None = Query(None),
     limit: int = Query(100, le=500),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[dict]:
     """인프라 모듈 감사 로그 조회."""
     return list_audit_logs(db, module="infra", contract_period_id=contract_period_id, limit=limit)

@@ -316,3 +316,57 @@
 - partner_type으로 CUSTOMER/IMPLEMENTER/MAINTAINER/CARRIER/VENDOR/ETC 구분.
 
 **영향:** DB 테이블/컬럼 rename (migration 0012), 코드 prefix C→P(업체), P→B(사업), ~90 파일 수정.
+
+---
+
+## 카탈로그 속성 기반 분류체계 (2026-04)
+
+**결정:** 고정 분류 노드(ClassificationScheme/ClassificationNode)를 폐기하고, 카탈로그 속성(CatalogAttributeDef/CatalogAttributeOption) + 분류 레이아웃(ClassificationLayout) 기반의 유연한 분류체계로 전환한다.
+
+**이유:**
+
+- 기존 고정 노드 방식은 분류 깊이/구성 변경 시 데이터 마이그레이션 필요.
+- 속성 기반 방식은 도메인/구현형태/제품군/플랫폼 등 속성을 자유롭게 조합하여 분류 레이아웃을 구성할 수 있음.
+- 같은 제품을 프로젝트별로 다른 분류 기준으로 볼 수 있음.
+
+**영향:** migrations 0026-0045 (노드→속성 데이터 마이그레이션 + 레거시 테이블 삭제), 프론트엔드 동적 분류 컬럼 생성.
+
+---
+
+## ag-Grid 상호작용 표준화 (2026-04)
+
+**결정:** 모든 ag-Grid에 `buildStandardGridBehavior()` 헬퍼를 적용하여 싱글클릭=선택/상세, 더블클릭=편집/이동 패턴으로 통일한다. `singleClickEdit: true`는 전면 금지.
+
+**이유:**
+
+- 그리드마다 클릭 동작이 달라 사용자가 예측 불가능했음.
+- 더블클릭 편집으로 통일하면 실수로 셀이 수정되는 것을 방지.
+- 하이브리드 인라인 편집: 단순 필드는 더블클릭 셀 편집, 복잡 필드는 모달 유지.
+
+**영향:** 27개 그리드 전환, "테이블 편집" 토글 버튼 제거, `frontend.md`에 표준 문서화.
+
+---
+
+## AssetRole.role_type 컬럼 제거 (2026-04)
+
+**결정:** `asset_roles` 테이블에서 `role_type` 컬럼을 삭제한다.
+
+**이유:**
+
+- "firewall", "db" 같은 역할 유형은 카탈로그 분류체계(도메인/제품군)에서 이미 관리됨.
+- 별도 자유 텍스트 필드는 데이터 품질을 보장할 수 없고, 분류체계와 중복.
+
+**영향:** migration 0062, 스키마/서비스/라우터/프론트에서 role_type 참조 제거.
+
+---
+
+## common 모델의 infra FK 분리 (2026-04)
+
+**결정:** `ContractPeriod.classification_layout_id` FK를 제거한다 (migration 0061).
+
+**이유:**
+
+- common 모듈 모델이 infra 모듈 테이블(`classification_layouts`)을 직접 참조하면 `core ← common ← {accounting, infra}` 규칙 위반.
+- 분류 레이아웃 연결은 infra 서비스에서 동적으로 처리.
+
+**영향:** FK 제거 + plain integer 컬럼으로 대체, infra 서비스에서 조인 로직 유지.

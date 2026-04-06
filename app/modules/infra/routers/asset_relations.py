@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.asset_relation import (
     AssetRelationCreate,
@@ -20,7 +21,7 @@ def list_asset_relations(
     partner_id: int | None = None,
     asset_id: int | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetRelationRead]:
     if asset_id is not None:
         return svc.list_by_asset(db, asset_id)
@@ -33,7 +34,7 @@ def list_asset_relations(
 def create_asset_relation(
     payload: AssetRelationCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     rel = svc.create_asset_relation(db, payload, current_user)
     enriched = svc.list_by_asset(db, rel.src_asset_id)
@@ -45,7 +46,7 @@ def update_asset_relation(
     rel_id: int,
     payload: AssetRelationUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     rel = svc.update_asset_relation(db, rel_id, payload, current_user)
     enriched = svc.list_by_asset(db, rel.src_asset_id)
@@ -56,6 +57,6 @@ def update_asset_relation(
 def delete_asset_relation(
     rel_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     svc.delete_asset_relation(db, rel_id, current_user)

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.asset_role import (
     AssetRoleAssignmentCreate,
@@ -43,7 +44,7 @@ def list_asset_roles_endpoint(
     contract_period_id: int | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetRoleRead]:
     return list_asset_roles(db, partner_id, contract_period_id, status)
 
@@ -52,7 +53,7 @@ def list_asset_roles_endpoint(
 def create_asset_role_endpoint(
     payload: AssetRoleCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleRead:
     role = create_asset_role(db, payload, current_user)
     rows = [row for row in list_asset_roles(db, role.partner_id) if row["id"] == role.id]
@@ -63,7 +64,7 @@ def create_asset_role_endpoint(
 def get_asset_role_endpoint(
     asset_role_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleRead:
     role = get_asset_role(db, asset_role_id)
     rows = [row for row in list_asset_roles(db, role.partner_id) if row["id"] == asset_role_id]
@@ -75,7 +76,7 @@ def update_asset_role_endpoint(
     asset_role_id: int,
     payload: AssetRoleUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleRead:
     role = update_asset_role(db, asset_role_id, payload, current_user)
     rows = [row for row in list_asset_roles(db, role.partner_id) if row["id"] == asset_role_id]
@@ -86,7 +87,7 @@ def update_asset_role_endpoint(
 def delete_asset_role_endpoint(
     asset_role_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_asset_role(db, asset_role_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -96,7 +97,7 @@ def delete_asset_role_endpoint(
 def list_asset_role_assignments_endpoint(
     asset_role_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetRoleAssignmentRead]:
     return list_asset_role_assignments(db, asset_role_id)
 
@@ -106,7 +107,7 @@ def create_asset_role_assignment_endpoint(
     asset_role_id: int,
     payload: AssetRoleAssignmentCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleAssignmentRead:
     assignment = create_asset_role_assignment(db, asset_role_id, payload, current_user)
     rows = [row for row in list_asset_role_assignments(db, asset_role_id) if row["id"] == assignment.id]
@@ -118,7 +119,7 @@ def update_asset_role_assignment_endpoint(
     assignment_id: int,
     payload: AssetRoleAssignmentUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleAssignmentRead:
     assignment = update_asset_role_assignment(db, assignment_id, payload, current_user)
     rows = [row for row in list_asset_role_assignments(db, assignment.asset_role_id) if row["id"] == assignment.id]
@@ -129,7 +130,7 @@ def update_asset_role_assignment_endpoint(
 def delete_asset_role_assignment_endpoint(
     assignment_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_asset_role_assignment(db, assignment_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -140,7 +141,7 @@ def replace_asset_role_endpoint(
     asset_role_id: int,
     payload: AssetRoleReplacementAction,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleActionResult:
     return replace_asset_role_assignment(
         db,
@@ -158,7 +159,7 @@ def failover_asset_role_endpoint(
     asset_role_id: int,
     payload: AssetRoleFailoverAction,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleActionResult:
     return replace_asset_role_assignment(
         db,
@@ -176,7 +177,7 @@ def repurpose_asset_role_endpoint(
     asset_role_id: int,
     payload: AssetRoleRepurposeAction,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRoleActionResult:
     return repurpose_asset_role_assignment(
         db,

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.asset import AssetCreate, AssetCurrentRoleUpdate, AssetRead, AssetUpdate
 from app.modules.infra.services.asset_service import (
@@ -29,7 +30,7 @@ def list_assets_endpoint(
     status: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetRead]:
     assets = list_assets(db, partner_id, period_id, status, q)
     return enrich_assets_with_aliases(db, assets)
@@ -44,7 +45,7 @@ def list_assets_inventory(
     layout_id: int | None = None,
     lang: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetRead]:
     """Partner-scoped asset inventory with period info enrichment."""
     assets = list_assets(db, partner_id, period_id, status, q)
@@ -55,7 +56,7 @@ def list_assets_inventory(
 def create_asset_endpoint(
     payload: AssetCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRead:
     asset = create_asset(db, payload, current_user)
     return enrich_asset_with_catalog_kind(db, asset)
@@ -65,7 +66,7 @@ def create_asset_endpoint(
 def get_asset_endpoint(
     asset_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRead:
     asset = get_asset(db, asset_id)
     return enrich_asset_with_catalog_kind(db, asset)
@@ -78,7 +79,7 @@ def update_asset_endpoint(
     layout_id: int | None = None,
     lang: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRead:
     asset = update_asset(db, asset_id, payload, current_user)
     return enrich_asset_with_catalog_kind(db, asset, layout_id=layout_id, lang=lang)
@@ -91,7 +92,7 @@ def update_asset_current_role_endpoint(
     layout_id: int | None = None,
     lang: str | None = None,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetRead:
     asset = update_asset_current_role(db, asset_id, payload.asset_role_id, current_user)
     return enrich_asset_with_catalog_kind(db, asset, layout_id=layout_id, lang=lang)
@@ -101,7 +102,7 @@ def update_asset_current_role_endpoint(
 def delete_asset_endpoint(
     asset_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_asset(db, asset_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.classification_layout import (
     ClassificationLayoutCreate,
@@ -34,7 +35,7 @@ def list_classification_layouts(
     project_id: int | None = None,
     active_only: bool = False,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[ClassificationLayoutRead]:
     return list_layouts(db, scope_type=scope_type, project_id=project_id, active_only=active_only)
 
@@ -43,7 +44,7 @@ def list_classification_layouts(
 def get_classification_layout(
     layout_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
     return get_layout_detail(db, layout_id)
 
@@ -52,7 +53,7 @@ def get_classification_layout(
 def create_classification_layout(
     payload: ClassificationLayoutCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> ClassificationLayoutRead:
     return create_layout(db, payload, current_user)
 
@@ -62,7 +63,7 @@ def update_classification_layout(
     layout_id: int,
     payload: ClassificationLayoutUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> ClassificationLayoutRead:
     return update_layout(db, layout_id, payload, current_user)
 
@@ -71,7 +72,7 @@ def update_classification_layout(
 def delete_classification_layout(
     layout_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_layout(db, layout_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -81,7 +82,7 @@ def delete_classification_layout(
 def get_project_classification_layout(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> ProjectClassificationLayoutRead | None:
     layout = get_project_layout(db, project_id)
     if layout is None:
@@ -98,7 +99,7 @@ def put_project_classification_layout(
     project_id: int,
     payload: ProjectClassificationLayoutUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> ProjectClassificationLayoutRead:
     assign_project_layout(db, project_id, payload.layout_id, current_user)
     detail = get_layout_detail(db, payload.layout_id)

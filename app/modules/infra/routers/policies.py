@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.policy_definition import (
     PolicyDefinitionCreate,
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/api/v1/policies", tags=["infra-policies"])
 @router.get("", response_model=list[PolicyDefinitionRead])
 def list_policies_endpoint(
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[PolicyDefinitionRead]:
     return list_policies(db)
 
@@ -36,7 +37,7 @@ def list_policies_endpoint(
 def create_policy_endpoint(
     payload: PolicyDefinitionCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PolicyDefinitionRead:
     return create_policy(db, payload, current_user)
 
@@ -45,7 +46,7 @@ def create_policy_endpoint(
 def get_policy_endpoint(
     policy_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PolicyDefinitionRead:
     return get_policy(db, policy_id)
 
@@ -55,7 +56,7 @@ def update_policy_endpoint(
     policy_id: int,
     payload: PolicyDefinitionUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> PolicyDefinitionRead:
     return update_policy(db, policy_id, payload, current_user)
 
@@ -64,7 +65,7 @@ def update_policy_endpoint(
 def delete_policy_endpoint(
     policy_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_policy(db, policy_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

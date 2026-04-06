@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.catalog_attribute import (
     CatalogAttributeCreate,
@@ -34,7 +35,7 @@ router = APIRouter(prefix="/api/v1/catalog-attributes", tags=["infra-catalog-att
 def list_catalog_attributes(
     active_only: bool = False,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[CatalogAttributeRead]:
     return list_attributes(db, active_only=active_only)
 
@@ -43,7 +44,7 @@ def list_catalog_attributes(
 def create_catalog_attribute(
     payload: CatalogAttributeCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> CatalogAttributeRead:
     return create_attribute(db, payload, current_user)
 
@@ -53,7 +54,7 @@ def update_catalog_attribute(
     attribute_id: int,
     payload: CatalogAttributeUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> CatalogAttributeRead:
     return update_attribute(db, attribute_id, payload, current_user)
 
@@ -62,7 +63,7 @@ def update_catalog_attribute(
 def delete_catalog_attribute(
     attribute_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_attribute(db, attribute_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -73,7 +74,7 @@ def list_catalog_attribute_options(
     attribute_id: int,
     active_only: bool = False,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[CatalogAttributeOptionRead]:
     return list_attribute_options(db, attribute_id, active_only=active_only)
 
@@ -83,7 +84,7 @@ def create_catalog_attribute_option(
     attribute_id: int,
     payload: CatalogAttributeOptionCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> CatalogAttributeOptionRead:
     return create_attribute_option(db, attribute_id, payload, current_user)
 
@@ -93,7 +94,7 @@ def update_catalog_attribute_option(
     option_id: int,
     payload: CatalogAttributeOptionUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> CatalogAttributeOptionRead:
     return update_attribute_option(db, option_id, payload, current_user)
 
@@ -102,7 +103,7 @@ def update_catalog_attribute_option(
 def delete_catalog_attribute_option(
     option_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_attribute_option(db, option_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -37,11 +37,11 @@ async function initFilters() {
   const users = await fetch('/api/v1/users').then(r => r.json());
   const depts = [...new Set(users.map(u => u.department).filter(Boolean))].sort();
   const deptMenu = document.querySelector('#rpt-drop-dept .chk-drop-menu');
-  deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${d}"> ${d}</label>`).join('');
+  deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${escapeHtml(d)}"> ${escapeHtml(d)}</label>`).join('');
 
   const ownerMenu = document.querySelector('#rpt-drop-owner .chk-drop-menu');
   ownerMenu.innerHTML = users.filter(u => u.is_active).sort((a, b) => a.name.localeCompare(b.name))
-    .map(u => `<label><input type="checkbox" value="${u.id}"> ${u.name}</label>`).join('');
+    .map(u => `<label><input type="checkbox" value="${u.id}"> ${escapeHtml(u.name)}</label>`).join('');
 
   initDropdownToggles();
 

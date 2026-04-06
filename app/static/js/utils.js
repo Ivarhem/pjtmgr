@@ -1160,7 +1160,7 @@ function buildContractGridOptions(opts) {
 function loadPartnerDatalist() {
   fetch('/api/v1/partners').then(r => r.json()).then(custs => {
     const dl = document.getElementById('partner-list');
-    if (dl) dl.innerHTML = custs.map(c => `<option value="${c.name}">`).join('');
+    if (dl) dl.innerHTML = custs.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
   });
 }
 

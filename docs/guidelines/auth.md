@@ -14,6 +14,8 @@
   | ------ | ----- | ---------- | ----- |
   | 관리자 | true | full | full |
   | 영업담당자 | false | full | null |
+  | 기술담당자 | false | null | full |
+  | PM | false | full | full |
 
 - 관리자가 커스텀 역할 생성 가능
 - 권한 수준: `null`(접근 불가), `"read"`(조회만), `"full"`(CRUD 전체), `admin` 플래그(시스템 관리)

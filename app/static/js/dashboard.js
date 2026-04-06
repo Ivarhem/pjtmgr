@@ -88,15 +88,15 @@
     ]);
     const depts = [...new Set(users.map(u => u.department).filter(Boolean))].sort();
     const deptMenu = document.querySelector('#dash-drop-dept .chk-drop-menu');
-    deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${d}"> ${d}</label>`).join('');
+    deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${escapeHtml(d)}"> ${escapeHtml(d)}</label>`).join('');
 
     const ownerMenu = document.querySelector('#dash-drop-owner .chk-drop-menu');
     ownerMenu.innerHTML = users.filter(u => u.is_active).sort((a, b) => a.name.localeCompare(b.name))
-      .map(u => `<label><input type="checkbox" value="${u.id}"> ${u.name}</label>`).join('');
+      .map(u => `<label><input type="checkbox" value="${u.id}"> ${escapeHtml(u.name)}</label>`).join('');
 
     const custMenu = document.querySelector('#dash-drop-partner .chk-drop-menu');
     custMenu.innerHTML = partners.sort((a, b) => a.name.localeCompare(b.name))
-      .map(c => `<label><input type="checkbox" value="${c.id}"> ${c.name}</label>`).join('');
+      .map(c => `<label><input type="checkbox" value="${c.id}"> ${escapeHtml(c.name)}</label>`).join('');
   }
 
   // ── 필터 파라미터 수집 ──────────────────────────────────────────

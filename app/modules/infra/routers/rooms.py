@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.rack import RackCreate, RackRead
 from app.modules.infra.schemas.room import RoomRead, RoomUpdate
@@ -23,7 +24,7 @@ def update_room_endpoint(
     room_id: int,
     payload: RoomUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> RoomRead:
     return update_room(db, room_id, payload, current_user)
 
@@ -32,7 +33,7 @@ def update_room_endpoint(
 def delete_room_endpoint(
     room_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_room(db, room_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -42,7 +43,7 @@ def delete_room_endpoint(
 def list_room_racks_endpoint(
     room_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[RackRead]:
     return list_racks(db, room_id)
 
@@ -52,7 +53,7 @@ def create_room_rack_endpoint(
     room_id: int,
     payload: RackCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> RackRead:
     payload.room_id = room_id
     return create_rack(db, payload, current_user)

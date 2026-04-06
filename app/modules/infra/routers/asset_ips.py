@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.asset_ip import AssetIPCreate, AssetIPRead, AssetIPUpdate
 from app.modules.infra.services.network_service import (
@@ -26,7 +27,7 @@ router = APIRouter(tags=["infra-asset-ips"])
 def list_asset_ips_endpoint(
     asset_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetIPRead]:
     return list_asset_ips(db, asset_id)
 
@@ -40,7 +41,7 @@ def create_asset_ip_endpoint(
     asset_id: int,
     payload: AssetIPCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetIPRead:
     payload.asset_id = asset_id
     return create_asset_ip(db, payload, current_user)
@@ -53,7 +54,7 @@ def create_asset_ip_endpoint(
 def list_partner_ips_endpoint(
     partner_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AssetIPRead]:
     return list_partner_ips(db, partner_id)
 
@@ -65,7 +66,7 @@ def list_partner_ips_endpoint(
 def get_asset_ip_endpoint(
     ip_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetIPRead:
     return get_asset_ip(db, ip_id)
 
@@ -78,7 +79,7 @@ def update_asset_ip_endpoint(
     ip_id: int,
     payload: AssetIPUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AssetIPRead:
     return update_asset_ip(db, ip_id, payload, current_user)
 
@@ -90,7 +91,7 @@ def update_asset_ip_endpoint(
 def delete_asset_ip_endpoint(
     ip_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     delete_asset_ip(db, ip_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
