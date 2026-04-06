@@ -897,7 +897,7 @@ function renderProductSimilarityBox(items) {
     items.map((item) => ({
       value: String(item.id),
       label: ((item.vendor || "") + " " + (item.name || "")).trim(),
-      hint: item.product_type ? (CATALOG_KIND_LABELS[item.product_type] || item.product_type) : "",
+      hint: item.product_type || "",
       aliases: [item.vendor || "", item.name || ""],
       modelName: item.name || "",
     }))
