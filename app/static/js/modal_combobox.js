@@ -1,13 +1,14 @@
 /* ── Modal Combobox (검색 가능 드롭다운) ── */
 
 class ModalCombobox {
-  constructor({ inputId, hiddenId, dropdownId, onSelect, maxDisplay = 0, footerAction = null }) {
+  constructor({ inputId, hiddenId, dropdownId, onSelect, maxDisplay = 0, footerAction = null, skipLocalFilter = false }) {
     this.input = document.getElementById(inputId);
     this.hidden = document.getElementById(hiddenId);
     this.dropdown = document.getElementById(dropdownId);
     this.onSelect = onSelect || (() => {});
     this.maxDisplay = maxDisplay;
     this.footerAction = footerAction;   // { label, onClick } or null
+    this.skipLocalFilter = skipLocalFilter; // true: 외부에서 아이템을 관리, 로컬 필터 안 함
     this.items = [];           /* { value, label, hint? } */
     this._focusIdx = -1;
     this._bound = false;
@@ -38,6 +39,10 @@ class ModalCombobox {
   getDisplayText() { return this.input.value; }
 
   _filter() {
+    if (this.skipLocalFilter) {
+      this._render(this.items);
+      return;
+    }
     const q = this.input.value.trim().toLowerCase();
     const filtered = q
       ? this.items.filter((item) =>

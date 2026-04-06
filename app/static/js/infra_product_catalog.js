@@ -1030,6 +1030,7 @@ function getProductNameCombobox() {
       hiddenId: "product-name-ref-id",
       dropdownId: "product-name-dropdown",
       maxDisplay: 10,
+      skipLocalFilter: true,
       onSelect: async (item) => {
         await fillFormFromSimilarProduct(item.value);
         // ModalCombobox sets input to full label (vendor + name).
