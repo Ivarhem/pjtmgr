@@ -881,72 +881,31 @@ function getCatalogAttributeValuesFromForm() {
 }
 
 function resetProductSimilarityBox() {
-  const box = document.getElementById("product-similarity-box");
-  const list = document.getElementById("product-similarity-list");
-  if (list) list.replaceChildren();
-  if (box) box.classList.add("hidden");
+  if (_productNameCombobox) {
+    _productNameCombobox.setItems([]);
+    _productNameCombobox._close();
+  }
 }
 
-function renderProductSimilarityBox(result) {
-  const box = document.getElementById("product-similarity-box");
-  const title = document.getElementById("product-similarity-title");
-  const list = document.getElementById("product-similarity-list");
-  if (!box || !title || !list) return;
-  const exactMatches = result?.exact_matches || [];
-  const similarMatches = result?.similar_matches || [];
-  const items = [...exactMatches, ...similarMatches];
-  if (!items.length) {
-    box.classList.add("hidden");
-    list.replaceChildren();
+function renderProductSimilarityBox(items) {
+  const combo = getProductNameCombobox();
+  if (!items?.length) {
+    combo.setItems([]);
     return;
   }
-  title.textContent = exactMatches.length
-    ? "동일하거나 거의 같은 제품 후보가 있습니다."
-    : "유사한 제품 후보가 있습니다.";
-  list.replaceChildren();
-  items.forEach((item) => {
-    const li = document.createElement("li");
-    li.style.cursor = "pointer";
-    const textSpan = document.createElement("span");
-    textSpan.textContent = (item.vendor || "") + " " + (item.name || "");
-    li.appendChild(textSpan);
-    const scoreSpan = document.createElement("span");
-    scoreSpan.className = "catalog-similarity-item-score";
-    scoreSpan.textContent = "\uc720\uc0ac\ub3c4 " + item.score;
-    li.appendChild(scoreSpan);
-    li.addEventListener("click", async () => {
-      const vendorInput = document.getElementById("product-vendor");
-      const vendorValue = document.getElementById("product-vendor-value");
-      const nameInput = document.getElementById("product-name");
-      if (vendorInput) vendorInput.value = item.vendor || "";
-      if (vendorValue) vendorValue.value = item.vendor || "";
-      if (nameInput) nameInput.value = item.name || "";
-      // 제품 상세에서 제품군/구현형태 자동 매핑
-      try {
-        const detail = await apiFetch("/api/v1/product-catalog/" + item.id);
-        const attrs = detail?.attributes || [];
-        const familyAttr = attrs.find((a) => a.attribute_key === "product_family");
-        const impAttr = attrs.find((a) => a.attribute_key === "imp_type");
-        if (familyAttr?.option_key) {
-          const familyInput = document.getElementById("product-family-input");
-          const familyHidden = document.getElementById("product-attr-product-family");
-          if (familyInput) familyInput.value = familyAttr.option_key;
-          if (familyHidden) familyHidden.value = familyAttr.option_key;
-        }
-        if (impAttr?.option_key) {
-          const impSelect = document.getElementById("product-attr-imp-type");
-          if (impSelect) impSelect.value = impAttr.option_key;
-        }
-      } catch (_) { /* 매핑 실패 시 무시 */ }
-      resetProductSimilarityBox();
-    });
-    list.appendChild(li);
-  });
-  box.classList.remove("hidden");
+  combo.setItems(
+    items.map((item) => ({
+      value: String(item.id),
+      label: ((item.vendor || "") + " " + (item.name || "")).trim(),
+      hint: item.product_type || "",
+      aliases: [item.vendor || "", item.name || ""],
+      modelName: item.name || "",
+    }))
+  );
+  combo._filter();
 }
 
 async function checkProductSimilaritySuggestions() {
-  const vendor = document.getElementById("product-vendor-value")?.value?.trim() || "";
   const name = document.getElementById("product-name")?.value?.trim() || "";
   const excludeIdRaw = document.getElementById("product-id")?.value || "";
   const excludeId = excludeIdRaw ? Number(excludeIdRaw) : null;
@@ -955,15 +914,9 @@ async function checkProductSimilaritySuggestions() {
     return;
   }
   try {
-    const result = await apiFetch("/api/v1/product-catalog/similarity-check", {
-      method: "POST",
-      body: {
-        vendor,
-        name,
-        exclude_product_id: excludeId || null,
-      },
-    });
-    renderProductSimilarityBox(result);
+    const items = await apiFetch("/api/v1/product-catalog?q=" + encodeURIComponent(name));
+    const filtered = excludeId ? items.filter((p) => p.id !== excludeId) : items;
+    renderProductSimilarityBox(filtered);
   } catch (err) {
     console.error(err);
   }
@@ -977,7 +930,7 @@ function scheduleProductSimilarityCheck() {
 }
 
 function bindProductSimilarityInputs() {
-  /* vendor combobox의 onSelect에서 직접 체크 호출하므로 여기서는 name만 바인딩 */
+  getProductNameCombobox();  // ensure combobox is initialized and bound
   const nameInput = document.getElementById("product-name");
   if (nameInput) {
     nameInput.addEventListener("input", scheduleProductSimilarityCheck);
@@ -1052,6 +1005,74 @@ function getProductTypeFromImpType(impTypeKey) {
     case "sw": return "software";
     case "svc": return "service";
     default: return "hardware";
+  }
+}
+
+/* ── 모델명 combobox (유사 제품 검색) ── */
+
+let _productNameCombobox = null;
+
+function getProductNameCombobox() {
+  if (!_productNameCombobox) {
+    _productNameCombobox = new ModalCombobox({
+      inputId: "product-name",
+      hiddenId: "product-name-ref-id",
+      dropdownId: "product-name-dropdown",
+      maxDisplay: 10,
+      skipLocalFilter: true,
+      onSelect: async (item) => {
+        await fillFormFromSimilarProduct(item.value);
+        // ModalCombobox sets input to full label (vendor + name).
+        // Override with just the model name for editing convenience.
+        const matched = (_productNameCombobox?.items || []).find((i) => i.value === item.value);
+        if (matched?.modelName) {
+          document.getElementById("product-name").value = matched.modelName;
+        }
+      },
+    });
+    _productNameCombobox.bind();
+  }
+  return _productNameCombobox;
+}
+
+async function fillFormFromSimilarProduct(productId) {
+  try {
+    const d = await apiFetch("/api/v1/product-catalog/" + productId);
+    const attrMap = getProductAttributeValueMap(d.attributes || []);
+    // Vendor
+    const vendorInput = document.getElementById("product-vendor");
+    const vendorValue = document.getElementById("product-vendor-value");
+    if (vendorInput) vendorInput.value = d.vendor || "";
+    if (vendorValue) vendorValue.value = d.vendor || "";
+    // Product type
+    const typeInput = document.getElementById("product-type");
+    if (typeInput) typeInput.value = d.product_type || "hardware";
+    // Name — keep what the user typed (don't overwrite)
+    // Classification attributes
+    if (attrMap.product_family) {
+      syncFamilyCombobox(attrMap.product_family);
+      const domainKey = getDomainKeyForFamily(attrMap.product_family);
+      if (domainKey) document.getElementById("product-attr-domain").value = domainKey;
+    }
+    if (attrMap.imp_type) {
+      const impSelect = document.getElementById("product-attr-imp-type");
+      if (impSelect) {
+        impSelect.value = attrMap.imp_type;
+        impSelect.dataset.autoSet = "true";
+      }
+    }
+    if (attrMap.platform) {
+      const platSelect = document.getElementById("product-attr-platform");
+      if (platSelect) platSelect.value = attrMap.platform;
+    }
+    // Reference URL
+    if (d.reference_url) {
+      document.getElementById("product-reference-url").value = d.reference_url;
+    }
+    updateCatalogClassificationHint();
+    showToast("유사 제품 정보를 불러왔습니다. 모델명을 수정하세요.", "info");
+  } catch (e) {
+    showToast("제품 정보를 불러올 수 없습니다: " + e.message, "error");
   }
 }
 
@@ -1985,6 +2006,7 @@ async function openCreateProduct() {
   }
   document.getElementById("product-id").value = "";
   document.getElementById("product-name").value = "";
+  document.getElementById("product-name-ref-id").value = "";
   document.getElementById("product-type").value = "hardware";
   document.getElementById("product-version").value = "";
   await loadVendorList();
@@ -2009,6 +2031,7 @@ async function openEditProduct() {
     const attrMap = getProductAttributeValueMap(d.attributes);
     document.getElementById("product-id").value = d.id;
     document.getElementById("product-name").value = d.name;
+    document.getElementById("product-name-ref-id").value = "";
     document.getElementById("product-type").value = d.product_type;
     document.getElementById("product-version").value = d.version || "";
     await loadVendorList();

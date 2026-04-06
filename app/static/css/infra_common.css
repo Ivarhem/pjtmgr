@@ -1589,34 +1589,6 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   margin-top: 8px;
 }
 
-.catalog-similarity-box {
-  margin-top: -2px;
-  margin-bottom: 4px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--warning-color, #f59e0b) 45%, var(--border-color));
-  background: color-mix(in srgb, var(--warning-color, #f59e0b) 10%, var(--bg-secondary));
-}
-
-.catalog-similarity-title {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-
-.catalog-similarity-list {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 4px;
-  font-size: 13px;
-}
-
-.catalog-similarity-item-score {
-  color: var(--text-color-secondary);
-  margin-left: 6px;
-  font-size: 12px;
-}
 
 .catalog-integrity-layout {
   display: grid;
