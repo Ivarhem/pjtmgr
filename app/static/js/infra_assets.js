@@ -452,7 +452,12 @@ const ASSET_INFO_COLS = [
     field: "center_id",
     headerName: "센터정보",
     width: 170,
-    valueGetter: (p) => p.data?.center_label || p.data?.center || "—",
+    cellDataType: false,
+    valueFormatter: (p) => {
+      if (!p.value) return p.data?.center || "—";
+      const c = _layoutCentersCache.find((x) => x.id === Number(p.value));
+      return c ? c.name : (p.data?.center_label || "—");
+    },
     editable: () => isGridFieldEditable("center_id"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: () => ({
@@ -516,7 +521,12 @@ const ASSET_CODE_COLS = [
     field: "period_id",
     headerName: "귀속프로젝트",
     width: 220,
-    valueGetter: (p) => p.data?.contract_name || p.data?.period_label || "—",
+    cellDataType: false,
+    valueFormatter: (p) => {
+      if (!p.value) return "—";
+      const period = _periodsCache.find((x) => x.id === Number(p.value));
+      return period ? (period.contract_name || period.period_label || p.value) : (p.data?.contract_name || p.data?.period_label || "—");
+    },
     editable: () => isGridFieldEditable("period_id"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: () => ({
@@ -527,7 +537,6 @@ const ASSET_CODE_COLS = [
         return p ? (p.contract_name || p.period_label || v) : v;
       },
     }),
-    valueParser: (p) => (p.newValue === "" || p.newValue == null ? null : Number(p.newValue)),
     cellClass: (p) => getGridCellClass("period_id"),
   },
   { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
