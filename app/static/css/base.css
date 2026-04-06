@@ -705,6 +705,11 @@ label.chk-inline { flex-direction: row; align-items: center; gap: 8px; cursor: p
   line-height: 1.45;
 }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.confirm-dialog-message {
+  white-space: pre-line;
+  margin-top: -4px;
+  margin-bottom: 20px;
+}
 .modal-xs { max-width: 320px; }
 .modal-sm { max-width: 380px; overflow: visible; }
 .modal-md { max-width: 480px; }

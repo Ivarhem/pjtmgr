@@ -2,23 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func
+from sqlalchemy import Table, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
+from app.core.database import Base
 from app.core.code_generator import next_partner_code
 
 if TYPE_CHECKING:
     from app.modules.common.models.user import User
+from app.modules.common.models.contract import Contract
+from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.partner import Partner
 from app.modules.common.models.partner_contact import PartnerContact
 from app.modules.common.models.partner_contact_role import PartnerContactRole
-from app.modules.accounting.models.contract import Contract
-from app.modules.accounting.models.contract_contact import ContractContact
-from app.modules.accounting.models.contract_period import ContractPeriod
-from app.modules.accounting.models.transaction_line import TransactionLine
-from app.modules.accounting.models.receipt import Receipt
-from app.modules.accounting.models.receipt_match import ReceiptMatch
 from app.modules.common.schemas.partner import PartnerCreate, PartnerUpdate
 from app.modules.common.schemas.partner_contact import PartnerContactCreate, PartnerContactUpdate
 from app.core.exceptions import NotFoundError, BusinessRuleError, DuplicateError
@@ -35,6 +32,13 @@ __all__ = [
     "get_or_create_by_name", "get_contacts", "create_contact", "update_contact", "delete_contact",
     "_related_contract_ids", "list_related_contracts", "list_partner_financials", "list_partner_receipts",
 ]
+
+
+def _get_table(db: Session, table_name: str) -> Table:
+    table = Base.metadata.tables.get(table_name)
+    if table is not None:
+        return table
+    return Table(table_name, Base.metadata, autoload_with=db.get_bind())
 
 
 def list_partners(
@@ -78,6 +82,7 @@ def list_partners(
 def _enrich_partners_with_summary(db: Session, partners: list[Partner]) -> list[dict]:
     """거래처 ORM 목록에 active_count, total_revenue 요약을 추가하여 dict 리스트로 반환."""
     partner_ids = [c.id for c in partners]
+    transaction_lines = _get_table(db, "transaction_lines")
 
     # 1) partner_id별 진행중 사업 건수 (stage != '계약완료')
     # end_partner 또는 period partner로 연결된 사업 기준
@@ -101,14 +106,14 @@ def _enrich_partners_with_summary(db: Session, partners: list[Partner]) -> list[
     # 2) partner_id별 매출 합계 (TransactionLine에서 해당 partner가 매출처인 것)
     rev_q = (
         db.query(
-            TransactionLine.partner_id,
-            func.sum(TransactionLine.supply_amount),
+            transaction_lines.c.partner_id,
+            func.sum(transaction_lines.c.supply_amount),
         )
         .filter(
-            TransactionLine.partner_id.in_(partner_ids),
-            TransactionLine.line_type == "revenue",
+            transaction_lines.c.partner_id.in_(partner_ids),
+            transaction_lines.c.line_type == "revenue",
         )
-        .group_by(TransactionLine.partner_id)
+        .group_by(transaction_lines.c.partner_id)
         .all()
     )
     rev_map = {cid: total or 0 for cid, total in rev_q}
@@ -156,6 +161,10 @@ def _get_owner_contract_ids(db: Session, user_id: int) -> list[int]:
 
 def _collect_partner_ids(db: Session, contract_ids: list[int]) -> set[int]:
     """계약 ID 목록으로부터 관련 거래처 ID를 수집."""
+    contract_contacts = _get_table(db, "contract_contacts")
+    transaction_lines = _get_table(db, "transaction_lines")
+    receipts = _get_table(db, "receipts")
+
     partner_ids: set[int] = set()
     partner_ids.update(
         cid
@@ -173,23 +182,23 @@ def _collect_partner_ids(db: Session, contract_ids: list[int]) -> set[int]:
     )
     partner_ids.update(
         cid
-        for cid, in db.query(TransactionLine.partner_id)
-        .filter(TransactionLine.contract_id.in_(contract_ids), TransactionLine.partner_id.isnot(None))
+        for cid, in db.query(transaction_lines.c.partner_id)
+        .filter(transaction_lines.c.contract_id.in_(contract_ids), transaction_lines.c.partner_id.isnot(None))
         .distinct()
         .all()
     )
     partner_ids.update(
         cid
-        for cid, in db.query(Receipt.partner_id)
-        .filter(Receipt.contract_id.in_(contract_ids), Receipt.partner_id.isnot(None))
+        for cid, in db.query(receipts.c.partner_id)
+        .filter(receipts.c.contract_id.in_(contract_ids), receipts.c.partner_id.isnot(None))
         .distinct()
         .all()
     )
     partner_ids.update(
         cid
-        for cid, in db.query(ContractContact.partner_id)
-        .join(ContractContact.contract_period)
-        .filter(ContractPeriod.contract_id.in_(contract_ids), ContractContact.partner_id.isnot(None))
+        for cid, in db.query(contract_contacts.c.partner_id)
+        .join(ContractPeriod, contract_contacts.c.contract_period_id == ContractPeriod.id)
+        .filter(ContractPeriod.contract_id.in_(contract_ids), contract_contacts.c.partner_id.isnot(None))
         .distinct()
         .all()
     )
@@ -273,13 +282,15 @@ def delete_partner(db: Session, partner_id: int) -> None:
     obj = db.get(Partner, partner_id)
     if not obj:
         raise NotFoundError("거래처를 찾을 수 없습니다.")
+    transaction_lines = _get_table(db, "transaction_lines")
+    receipts = _get_table(db, "receipts")
     # 참조 데이터가 있으면 삭제 불가
     if obj.contracts:
         raise BusinessRuleError("END 고객으로 등록된 사업이 있어 삭제할 수 없습니다.")
-    transaction_line_count = db.query(TransactionLine).filter(TransactionLine.partner_id == partner_id).count()
+    transaction_line_count = db.query(transaction_lines).filter(transaction_lines.c.partner_id == partner_id).count()
     if transaction_line_count > 0:
         raise BusinessRuleError("매출/매입 실적이 있어 삭제할 수 없습니다.")
-    receipt_count = db.query(Receipt).filter(Receipt.partner_id == partner_id).count()
+    receipt_count = db.query(receipts).filter(receipts.c.partner_id == partner_id).count()
     if receipt_count > 0:
         raise BusinessRuleError("입금 내역이 있어 삭제할 수 없습니다.")
     db.delete(obj)

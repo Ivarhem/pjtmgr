@@ -20,11 +20,9 @@ class ContractPeriod(TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     partner_id: Mapped[int | None] = mapped_column(ForeignKey("partners.id", ondelete="SET NULL"))
-    classification_layout_id: Mapped[int | None] = mapped_column(
-        ForeignKey("classification_layouts.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
-    )
+    # Infra-specific classification layout linkage remains as a plain nullable ID here.
+    # The DB-level FK cleanup is handled separately so common ORM no longer depends on infra tables.
+    classification_layout_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     is_planned: Mapped[bool] = mapped_column(Boolean, default=True)
     notes: Mapped[str | None] = mapped_column(String(500))

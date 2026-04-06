@@ -520,7 +520,10 @@ async function loadPeriodContacts(periodId) {
 
 async function togglePeriodCompleted(periodId, newValue) {
   const action = newValue ? '사업완료 처리' : '진행중으로 변경';
-  if (!confirm(`이 귀속기간을 ${action}하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`이 귀속기간을 ${action}하시겠습니까?`, {
+    title: '귀속기간 상태 변경',
+    confirmText: '진행',
+  })) return;
 
   const res = await fetch(`/api/v1/contract-periods/${periodId}`, {
     method: 'PATCH',
@@ -775,8 +778,11 @@ function renderPeriodTabs(periods) {
   _updatePillNavVisibility();
 
   // 다중선택 토글 이벤트
-  container.querySelector('[data-action="multi-toggle"]').addEventListener('click', () => {
-    if (isDirty() && !confirm('저장하지 않은 변경 사항이 있습니다. 계속하시겠습니까?')) return;
+  container.querySelector('[data-action="multi-toggle"]').addEventListener('click', async () => {
+    if (isDirty() && !await showConfirmDialog('저장하지 않은 변경 사항이 있습니다. 계속하시겠습니까?', {
+      title: '저장되지 않은 변경',
+      confirmText: '계속',
+    })) return;
     multiSelectMode = !multiSelectMode;
     if (!multiSelectMode) {
       // 다중선택 해제 → 현재 period로 복귀
@@ -791,8 +797,11 @@ function renderPeriodTabs(periods) {
   // ALL 버튼 이벤트 (다중선택 모드에서만 존재)
   const allBtnEl = container.querySelector('[data-view="all"]');
   if (allBtnEl) {
-    allBtnEl.addEventListener('click', () => {
-      if (isDirty() && !confirm('저장하지 않은 변경 사항이 있습니다. 계속하시겠습니까?')) return;
+    allBtnEl.addEventListener('click', async () => {
+      if (isDirty() && !await showConfirmDialog('저장하지 않은 변경 사항이 있습니다. 계속하시겠습니까?', {
+        title: '저장되지 않은 변경',
+        confirmText: '계속',
+      })) return;
       if (isAllSelected) {
         selectedPeriodIds.clear();
         selectedPeriodIds.add(CONTRACT_PERIOD_ID);
@@ -806,9 +815,12 @@ function renderPeriodTabs(periods) {
   }
 
   container.querySelectorAll('[data-period-id]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const pid = parseInt(btn.dataset.periodId);
-      if (isDirty() && !confirm('저장하지 않은 변경 사항이 있습니다. 계속하시겠습니까?')) return;
+      if (isDirty() && !await showConfirmDialog('저장하지 않은 변경 사항이 있습니다. 계속하시겠습니까?', {
+        title: '저장되지 않은 변경',
+        confirmText: '계속',
+      })) return;
 
       if (multiSelectMode) {
         // 다중선택 모드: 토글 방식
@@ -1550,7 +1562,10 @@ async function deleteSelectedLedgerRows() {
     alert(`입금 매칭이 존재하는 ${matched.length}건은 삭제할 수 없습니다.\n매칭을 먼저 해제하세요.`);
     return;
   }
-  if (!confirm(`선택한 ${selected.length}건을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`선택한 ${selected.length}건을 삭제하시겠습니까?`, {
+    title: '실적 행 삭제',
+    confirmText: '삭제',
+  })) return;
   const toRemove = [];
   for (const row of selected) {
     if (row.type === '입금' && row._receipt_id) {
@@ -1629,8 +1644,9 @@ async function _doSaveLedger() {
       }
     });
     if (salesNoPartner.length > 0) {
-      const fill = confirm(
-        `거래처가 비어있는 매출 ${salesNoPartner.length}건이 있습니다.\n${getTermLabel('customer', '고객')}(${endName})으로 자동 채우시겠습니까?`
+      const fill = await showConfirmDialog(
+        `거래처가 비어있는 매출 ${salesNoPartner.length}건이 있습니다.\n${getTermLabel('customer', '고객')}(${endName})으로 자동 채우시겠습니까?`,
+        { title: '거래처 자동 채우기', confirmText: '채우기' }
       );
       if (fill) {
         salesNoPartner.forEach(n => { n.setDataValue('partner_name', endName); });
@@ -1750,7 +1766,7 @@ async function reloadLedger() {
   renderGpSummary();
 }
 
-function bulkConfirmTransactionLines() {
+async function bulkConfirmTransactionLines() {
   const selected = ledgerApi.getSelectedRows();
   let targets;
   let autoMode = false;
@@ -1800,7 +1816,10 @@ function bulkConfirmTransactionLines() {
   const msg = autoMode
     ? `발행일이 오늘 이전인 예정 ${targets.length}건을 확정하시겠습니까?`
     : `선택한 ${targets.length}건을 확정하시겠습니까?`;
-  if (!confirm(msg)) return;
+  if (!await showConfirmDialog(msg, {
+    title: '일괄 확정',
+    confirmText: '확정',
+  })) return;
 
   _clearMissingHighlight(ledgerApi);
   targets.forEach(r => { r.status = '확정'; });
@@ -2049,7 +2068,10 @@ async function submitAddPeriod() {
     const startYear = parseInt(startMonth.split('-')[0]);
     const endYear = parseInt(endMonth.split('-')[0]);
     if (endYear < year || startYear > year) {
-      if (!confirm(`사업기간(${startMonth} ~ ${endMonth})이 귀속연도(${year})와 겹치지 않습니다.\n계속 진행하시겠습니까?`)) return;
+      if (!await showConfirmDialog(`사업기간(${startMonth} ~ ${endMonth})이 귀속연도(${year})와 겹치지 않습니다.\n계속 진행하시겠습니까?`, {
+        title: '기간 경고',
+        confirmText: '계속',
+      })) return;
     }
   }
 
@@ -2562,7 +2584,10 @@ async function deletePeriodById(periodId, label) {
   const msg = allPeriods.length <= 1
     ? `${label} Period를 삭제하시겠습니까?\n마지막 Period이므로 사업이 삭제(비활성) 처리됩니다.`
     : `${label} Period를 삭제하시겠습니까?\nForecast, 매출/매입 실적, 입금 데이터가 모두 삭제됩니다.`;
-  if (!confirm(msg)) return;
+  if (!await showConfirmDialog(msg, {
+    title: 'Period 삭제',
+    confirmText: '삭제',
+  })) return;
 
   const res = await fetch(`/api/v1/contract-periods/${periodId}`, { method: 'DELETE' });
   if (!res.ok) {
@@ -2856,7 +2881,10 @@ async function deleteSelectedReceiptRows() {
   if (!me?.permissions?.can_delete_receipt) { alert('관리자만 삭제할 수 있습니다.'); return; }
   const selected = receiptApi.getSelectedRows();
   if (!selected.length) { alert('삭제할 행을 선택해주세요.'); return; }
-  if (!confirm(`선택한 ${selected.length}건을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`선택한 ${selected.length}건을 삭제하시겠습니까?`, {
+    title: '입금 행 삭제',
+    confirmText: '삭제',
+  })) return;
   const toRemove = [];
   for (const row of selected) {
     if (row.id) {
@@ -3140,7 +3168,10 @@ function refreshReceiptMatchSummary(allocations) {
 
 async function autoMatch() {
   if (!contractId) return;
-  if (!confirm('자동 배분(FIFO)을 재실행하시겠습니까? 기존 자동 배분이 재계산됩니다.')) return;
+  if (!await showConfirmDialog('자동 배분(FIFO)을 재실행하시겠습니까? 기존 자동 배분이 재계산됩니다.', {
+    title: '자동 배분 재실행',
+    confirmText: '재실행',
+  })) return;
   const res = await fetch(`/api/v1/contracts/${contractId}/receipt-matches/auto`, { method: 'POST' });
   if (!res.ok) { showToast('자동 배분 실패', 'error'); return; }
   showToast('자동 배분이 완료되었습니다.');
@@ -3210,7 +3241,10 @@ async function deleteSelectedMatches() {
   if (!receiptMatchApi) return;
   const selected = receiptMatchApi.getSelectedRows();
   if (!selected.length) { showToast('삭제할 배분을 선택하세요.', 'error'); return; }
-  if (!confirm(`선택한 ${selected.length}건의 배분을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`선택한 ${selected.length}건의 배분을 삭제하시겠습니까?`, {
+    title: '배분 삭제',
+    confirmText: '삭제',
+  })) return;
 
   let failed = 0;
   for (const row of selected) {
@@ -3232,4 +3266,3 @@ document.getElementById('btn-match-save')?.addEventListener('click', saveManualM
 document.getElementById('btn-match-cancel')?.addEventListener('click', () => {
   document.getElementById('modal-add-receipt-match')?.close();
 });
-

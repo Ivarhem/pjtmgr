@@ -2,6 +2,17 @@
 
 let _pcPartnersCache = [];
 let _pcContactsCache = [];
+const RELATED_PARTNER_ROLE_LABELS = {
+  maintainer: "유지보수",
+  supplier: "공급",
+  installer: "설치",
+  operator: "운영",
+  carrier: "통신",
+  vendor: "벤더",
+  lessor: "임대",
+  owner: "소유",
+  other: "기타",
+};
 
 async function loadProjectPartners() {
   const container = document.getElementById("partners-list");
@@ -33,7 +44,7 @@ function renderProjectPartners(container, partners, contacts) {
   if (partners.length === 0) {
     const p = document.createElement("p");
     p.className = "text-muted pc-placeholder";
-    p.textContent = "연결된 업체가 없습니다. '업체 연결' 버튼으로 추가하세요.";
+    p.textContent = "배정된 협력업체가 없습니다. '협력업체 배정' 버튼으로 추가하세요.";
     container.appendChild(p);
     return;
   }
@@ -71,6 +82,40 @@ function renderProjectPartners(container, partners, contacts) {
     delBtn.addEventListener("click", () => deleteProjectPartner(pc.id));
     header.appendChild(delBtn);
     card.appendChild(header);
+
+    const assignedAssets = Array.isArray(pc.assigned_assets) ? pc.assigned_assets : [];
+    if (assignedAssets.length > 0) {
+      const assetSection = document.createElement("div");
+      assetSection.className = "pc-assets";
+      const assetTitle = document.createElement("p");
+      assetTitle.className = "text-muted pc-assets-title";
+      assetTitle.textContent = "담당 자산";
+      assetSection.appendChild(assetTitle);
+
+      const assetList = document.createElement("div");
+      assetList.className = "pc-asset-list";
+      assignedAssets.forEach((asset) => {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "pc-asset-chip";
+        const parts = [];
+        if (asset.project_asset_number) parts.push(asset.project_asset_number);
+        if (asset.asset_code) parts.push(asset.asset_code);
+        if (asset.hostname) parts.push(asset.hostname);
+        const roleLabel = RELATED_PARTNER_ROLE_LABELS[asset.relation_type] || asset.relation_type || "기타";
+        chip.addEventListener("click", () => {
+          window.location.href = "/assets?asset_id=" + encodeURIComponent(String(asset.id));
+        });
+        chip.innerHTML = `
+          <strong>${escapeHtml(asset.asset_name || "(자산명 없음)")}</strong>
+          <span>${escapeHtml(roleLabel)}${asset.is_primary ? " · 주담당" : ""}</span>
+          ${parts.length ? `<small>${escapeHtml(parts.join(" · "))}</small>` : ""}
+        `;
+        assetList.appendChild(chip);
+      });
+      assetSection.appendChild(assetList);
+      card.appendChild(assetSection);
+    }
 
     const pcContacts = contacts.filter(c => c.project_partner_id === pc.id);
     if (pcContacts.length > 0) {
@@ -114,7 +159,7 @@ async function openAddPartnerModal() {
   document.getElementById("pc-scope-text").value = "";
   document.getElementById("pc-note").value = "";
   document.getElementById("pc-role").value = "고객사";
-  document.getElementById("modal-pc-title").textContent = "업체 연결";
+  document.getElementById("modal-pc-title").textContent = "협력업체 배정";
   const sel = document.getElementById("pc-partner-id");
   sel.textContent = "";
   try {
@@ -142,10 +187,10 @@ async function saveProjectPartner() {
   try {
     if (pcId) {
       await apiFetch("/api/v1/period-partners/" + pcId, { method: "PATCH", body: payload });
-      showToast("업체 정보가 수정되었습니다.");
+      showToast("협력업체 정보가 수정되었습니다.");
     } else {
       await apiFetch("/api/v1/period-partners", { method: "POST", body: payload });
-      showToast("업체가 연결되었습니다.");
+      showToast("협력업체가 배정되었습니다.");
     }
     pcModal.close();
     loadProjectPartners();
@@ -153,10 +198,10 @@ async function saveProjectPartner() {
 }
 
 async function deleteProjectPartner(pcId) {
-  confirmDelete("업체 연결을 해제하시겠습니까?", async () => {
+  confirmDelete("협력업체 배정을 해제하시겠습니까?", async () => {
     try {
       await apiFetch("/api/v1/period-partners/" + pcId, { method: "DELETE" });
-      showToast("업체 연결이 해제되었습니다.");
+      showToast("협력업체 배정이 해제되었습니다.");
       loadProjectPartners();
     } catch (err) { showToast(err.message, "error"); }
   });
@@ -230,4 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => loadProjectPartners(), 400);
 });
 
-window.addEventListener("ctx-changed", () => loadProjectPartners());
+window.addEventListener("ctx-changed", () => {
+  loadProjectPartners();
+});

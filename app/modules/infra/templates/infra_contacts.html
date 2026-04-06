@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}업체 - 프로젝트관리{% endblock %}
+{% block title %}협력업체 - 프로젝트관리{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
@@ -13,21 +13,21 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>프로젝트 업체</h1>
-  <button class="btn btn-primary" id="btn-add-partner">업체 연결</button>
+  <h1>프로젝트 협력업체</h1>
+  <button class="btn btn-primary" id="btn-add-partner">협력업체 배정</button>
 </div>
 
 <p class="text-secondary text-sm mb-md">
-  선택한 고객사의 프로젝트에 연결된 업체(수행사/유지보수사/통신사/벤더)를 관리합니다.
+  현재 고객사와 프로젝트 범위를 기준으로 참여 업체, 담당자, 담당 자산 및 운영 범위를 함께 관리합니다.
 </p>
 
 <div id="partners-list" class="project-partners-grid">
   <p class="text-muted">고객사를 선택하세요.</p>
 </div>
 
-<!-- 업체 연결 모달 -->
+<!-- 협력업체 배정 모달 -->
 <dialog id="modal-project-partner" class="modal">
-  <h2 id="modal-pc-title">업체 연결</h2>
+  <h2 id="modal-pc-title">협력업체 배정</h2>
   <form class="form-grid">
     <input type="hidden" id="pc-id">
     <label>
@@ -45,8 +45,8 @@
       </select>
     </label>
     <label class="full-width">
-      범위/설명
-      <input type="text" id="pc-scope-text">
+      담당 범위/자산
+      <input type="text" id="pc-scope-text" placeholder="예: 방화벽 운영, 백업 서버, 대외망 회선">
     </label>
     <label class="full-width">
       비고

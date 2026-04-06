@@ -137,6 +137,43 @@
 }
 .pc-scope { font-size: 0.85rem; }
 .pc-spacer { flex: 1; }
+.pc-assets {
+  margin: 10px 0 12px;
+}
+.pc-assets-title {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+}
+.pc-asset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pc-asset-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color, #e2e8f0);
+  cursor: pointer;
+}
+.pc-asset-chip strong {
+  font-size: 0.85rem;
+}
+.pc-asset-chip span,
+.pc-asset-chip small {
+  color: var(--text-color-secondary);
+  line-height: 1.35;
+}
+.pc-asset-chip:hover {
+  border-color: color-mix(in srgb, var(--border-color, #e2e8f0) 45%, var(--primary-color) 55%);
+  background: color-mix(in srgb, var(--bg-secondary) 88%, var(--primary-color) 12%);
+}
 .pc-contacts-table {
   width: 100%;
   font-size: 0.85rem;

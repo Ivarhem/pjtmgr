@@ -1031,7 +1031,10 @@ async function deletePartner() {
   if (!selectedPartnerId) { alert('삭제할 거래처를 선택하세요.'); return; }
   const cust = allPartners.find(d => d.id === selectedPartnerId);
   const name = cust ? cust.name : '';
-  if (!confirm(`"${name}" 거래처를 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`"${name}" 거래처를 삭제하시겠습니까?`, {
+    title: '거래처 삭제',
+    confirmText: '삭제',
+  })) return;
   const res = await fetch(`/api/v1/partners/${selectedPartnerId}`, { method: 'DELETE' });
   if (res.ok) {
     selectedPartnerId = null;
@@ -1091,7 +1094,10 @@ async function submitNewMasterContact() {
 }
 
 async function deleteMasterContact(contactId, contactName) {
-  if (!confirm(`${contactName} 담당자를 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`${contactName} 담당자를 삭제하시겠습니까?`, {
+    title: '담당자 삭제',
+    confirmText: '삭제',
+  })) return;
   const res = await fetch(`/api/v1/partners/contacts/${contactId}`, { method: 'DELETE' });
   if (res.ok) {
     loadedTabs['contacts'] = false;

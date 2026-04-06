@@ -141,8 +141,11 @@ function renderIntegrityVendorAliasChips() {
       xBtn.className = "tag-chip-x";
       xBtn.dataset.idx = idx;
       xBtn.textContent = "\u00d7";
-      xBtn.addEventListener("click", () => {
-        if (confirm(`별칭 '${alias}'을(를) 삭제하시겠습니까?`)) {
+      xBtn.addEventListener("click", async () => {
+        if (await showConfirmDialog(`별칭 '${alias}'을(를) 삭제하시겠습니까?`, {
+          title: "별칭 삭제",
+          confirmText: "삭제",
+        })) {
           _integrityVendorAliases.splice(idx, 1);
           renderIntegrityVendorAliasChips();
         }
@@ -223,7 +226,10 @@ async function deleteIntegrityVendor() {
     alert(`연결된 제품 ${vendorRow.product_count}개가 있어 삭제할 수 없습니다.`);
     return;
   }
-  if (!confirm(`제조사 '${_integrityVendorOriginal}'과(와) 모든 별칭을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`제조사 '${_integrityVendorOriginal}'과(와) 모든 별칭을 삭제하시겠습니까?`, {
+    title: "제조사 삭제",
+    confirmText: "삭제",
+  })) return;
   try {
     await apiFetch(`/api/v1/catalog-integrity/vendors/${encodeURIComponent(_integrityVendorOriginal)}`, { method: "DELETE" });
     showToast("제조사를 삭제했습니다.", "success");
@@ -495,7 +501,10 @@ function renderMdmSimilarCard(item, targetProduct, isDismissed = false) {
       const sourceLabel = (item.vendor || "") + " " + (item.name || "");
       const targetLabel = ((targetProduct.vendor || "") + " " + (targetProduct.name || "")).trim();
       const msg = "\uc81c\ud488 '" + sourceLabel + "'(\uc790\uc0b0 " + (item.asset_count ?? 0) + "\uac74)\uc744 '" + targetLabel + "'\uc73c\ub85c \ubcd1\ud569\ud569\ub2c8\ub2e4.\n\n\uc790\uc0b0\uc774 \ub300\uc0c1 \uc81c\ud488\uc73c\ub85c \uc774\uc804\ub418\uace0, \uc6d0\ubcf8 \uc81c\ud488\uc740 \uc0ad\uc81c\ub429\ub2c8\ub2e4.";
-      if (!confirm(msg)) return;
+      if (!await showConfirmDialog(msg, {
+        title: "제품 병합",
+        confirmText: "병합",
+      })) return;
 
       try {
         const result = await apiFetch("/api/v1/product-catalog/merge", {

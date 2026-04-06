@@ -7,21 +7,25 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func
+from sqlalchemy import Table, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.auth.authorization import has_full_contract_scope, list_accessible_contract_ids
-from app.modules.accounting.models.contract import Contract
-from app.modules.accounting.models.contract_contact import ContractContact
-from app.modules.accounting.models.contract_period import ContractPeriod
+from app.core.database import Base
+from app.modules.common.models.contract import Contract
+from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.partner import Partner
-from app.modules.accounting.models.receipt import Receipt
-from app.modules.accounting.models.receipt_match import ReceiptMatch
-from app.modules.accounting.models.transaction_line import TransactionLine
 from app.core.exceptions import NotFoundError
 
 if TYPE_CHECKING:
     from app.modules.common.models.user import User
+
+
+def _get_table(db: Session, table_name: str) -> Table:
+    table = Base.metadata.tables.get(table_name)
+    if table is not None:
+        return table
+    return Table(table_name, Base.metadata, autoload_with=db.get_bind())
 
 
 def _related_contract_ids(db: Session, partner_id: int) -> set[int]:
@@ -35,6 +39,10 @@ def _related_contract_ids(db: Session, partner_id: int) -> set[int]:
 
 def _related_contract_roles(db: Session, partner_id: int) -> dict[str, set[int]]:
     """거래처와 관련된 사업 ID를 역할별로 분류하여 반환한다."""
+    contract_contacts = _get_table(db, "contract_contacts")
+    transaction_lines = _get_table(db, "transaction_lines")
+    receipts = _get_table(db, "receipts")
+
     end_cust_ids = {
         r[0] for r in db.query(Contract.id).filter(Contract.end_partner_id == partner_id).all()
     }
@@ -48,28 +56,28 @@ def _related_contract_roles(db: Session, partner_id: int) -> dict[str, set[int]]
     contact_cust_ids = {
         r[0]
         for r in db.query(ContractPeriod.contract_id)
-        .join(ContractContact, ContractContact.contract_period_id == ContractPeriod.id)
-        .filter(ContractContact.partner_id == partner_id)
+        .join(contract_contacts, contract_contacts.c.contract_period_id == ContractPeriod.id)
+        .filter(contract_contacts.c.partner_id == partner_id)
         .distinct()
         .all()
     }
     cost_cust_ids = {
         r[0]
-        for r in db.query(TransactionLine.contract_id)
-        .filter(TransactionLine.partner_id == partner_id, TransactionLine.line_type == "cost")
+        for r in db.query(transaction_lines.c.contract_id)
+        .filter(transaction_lines.c.partner_id == partner_id, transaction_lines.c.line_type == "cost")
         .distinct()
         .all()
     }
     revenue_cust_ids = {
         r[0]
-        for r in db.query(TransactionLine.contract_id)
-        .filter(TransactionLine.partner_id == partner_id, TransactionLine.line_type == "revenue")
+        for r in db.query(transaction_lines.c.contract_id)
+        .filter(transaction_lines.c.partner_id == partner_id, transaction_lines.c.line_type == "revenue")
         .distinct()
         .all()
     }
     receipt_cust_ids = {
         r[0]
-        for r in db.query(Receipt.contract_id).filter(Receipt.partner_id == partner_id).distinct().all()
+        for r in db.query(receipts.c.contract_id).filter(receipts.c.partner_id == partner_id).distinct().all()
     }
     return {
         "end_partner": end_cust_ids,
@@ -159,19 +167,19 @@ def list_related_contracts(db: Session, partner_id: int, current_user: User | No
         fin_rows = (
             db.query(
                 ContractPeriod.id,
-                TransactionLine.line_type,
-                func.sum(TransactionLine.supply_amount),
+                transaction_lines.c.line_type,
+                func.sum(transaction_lines.c.supply_amount),
             )
             .join(
-                TransactionLine,
-                TransactionLine.contract_id == ContractPeriod.contract_id,
+                transaction_lines,
+                transaction_lines.c.contract_id == ContractPeriod.contract_id,
             )
             .filter(
                 ContractPeriod.id.in_(period_ids),
-                TransactionLine.revenue_month >= ContractPeriod.start_month,
-                TransactionLine.revenue_month <= ContractPeriod.end_month,
+                transaction_lines.c.revenue_month >= ContractPeriod.start_month,
+                transaction_lines.c.revenue_month <= ContractPeriod.end_month,
             )
-            .group_by(ContractPeriod.id, TransactionLine.line_type)
+            .group_by(ContractPeriod.id, transaction_lines.c.line_type)
             .all()
         )
         for pid, lt, total in fin_rows:
@@ -188,15 +196,15 @@ def list_related_contracts(db: Session, partner_id: int, current_user: User | No
         rev_period_rows = (
             db.query(ContractPeriod.id)
             .join(
-                TransactionLine,
-                TransactionLine.contract_id == ContractPeriod.contract_id,
+                transaction_lines,
+                transaction_lines.c.contract_id == ContractPeriod.contract_id,
             )
             .filter(
                 ContractPeriod.id.in_(period_ids),
-                TransactionLine.partner_id == partner_id,
-                TransactionLine.line_type == "revenue",
-                TransactionLine.revenue_month >= ContractPeriod.start_month,
-                TransactionLine.revenue_month <= ContractPeriod.end_month,
+                transaction_lines.c.partner_id == partner_id,
+                transaction_lines.c.line_type == "revenue",
+                transaction_lines.c.revenue_month >= ContractPeriod.start_month,
+                transaction_lines.c.revenue_month <= ContractPeriod.end_month,
             )
             .distinct()
             .all()
@@ -206,15 +214,15 @@ def list_related_contracts(db: Session, partner_id: int, current_user: User | No
         cost_period_rows = (
             db.query(ContractPeriod.id)
             .join(
-                TransactionLine,
-                TransactionLine.contract_id == ContractPeriod.contract_id,
+                transaction_lines,
+                transaction_lines.c.contract_id == ContractPeriod.contract_id,
             )
             .filter(
                 ContractPeriod.id.in_(period_ids),
-                TransactionLine.partner_id == partner_id,
-                TransactionLine.line_type == "cost",
-                TransactionLine.revenue_month >= ContractPeriod.start_month,
-                TransactionLine.revenue_month <= ContractPeriod.end_month,
+                transaction_lines.c.partner_id == partner_id,
+                transaction_lines.c.line_type == "cost",
+                transaction_lines.c.revenue_month >= ContractPeriod.start_month,
+                transaction_lines.c.revenue_month <= ContractPeriod.end_month,
             )
             .distinct()
             .all()
@@ -225,10 +233,10 @@ def list_related_contracts(db: Session, partner_id: int, current_user: User | No
     period_contact_set: set[int] = set()
     if period_ids:
         contact_period_rows = (
-            db.query(ContractContact.contract_period_id)
+            db.query(contract_contacts.c.contract_period_id)
             .filter(
-                ContractContact.contract_period_id.in_(period_ids),
-                ContractContact.partner_id == partner_id,
+                contract_contacts.c.contract_period_id.in_(period_ids),
+                contract_contacts.c.partner_id == partner_id,
             )
             .distinct()
             .all()
@@ -338,10 +346,16 @@ def list_partner_financials(db: Session, partner_id: int, current_user: User | N
 
     # 개별 TransactionLine 조회 → period 매칭
     txn_rows = (
-        db.query(TransactionLine)
+        db.query(
+            transaction_lines.c.contract_id,
+            transaction_lines.c.partner_id,
+            transaction_lines.c.line_type,
+            transaction_lines.c.supply_amount,
+            transaction_lines.c.revenue_month,
+        )
         .filter(
-            TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.partner_id == partner_id,
+            transaction_lines.c.contract_id.in_(contract_ids),
+            transaction_lines.c.partner_id == partner_id,
         )
         .all()
     )
@@ -419,22 +433,25 @@ def list_partner_financials(db: Session, partner_id: int, current_user: User | N
 
     # 미수금
     confirmed_revenue = (
-        db.query(func.coalesce(func.sum(TransactionLine.supply_amount), 0))
+        db.query(func.coalesce(func.sum(transaction_lines.c.supply_amount), 0))
         .filter(
-            TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.partner_id == partner_id,
-            TransactionLine.line_type == "revenue",
-            TransactionLine.status == "확정",
+            transaction_lines.c.contract_id.in_(contract_ids),
+            transaction_lines.c.partner_id == partner_id,
+            transaction_lines.c.line_type == "revenue",
+            transaction_lines.c.status == "확정",
         )
         .scalar()
     )
     matched_total = (
-        db.query(func.coalesce(func.sum(ReceiptMatch.matched_amount), 0))
-        .join(ReceiptMatch.transaction_line)
+        db.query(func.coalesce(func.sum(receipt_matches.c.matched_amount), 0))
+        .join(
+            transaction_lines,
+            transaction_lines.c.id == receipt_matches.c.transaction_line_id,
+        )
         .filter(
-            TransactionLine.contract_id.in_(contract_ids),
-            TransactionLine.partner_id == partner_id,
-            TransactionLine.line_type == "revenue",
+            transaction_lines.c.contract_id.in_(contract_ids),
+            transaction_lines.c.partner_id == partner_id,
+            transaction_lines.c.line_type == "revenue",
         )
         .scalar()
     )
@@ -463,12 +480,20 @@ def list_partner_receipts(db: Session, partner_id: int, current_user: User | Non
         return {"summary": {"total_receipt": 0, "ar_balance": 0}, "receipts": []}
 
     rows = (
-        db.query(Receipt)
-        .filter(
-            Receipt.contract_id.in_(contract_ids),
-            Receipt.partner_id == partner_id,
+        db.query(
+            receipts_table.c.id,
+            receipts_table.c.contract_id,
+            receipts_table.c.partner_id,
+            receipts_table.c.receipt_date,
+            receipts_table.c.amount,
+            receipts_table.c.description,
+            receipts_table.c.revenue_month,
         )
-        .order_by(Receipt.contract_id, Receipt.receipt_date.desc())
+        .filter(
+            receipts_table.c.contract_id.in_(contract_ids),
+            receipts_table.c.partner_id == partner_id,
+        )
+        .order_by(receipts_table.c.contract_id, receipts_table.c.receipt_date.desc())
         .all()
     )
 
@@ -584,3 +609,10 @@ def list_partner_receipts(db: Session, partner_id: int, current_user: User | Non
         "summary": {"total_receipt": total_receipt, "ar_balance": ar_balance},
         "receipts": receipts,
     }
+    transaction_lines = _get_table(db, "transaction_lines")
+    contract_contacts = _get_table(db, "contract_contacts")
+
+    transaction_lines = _get_table(db, "transaction_lines")
+    receipt_matches = _get_table(db, "receipt_matches")
+
+    receipts_table = _get_table(db, "receipts")

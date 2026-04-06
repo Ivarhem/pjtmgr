@@ -4,15 +4,6 @@ let _racks = [];
 let _selectedCenterId = null;
 let _selectedRoomId = null;
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 function selectedCenter() {
   return _centers.find((item) => item.id === _selectedCenterId) || null;
 }

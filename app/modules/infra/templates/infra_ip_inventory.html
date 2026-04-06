@@ -7,16 +7,17 @@
 
 {% block content %}
 <div class="tab-nav">
-  <a href="/assets" class="tab-btn">자산 목록</a>
-  <a href="/asset-roles" class="tab-btn">역할 기준 보기</a>
   <a href="/ip-inventory" class="tab-btn active">IP 인벤토리</a>
   <a href="/port-maps" class="tab-btn">포트맵</a>
-  <a href="/physical-layout" class="tab-btn">물리배치</a>
   <div class="tab-nav-actions">
     <button class="btn btn-primary" id="btn-add-subnet">+ 대역 추가</button>
     <button class="btn btn-primary" id="btn-add-ip">IP 등록</button>
   </div>
 </div>
+
+<p class="text-secondary text-sm mb-md">
+  현재 고객사와 프로젝트 범위를 기준으로 IP 대역과 IP 할당 정보를 관리합니다.
+</p>
 
 <div class="split-layout">
   <!-- 좌측: 서브넷 목록 -->

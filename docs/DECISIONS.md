@@ -189,6 +189,22 @@
 
 ---
 
+## common 모델은 infra 전용 FK를 직접 참조하지 않음
+
+### 이유
+
+- `ContractPeriod`는 common 모듈의 공유 엔티티라서 infra 전용 테이블 구조에 ORM 레벨로 결합되면 모듈 경계가 흐려진다
+- Python import 규칙뿐 아니라 ORM 메타데이터에서도 `core <- common <- {accounting, infra}` 방향을 지키는 편이 유지보수와 분리 가능성에 유리하다
+- 프로젝트별 분류 레이아웃 연결은 인프라 기능이지만, 계약단위 식별 자체는 공통 도메인에 남아 있어야 한다
+
+### 영향
+
+- `ContractPeriod.classification_layout_id`는 common 모델에서 plain nullable ID로 유지한다
+- infra 서비스가 이 값을 해석해 `classification_layouts`와 연결한다
+- DB 레벨 FK 정리나 제약 변경은 별도 Alembic migration으로 따라간다
+
+---
+
 ## ~~Partner -> Customer 통합~~ (폐기 — D-015에서 Customer → Partner로 재리네이밍)
 
 ### 이유

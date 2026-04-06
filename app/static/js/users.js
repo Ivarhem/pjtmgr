@@ -10,15 +10,6 @@ const PERMISSION_DEFS = [
   { key: 'catalog_taxonomy_manage', label: '카탈로그기준관리' },
 ];
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
 function getPermissionFlags(row) {
   const permissions = row?.role_permissions || {};
   const modules = permissions.modules || {};
@@ -241,7 +232,10 @@ async function resetPassword() {
     return;
   }
   const names = rows.map((r) => r.name).join(', ');
-  if (!confirm(`${names}의 비밀번호를 로그인 ID로 초기화하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`${names}의 비밀번호를 로그인 ID로 초기화하시겠습니까?`, {
+    title: '비밀번호 초기화',
+    confirmText: '초기화',
+  })) return;
   const results = await Promise.all(
     rows.map((r) => fetch(`/api/v1/users/${r.id}/reset-password`, { method: 'POST' })
       .then(async (res) => ({ res, name: r.name, data: res.ok ? null : await res.json() }))),
@@ -258,7 +252,10 @@ async function deleteSelected() {
     alert('삭제할 사용자를 선택하세요.');
     return;
   }
-  if (!confirm(`선택한 ${rows.length}명을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`선택한 ${rows.length}명을 삭제하시겠습니까?`, {
+    title: '사용자 삭제',
+    confirmText: '삭제',
+  })) return;
   const results = await Promise.all(
     rows.map((r) => fetch(`/api/v1/users/${r.id}`, { method: 'DELETE' }).then(async (res) => ({ res, data: res.ok ? null : await res.json() }))),
   );

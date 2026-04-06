@@ -154,7 +154,11 @@ function renderRoleBasicTab(container) {
   rows.forEach(([label, value]) => {
     const row = document.createElement("div");
     row.className = "detail-row";
-    row.innerHTML = `<strong>${label}</strong><span>${value}</span>`;
+    const strong = document.createElement("strong");
+    strong.textContent = label;
+    const span = document.createElement("span");
+    span.textContent = value;
+    row.append(strong, span);
     wrap.appendChild(row);
   });
   container.appendChild(wrap);
@@ -163,12 +167,13 @@ function renderRoleBasicTab(container) {
 async function renderRoleAssignmentsTab(container) {
   const header = document.createElement("div");
   header.className = "subtab-header";
-  header.innerHTML = `<h3>할당 이력</h3>`;
+  const title = document.createElement("h3");
+  title.textContent = "할당 이력";
   const addBtn = document.createElement("button");
   addBtn.className = "btn btn-sm btn-primary";
   addBtn.textContent = "할당 추가";
   addBtn.addEventListener("click", () => openRoleAssignmentModal());
-  header.appendChild(addBtn);
+  header.append(title, addBtn);
   container.appendChild(header);
 
   try {
@@ -179,11 +184,11 @@ async function renderRoleAssignmentsTab(container) {
     summary.innerHTML = `
       <div class="asset-history-stat">
         <span class="asset-history-stat-label">현재 담당</span>
-        <strong class="asset-history-stat-value">${current ? (current.asset_name || current.asset_code || "할당됨") : "미할당"}</strong>
+        <strong class="asset-history-stat-value">${escapeHtml(current ? (current.asset_name || current.asset_code || "할당됨") : "미할당")}</strong>
       </div>
       <div class="asset-history-stat">
         <span class="asset-history-stat-label">현재 유형</span>
-        <strong class="asset-history-stat-value">${current ? (ASSIGNMENT_TYPE_LABELS[current.assignment_type] || current.assignment_type) : "—"}</strong>
+        <strong class="asset-history-stat-value">${escapeHtml(current ? (ASSIGNMENT_TYPE_LABELS[current.assignment_type] || current.assignment_type) : "—")}</strong>
       </div>
       <div class="asset-history-stat">
         <span class="asset-history-stat-label">할당 이력</span>
@@ -209,12 +214,12 @@ async function renderRoleAssignmentsTab(container) {
         <div class="asset-timeline-marker asset-timeline-marker-${row.is_current ? "current" : "history"}"></div>
         <div class="asset-timeline-main">
           <div class="asset-timeline-meta">
-            <span class="badge">${ASSIGNMENT_TYPE_LABELS[row.assignment_type] || row.assignment_type}</span>
-            <span>${row.valid_from || "시작 미기재"} ~ ${row.valid_to || "현재"}</span>
+            <span class="badge">${escapeHtml(ASSIGNMENT_TYPE_LABELS[row.assignment_type] || row.assignment_type)}</span>
+            <span>${escapeHtml(row.valid_from || "시작 미기재")} ~ ${escapeHtml(row.valid_to || "현재")}</span>
             ${row.is_current ? '<span class="badge badge-active">현재 담당</span>' : ""}
           </div>
-          <div class="asset-timeline-title">${[row.asset_name, row.asset_code].filter(Boolean).join(" / ") || "미지정 자산"}</div>
-          ${row.note ? `<div class="asset-timeline-body">${row.note}</div>` : ""}
+          <div class="asset-timeline-title">${escapeHtml([row.asset_name, row.asset_code].filter(Boolean).join(" / ") || "미지정 자산")}</div>
+          ${row.note ? `<div class="asset-timeline-body">${escapeHtml(row.note)}</div>` : ""}
         </div>
         <div class="asset-timeline-actions"></div>
       `;

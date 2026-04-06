@@ -90,8 +90,107 @@ function fmtDate(v) {
  * @param {string} message - 확인 메시지
  * @param {Function} onConfirm - 확인 시 실행할 콜백
  */
-function confirmDelete(message, onConfirm) {
-  if (confirm(message)) onConfirm();
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+let _confirmDialogState = null;
+
+function ensureConfirmDialog() {
+  if (_confirmDialogState) return _confirmDialogState;
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "modal modal-sm confirm-dialog";
+  dialog.innerHTML = `
+    <h2 id="confirm-dialog-title">확인</h2>
+    <p id="confirm-dialog-message" class="modal-desc confirm-dialog-message"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="confirm-dialog-cancel">취소</button>
+      <button type="button" class="btn btn-danger" id="confirm-dialog-confirm">확인</button>
+    </div>
+  `;
+  document.body.appendChild(dialog);
+
+  const state = {
+    dialog,
+    titleEl: dialog.querySelector("#confirm-dialog-title"),
+    messageEl: dialog.querySelector("#confirm-dialog-message"),
+    cancelBtn: dialog.querySelector("#confirm-dialog-cancel"),
+    confirmBtn: dialog.querySelector("#confirm-dialog-confirm"),
+    resolver: null,
+  };
+
+  const resolveDialog = (confirmed) => {
+    if (!state.resolver) return;
+    const resolver = state.resolver;
+    state.resolver = null;
+    resolver(confirmed);
+  };
+
+  state.cancelBtn.addEventListener("click", () => {
+    dialog.close("cancel");
+    resolveDialog(false);
+  });
+  state.confirmBtn.addEventListener("click", () => {
+    dialog.close("confirm");
+    resolveDialog(true);
+  });
+  dialog.addEventListener("cancel", () => {
+    resolveDialog(false);
+  });
+  dialog.addEventListener("close", () => {
+    if (dialog.returnValue !== "confirm" && dialog.returnValue !== "cancel") {
+      resolveDialog(false);
+    }
+  });
+
+  _confirmDialogState = state;
+  return state;
+}
+
+function showConfirmDialog(message, options = {}) {
+  const state = ensureConfirmDialog();
+  const {
+    title = "확인",
+    confirmText = "확인",
+    cancelText = "취소",
+  } = options;
+
+  if (state.resolver) {
+    state.dialog.close("cancel");
+    state.resolver(false);
+    state.resolver = null;
+  }
+
+  state.titleEl.textContent = title;
+  state.messageEl.textContent = message;
+  state.confirmBtn.textContent = confirmText;
+  state.cancelBtn.textContent = cancelText;
+
+  return new Promise((resolve) => {
+    state.resolver = resolve;
+    state.dialog.showModal();
+    state.cancelBtn.focus();
+  });
+}
+
+async function confirmAction(message, onConfirm, options = {}) {
+  const confirmed = await showConfirmDialog(message, options);
+  if (!confirmed) return;
+  return onConfirm();
+}
+
+function confirmDelete(message, onConfirm, options = {}) {
+  return confirmAction(message, onConfirm, {
+    title: options.title || "삭제 확인",
+    confirmText: options.confirmText || "삭제",
+    cancelText: options.cancelText || "취소",
+  });
 }
 
 /** 토스트 알림 표시
@@ -934,7 +1033,10 @@ async function deleteSelectedContracts(gridApi, loadDataFn) {
 
   const contractNames = rows.map(r => r.contract_name).filter((v, i, a) => a.indexOf(v) === i);
   const preview = contractNames.length <= 3 ? contractNames.join(', ') : `${contractNames.slice(0, 3).join(', ')} 외 ${contractNames.length - 3}건`;
-  if (!confirm(`선택한 ${rows.length}행 (${preview})을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`선택한 ${rows.length}행 (${preview})을 삭제하시겠습니까?`, {
+    title: '사업 삭제',
+    confirmText: '삭제',
+  })) return;
 
   const requests = contractIds.map(contractId => {
     const selected = selectedByContract.get(contractId) || 0;

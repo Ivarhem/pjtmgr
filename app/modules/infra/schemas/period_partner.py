@@ -5,6 +5,17 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class PeriodPartnerAssignedAssetRead(BaseModel):
+    id: int
+    asset_name: str
+    asset_code: str | None = None
+    project_asset_number: str | None = None
+    hostname: str | None = None
+    relation_type: str
+    is_primary: bool = False
+    note: str | None = None
+
+
 class PeriodPartnerCreate(BaseModel):
     contract_period_id: int
     partner_id: int
@@ -31,5 +42,6 @@ class PeriodPartnerRead(BaseModel):
     # enriched
     partner_name: str | None = None
     business_no: str | None = None
+    assigned_assets: list[PeriodPartnerAssignedAssetRead] = []
     created_at: datetime
     updated_at: datetime

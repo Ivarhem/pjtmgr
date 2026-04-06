@@ -4,7 +4,7 @@ from app.modules.common.services import partner as partner_service
 
 
 def test_delete_contact_removes_partner_contact(db_session) -> None:
-    partner = Partner(name="거래처")
+    partner = Partner(partner_code="P001", name="거래처")
     db_session.add(partner)
     db_session.flush()
 

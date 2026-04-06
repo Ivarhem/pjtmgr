@@ -49,6 +49,12 @@
 - 정책은 반드시 `PolicyDefinition`과 `PolicyAssignment`로 분리한다.
 - IP 중복 검증은 업체 범위 내에서 수행한다.
 - 자산명은 업체 내 unique를 기본 원칙으로 한다.
+- 인프라 탐색 구조는 데이터 모델보다 실제 작업 시작점을 우선한다.
+  - 전역 메뉴에서 최소 `프로젝트`, `자산`, `네트워크(IP/포트맵)`, `배치`, `업체`, `이력` 수준의 진입성을 확보하는 방향을 우선 검토한다.
+  - `IP 인벤토리`, `포트맵`, `물리배치`처럼 독립 업무 성격이 강한 화면은 특정 페이지 내부 탭에만 숨기지 않는다.
+- topbar 고객사/계약단위 선택기가 있더라도, 인프라 화면 본문 상단에 현재 컨텍스트를 다시 드러내는 것을 기본 원칙으로 한다.
+  - 최소 노출 정보: 현재 고객사, 현재 계약단위(프로젝트), 현재 범위 필터
+  - 컨텍스트 미선택 상태는 단순 빈 메시지 대신 선택 CTA와 안내를 함께 제공한다.
 - 자산 식별자는 목적별로 분리한다.
   - `asset_code`: 시스템 내부 식별자
   - `project_asset_number`: 프로젝트 수행 기준 관리번호
@@ -72,6 +78,9 @@
 - Excel Import/Export는 업체 단위로 수행한다. Export 시 옵션 계약단위 필터로 해당 계약단위 자산만 포함 가능. 3시트(Inventory/IP대역/Portmap) 구조.
 - 제품 카탈로그 Import는 글로벌(partner_id 불필요). `spec` 도메인(제품+HW스펙)과 `eosl` 도메인(EOS/EOSL 날짜)으로 분리.
 - `ContractPeriod`는 common 모듈에 위치하며, infra에서 `contract_period_id` FK로 참조한다. infra → common 방향 import만 허용.
+- 프로젝트별 분류 레이아웃 연결은 `ContractPeriod.classification_layout_id` 숫자 필드로 유지하되, common ORM이 infra 테이블 FK를 직접 참조하지 않도록 관리한다.
+  - 실제 레이아웃 해석과 검증 책임은 infra 서비스(`classification_layout_service` 등)에 둔다.
+  - DB FK/인덱스 변경이 필요하면 common 모델 변경과 별도 migration으로 따라간다.
 
 ## 상태값 / 코드값 규칙
 

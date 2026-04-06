@@ -341,7 +341,9 @@ async function deleteIp(ip) {
 }
 
 /* ── Events ── */
-document.addEventListener("DOMContentLoaded", initPage);
+document.addEventListener("DOMContentLoaded", () => {
+  initPage();
+});
 initProjectFilterCheckbox();
 document.getElementById("btn-add-subnet").addEventListener("click", openCreateSubnet);
 document.getElementById("btn-cancel-subnet").addEventListener("click", () => subnetModal.close());

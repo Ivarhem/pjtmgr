@@ -673,7 +673,10 @@ async function saveRelation() {
 }
 
 async function deleteRelation(relId) {
-  if (!confirm("이 관계를 삭제하시겠습니까?")) return;
+  if (!await showConfirmDialog("이 관계를 삭제하시겠습니까?", {
+    title: "관계 삭제",
+    confirmText: "삭제",
+  })) return;
   try {
     await apiFetch(`/api/v1/asset-relations/${relId}`, { method: "DELETE" });
     showToast("관계가 삭제되었습니다.");

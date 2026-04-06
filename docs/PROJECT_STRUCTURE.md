@@ -328,6 +328,8 @@ docs/superpowers/plans/
 ├── 2026-03-23-unified-business-model.md    # 사업/계약단위 통합
 ├── 2026-03-23-code-numbering.md            # 코드 채번 체계
 ├── 2026-03-20-customer-centric-infra-plan.md # 고객 중심 인프라 전환
+├── 2026-04-06-infra-navigation-ux-review.md # 인프라 메뉴 구조 / UI-UX 개선안
+├── 2026-04-06-refactoring-roadmap.md       # 전역 리팩토링 실행 로드맵
 ├── 2026-03-18-modular-migration-plan.md    # 모듈 분리 마이그레이션
 ├── 2026-03-18-infra-module-enhancement-plan.md # 인프라 모듈 개선
 └── 2026-03-18-infra-phase2-plan.md         # 인프라 Phase 2
@@ -507,7 +509,14 @@ alembic/
     ├── 0052_add_catalog_attribute_option_aliases.py # 속성 옵션 별칭 추가
     ├── 0053_add_domain_scope_to_product_family.py # 제품군 도메인 scope 추가
     ├── 0054_expand_catalog_seeds.py              # 카탈로그 시드 확장 (속성 옵션, 벤더 별칭, 제품)
-    └── 0055_option_label_kr.py                   # 속성 옵션 label_kr 컬럼 추가 + 한/영 backfill
+    ├── 0055_option_label_kr.py                   # 속성 옵션 label_kr 컬럼 추가 + 한/영 backfill
+    ├── 0056_product_catalog_list_cache.py        # 제품 목록 캐시 테이블
+    ├── 0057_rename_hardware_model_id_to_model_id.py # assets.hardware_model_id -> model_id
+    ├── 0058_add_generic_domain_option.py         # generic 도메인 옵션 추가
+    ├── 0059_product_similarity_dismissal.py      # 유사 제품 무시 기록
+    ├── 0060_product_similar_count.py             # 제품 유사 개수 컬럼 추가
+    ├── 0061_drop_contract_period_classification_layout_fk.py # contract_periods 분류 레이아웃 FK 제거
+    └── 91fa5696df75_add_catalog_vendor_meta_table.py # 카탈로그 제조사 메타 테이블
 ```
 
 ## 문서

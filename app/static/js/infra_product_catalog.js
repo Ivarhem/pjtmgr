@@ -82,15 +82,6 @@ const CATALOG_IMPORT_STATUS_LABELS = {
 
 const CATALOG_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 async function loadCatalogPermissions() {
   try {
     const me = window.__me || await apiFetch("/api/v1/auth/me");
@@ -1619,7 +1610,11 @@ async function deleteCatalogClassificationNode() {
     return;
   }
   const node = getSelectedCatalogClassificationNode();
-  if (!node || !confirm(`분류 "${node.node_name}"을(를) 삭제하시겠습니까?`)) return;
+  if (!node) return;
+  if (!await showConfirmDialog(`분류 "${node.node_name}"을(를) 삭제하시겠습니까?`, {
+    title: "분류 삭제",
+    confirmText: "삭제",
+  })) return;
   const attributeKey = getCatalogPrimaryLevelKey(node.level);
   const options = await loadCatalogAttributeOptions(attributeKey, false);
   const option = options.find((item) => item.label === getCatalogNodeOptionLabel(node.node_name, node.level));

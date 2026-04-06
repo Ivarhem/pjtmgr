@@ -119,7 +119,7 @@ def ensure_bootstrap_admin(
 
 def delete_user(db: Session, user_id: int) -> None:
     """사용자 삭제. 미존재 시 NotFoundError, 관리자 삭제 시 BusinessRuleError."""
-    from app.modules.accounting.models.contract import Contract
+    from app.modules.common.models.contract import Contract
 
     obj = db.get(User, user_id)
     if not obj:

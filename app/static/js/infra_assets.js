@@ -103,15 +103,6 @@ const ASSET_EVENT_TEMPLATES = {
   },
 };
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 function formatDateTime(value) {
   if (!value) return "—";
   const date = value instanceof Date ? value : new Date(value);
@@ -416,6 +407,7 @@ let _assetRoleOptions = [];
 let _layoutCentersCache = [];
 const _layoutRoomsCache = new Map();
 const _layoutRacksCache = new Map();
+let _requestedAssetId = null;
 
 const NUMERIC_FIELDS = ["size_unit", "lc_count", "ha_count", "utp_count", "power_count", "year_acquired"];
 const ASSET_LAYOUT_WIDTH_KEY = "infra_assets_list_width_percent";
@@ -964,7 +956,41 @@ function rememberSelectedAssetState(asset) {
   localStorage.setItem(ASSET_DETAIL_LAST_PARTNER_KEY, String(partnerId));
 }
 
+function getRequestedAssetId() {
+  if (_requestedAssetId !== null) return _requestedAssetId;
+  const raw = new URLSearchParams(window.location.search).get("asset_id");
+  const parsed = raw ? Number(raw) : NaN;
+  _requestedAssetId = Number.isFinite(parsed) ? parsed : 0;
+  return _requestedAssetId;
+}
+
+function consumeRequestedAssetId() {
+  _requestedAssetId = 0;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("asset_id");
+  window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+}
+
+function openAssetDetailFromRows(rows, assetId) {
+  const match = (rows || []).find((row) => row.id === assetId);
+  if (!match) return false;
+  showAssetDetail(match);
+  if (gridApi) {
+    gridApi.forEachNode((node) => {
+      if (node.data?.id === assetId) node.setSelected(true);
+    });
+  }
+  return true;
+}
+
 function restoreAssetDetailState(rows) {
+  const requestedAssetId = getRequestedAssetId();
+  if (requestedAssetId > 0) {
+    if (openAssetDetailFromRows(rows, requestedAssetId)) {
+      consumeRequestedAssetId();
+    }
+    return;
+  }
   const shouldOpen = localStorage.getItem(ASSET_DETAIL_OPEN_KEY) === "1";
   const lastId = Number(localStorage.getItem(ASSET_DETAIL_LAST_ID_KEY));
   const lastPartnerId = localStorage.getItem(ASSET_DETAIL_LAST_PARTNER_KEY);
@@ -972,14 +998,7 @@ function restoreAssetDetailState(rows) {
   if (!shouldOpen || !Number.isFinite(lastId) || !lastPartnerId || lastPartnerId !== currentPartnerId) {
     return;
   }
-  const match = (rows || []).find((row) => row.id === lastId);
-  if (!match) return;
-  showAssetDetail(match);
-  if (gridApi) {
-    gridApi.forEachNode((node) => {
-      if (node.data?.id === lastId) node.setSelected(true);
-    });
-  }
+  openAssetDetailFromRows(rows, lastId);
 }
 
 function syncAssetLayoutState(isOpen) {
@@ -2392,7 +2411,7 @@ async function renderHistoryTab(container) {
             <span class="badge">${typeLabel}</span>
             <span>${row.occurred_at ? formatDateTime(row.occurred_at) : "시각 미기재"}</span>
           </div>
-          <div class="asset-timeline-title">${row.summary || `${_selectedAsset.asset_name} ${typeLabel}`}</div>
+          <div class="asset-timeline-title">${escapeHtml(row.summary || `${_selectedAsset.asset_name} ${typeLabel}`)}</div>
           ${extraMeta.length ? `<div class="asset-timeline-tags">${extraMeta.map((value) => `<span class="asset-timeline-tag">${escapeHtml(value)}</span>`).join("")}</div>` : ""}
           ${row.detail ? `<div class="asset-timeline-body">${escapeHtml(row.detail).replace(/\\n/g, "<br>")}</div>` : ""}
         </div>

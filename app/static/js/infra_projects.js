@@ -99,8 +99,8 @@ function resetForm() {
   document.getElementById("project-desc").value = "";
   classificationSourceEl.innerHTML = "";
   classificationHintEl.textContent = "선택한 프리셋은 프로젝트별 자산 분류 표시 기준으로 사용됩니다.";
-  classificationGroup.hidden = false;
-  classificationSourceWrapEl.hidden = false;
+  setElementHidden(classificationGroup, false);
+  setElementHidden(classificationSourceWrapEl, false);
 }
 
 async function openCreateModal() {
@@ -124,7 +124,7 @@ function openEditModal(period) {
   document.getElementById("start-date").value = period.start_month ? period.start_month.slice(0, 10) : "";
   document.getElementById("end-date").value = period.end_month ? period.end_month.slice(0, 10) : "";
   document.getElementById("project-desc").value = period.description || "";
-  classificationGroup.hidden = true;
+  setElementHidden(classificationGroup, true);
   document.getElementById("modal-project-title").textContent = "프로젝트 수정";
   document.getElementById("btn-save-project").textContent = "저장";
   modal.showModal();
@@ -137,7 +137,7 @@ async function ensureClassificationLayouts() {
 }
 
 function refreshClassificationSourceOptions() {
-  classificationSourceWrapEl.hidden = false;
+  setElementHidden(classificationSourceWrapEl, false);
   classificationSourceEl.innerHTML = "";
 
   const choices = _classificationLayouts || [];
@@ -268,4 +268,6 @@ document.getElementById("chk-active-projects").addEventListener("change", (event
   applyProjectFilters();
 });
 
-window.addEventListener("ctx-changed", () => loadPeriods());
+window.addEventListener("ctx-changed", () => {
+  loadPeriods();
+});

@@ -46,4 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setTimeout(() => loadHistory(), 400);
 });
 
-window.addEventListener("ctx-changed", () => loadHistory());
+window.addEventListener("ctx-changed", () => {
+  loadHistory();
+});

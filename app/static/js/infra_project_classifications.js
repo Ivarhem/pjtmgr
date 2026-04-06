@@ -9,15 +9,6 @@ const CLASSIFICATION_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "�
 const CLASSIFICATION_TREE_STATE_KEY = "project_classification_tree_state";
 const CLASSIFICATION_LAYOUT_WIDTH_KEY = "project_classification_layout_width";
 
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
 function currentProjectId() {
   return getCtxProjectId();
 }

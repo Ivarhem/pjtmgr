@@ -212,8 +212,11 @@ function renderSystemAttrAliasChips() {
       xBtn.className = "tag-chip-x";
       xBtn.dataset.idx = idx;
       xBtn.textContent = "\u00d7";
-      xBtn.addEventListener("click", () => {
-        if (confirm(`별칭 '${alias.alias_value}'을(를) 삭제하시겠습니까?`)) {
+      xBtn.addEventListener("click", async () => {
+        if (await showConfirmDialog(`별칭 '${alias.alias_value}'을(를) 삭제하시겠습니까?`, {
+          title: "별칭 삭제",
+          confirmText: "삭제",
+        })) {
           deleteSystemAttrAlias(alias.id, idx);
         }
       });
@@ -269,7 +272,10 @@ function findSystemAttrOptionInGrid(optionId) {
 
 async function deleteSystemAttrOption() {
   if (!_systemAttrCurrentOption) return;
-  if (!confirm(`아이템 '${_systemAttrCurrentOption.label}'을(를) 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`아이템 '${_systemAttrCurrentOption.label}'을(를) 삭제하시겠습니까?`, {
+    title: "아이템 삭제",
+    confirmText: "삭제",
+  })) return;
   try {
     await apiFetch(`/api/v1/catalog-attributes/options/${_systemAttrCurrentOption.id}`, { method: "DELETE" });
     showToast("아이템을 삭제했습니다.", "success");
@@ -688,7 +694,10 @@ async function submitTermConfig() {
 }
 
 async function resetTermLabel(termKey) {
-  if (!confirm("커스텀 표시명을 기본값으로 초기화하시겠습니까?")) return;
+  if (!await showConfirmDialog("커스텀 표시명을 기본값으로 초기화하시겠습니까?", {
+    title: "표시명 초기화",
+    confirmText: "초기화",
+  })) return;
   const res = await fetch(`/api/v1/term-configs/${encodeURIComponent(termKey)}/reset`, { method: "POST" });
   if (res.ok) {
     await loadTermConfigTable();

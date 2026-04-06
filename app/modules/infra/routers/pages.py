@@ -102,15 +102,13 @@ def infra_dashboard_page(request: Request) -> RedirectResponse:
     return RedirectResponse("/periods", status_code=301)
 
 
-@router.get("/inventory/assets", response_class=HTMLResponse)
-def inventory_assets_page(request: Request) -> HTMLResponse:
-    return _templates(request).TemplateResponse(
-        "infra_inventory_assets.html", {"request": request}
-    )
+@router.get("/inventory/assets")
+def inventory_assets_page(request: Request) -> RedirectResponse:
+    """Legacy inventory URL redirects to the unified assets workspace."""
+    return RedirectResponse("/assets", status_code=301)
 
 
-@router.get("/infra-import", response_class=HTMLResponse)
-def infra_import_page(request: Request) -> HTMLResponse:
-    return _templates(request).TemplateResponse(
-        "infra_import.html", {"request": request}
-    )
+@router.get("/infra-import")
+def infra_import_page(request: Request) -> RedirectResponse:
+    """Legacy import page redirects to assets where import is available."""
+    return RedirectResponse("/assets", status_code=301)

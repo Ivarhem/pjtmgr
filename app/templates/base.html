@@ -120,10 +120,12 @@
         {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
         {% if "infra" in enabled_modules and mc == "infra" %}
 
-        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
-        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>업체</span></a></li>
-        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
+        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">계약단위·단계·산출물</small></span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">자산 원장·역할 기준</small></span></a></li>
+        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
+        <li><a href="/physical-layout"><i class="icon" data-lucide="blocks"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">담당자·담당 자산</small></span></a></li>
+        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
 
         {% endif %}
 
@@ -137,14 +139,17 @@
         {% endif %}
         {% if "infra" in enabled_modules and "accounting" not in enabled_modules %}
 
-        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트</span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산</span></a></li>
-        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>업체</span></a></li>
-        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력</span></a></li>
+        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">계약단위·단계·산출물</small></span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">자산 원장·역할 기준</small></span></a></li>
+        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
+        <li><a href="/physical-layout"><i class="icon" data-lucide="blocks"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">담당자·담당 자산</small></span></a></li>
+        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
 
         {% endif %}
 
         <li class="subnav-sep"></li>
+        <li class="nav-group-header">기준정보/관리</li>
 
         {# --- 공통 메뉴 (모듈 무관) --- #}
 
@@ -158,7 +163,10 @@
   <script>
     // Active link highlighting (with group mapping for tabbed pages)
     const _navGroups = {
-      '/ip-inventory': '/assets', '/port-maps': '/assets',
+      '/asset-roles': '/assets',
+      '/inventory/assets': '/assets',
+      '/port-maps': '/ip-inventory',
+      '/infra-import': '/assets',
       '/catalog-management/integrity': '/product-catalog',
       '/catalog-integrity': '/product-catalog',
     };
@@ -170,7 +178,17 @@
     // Scope filter: restore saved value on every page load
     (function() {
       const sf = document.getElementById('ctx-scope-filter');
-      if (sf) sf.value = localStorage.getItem('infra_scope_filter') || 'all';
+      if (!sf) return;
+      sf.value = localStorage.getItem('infra_scope_filter') || 'all';
+      sf.addEventListener('change', () => {
+        localStorage.setItem('infra_scope_filter', sf.value);
+        window.dispatchEvent(new CustomEvent('ctx-changed', {
+          detail: {
+            partnerId: window.getCtxPartnerId ? window.getCtxPartnerId() : null,
+            projectId: window.getCtxProjectId ? window.getCtxProjectId() : null,
+          },
+        }));
+      });
     })();
 
     // Module dropdown toggle
