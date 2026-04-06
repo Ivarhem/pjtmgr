@@ -15,6 +15,20 @@ let roleGridApi;
 let _selectedRole = null;
 let _rolePartnerAssetsCache = [];
 
+/* ── Tree state ── */
+let _roleTreeData = {};            // { domain: { center: { family: [roles] } } }
+let _selectedTreeNode = "";        // e.g. "네트워크>IDC-A>방화벽"
+let _roleTreeSearchQuery = "";
+const _roleTreeCollapsed = new Set();
+
+const ROLE_TREE_COLLAPSED_KEY = "role_tree_collapsed_nodes";
+const ROLE_TREE_SEARCH_KEY = "role_tree_search_query";
+const ROLE_CATEGORY_WIDTH_KEY = "role_category_width";
+const ROLE_LIST_WIDTH_KEY = "role_list_width";
+const ROLE_DETAIL_OPEN_KEY = "role_detail_open";
+
+const UNCLASSIFIED = "미분류";
+
 const roleColumnDefs = [
   { field: "role_name", headerName: "역할명", flex: 1, minWidth: 150, sort: "asc" },
 ];
@@ -30,6 +44,8 @@ async function initRoleGrid() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    isExternalFilterPresent: isRoleExternalFilterPresent,
+    doesExternalFilterPass: doesRoleExternalFilterPass,
     ...buildStandardGridBehavior({
       type: 'detail-panel',
       onSelect: (data) => showRoleDetail(data),
@@ -42,6 +58,9 @@ async function loadAssetRoles() {
   const partnerId = getCtxPartnerId();
   if (!partnerId) {
     roleGridApi.setGridOption("rowData", []);
+    buildRoleTree([]);
+    renderRoleTree();
+    updateRoleListMeta();
     return;
   }
   let url = `/api/v1/asset-roles?partner_id=${partnerId}`;
@@ -52,21 +71,316 @@ async function loadAssetRoles() {
   try {
     const rows = await apiFetch(url);
     roleGridApi.setGridOption("rowData", rows);
+    buildRoleTree(rows);
+    renderRoleTree();
+    applyRoleFilter();
   } catch (err) {
     showToast(err.message, "error");
   }
 }
 
-function applyRoleQuickFilter() {
+/* ── Tree: build ── */
+
+function buildRoleTree(roles) {
+  _roleTreeData = {};
+  (roles || []).forEach((role) => {
+    const domain = role.current_asset_domain || UNCLASSIFIED;
+    const center = role.current_asset_center_label || UNCLASSIFIED;
+    const family = role.current_asset_product_family || UNCLASSIFIED;
+    if (!_roleTreeData[domain]) _roleTreeData[domain] = {};
+    if (!_roleTreeData[domain][center]) _roleTreeData[domain][center] = {};
+    if (!_roleTreeData[domain][center][family]) _roleTreeData[domain][center][family] = [];
+    _roleTreeData[domain][center][family].push(role);
+  });
+}
+
+/* ── Tree: render ── */
+
+function renderRoleTree() {
+  const container = document.getElementById("role-classification-tree");
+  if (!container) return;
+
+  const domainKeys = Object.keys(_roleTreeData).sort((a, b) => a.localeCompare(b, "ko-KR"));
+  if (!domainKeys.length) {
+    container.textContent = "";
+    const emptyDiv = document.createElement("div");
+    emptyDiv.className = "catalog-classification-empty";
+    emptyDiv.textContent = "역할이 없습니다.";
+    container.appendChild(emptyDiv);
+    return;
+  }
+
+  const query = _roleTreeSearchQuery.trim().toLocaleLowerCase("ko-KR");
+
+  const rootUl = document.createElement("ul");
+  rootUl.className = "classification-tree-root";
+  let hasAnyNodes = false;
+
+  domainKeys.forEach((domain) => {
+    const centers = _roleTreeData[domain];
+    const centerKeys = Object.keys(centers).sort((a, b) => a.localeCompare(b, "ko-KR"));
+
+    const centerUl = document.createElement("ul");
+    let domainCount = 0;
+    let domainHasVisibleChildren = false;
+
+    centerKeys.forEach((center) => {
+      const families = centers[center];
+      const familyKeys = Object.keys(families).sort((a, b) => a.localeCompare(b, "ko-KR"));
+
+      const familyUl = document.createElement("ul");
+      let centerCount = 0;
+      let centerHasVisibleChildren = false;
+
+      familyKeys.forEach((family) => {
+        const count = families[family].length;
+        centerCount += count;
+
+        if (query && !family.toLocaleLowerCase("ko-KR").includes(query)
+            && !center.toLocaleLowerCase("ko-KR").includes(query)
+            && !domain.toLocaleLowerCase("ko-KR").includes(query)) {
+          return;
+        }
+
+        const familyKey = `${domain}>${center}>${family}`;
+        const isSelected = _selectedTreeNode === familyKey;
+        familyUl.appendChild(createTreeLeafNode(familyKey, family, count, isSelected));
+        centerHasVisibleChildren = true;
+      });
+
+      if (query && !centerHasVisibleChildren && !center.toLocaleLowerCase("ko-KR").includes(query)
+          && !domain.toLocaleLowerCase("ko-KR").includes(query)) {
+        return;
+      }
+
+      domainCount += centerCount;
+      const centerKey = `${domain}>${center}`;
+      const isSelected = _selectedTreeNode === centerKey;
+      const forceExpanded = !!query;
+      const collapsed = centerHasVisibleChildren && !forceExpanded && _roleTreeCollapsed.has(centerKey);
+      centerUl.appendChild(createTreeBranchNode(centerKey, center, centerCount, isSelected, centerHasVisibleChildren, collapsed, familyUl));
+      domainHasVisibleChildren = true;
+    });
+
+    if (query && !domainHasVisibleChildren && !domain.toLocaleLowerCase("ko-KR").includes(query)) {
+      return;
+    }
+
+    const domainKey = domain;
+    const isSelected = _selectedTreeNode === domainKey;
+    const forceExpanded = !!query;
+    const collapsed = domainHasVisibleChildren && !forceExpanded && _roleTreeCollapsed.has(domainKey);
+    rootUl.appendChild(createTreeBranchNode(domainKey, domain, domainCount, isSelected, domainHasVisibleChildren, collapsed, centerUl));
+    hasAnyNodes = true;
+  });
+
+  container.textContent = "";
+  if (!hasAnyNodes) {
+    const emptyDiv = document.createElement("div");
+    emptyDiv.className = "catalog-classification-empty";
+    emptyDiv.textContent = "검색 결과가 없습니다.";
+    container.appendChild(emptyDiv);
+    return;
+  }
+  container.appendChild(rootUl);
+}
+
+function createTreeLeafNode(key, label, count, isSelected) {
+  const li = document.createElement("li");
+  li.className = "classification-tree-item";
+
+  const nodeDiv = document.createElement("div");
+  nodeDiv.className = "classification-tree-node" + (isSelected ? " is-selected" : "");
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "classification-tree-node-main";
+  btn.setAttribute("data-role-tree-key", key);
+
+  const toggle = document.createElement("span");
+  toggle.className = "classification-tree-toggle is-placeholder";
+  toggle.textContent = "\u2022";
+
+  const mainSpan = document.createElement("span");
+  mainSpan.className = "classification-tree-main";
+
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "classification-tree-title";
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "classification-tree-name";
+  nameSpan.textContent = label;
+
+  const codeSpan = document.createElement("span");
+  codeSpan.className = "classification-tree-code";
+  codeSpan.textContent = String(count);
+
+  titleSpan.appendChild(nameSpan);
+  titleSpan.appendChild(codeSpan);
+  mainSpan.appendChild(titleSpan);
+  btn.appendChild(toggle);
+  btn.appendChild(mainSpan);
+  nodeDiv.appendChild(btn);
+  li.appendChild(nodeDiv);
+  return li;
+}
+
+function createTreeBranchNode(key, label, count, isSelected, hasChildren, collapsed, childUl) {
+  const li = document.createElement("li");
+  li.className = "classification-tree-item";
+
+  const nodeDiv = document.createElement("div");
+  nodeDiv.className = "classification-tree-node" + (isSelected ? " is-selected" : "");
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "classification-tree-node-main";
+  btn.setAttribute("data-role-tree-key", key);
+
+  const toggle = document.createElement("span");
+  if (hasChildren) {
+    toggle.className = "classification-tree-toggle";
+    toggle.setAttribute("data-role-tree-toggle", key);
+    toggle.textContent = collapsed ? "\u25B8" : "\u25BE";
+  } else {
+    toggle.className = "classification-tree-toggle is-placeholder";
+    toggle.textContent = "\u2022";
+  }
+
+  const mainSpan = document.createElement("span");
+  mainSpan.className = "classification-tree-main";
+
+  const titleSpan = document.createElement("span");
+  titleSpan.className = "classification-tree-title";
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "classification-tree-name";
+  nameSpan.textContent = label;
+
+  const codeSpan = document.createElement("span");
+  codeSpan.className = "classification-tree-code";
+  codeSpan.textContent = String(count);
+
+  titleSpan.appendChild(nameSpan);
+  titleSpan.appendChild(codeSpan);
+  mainSpan.appendChild(titleSpan);
+  btn.appendChild(toggle);
+  btn.appendChild(mainSpan);
+  nodeDiv.appendChild(btn);
+  li.appendChild(nodeDiv);
+
+  if (hasChildren && !collapsed) {
+    li.appendChild(childUl);
+  }
+
+  return li;
+}
+
+/* ── Tree: filter / external filter ── */
+
+function applyRoleFilter() {
   if (!roleGridApi) return;
-  const query = document.getElementById("filter-role-search").value.trim().toLowerCase();
-  roleGridApi.setGridOption("quickFilterText", query);
+  roleGridApi.onFilterChanged();
+  updateRoleListMeta();
+}
+
+function isRoleExternalFilterPresent() {
+  const q = (document.getElementById("filter-role-search")?.value || "").trim();
+  return !!(_selectedTreeNode || q);
+}
+
+function doesRoleExternalFilterPass(node) {
+  const d = node.data;
+  if (_selectedTreeNode) {
+    const domain = d.current_asset_domain || UNCLASSIFIED;
+    const center = d.current_asset_center_label || UNCLASSIFIED;
+    const family = d.current_asset_product_family || UNCLASSIFIED;
+    const roleKey = `${domain}>${center}>${family}`;
+    if (!roleKey.startsWith(_selectedTreeNode)) return false;
+  }
+  const q = (document.getElementById("filter-role-search")?.value || "").trim().toLowerCase();
+  if (q && !(d.role_name || "").toLowerCase().includes(q)) return false;
+  return true;
+}
+
+function updateRoleListMeta() {
+  const titleEl = document.getElementById("role-list-title");
+  const countEl = document.getElementById("role-list-count");
+  let count = 0;
+  roleGridApi?.forEachNodeAfterFilterAndSort(() => { count += 1; });
+  if (titleEl) {
+    if (_selectedTreeNode) {
+      const parts = _selectedTreeNode.split(">");
+      titleEl.textContent = parts[parts.length - 1] + " 역할";
+    } else {
+      titleEl.textContent = "전체 역할";
+    }
+  }
+  if (countEl) countEl.textContent = `${count}건`;
+}
+
+/* ── Tree: events (delegated) ── */
+
+function initRoleTreeEvents() {
+  const container = document.getElementById("role-classification-tree");
+  if (!container) return;
+
+  container.addEventListener("click", (e) => {
+    // Toggle collapse
+    const toggleEl = e.target.closest("[data-role-tree-toggle]");
+    if (toggleEl) {
+      e.stopPropagation();
+      const key = toggleEl.getAttribute("data-role-tree-toggle");
+      if (_roleTreeCollapsed.has(key)) {
+        _roleTreeCollapsed.delete(key);
+      } else {
+        _roleTreeCollapsed.add(key);
+      }
+      saveRoleTreeCollapsedState();
+      renderRoleTree();
+      return;
+    }
+
+    // Node click (select filter)
+    const nodeBtn = e.target.closest("[data-role-tree-key]");
+    if (nodeBtn) {
+      const key = nodeBtn.getAttribute("data-role-tree-key");
+      _selectedTreeNode = (_selectedTreeNode === key) ? "" : key;
+      renderRoleTree();
+      applyRoleFilter();
+    }
+  });
+}
+
+/* ── Tree: state persistence ── */
+
+function saveRoleTreeCollapsedState() {
+  try {
+    localStorage.setItem(ROLE_TREE_COLLAPSED_KEY, JSON.stringify([..._roleTreeCollapsed]));
+  } catch (_) {}
+}
+
+function loadRoleTreeCollapsedState() {
+  try {
+    const stored = localStorage.getItem(ROLE_TREE_COLLAPSED_KEY);
+    if (stored) {
+      const arr = JSON.parse(stored);
+      if (Array.isArray(arr)) arr.forEach((k) => _roleTreeCollapsed.add(k));
+    }
+  } catch (_) {}
+}
+
+function loadRoleTreeSearchState() {
+  _roleTreeSearchQuery = localStorage.getItem(ROLE_TREE_SEARCH_KEY) || "";
+  const input = document.getElementById("role-tree-search");
+  if (input) input.value = _roleTreeSearchQuery;
 }
 
 /* ── Detail Panel ── */
 
 function showRoleDetail(role) {
   _selectedRole = role;
+  toggleRoleDetailPanel(true);
   setElementHidden(document.getElementById("role-detail-empty"), true);
   setElementHidden(document.getElementById("role-detail-content"), false);
 
@@ -102,6 +416,37 @@ function syncRoleActionButtons() {
     }
     btn.disabled = !_selectedRole || !hasCurrent;
   });
+}
+
+/* ── Detail Panel Toggle ── */
+
+function toggleRoleDetailPanel(show) {
+  const mainPanel = document.getElementById("role-main-panel");
+  const detailPanel = document.getElementById("role-detail-panel");
+  const detailContent = document.getElementById("role-detail-content");
+  const detailEmpty = document.getElementById("role-detail-empty");
+  const splitter = document.getElementById("role-splitter");
+  const handle = document.getElementById("btn-minimize-role-detail");
+  if (!mainPanel || !detailPanel || !detailContent || !detailEmpty || !splitter || !handle) return;
+
+  const isOpen = !!show;
+  mainPanel.classList.toggle("is-detail-open", isOpen);
+  detailPanel.classList.toggle("is-hidden", !isOpen);
+  detailContent.classList.toggle("is-hidden", !isOpen || !_selectedRole);
+  detailEmpty.classList.toggle("is-hidden", !!_selectedRole);
+  splitter.classList.toggle("is-hidden", !isOpen);
+  handle.textContent = isOpen ? "\u276E" : "\u276F";
+  localStorage.setItem(ROLE_DETAIL_OPEN_KEY, isOpen ? "1" : "0");
+}
+
+function handleMinimizeRoleDetail() {
+  const mainPanel = document.getElementById("role-main-panel");
+  if (mainPanel?.classList.contains("is-detail-open")) {
+    _selectedRole = null;
+    toggleRoleDetailPanel(false);
+  } else {
+    toggleRoleDetailPanel(true);
+  }
 }
 
 /* ── Current Assignments Grid ── */
@@ -519,38 +864,86 @@ async function saveRoleAction() {
   }
 }
 
-/* ── Splitter ── */
+/* ── Splitters ── */
 
-function initRoleSplitter() {
-  const splitter = document.getElementById("role-splitter");
-  const listPanel = document.getElementById("role-list-panel");
-  const layout = document.getElementById("role-layout");
-  if (!splitter || !listPanel || !layout) return;
-
+function initRoleTreeSplitter() {
+  const splitter = document.getElementById("role-category-splitter");
+  const layout = document.querySelector(".catalog-layout");
+  if (!splitter || !layout) return;
+  const storedWidth = Number(localStorage.getItem(ROLE_CATEGORY_WIDTH_KEY) || 0);
+  if (storedWidth >= 280 && storedWidth <= 520) {
+    layout.style.setProperty("--catalog-category-width", `${storedWidth}px`);
+  }
   let dragging = false;
-  splitter.addEventListener("mousedown", (e) => {
-    e.preventDefault();
+  splitter.addEventListener("mousedown", (event) => {
     dragging = true;
-    document.body.style.cursor = "col-resize";
+    splitter.classList.add("is-dragging");
+    event.preventDefault();
   });
-  document.addEventListener("mousemove", (e) => {
+  document.addEventListener("mousemove", (event) => {
     if (!dragging) return;
     const rect = layout.getBoundingClientRect();
-    const pct = ((e.clientX - rect.left) / rect.width) * 100;
-    const clamped = Math.max(20, Math.min(50, pct));
-    listPanel.style.flex = `0 0 ${clamped}%`;
+    const width = Math.min(520, Math.max(280, event.clientX - rect.left));
+    layout.style.setProperty("--catalog-category-width", `${width}px`);
   });
   document.addEventListener("mouseup", () => {
     if (!dragging) return;
     dragging = false;
-    document.body.style.cursor = "";
+    splitter.classList.remove("is-dragging");
+    const current = parseInt(getComputedStyle(layout).getPropertyValue("--catalog-category-width"), 10);
+    if (!Number.isNaN(current)) {
+      localStorage.setItem(ROLE_CATEGORY_WIDTH_KEY, String(current));
+    }
+  });
+}
+
+function initRoleDetailSplitter() {
+  const splitter = document.getElementById("role-splitter");
+  const listPanel = document.getElementById("role-list-panel");
+  const mainPanel = document.getElementById("role-main-panel");
+  if (!splitter || !listPanel || !mainPanel) return;
+  const storedWidth = Number(localStorage.getItem(ROLE_LIST_WIDTH_KEY) || 0);
+  if (storedWidth >= 15 && storedWidth <= 80) {
+    mainPanel.style.setProperty("--catalog-list-width", `${storedWidth}%`);
+  }
+  let dragging = false;
+  splitter.addEventListener("mousedown", (e) => {
+    dragging = true;
+    splitter.classList.add("is-dragging");
+    e.preventDefault();
+  });
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const rect = mainPanel.getBoundingClientRect();
+    const pct = ((e.clientX - rect.left) / rect.width) * 100;
+    if (pct > 15 && pct < 80) {
+      mainPanel.style.setProperty("--catalog-list-width", `${pct}%`);
+    }
+  });
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove("is-dragging");
+    const current = parseFloat(getComputedStyle(mainPanel).getPropertyValue("--catalog-list-width"));
+    if (!Number.isNaN(current)) {
+      localStorage.setItem(ROLE_LIST_WIDTH_KEY, String(current));
+    }
   });
 }
 
 /* ── Events ── */
 document.addEventListener("DOMContentLoaded", async () => {
-  initRoleSplitter();
+  loadRoleTreeCollapsedState();
+  loadRoleTreeSearchState();
+  initRoleTreeSplitter();
+  initRoleDetailSplitter();
+  initRoleTreeEvents();
   initRoleGrid();
+
+  // Restore detail panel open state
+  if (localStorage.getItem(ROLE_DETAIL_OPEN_KEY) === "1") {
+    toggleRoleDetailPanel(true);
+  }
 });
 document.getElementById("btn-add-role").addEventListener("click", () => openRoleModal());
 document.getElementById("btn-role-replacement").addEventListener("click", () => openRoleActionModal("replacement"));
@@ -569,10 +962,28 @@ document.getElementById("btn-cancel-role-assignment").addEventListener("click", 
 document.getElementById("btn-save-role-assignment").addEventListener("click", saveRoleAssignment);
 document.getElementById("btn-cancel-role-action").addEventListener("click", () => document.getElementById("modal-role-action").close());
 document.getElementById("btn-save-role-action").addEventListener("click", saveRoleAction);
-document.getElementById("filter-role-search").addEventListener("input", applyRoleQuickFilter);
+document.getElementById("btn-minimize-role-detail").addEventListener("click", handleMinimizeRoleDetail);
+document.getElementById("btn-clear-role-tree-filter").addEventListener("click", () => {
+  _selectedTreeNode = "";
+  renderRoleTree();
+  applyRoleFilter();
+});
+
+document.getElementById("filter-role-search").addEventListener("input", () => {
+  applyRoleFilter();
+});
+
+document.getElementById("role-tree-search").addEventListener("input", (e) => {
+  _roleTreeSearchQuery = e.target.value.trim();
+  try {
+    localStorage.setItem(ROLE_TREE_SEARCH_KEY, _roleTreeSearchQuery);
+  } catch (_) {}
+  renderRoleTree();
+});
 
 initProjectFilterCheckbox(loadAssetRoles);
 window.addEventListener("ctx-changed", () => {
+  _selectedTreeNode = "";
   closeRoleDetail();
   _rolePartnerAssetsCache = [];
   loadAssetRoles();
