@@ -665,8 +665,10 @@ body.dark-mode .asset-detail-value-rawtext {
 }
 .catalog-toolbar {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
   align-items: center;
+  margin-bottom: 12px;
 }
 .catalog-toolbar .input-search {
   flex: 1;

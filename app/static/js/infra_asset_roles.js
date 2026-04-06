@@ -432,20 +432,6 @@ async function openRoleActionModal(actionType) {
   document.getElementById("modal-role-action").showModal();
 }
 
-function formatDateTimeLocalValue(date) {
-  const pad = (value) => String(value).padStart(2, "0");
-  return [
-    date.getFullYear(),
-    "-",
-    pad(date.getMonth() + 1),
-    "-",
-    pad(date.getDate()),
-    "T",
-    pad(date.getHours()),
-    ":",
-    pad(date.getMinutes()),
-  ].join("");
-}
 
 async function populateRoleActionAssets() {
   const select = document.getElementById("role-action-asset-id");

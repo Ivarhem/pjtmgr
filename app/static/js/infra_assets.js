@@ -2425,21 +2425,6 @@ function openEventModal() {
   modal.showModal();
 }
 
-function formatDateTimeLocalValue(date) {
-  const pad = (value) => String(value).padStart(2, "0");
-  return [
-    date.getFullYear(),
-    "-",
-    pad(date.getMonth() + 1),
-    "-",
-    pad(date.getDate()),
-    "T",
-    pad(date.getHours()),
-    ":",
-    pad(date.getMinutes()),
-  ].join("");
-}
-
 function getSelectedEventRelatedAsset() {
   const selectedId = Number(document.getElementById("event-related-asset-id").value || 0);
   if (!selectedId) return null;

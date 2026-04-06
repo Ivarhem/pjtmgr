@@ -179,7 +179,9 @@ app/modules/infra/
 │   ├── catalog_attribute_option.py # CatalogAttributeOption (속성 옵션)
 │   ├── catalog_attribute_option_alias.py # CatalogAttributeOptionAlias (옵션 별칭)
 │   ├── catalog_vendor_alias.py  # CatalogVendorAlias (제조사 별칭)
+│   ├── catalog_vendor_meta.py   # CatalogVendorMeta (제조사 메타정보)
 │   ├── product_catalog_attribute_value.py # ProductCatalogAttributeValue (제품 속성값)
+│   ├── product_similarity_dismissal.py # ProductSimilarityDismissal (유사도 무시 기록)
 │   ├── classification_layout.py # ClassificationLayout (분류 레이아웃)
 │   ├── classification_layout_level.py # ClassificationLayoutLevel (분류 레벨 정의)
 │   ├── classification_layout_level_key.py # ClassificationLayoutLevelKey (레벨 키 매핑)
@@ -253,7 +255,8 @@ app/modules/infra/
 │   ├── catalog_attribute_service.py # 카탈로그 속성 정의 CRUD
 │   ├── catalog_alias_service.py # 제조사/옵션 별칭 관리
 │   ├── catalog_integrity_service.py # 카탈로그 정합성 점검
-│   └── catalog_similarity_service.py # 카탈로그 유사도/중복 탐지
+│   ├── catalog_similarity_service.py # 카탈로그 유사도/중복 탐지
+│   └── catalog_merge_service.py # 카탈로그 병합 서비스
 ├── routers/
 │   ├── period_phases.py         # /api/v1/contract-periods/{id}/phases
 │   ├── period_deliverables.py   # /api/v1/contract-periods/{id}/deliverables
