@@ -1,6 +1,6 @@
 # 코드 채번 체계 재설계 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 고객코드(C000)·사업코드(C000-P000)·기간코드(C000-P000-Y26A) 계층적 코드 체계를 구현한다.
 

@@ -1,6 +1,6 @@
 # 인프라모듈 고도화 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 인프라모듈을 실무 업무 플로우에 맞게 고도화 — ProjectContractLink, 프로젝트 상세 탭 구조, 인벤토리 횡단 조회, 현황판, Excel Import/Export 구현.
 

@@ -1,6 +1,6 @@
 # projmgr 모듈화 마이그레이션 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** projmgr를 공통/회계/인프라 3개 모듈로 재구성하고, inframgr 코드를 인프라모듈로 이식하며, RBAC와 PostgreSQL로 전환한다.
 

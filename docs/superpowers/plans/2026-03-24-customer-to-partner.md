@@ -1,6 +1,6 @@
 # Customer → Partner 리네이밍 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** Rename Customer to Partner across the entire codebase — DB tables/columns, Python models/schemas/services/routers, JS/HTML frontend, tests, docs — and update code prefixes (C→P for partners, P→B for contracts).
 

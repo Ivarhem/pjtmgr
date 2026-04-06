@@ -1,6 +1,6 @@
 # 전산실 배치도 + Alias 관리 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 인프라모듈에 전산실 배치도(센터/전산실/랙 공간 관리 + 자산 매핑 시각화)와 자산 Alias 관리 기능의 DB 기반 + API 스켈레톤 + placeholder UI를 구축한다. 실제 기능 구현은 모듈 단위 후속 세션에서 진행한다.
 

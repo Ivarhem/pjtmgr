@@ -1,6 +1,6 @@
 # 인프라모듈 고객사 중심 구조 전환 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 인프라모듈의 데이터 소유를 프로젝트 중심에서 고객사 중심으로 전환하고, 네비게이션/UI를 재설계한다.
 

@@ -1,6 +1,6 @@
 # 인프라모듈 고도화 Phase 2 — 통합 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** Pin 프로젝트, Asset 전역화, 프로젝트-거래처 연결, 자산 간 관계, Excel Export, 감사 로그 연동을 점진적으로 구현.
 

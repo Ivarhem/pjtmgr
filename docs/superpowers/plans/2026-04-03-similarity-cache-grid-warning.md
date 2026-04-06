@@ -1,6 +1,6 @@
 # 유사도 사전 캐시 + 그리드 경고 + 무시 롤백 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** `product_catalog.similar_count` 사전 계산 캐시를 추가하여 제조사/제품 그리드에 중복 경고 아이콘을 표시하고, 무시한 유사 관계를 복원할 수 있게 한다.
 

@@ -1,6 +1,6 @@
 # 사업/계약단위 통합 모델 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** Contract/ContractPeriod를 common 모듈로 이동하고, infra의 Project 테이블을 제거하여 사업/계약단위를 전 모듈 공통 기본정보로 통합한다.
 

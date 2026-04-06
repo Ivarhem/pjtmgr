@@ -1,6 +1,6 @@
 # 자산유형 코드 체계 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 자산유형을 DB 관리형 테이블로 전환하고, `{고객사코드}-{유형코드}-{base36 4자리}` 형식의 자산 코드를 자동 생성한다. 시스템관리 페이지를 탭 구조로 개편한다.
 

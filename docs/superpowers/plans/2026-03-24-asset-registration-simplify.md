@@ -1,6 +1,6 @@
 # 자산 등록 간소화 + 카탈로그 연동 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 자산 등록 모달을 4개 필드로 간소화하고, 카탈로그 선택으로 유형/제조사/모델을 자동 결정하며, placeholder 카탈로그로 미분류 장비도 등록 가능하게 한다.
 

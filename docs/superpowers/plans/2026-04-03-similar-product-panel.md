@@ -1,6 +1,6 @@
 # 유사 제품 패널 + 병합 기능 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 기준정보관리 탭에서 제품 클릭 시 유사 제품을 조회하고, 병합(흡수)/무시할 수 있는 수평 확장 패널을 구현한다.
 

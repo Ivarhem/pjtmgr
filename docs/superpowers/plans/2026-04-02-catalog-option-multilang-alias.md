@@ -1,6 +1,6 @@
 # 카탈로그 속성 옵션 다국어 라벨 + Alias 관리 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 속성 옵션에 영문 기본 라벨 + 한글 보조 라벨을 분리하고, 한/영 전환 UI와 인라인 alias 관리를 구현한다.
 

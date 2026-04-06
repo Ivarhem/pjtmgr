@@ -1,6 +1,6 @@
 # 자산 카탈로그 선택 UX 변경 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> ??????? ??? ?? `docs/guidelines/agent_workflow.md`? ??? `docs/agents/*.md`? ???? ??? ???. ? ??? ????? ?? ?????.
 
 **Goal:** 자산의 model/vendor/category를 카탈로그 기반 읽기 전용으로 전환하고, 상세 패널 + 그리드에서 카탈로그 검색/선택 UX를 제공한다.
 
