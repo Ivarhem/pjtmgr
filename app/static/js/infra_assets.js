@@ -810,9 +810,11 @@ function _assetPatchUrl(path) {
 }
 
 async function handleGridCellValueChanged(event) {
-  if (!event?.data || event.newValue === event.oldValue) return;
-  const row = event.data;
+  const row = event?.data;
+  if (!row) return;
   const field = event.colDef.field;
+  // role 필드는 valueSetter 경유라 newValue/oldValue 비교 건너뜀
+  if (field !== "current_role_name_input" && event.newValue === event.oldValue) return;
   try {
     let updated;
     if (field === "current_role_name_input") {
