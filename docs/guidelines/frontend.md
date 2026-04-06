@@ -257,3 +257,26 @@
 2. `buildStandardGridBehavior()`에 `onCellValueChanged` 핸들러 전달
 3. 핸들러에서 `PATCH /api/v1/{resource}/{id}` 호출, 실패 시 `oldValue` 복원 + `refreshCells`
 4. `singleClickEdit: true`는 사용 금지 — 더블클릭 편집만 허용
+
+### 커스텀 셀 에디터 (ag-Grid v32)
+
+`getValue()`가 객체를 반환하는 커스텀 에디터 작성 시 필수 규칙:
+
+- **`cellDataType: false` 필수** — ag-Grid v32는 셀 데이터 타입을 자동 추론한다. 커스텀 에디터가 객체를 반환하면 "Data type does not match" 경고와 함께 값이 무시된다.
+- **`valueGetter`와 커스텀 에디터를 함께 쓰지 않는다** — `valueGetter`가 있으면 ag-Grid가 편집 완료 시 `getValue()` 대신 `valueGetter` 반환값을 `newValue`로 사용한다. 표시 변환은 `valueFormatter`로 처리한다.
+- **`refreshCells` 재진입 방지** — `onCellValueChanged` 핸들러에서 `refreshCells({ force: true })`를 호출하면 셀 값이 재평가되면서 핸들러가 다시 트리거될 수 있다. `_cellChangeInProgress` 같은 재진입 가드를 사용한다.
+
+커스텀 에디터 컬럼 정의 예시:
+
+```javascript
+{
+  field: "some_id",
+  headerName: "표시명",
+  cellEditor: CustomCellEditor,
+  cellDataType: false,                    // 필수: 타입 자동 추론 비활성화
+  valueFormatter: (p) => getLabel(p.value), // valueGetter 대신 사용
+  editable: () => isGridFieldEditable("some_id"),
+}
+```
+
+기존 커스텀 에디터: `CatalogCellEditor` (모델명), `RoleCellEditor` (현재 역할)

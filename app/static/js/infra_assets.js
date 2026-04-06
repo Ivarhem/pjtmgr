@@ -918,17 +918,12 @@ async function handleGridCellValueChanged(event) {
   const row = event?.data;
   if (!row) return;
   const field = event.colDef.field;
-  console.log("[GRID-EDIT] field:", field, "newValue:", event.newValue, "oldValue:", event.oldValue, "type:", typeof event.newValue);
-  if (field !== "current_role_id" && event.newValue === event.oldValue) {
-    console.log("[GRID-EDIT] skipped: same value");
-    return;
-  }
+  if (field !== "current_role_id" && event.newValue === event.oldValue) return;
   _cellChangeInProgress = true;
   try {
     let updated;
     if (field === "current_role_id") {
       const val = event.newValue;
-      console.log("[GRID-EDIT] role val:", JSON.stringify(val));
       // RoleCellEditor 반환: { _roleId, _roleName }
       const roleId = val?._roleId ?? null;
       const roleName = (val?._roleName || "").trim();
