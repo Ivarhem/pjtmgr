@@ -1058,11 +1058,12 @@ function getProductTypeFromImpType(impTypeKey) {
 /* ── Modal Combobox (검색 가능 드롭다운) ── */
 
 class ModalCombobox {
-  constructor({ inputId, hiddenId, dropdownId, onSelect }) {
+  constructor({ inputId, hiddenId, dropdownId, onSelect, maxDisplay = 0 }) {
     this.input = document.getElementById(inputId);
     this.hidden = document.getElementById(hiddenId);
     this.dropdown = document.getElementById(dropdownId);
     this.onSelect = onSelect || (() => {});
+    this.maxDisplay = maxDisplay;
     this.items = [];           /* { value, label, hint? } */
     this._focusIdx = -1;
     this._bound = false;
@@ -1114,7 +1115,9 @@ class ModalCombobox {
       setElementHidden(this.dropdown, false);
       return;
     }
-    items.forEach((item, idx) => {
+    const totalCount = items.length;
+    const display = this.maxDisplay > 0 ? items.slice(0, this.maxDisplay) : items;
+    display.forEach((item, idx) => {
       const div = document.createElement("div");
       div.className = "modal-combobox-option";
       div.dataset.value = item.value;
@@ -1132,6 +1135,12 @@ class ModalCombobox {
       });
       this.dropdown.appendChild(div);
     });
+    if (this.maxDisplay > 0 && totalCount > this.maxDisplay) {
+      const more = document.createElement("div");
+      more.className = "modal-combobox-empty";
+      more.textContent = `외 ${totalCount - this.maxDisplay}건 — 검색어를 더 입력하세요`;
+      this.dropdown.appendChild(more);
+    }
     setElementHidden(this.dropdown, false);
   }
 
