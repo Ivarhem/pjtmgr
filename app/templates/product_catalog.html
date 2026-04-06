@@ -219,13 +219,11 @@
     <input type="hidden" id="product-id">
     <input type="hidden" id="product-type" value="hardware">
     <input type="hidden" id="product-attr-domain" value="">
-    <label class="product-field-required">모델명
-      <div class="modal-combobox">
-        <input type="text" id="product-name" required autocomplete="off" placeholder="모델명 입력 — 유사 제품 자동 검색">
-        <input type="hidden" id="product-name-ref-id">
-        <div class="modal-combobox-dropdown is-hidden" id="product-name-dropdown"></div>
-      </div>
-    </label>
+    <label class="product-field-required">모델명 <input type="text" id="product-name" required></label>
+    <div class="catalog-similarity-box hidden full-width" id="product-similarity-box">
+      <strong class="catalog-similarity-title" id="product-similarity-title">유사한 제품 후보가 있습니다.</strong>
+      <ul class="catalog-similarity-list" id="product-similarity-list"></ul>
+    </div>
     <label class="product-field-required">제조사
       <div class="modal-combobox" id="product-vendor-combo">
         <input type="text" id="product-vendor" autocomplete="off" placeholder="제조사 검색" required>
