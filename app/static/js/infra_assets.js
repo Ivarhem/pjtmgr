@@ -8,7 +8,8 @@ const ENV_MAP = {
 };
 
 const ASSET_STATUS_MAP = {
-  planned: "계획",
+  planned: "도입예정",
+  standby: "대기",
   active: "운영중",
   decommissioned: "폐기",
 };
@@ -146,7 +147,7 @@ const GRID_EDITABLE_FIELDS = new Set([
   "current_role_id",
   "hostname",
   "model",
-  "operation_type",
+  "environment",
   "status",
 ]);
 
@@ -368,10 +369,28 @@ const columnDefs = [
     cellEditor: CatalogCellEditor,
     cellClass: (p) => getGridCellClass(p.colDef.field),
   },
-  { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("operation_type"), cellClass: (p) => getGridCellClass(p.colDef.field) },
+  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field) },
+  { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+  {
+    field: "environment",
+    headerName: "환경",
+    width: 100,
+    editable: () => isGridFieldEditable("environment"),
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: Object.keys(ENV_MAP) },
+    valueFormatter: (p) => ENV_MAP[p.value] || p.value || "—",
+    cellRenderer: (params) => {
+      const label = ENV_MAP[params.value] || params.value || "—";
+      const span = document.createElement("span");
+      span.className = "badge badge-env-" + (params.value || "unknown");
+      span.textContent = label;
+      return span;
+    },
+    cellClass: (p) => getGridCellClass(p.colDef.field),
+  },
   {
     field: "status",
-    headerName: "상태구분",
+    headerName: "상태",
     width: 110,
     editable: () => isGridFieldEditable("status"),
     cellEditor: "agSelectCellEditor",
@@ -822,10 +841,8 @@ const DETAIL_TAB_FIELDS = {
       title: "운영 속성",
       description: "운영 상태와 환경, 담당 부서처럼 운영 기준을 파악하는 정보입니다.",
       fields: [
-        ["운영 유형", "operation_type"],
         ["환경", "environment", (v) => ENV_MAP[v] || v],
         ["상태", "status", (v) => ASSET_STATUS_MAP[v] || v],
-        ["단계", "phase"],
         ["부서", "dept"],
         ["유지보수 업체", "maintenance_vendor"],
       ],
@@ -881,10 +898,8 @@ const DETAIL_EDIT_FIELDS = {
     ["위치", "location"],
     ["입고일", "received_date"],
     ["도입 연도", "year_acquired"],
-    ["운영 유형", "operation_type"],
     ["환경", "environment"],
     ["상태", "status"],
-    ["단계", "phase"],
     ["부서", "dept"],
     ["유지보수 업체", "maintenance_vendor"],
     ["호스트명", "hostname"],
