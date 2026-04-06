@@ -405,7 +405,6 @@ let _currentTab = "overview";
 let _partnerContactsCache = [];
 let _partnerAssetsCache = [];
 let _allPartnersCache = [];
-let _catalogSearchResults = [];
 let _assetNameTouched = false;
 let _assetHostnameTouched = false;
 let _eventSummaryTouched = false;
@@ -2056,7 +2055,51 @@ function syncAssetRoleActionButtons() {
 
 /* ── Modal (간소화 등록) ── */
 const modal = document.getElementById("modal-asset");
-let _catalogSearchTimer = null;
+let _catalogCombobox = null;
+let _catalogItemsCache = [];
+
+function getCatalogCombobox() {
+  if (!_catalogCombobox) {
+    _catalogCombobox = new ModalCombobox({
+      inputId: "catalog-search",
+      hiddenId: "catalog-id",
+      dropdownId: "catalog-dropdown",
+      maxDisplay: 50,
+      onSelect: (item) => {
+        const full = _catalogItemsCache.find((p) => String(p.id) === String(item.value));
+        if (full) selectCatalogItem(full);
+      },
+    });
+    _catalogCombobox.bind();
+  }
+  return _catalogCombobox;
+}
+
+async function loadCatalogListForModal(productType = "") {
+  try {
+    let url = "/api/v1/product-catalog";
+    if (productType) url += "?product_type=" + encodeURIComponent(productType);
+    const items = await apiFetch(url);
+    _catalogItemsCache = items;
+    const combo = getCatalogCombobox();
+    combo.setItems(
+      items
+        .filter((item) => buildCatalogClassificationPath(item) && buildCatalogClassificationPath(item) !== "분류 미지정")
+        .map((item) => {
+          const kindLabel = CATALOG_KIND_LABELS[item.product_type] || item.product_type || "";
+          const vendorModel = ((item.vendor || "") + " " + (item.name || "")).trim();
+          return {
+            value: String(item.id),
+            label: `[${kindLabel}] ${vendorModel}`,
+            hint: buildCatalogClassificationPath(item),
+            aliases: [item.vendor || "", item.name || ""],
+          };
+        })
+    );
+  } catch (e) {
+    showToast("카탈로그 목록을 불러올 수 없습니다: " + e.message, "error");
+  }
+}
 
 function updateAssetSaveState() {
   const btn = document.getElementById("btn-save-asset");
@@ -2117,14 +2160,17 @@ function syncRoleNameSuggestion() {
 }
 
 function clearSelectedCatalog({ keepSearch = false } = {}) {
-  document.getElementById("catalog-id").value = "";
-  if (!keepSearch) document.getElementById("catalog-search").value = "";
+  const combo = getCatalogCombobox();
+  if (keepSearch) {
+    combo.hidden.value = "";
+  } else {
+    combo.reset();
+  }
   const summary = document.getElementById("catalog-summary");
   summary.classList.add("hidden");
   summary.textContent = "";
   summary.classList.remove("placeholder-style");
   document.getElementById("btn-clear-catalog").classList.add("hidden");
-  _catalogSearchResults = [];
   updateAssetNameHint("카탈로그를 선택하면 자산명이 자동 제안됩니다.");
   updateAssetHostnameHint("호스트명은 자산명 기준으로 자동 제안됩니다.");
   updateAssetRoleSuggestionHint("역할명 추천은 자산명 기준으로 참고용 제안만 제공합니다. 자동 선택되지 않습니다.");
@@ -2194,7 +2240,6 @@ async function openCreateModal() {
   _assetHostnameTouched = false;
   clearSelectedCatalog();
   document.getElementById("catalog-kind-filter-modal").value = "hardware";
-  document.getElementById("catalog-dropdown").classList.add("hidden");
   document.getElementById("inline-catalog-form").classList.add("hidden");
   document.getElementById("asset-project-code").value = "";
   document.getElementById("asset-customer-code").value = "";
@@ -2236,6 +2281,7 @@ async function openCreateModal() {
     if (pid) periodSel.value = pid;
   } catch (_) { /* ignore */ }
 
+  await loadCatalogListForModal("hardware");
   modal.showModal();
   updateAssetSaveState();
   document.getElementById("catalog-search").focus();
@@ -2243,10 +2289,10 @@ async function openCreateModal() {
 
 async function refreshAssetClassificationSelect(selectedId = null) {
   const currentCatalogId = Number(document.getElementById("catalog-id").value || 0);
-  if (!currentCatalogId || !_catalogSearchResults?.length) {
+  if (!currentCatalogId || !_catalogItemsCache?.length) {
     return;
   }
-  const item = _catalogSearchResults.find((entry) => Number(entry.id) === currentCatalogId);
+  const item = _catalogItemsCache.find((entry) => Number(entry.id) === currentCatalogId);
   updateAssetClassificationPreview(buildCatalogClassificationPath(item));
 }
 
@@ -2254,60 +2300,6 @@ async function applyCatalogClassificationSuggestion(nodeCode) {
   return;
 }
 
-/* ── 카탈로그 검색 ── */
-
-function renderCatalogDropdown(items) {
-  const dd = document.getElementById("catalog-dropdown");
-  dd.textContent = "";
-  _catalogSearchResults = items.filter((item) => buildCatalogClassificationPath(item));
-
-  items.forEach(item => {
-    const div = document.createElement("div");
-    const label = ((item.vendor || "") + " " + (item.name || "")).trim();
-    const kindLabel = CATALOG_KIND_LABELS[item.product_type] || item.product_type || "미지정";
-    div.textContent = `[${kindLabel}] ${label}`;
-
-    if (!buildCatalogClassificationPath(item)) {
-      div.className = "catalog-dropdown-item disabled";
-      const warn = document.createElement("span");
-      warn.textContent = " (분류 미설정)";
-      warn.className = "catalog-warning-note";
-      div.appendChild(warn);
-    } else {
-      div.className = "catalog-dropdown-item" + (item.is_placeholder ? " placeholder" : "");
-      if (item.is_placeholder) div.textContent += " (placeholder)";
-      div.addEventListener("click", () => selectCatalogItem(item));
-    }
-    dd.appendChild(div);
-  });
-
-  // 맨 아래: 새 제품 등록
-  const addDiv = document.createElement("div");
-  addDiv.className = "catalog-dropdown-add";
-  addDiv.textContent = "+ 새 제품 등록";
-  addDiv.addEventListener("click", openInlineCatalogForm);
-  dd.appendChild(addDiv);
-
-  dd.classList.remove("hidden");
-}
-
-async function onCatalogSearchInput() {
-  const q = document.getElementById("catalog-search").value.trim();
-  const kind = document.getElementById("catalog-kind-filter-modal").value;
-  if (!q) {
-    document.getElementById("catalog-dropdown").classList.add("hidden");
-    return;
-  }
-  clearTimeout(_catalogSearchTimer);
-  _catalogSearchTimer = setTimeout(async () => {
-    try {
-      let url = "/api/v1/product-catalog?q=" + encodeURIComponent(q);
-      if (kind) url += "&product_type=" + encodeURIComponent(kind);
-      const items = await apiFetch(url);
-      renderCatalogDropdown(items);
-    } catch (e) { showToast(e.message, "error"); }
-  }, 300);
-}
 
 async function loadPartnerContacts(partnerId) {
   if (!partnerId) {
@@ -2628,18 +2620,11 @@ function selectCatalogItem(item) {
   assetNameInput.focus();
 }
 
-// 바깥 클릭 시 드롭다운 닫기
-document.addEventListener("click", (e) => {
-  const wrap = document.querySelector(".catalog-search-wrap");
-  if (wrap && !wrap.contains(e.target)) {
-    document.getElementById("catalog-dropdown").classList.add("hidden");
-  }
-});
 
 /* ── 인라인 카탈로그 등록 ── */
 
 async function openInlineCatalogForm() {
-  document.getElementById("catalog-dropdown").classList.add("hidden");
+  getCatalogCombobox()._close();
   const form = document.getElementById("inline-catalog-form");
   form.classList.remove("hidden");
   document.getElementById("inline-vendor").value = "";
@@ -3005,21 +2990,10 @@ document.getElementById("btn-asset-failover").addEventListener("click", () => op
 document.getElementById("btn-asset-repurpose").addEventListener("click", () => openAssetRoleActionModal("repurpose"));
 document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
 
-// 카탈로그 검색
-document.getElementById("catalog-search").addEventListener("input", onCatalogSearchInput);
-document.getElementById("catalog-search").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    if (_catalogSearchResults.length === 1) {
-      selectCatalogItem(_catalogSearchResults[0]);
-    }
-  } else if (e.key === "Escape") {
-    document.getElementById("catalog-dropdown").classList.add("hidden");
-  }
-});
 document.getElementById("catalog-kind-filter-modal").addEventListener("change", () => {
   clearSelectedCatalog({ keepSearch: true });
-  onCatalogSearchInput();
+  const kind = document.getElementById("catalog-kind-filter-modal").value;
+  loadCatalogListForModal(kind);
 });
 document.getElementById("asset-name").addEventListener("input", () => {
   _assetNameTouched = true;
