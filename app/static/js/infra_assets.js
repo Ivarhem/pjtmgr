@@ -530,7 +530,10 @@ function hasStoredGridColumnState() {
   return !!getStoredGridColumnState()?.length;
 }
 
+let _suppressColumnSave = false;
+
 function saveGridColumnState() {
+  if (_suppressColumnSave) return;
   if (!gridApi?.getColumnState) return;
   const state = gridApi.getColumnState();
   if (!Array.isArray(state) || !state.length) return;
@@ -568,9 +571,11 @@ function applyClassificationLevelHeaders() {
   columnDefs.forEach((col) => {
     if (headerMap[col.field]) col.headerName = headerMap[col.field];
   });
+  _suppressColumnSave = true;
   gridApi.setGridOption("columnDefs", columnDefs);
   const restored = restoreGridColumnState();
   if (!restored) fitGridColumnsIfNeeded();
+  _suppressColumnSave = false;
 }
 
 async function loadClassificationLevelAliases() {
@@ -711,9 +716,11 @@ async function initGrid() {
       if (event.finished) saveGridColumnState();
     },
   });
+  _suppressColumnSave = true;
   await loadClassificationLevelAliases();
   const restored = restoreGridColumnState();
   if (!restored) fitGridColumnsIfNeeded();
+  _suppressColumnSave = false;
   // 초기 로드는 ctx-changed 이벤트에서 처리 (initContextSelectors 완료 후 dispatch)
   if (getCtxPartnerId()) loadAssets();
 }
