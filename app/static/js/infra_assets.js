@@ -149,6 +149,9 @@ const GRID_EDITABLE_FIELDS = new Set([
   "model",
   "environment",
   "status",
+  "center_id",
+  "period_id",
+  "serial_no",
 ]);
 
 /* ── CatalogCellEditor (AG Grid 셀 에디터) ── */
@@ -283,7 +286,7 @@ function isRawFallbackField(field, row = {}) {
 
 function getGridCellClass(field, row = null) {
   const classes = [];
-  if (GRID_EDITABLE_FIELDS.has(field)) classes.push("infra-cell-editable");
+  classes.push(GRID_EDITABLE_FIELDS.has(field) ? "infra-cell-editable" : "infra-cell-readonly");
   if (isRawFallbackField(field, row)) classes.push("infra-cell-rawtext");
   return classes.join(" ");
 }
@@ -305,12 +308,22 @@ const columnDefs = [
     cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
   },
   {
-    field: "contract_name",
+    field: "period_id",
     headerName: "귀속프로젝트",
     width: 220,
     valueGetter: (p) => p.data?.contract_name || p.data?.period_label || "—",
-    editable: false,
-    cellClass: () => getGridCellClass("contract_name"),
+    editable: () => isGridFieldEditable("period_id"),
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: () => ({
+      values: ["", ..._periodsCache.map((p) => String(p.id))],
+      formatValue: (v) => {
+        if (!v) return "—";
+        const p = _periodsCache.find((x) => String(x.id) === String(v));
+        return p ? (p.contract_name || p.period_label || v) : v;
+      },
+    }),
+    valueParser: (p) => (p.newValue === "" || p.newValue == null ? null : Number(p.newValue)),
+    cellClass: (p) => getGridCellClass("period_id"),
   },
   {
     field: "asset_name", headerName: "자산명", flex: 1.2, minWidth: 220,
@@ -347,12 +360,21 @@ const columnDefs = [
   },
   { field: "customer_asset_number", headerName: "고객 자산번호", width: 150, valueFormatter: (p) => p.value || "—", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
   {
-    field: "center_label",
+    field: "center_id",
     headerName: "센터정보",
     width: 170,
     valueGetter: (p) => p.data?.center_label || p.data?.center || "—",
-    editable: false,
-    cellClass: (p) => getGridCellClass("center_label", p.data),
+    editable: () => isGridFieldEditable("center_id"),
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: () => ({
+      values: ["", ..._layoutCentersCache.map((c) => String(c.id))],
+      formatValue: (v) => {
+        if (!v) return "—";
+        const c = _layoutCentersCache.find((x) => String(x.id) === String(v));
+        return c ? c.name : v;
+      },
+    }),
+    cellClass: (p) => getGridCellClass("center_id", p.data),
   },
   { field: "classification_level_1_name", headerName: "대구분", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_1_name", p.data) },
   { field: "classification_level_2_name", headerName: "중구분", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_2_name", p.data) },
@@ -369,7 +391,7 @@ const columnDefs = [
     cellEditor: CatalogCellEditor,
     cellClass: (p) => getGridCellClass(p.colDef.field),
   },
-  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field) },
+  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("serial_no"), cellClass: (p) => getGridCellClass(p.colDef.field) },
   { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
   {
     field: "environment",
@@ -421,6 +443,7 @@ let _currentAssetRoleAction = null;
 let _detailEscArmedAt = 0;
 let _assetRoleOptions = [];
 let _layoutCentersCache = [];
+let _periodsCache = [];
 const _layoutRoomsCache = new Map();
 const _layoutRacksCache = new Map();
 let _requestedAssetId = null;
@@ -508,6 +531,13 @@ async function loadLayoutCenters(partnerId) {
   if (!partnerId) return [];
   _layoutCentersCache = await apiFetch(`/api/v1/centers?partner_id=${partnerId}`);
   return _layoutCentersCache;
+}
+
+async function loadPeriodsCache(partnerId) {
+  if (!partnerId) { _periodsCache = []; return; }
+  try {
+    _periodsCache = await apiFetch(`/api/v1/contract-periods?partner_id=${partnerId}`);
+  } catch { _periodsCache = []; }
 }
 
 function _assetGridStateKey() {
@@ -688,7 +718,12 @@ async function loadGridRoleOptions() {
 /* ── Grid init ── */
 
 async function initGrid() {
-  await loadGridRoleOptions();
+  const partnerId = getCtxPartnerId();
+  await Promise.all([
+    loadGridRoleOptions(),
+    loadLayoutCenters(partnerId),
+    loadPeriodsCache(partnerId),
+  ]);
   setAssetListWidth(getStoredAssetListWidth(), { persist: false });
   const gridDiv = document.getElementById("grid-assets");
   gridApi = agGrid.createGrid(gridDiv, {
@@ -766,6 +801,12 @@ async function handleGridCellValueChanged(event) {
         body: { model_id: val._catalogModelId },
       });
       row.model = updated.model;
+    } else if (field === "center_id" || field === "period_id") {
+      const val = event.newValue === "" || event.newValue == null ? null : Number(event.newValue);
+      updated = await apiFetch(`/api/v1/assets/${row.id}`, {
+        method: "PATCH",
+        body: { [field]: val },
+      });
     } else {
       updated = await apiFetch(`/api/v1/assets/${row.id}`, {
         method: "PATCH",

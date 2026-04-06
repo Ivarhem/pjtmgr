@@ -350,19 +350,21 @@ body.dark-mode .import-msg-error { background: #450a0a; color: #fca5a5; border-c
 }
 
 .infra-cell-readonly {
-  background: color-mix(in srgb, var(--bg-secondary, #f8fafc) 92%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary, #f1f5f9) 60%, transparent);
+  color: var(--text-muted, #64748b);
 }
 
 .infra-cell-editable {
-  background: color-mix(in srgb, var(--primary-color, #2563eb) 10%, var(--bg-primary, #fff));
+  /* 편집 가능: 기본 배경 유지 (강조 없음) */
 }
 
 body.dark-mode .infra-cell-readonly {
-  background: color-mix(in srgb, var(--bg-secondary, #1e293b) 94%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary, #1e293b) 60%, transparent);
+  color: var(--text-muted, #94a3b8);
 }
 
 body.dark-mode .infra-cell-editable {
-  background: color-mix(in srgb, var(--primary-color, #60a5fa) 16%, var(--bg-primary, #0f172a));
+  /* 편집 가능: 기본 배경 유지 */
 }
 
 .infra-cell-rawtext {
