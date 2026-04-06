@@ -270,6 +270,109 @@ class CatalogCellEditor {
   isPopup() { return true; }
 }
 
+/* ── RoleCellEditor (콤보박스 스타일 역할 선택/생성) ── */
+class RoleCellEditor {
+  init(params) {
+    this.params = params;
+    this._selectedRoleId = null;
+
+    this.container = document.createElement("div");
+    this.container.className = "ag-cell-catalog-editor";
+
+    this.input = document.createElement("input");
+    this.input.type = "text";
+    this.input.className = "ag-cell-input-editor";
+    this.input.placeholder = "역할명 입력 또는 검색";
+    // 현재 역할명으로 초기값 설정
+    const currentName = getRoleNameById(params.data?.current_role_id, params.data?.current_role_names);
+    this.input.value = currentName === "—" ? "" : currentName;
+    this.container.appendChild(this.input);
+
+    this.dropdown = document.createElement("div");
+    this.dropdown.className = "ag-cell-catalog-dropdown is-hidden";
+    document.body.appendChild(this.dropdown);
+
+    this.input.addEventListener("input", () => this._filter());
+    this.input.addEventListener("focus", () => this._filter());
+    this.input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const first = this.dropdown.querySelector(".catalog-cell-option");
+        if (first) first.focus();
+      }
+      if (e.key === "Escape") {
+        setElementHidden(this.dropdown, true);
+        this.params.stopEditing();
+      }
+    });
+  }
+
+  _filter() {
+    const q = this.input.value.trim().toLowerCase();
+    const filtered = q
+      ? _assetRoleOptions.filter((r) => r.role_name.toLowerCase().includes(q))
+      : _assetRoleOptions;
+    this._renderDropdown(filtered.slice(0, 20));
+  }
+
+  _renderDropdown(items) {
+    this.dropdown.textContent = "";
+    if (!items.length && !this.input.value.trim()) {
+      setElementHidden(this.dropdown, true);
+      return;
+    }
+    items.forEach((role) => {
+      const div = document.createElement("div");
+      div.className = "catalog-cell-option";
+      div.tabIndex = -1;
+      div.textContent = role.role_name;
+      if (role.status !== "active") {
+        const badge = document.createElement("span");
+        badge.textContent = ` (${role.status})`;
+        badge.className = "catalog-warning-note";
+        div.appendChild(badge);
+      }
+      div.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        this._selectRole(role);
+      });
+      div.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") this._selectRole(role);
+        if (e.key === "ArrowDown" && div.nextElementSibling) { e.preventDefault(); div.nextElementSibling.focus(); }
+        if (e.key === "ArrowUp" && div.previousElementSibling) { e.preventDefault(); div.previousElementSibling.focus(); }
+        if (e.key === "Escape") { setElementHidden(this.dropdown, true); this.params.stopEditing(); }
+      });
+      this.dropdown.appendChild(div);
+    });
+
+    const rect = this.input.getBoundingClientRect();
+    this.dropdown.style.left = rect.left + "px";
+    this.dropdown.style.top = rect.bottom + "px";
+    this.dropdown.style.width = Math.max(rect.width, 250) + "px";
+    setElementHidden(this.dropdown, false);
+  }
+
+  _selectRole(role) {
+    this._selectedRoleId = role.id;
+    this.input.value = role.role_name;
+    setElementHidden(this.dropdown, true);
+    this.params.stopEditing();
+  }
+
+  getGui() { return this.container; }
+  afterGuiAttached() { this.input.focus(); this.input.select(); }
+  getValue() {
+    if (this._selectedRoleId) {
+      return { _roleId: this._selectedRoleId, _roleName: this.input.value.trim() };
+    }
+    const typed = this.input.value.trim();
+    if (!typed) return { _roleId: null, _roleName: "" };
+    return { _roleId: null, _roleName: typed };
+  }
+  destroy() { this.dropdown.remove(); }
+  isPopup() { return true; }
+}
+
 function isGridFieldEditable(field) {
   return GRID_EDITABLE_FIELDS.has(field);
 }
@@ -323,11 +426,8 @@ const ASSET_INFO_COLS = [
     headerName: "현재 역할",
     width: 200,
     editable: () => isGridFieldEditable("current_role_id"),
+    cellEditor: RoleCellEditor,
     valueGetter: (p) => getRoleNameById(p.data?.current_role_id, p.data?.current_role_names),
-    valueSetter: (p) => {
-      p.data._pendingRoleName = p.newValue;
-      return p.newValue !== p.oldValue;
-    },
     cellClass: (p) => getGridCellClass("current_role_id", p.data),
   },
   { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
@@ -818,16 +918,26 @@ async function handleGridCellValueChanged(event) {
   try {
     let updated;
     if (field === "current_role_name_input") {
-      const roleName = (row._pendingRoleName || event.newValue || "").trim();
-      delete row._pendingRoleName;
-      if (!roleName || roleName === "—") {
+      const val = event.newValue;
+      // RoleCellEditor 반환: { _roleId, _roleName }
+      const roleId = val?._roleId ?? null;
+      const roleName = (val?._roleName || "").trim();
+      if (!roleName) {
+        // 역할 해제
         updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}/current-role`), {
           method: "PATCH",
           body: { asset_role_id: null },
         });
+      } else if (roleId) {
+        // 기존 역할 선택
+        updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}/current-role`), {
+          method: "PATCH",
+          body: { asset_role_id: roleId },
+        });
       } else {
+        // 텍스트 입력 — 이름으로 검색, 없으면 자동 생성
         let role = _assetRoleOptions.find(
-          (r) => r.role_name === roleName || r.role_name.toLowerCase() === roleName.toLowerCase()
+          (r) => r.role_name.toLowerCase() === roleName.toLowerCase()
         );
         if (!role) {
           const periodId = getCtxProjectId() || null;
@@ -843,7 +953,7 @@ async function handleGridCellValueChanged(event) {
           });
           role = created;
           _assetRoleOptions.push(created);
-          showToast(`역할 "${roleName}" 이(가) 자동 생성되었습니다.`, "success");
+          showToast(`역할 "${roleName}" 자동 생성`, "success");
         }
         updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}/current-role`), {
           method: "PATCH",
