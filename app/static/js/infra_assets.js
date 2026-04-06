@@ -422,12 +422,13 @@ const ASSET_INFO_COLS = [
     cellClass: (p) => getGridCellClass(p.colDef.field),
   },
   {
-    field: "current_role_name_input",
+    field: "current_role_id",
     headerName: "현재 역할",
     width: 200,
     editable: () => isGridFieldEditable("current_role_id"),
     cellEditor: RoleCellEditor,
-    valueGetter: (p) => getRoleNameById(p.data?.current_role_id, p.data?.current_role_names),
+    cellDataType: false,
+    valueFormatter: (p) => getRoleNameById(p.value, p.data?.current_role_names),
     cellClass: (p) => getGridCellClass("current_role_id", p.data),
   },
   { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
@@ -439,6 +440,7 @@ const ASSET_INFO_COLS = [
     },
     editable: () => isGridFieldEditable("model"),
     cellEditor: CatalogCellEditor,
+    cellDataType: false,
     cellClass: (p) => getGridCellClass(p.colDef.field),
   },
   { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("serial_no"), cellClass: (p) => getGridCellClass(p.colDef.field) },
@@ -916,12 +918,17 @@ async function handleGridCellValueChanged(event) {
   const row = event?.data;
   if (!row) return;
   const field = event.colDef.field;
-  if (field !== "current_role_name_input" && event.newValue === event.oldValue) return;
+  console.log("[GRID-EDIT] field:", field, "newValue:", event.newValue, "oldValue:", event.oldValue, "type:", typeof event.newValue);
+  if (field !== "current_role_id" && event.newValue === event.oldValue) {
+    console.log("[GRID-EDIT] skipped: same value");
+    return;
+  }
   _cellChangeInProgress = true;
   try {
     let updated;
-    if (field === "current_role_name_input") {
+    if (field === "current_role_id") {
       const val = event.newValue;
+      console.log("[GRID-EDIT] role val:", JSON.stringify(val));
       // RoleCellEditor 반환: { _roleId, _roleName }
       const roleId = val?._roleId ?? null;
       const roleName = (val?._roleName || "").trim();
