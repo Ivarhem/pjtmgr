@@ -2162,7 +2162,7 @@ function syncRoleNameSuggestion() {
 function clearSelectedCatalog({ keepSearch = false } = {}) {
   const combo = getCatalogCombobox();
   if (keepSearch) {
-    combo.hidden.value = "";
+    combo.setValue("", combo.getDisplayText());
   } else {
     combo.reset();
   }
@@ -2588,7 +2588,6 @@ async function populateRelationAssetSelect() {
 function selectCatalogItem(item) {
   document.getElementById("catalog-id").value = item.id;
   document.getElementById("catalog-search").value = ((item.vendor || "") + " " + (item.name || "")).trim();
-  document.getElementById("catalog-dropdown").classList.add("hidden");
   document.getElementById("btn-clear-catalog").classList.remove("hidden");
 
   // 요약 표시
