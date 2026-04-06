@@ -34,6 +34,9 @@ class AssetRoleRead(BaseModel):
     current_asset_code: str | None = None
     current_asset_status: str | None = None
     current_assignment_id: int | None = None
+    current_asset_domain: str | None = None
+    current_asset_center_label: str | None = None
+    current_asset_product_family: str | None = None
     created_at: datetime
     updated_at: datetime
 

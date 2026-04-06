@@ -321,12 +321,19 @@ def repurpose_asset_role_assignment(
 
 
 def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -> list[dict]:
+    from app.modules.infra.models.center import Center
+    from app.modules.infra.models.product_catalog import ProductCatalog
+
     if not roles:
         return []
     role_ids = [role.id for role in roles]
     current_assignments = list(
         db.execute(
-            select(AssetRoleAssignment, Asset.asset_name, Asset.asset_code, Asset.status)
+            select(
+                AssetRoleAssignment,
+                Asset.asset_name, Asset.asset_code, Asset.status,
+                Asset.model_id, Asset.center_id,
+            )
             .join(Asset, Asset.id == AssetRoleAssignment.asset_id)
             .where(
                 AssetRoleAssignment.asset_role_id.in_(role_ids),
@@ -335,8 +342,36 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
             .order_by(AssetRoleAssignment.id.desc())
         )
     )
-    current_map = {}
-    for assignment, asset_name, asset_code, asset_status in current_assignments:
+
+    # 벌크 조회: 센터명
+    center_ids = {row.center_id for row in current_assignments if row.center_id}
+    center_map: dict[int, str] = {}
+    if center_ids:
+        center_map = {
+            c.id: c.center_name
+            for c in db.scalars(select(Center).where(Center.id.in_(center_ids)))
+        }
+
+    # 벌크 조회: 카탈로그 속성 (domain, product_family)
+    model_ids = {row.model_id for row in current_assignments if row.model_id}
+    catalog_attr_map: dict[int, dict[str, str | None]] = {}
+    if model_ids:
+        from app.modules.infra.services.product_catalog_attribute_service import get_product_attributes
+        for mid in model_ids:
+            attrs = get_product_attributes(db, mid)
+            attr_dict: dict[str, str | None] = {}
+            for item in attrs:
+                key = item.get("attribute_key")
+                if key in ("domain", "product_family"):
+                    attr_dict[key] = (
+                        item.get("option_label_kr")
+                        or item.get("option_label")
+                        or item.get("option_key")
+                    )
+            catalog_attr_map[mid] = attr_dict
+
+    current_map: dict[int, dict] = {}
+    for assignment, asset_name, asset_code, asset_status, model_id, center_id in current_assignments:
         current_map.setdefault(
             assignment.asset_role_id,
             {
@@ -345,26 +380,28 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
                 "current_asset_name": asset_name,
                 "current_asset_code": asset_code,
                 "current_asset_status": asset_status,
+                "current_asset_domain": catalog_attr_map.get(model_id, {}).get("domain") if model_id else None,
+                "current_asset_center_label": center_map.get(center_id) if center_id else None,
+                "current_asset_product_family": catalog_attr_map.get(model_id, {}).get("product_family") if model_id else None,
             },
         )
 
+    _defaults = {
+        "current_assignment_id": None,
+        "current_asset_id": None,
+        "current_asset_name": None,
+        "current_asset_code": None,
+        "current_asset_status": None,
+        "current_asset_domain": None,
+        "current_asset_center_label": None,
+        "current_asset_product_family": None,
+    }
     result = []
     for role in roles:
         item = {column.key: getattr(role, column.key) for column in AssetRole.__table__.columns}
         item["created_at"] = role.created_at
         item["updated_at"] = role.updated_at
-        item.update(
-            current_map.get(
-                role.id,
-                {
-                    "current_assignment_id": None,
-                    "current_asset_id": None,
-                    "current_asset_name": None,
-                    "current_asset_code": None,
-                    "current_asset_status": None,
-                },
-            )
-        )
+        item.update(current_map.get(role.id, _defaults))
         result.append(item)
     return result
 
