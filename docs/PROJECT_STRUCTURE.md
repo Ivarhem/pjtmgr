@@ -516,6 +516,7 @@ alembic/
     ├── 0059_product_similarity_dismissal.py      # 유사 제품 무시 기록
     ├── 0060_product_similar_count.py             # 제품 유사 개수 컬럼 추가
     ├── 0061_drop_contract_period_classification_layout_fk.py # contract_periods 분류 레이아웃 FK 제거
+    ├── 0062_drop_asset_role_type.py                 # asset_roles.role_type 컬럼 제거
     └── 91fa5696df75_add_catalog_vendor_meta_table.py # 카탈로그 제조사 메타 테이블
 ```
 
@@ -550,6 +551,10 @@ docs/
 ```text
 scripts/
 ├── seed_catalog.py             # 제품 카탈로그 시드 데이터
+├── seed_products.py            # 제품 데이터 시드
+├── enrich_vendors.py           # 제조사 데이터 보강
+├── fill_product_classification.py # 제품 분류 채우기
+├── merge_and_seed_vendors.py   # 제조사 병합 및 시드
 └── migrate_contacts.py         # 연락처 마이그레이션
 ```
 

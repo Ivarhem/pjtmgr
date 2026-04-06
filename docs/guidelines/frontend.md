@@ -279,4 +279,14 @@
 }
 ```
 
-기존 커스텀 에디터: `CatalogCellEditor` (모델명), `RoleCellEditor` (현재 역할)
+기존 커스텀 에디터: `CatalogCellEditor` (모델명), `RoleCellEditor` (역할명)
+
+### 자산 그리드 컬럼 구성
+
+자산 그리드의 columnDefs는 3개 파트로 조립된다:
+
+- `ASSET_INFO_COLS`: 자산 정보 (자산명, 역할명, 호스트명, 모델명, 시리얼번호, 센터, 환경, 상태)
+- `buildClassificationCols(depth)`: 분류체계 (카탈로그 레이아웃 깊이에 따라 동적 생성)
+- `ASSET_CODE_COLS`: 관리 코드 (자산코드, 프로젝트코드, 고객자산번호, 귀속프로젝트)
+
+컬럼 구성 변경 시 `ASSET_GRID_COLUMN_STATE_KEY` 버전을 올려 저장된 상태를 무효화한다.
