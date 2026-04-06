@@ -115,14 +115,10 @@ def register_routers(app: FastAPI, enabled: list[str]) -> None:
 
         app.include_router(accounting_api_router)
 
-    # Infra module routers (placeholder — routers will be added in later tasks)
     if "infra" in enabled:
-        try:
-            from app.modules.infra.routers import api_router as infra_api_router
+        from app.modules.infra.routers import api_router as infra_api_router
 
-            app.include_router(infra_api_router)
-        except ImportError:
-            pass  # Infra routers not yet implemented
+        app.include_router(infra_api_router)
 
 
 def configure_templates(app: FastAPI, enabled: list[str]) -> None:

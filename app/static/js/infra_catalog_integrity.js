@@ -65,7 +65,7 @@ async function loadIntegrityPermissions() {
     _canManageVendor = false;
   }
   document.querySelectorAll(".vendor-write-only").forEach((el) => {
-    el.style.display = _canManageVendor ? "" : "none";
+    setElementHidden(el, !_canManageVendor);
   });
 }
 
@@ -542,7 +542,9 @@ function renderMdmSimilarCard(item, targetProduct, isDismissed = false) {
   card.appendChild(actions);
 
   if (!_canManageVendor) {
-    card.querySelectorAll(".vendor-write-only").forEach((el) => { el.style.display = "none"; });
+    card.querySelectorAll(".vendor-write-only").forEach((el) => {
+      setElementHidden(el, true);
+    });
   }
 
   return card;

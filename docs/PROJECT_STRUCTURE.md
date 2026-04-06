@@ -518,13 +518,21 @@ docs/
 ├── KNOWN_ISSUES.md             # 알려진 제약, 임시 우회
 ├── PROJECT_CONTEXT.md          # 프로젝트 배경, 사용자, 문제 정의
 ├── PROJECT_STRUCTURE.md        # 이 파일 — 파일 단위 구조와 역할
-└── guidelines/
-    ├── backend.md              # 백엔드 코드 규칙, 예외 처리, 감사 로그
-    ├── frontend.md             # 프론트엔드 명명, CSS, 모달, UI/UX
-    ├── auth.md                 # 인증/권한/보안 규칙
-    ├── excel.md                # Excel Import/Export 규칙
-    ├── accounting.md           # 회계모듈 용어, 데이터 원칙
-    └── infra.md                # 인프라모듈 용어, 데이터 원칙
+├── guidelines/
+│   ├── backend.md              # 백엔드 코드 규칙, 예외 처리, 감사 로그
+│   ├── frontend.md             # 프론트엔드 명명, CSS, 모달, UI/UX
+│   ├── auth.md                 # 인증/권한/보안 규칙
+│   ├── excel.md                # Excel Import/Export 규칙
+│   ├── accounting.md           # 회계모듈 용어, 데이터 원칙
+│   ├── infra.md                # 인프라모듈 용어, 데이터 원칙
+│   └── agent_workflow.md       # 멀티에이전트 작업 오케스트레이션 기준
+└── agents/
+    ├── planner.md              # 작업 분해, 범위/완료 조건 정리
+    ├── impact-analyzer.md      # 영향 범위, 의존성, 전역 상태 조사
+    ├── implementer.md          # 구현 역할 카드
+    ├── reviewer.md             # 리뷰 역할 카드
+    ├── tester.md               # 검증 역할 카드
+    └── docs-updater.md         # 문서 갱신 판정 역할 카드
 ```
 
 ## 스크립트

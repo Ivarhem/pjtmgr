@@ -7,6 +7,7 @@
 >
 > **문서 안내** — 코딩 규칙은 `CLAUDE.md`, 작업 지침은 `docs/guidelines/`, 아키텍처 결정은 `docs/DECISIONS.md`,
 > 알려진 제약은 `docs/KNOWN_ISSUES.md`, 프로젝트 배경은 `docs/PROJECT_CONTEXT.md` 참조.
+> 멀티에이전트 작업 기준은 `docs/guidelines/agent_workflow.md`, `docs/agents/`를 따른다.
 > 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델의 1차 기준은 소스 코드(`app/core/startup/`, `app/modules/*/routers/`, `app/modules/*/models/`)다.
 > 인프라모듈의 세부 진행 상태와 우선순위는 `docs/superpowers/plans/2026-03-24-infra-module-roadmap.md`를 기준으로 본다.
 
@@ -185,6 +186,7 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 - `README.md`: 프로젝트 소개, 실행 방법, 현재 상태
 - `CLAUDE.md`: 상위 개발 지침, 문서 갱신 규칙, 완료 조건
 - `docs/guidelines/`: 백엔드, 인증/권한, 프론트엔드, Excel 작업별 상세 규칙
+- `docs/guidelines/agent_workflow.md`, `docs/agents/`: 멀티에이전트 작업 오케스트레이션 기준과 역할 카드
 - `docs/DECISIONS.md`: 구조/정책 결정 기록
 - `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 제약과 우회
 - `docs/PROJECT_CONTEXT.md`: 프로젝트 배경, 사용자, 문제 정의

@@ -13,6 +13,7 @@
 - Excel Import/Export 작업 → `docs/guidelines/excel.md`
 - 회계모듈 작업 → `docs/guidelines/accounting.md`
 - 인프라모듈 작업 → `docs/guidelines/infra.md`
+- 멀티에이전트 작업 오케스트레이션/역할 분리 → `docs/guidelines/agent_workflow.md`, `docs/agents/`
 
 ---
 
@@ -21,6 +22,7 @@
 - `README.md`: 프로젝트 소개, 실행 방법, 현재 상태, 문서 안내
 - `CLAUDE.md`: 항상 유지해야 하는 핵심 규칙, 문서 갱신 매핑, 완료 조건
 - `docs/guidelines/*.md`: 작업 영역별 상세 규칙과 패턴
+- `docs/agents/*.md`: 멀티에이전트 역할 카드와 handoff 템플릿
 - `docs/DECISIONS.md`: 왜 그런 구조/정책을 택했는지에 대한 결정 기록
 - `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 임시 제약, 우회, 운영상 주의점
 - `docs/PROJECT_CONTEXT.md`: 도메인 배경, 사용자, 문제 정의
@@ -91,11 +93,12 @@ app/
 | 인프라 비즈니스 규칙 변경 | `docs/guidelines/infra.md` |
 | 분류체계 / 카탈로그 속성·레이아웃 변경 | `docs/guidelines/infra.md` |
 | 코딩 패턴/규칙 변경 | `docs/guidelines/backend.md` |
-| 테스트 전략/회귀 범위 변경 | CLAUDE.md SS3 테스트/확장성 |
+| 테스트 전략/회귀 범위 변경 | CLAUDE.md의 `3. 테스트/확장성` |
 | 권한 변경 | `docs/guidelines/auth.md` |
 | 사용자관리 권한 부여 UX 변경 | `docs/guidelines/auth.md`, `docs/KNOWN_ISSUES.md` |
 | 프론트엔드 패턴 변경 | `docs/guidelines/frontend.md` |
 | 레이아웃 상태 저장/복원 패턴 변경 | `docs/guidelines/frontend.md`, 필요 시 해당 모듈 guideline |
+| 멀티에이전트 역할/오케스트레이션 규칙 변경 | `docs/guidelines/agent_workflow.md`, 필요 시 `docs/agents/*.md` |
 | Excel Import/Export 변경 | `docs/guidelines/excel.md` |
 | startup/bootstrap/migration 변경 | `docs/DECISIONS.md`, 필요 시 `README.md` |
 | 공개 엔드포인트/인증 흐름 변경 | `docs/guidelines/auth.md`, 필요 시 `README.md` |
@@ -127,7 +130,7 @@ app/
 1. 코드 변경 완료
 2. 관련 테스트 통과 (새 기능은 테스트 추가)
    - 테스트가 로컬 환경 의존성 부족이나 실행 정책 때문에 막히면, 누락 의존성/차단 원인/미실행 범위를 작업 결과에 명시한다.
-3. 변경 유형을 식별하고 SS2 매핑 표의 필수 문서를 갱신 완료
+3. 변경 유형을 식별하고 위 문서 갱신 매핑 표의 필수 문서를 갱신 완료
 4. 해결된 KNOWN_ISSUES 항목이 있으면 삭제 완료
 5. 문서에 적은 경로/엔드포인트/권한/초기화 절차가 코드와 일치함을 확인
 

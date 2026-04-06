@@ -21,7 +21,7 @@ async function loadSystemAttrPermissions() {
     _canManageAttr = false;
   }
   document.querySelectorAll(".attr-write-only").forEach((el) => {
-    el.style.display = _canManageAttr ? "" : "none";
+    setElementHidden(el, !_canManageAttr);
   });
 }
 
