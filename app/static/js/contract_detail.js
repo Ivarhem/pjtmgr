@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 거래처 select 채우기
     const sel = document.getElementById('repeat-partner');
     sel.innerHTML = '<option value="">-- 선택 --</option>' +
-      partners.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+      partners.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
     // Forecast 매입 기준 체크박스 초기화
     const chkFc = document.getElementById('repeat-use-forecast');
     chkFc.checked = false;
@@ -351,7 +351,7 @@ async function loadPartners() {
   partners = await res.json();
   // datalist for partner autocomplete
   const dl = document.getElementById('partner-list');
-  if (dl) dl.innerHTML = partners.map(c => `<option value="${c.name}">`).join('');
+  if (dl) dl.innerHTML = partners.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
 }
 
 async function loadUsers() {
@@ -361,7 +361,7 @@ async function loadUsers() {
     const dl = document.getElementById('user-list');
     dl.innerHTML = users.filter(u => u.is_active).map(u => {
       const label = u.department ? `${u.name} (${u.department})` : u.name;
-      return `<option value="${label}">`;
+      return `<option value="${escapeHtml(label)}">`;
     }).join('');
   }
 }
@@ -408,9 +408,9 @@ function renderHeader(contract, period) {
   document.getElementById('contract-title').textContent = contract.contract_name;
   document.getElementById('contract-info').innerHTML = `
     <div class="info-row">
-      <span class="info-item"><b>사업코드</b> ${contract.contract_code || '-'}</span>
-      <span class="info-item"><b>사업유형</b> ${contract.contract_type}</span>
-      <span class="info-item"><b>${getTermLabel('customer', '고객')}</b> ${contract.end_partner_name || '-'}</span>
+      <span class="info-item"><b>사업코드</b> ${escapeHtml(contract.contract_code || '-')}</span>
+      <span class="info-item"><b>사업유형</b> ${escapeHtml(contract.contract_type || '-')}</span>
+      <span class="info-item"><b>${escapeHtml(getTermLabel('customer', '고객'))}</b> ${escapeHtml(contract.end_partner_name || '-')}</span>
       <span class="info-item">
         <button class="btn btn-secondary btn-sm" onclick="openEditContractInfo()">수정</button>
       </span>
@@ -459,24 +459,29 @@ function renderPeriodInfoSections() {
     const gpPct = rev ? (Math.round(gp / rev * 1000) / 10) : 0;
     const ownerName = p.owner_name || '-';
     const contactsId = `period-contacts-${p.id}`;
+    const safePeriodLabel = escapeHtml(p.period_label || '-');
+    const safeRange = escapeHtml(range);
+    const safeStage = escapeHtml(p.stage || '-');
+    const safeOwnerName = escapeHtml(ownerName);
+    const safePartnerName = escapeHtml(p.partner_name || currentContract?.end_partner_name || '-');
     return `
       <div class="period-info-card${collapsed ? ' collapsed' : ''}" data-period-id="${p.id}">
         <div class="period-info-header" onclick="this.parentElement.classList.toggle('collapsed')">
           <span class="period-info-toggle">${collapsed ? '▶' : '▼'}</span>
-          <b>${p.period_label}</b>
-          <span class="info-item"><b>사업기간</b> ${range}</span>
-          <span class="info-item"><b>진행단계</b> <span class="badge badge-${p.stage === '계약완료' ? 'done' : 'progress'}">${p.stage}</span></span>
+          <b>${safePeriodLabel}</b>
+          <span class="info-item"><b>사업기간</b> ${safeRange}</span>
+          <span class="info-item"><b>진행단계</b> <span class="badge badge-${p.stage === '계약완료' ? 'done' : 'progress'}">${safeStage}</span></span>
           <span class="info-item">${p.is_completed ? '<span class="contract-status-badge closed">완료</span>' : '<span class="contract-status-badge active">진행중</span>'}</span>
           <span class="info-item">${p.is_planned ? '<span class="contract-status-badge active">계획사업</span>' : '<span class="contract-status-badge planned-new">수시사업</span>'}</span>
           <span class="period-header-actions">
             <button class="btn btn-xs" onclick="event.stopPropagation(); togglePeriodCompleted(${p.id}, ${!p.is_completed})" title="${p.is_completed ? '진행중으로 변경' : '사업완료 처리'}">${p.is_completed ? '진행중으로 변경' : '사업완료'}</button>
-            <button class="btn btn-xs btn-text-danger period-delete-btn" onclick="event.stopPropagation(); deletePeriodById(${p.id}, '${p.period_label}')" title="Period 삭제">삭제</button>
+            <button class="btn btn-xs btn-text-danger period-delete-btn" onclick="event.stopPropagation(); deletePeriodById(${p.id}, ${JSON.stringify(p.period_label || '')})" title="Period 삭제">삭제</button>
           </span>
         </div>
         <div class="period-info-body">
           <div class="info-row">
-            <span class="info-item"><b>담당</b> ${ownerName}</span>
-            <span class="info-item"><b>매출처</b> ${p.partner_name || currentContract?.end_partner_name || '-'}</span>
+            <span class="info-item"><b>담당</b> ${safeOwnerName}</span>
+            <span class="info-item"><b>매출처</b> ${safePartnerName}</span>
             <span class="info-item"><b>예상 매출</b> ${rev ? fmt(rev) + '원' : '미설정'}</span>
             <span class="info-item"><b>예상 GP</b> ${gp ? fmt(gp) + '원' : '미설정'}</span>
             <span class="info-item"><b>GP%</b> ${rev ? gpPct + '%' : '-'}</span>
@@ -513,8 +518,8 @@ async function loadPeriodContacts(periodId) {
   bar.innerHTML = '<span class="contact-label">담당자</span>' + contacts.map(c => {
     const roleClass = c.contact_type === '세금계산서' ? 'contact-role tax' : 'contact-role';
     const rankLabel = c.rank === '부' ? '(부)' : '';
-    const info = [c.contact_name, c.contact_phone, c.contact_email].filter(Boolean).join(' · ');
-    return `<span class="contact-item"><span class="${roleClass}">${c.contact_type}${rankLabel}</span> ${info}</span>`;
+    const info = [c.contact_name, c.contact_phone, c.contact_email].filter(Boolean).map((value) => escapeHtml(value)).join(' · ');
+    return `<span class="contact-item"><span class="${roleClass}">${escapeHtml(c.contact_type || '')}${escapeHtml(rankLabel)}</span> ${info}</span>`;
   }).join('');
 }
 
@@ -562,6 +567,7 @@ function openEditPeriodInfo() {
   const ownerDisplay = period.owner_name
     ? (users.find(u => u.id === period.owner_user_id) ? _userDisplayName(users.find(u => u.id === period.owner_user_id)) : period.owner_name)
     : '';
+  const safeOwnerDisplay = escapeHtml(ownerDisplay);
   const card = document.querySelector(`.period-info-card[data-period-id="${CONTRACT_PERIOD_ID}"]`);
   if (!card) return;
   const body = card.querySelector('.period-info-body');
@@ -572,19 +578,19 @@ function openEditPeriodInfo() {
         <div class="info-edit-row">
           <label class="info-edit-field">
             <span>담당</span>
-            <input type="text" id="edit-owner" value="${ownerDisplay}" list="user-list" placeholder="이름 검색">
+            <input type="text" id="edit-owner" value="${safeOwnerDisplay}" list="user-list" placeholder="이름 검색">
           </label>
           <label class="info-edit-field">
             <span>매출처</span>
             <select id="edit-partner">
               <option value="">-- ${getTermLabel('customer', '고객')} 동일 --</option>
-              ${partners.map(c => `<option value="${c.id}"${period.partner_id===c.id?' selected':''}>${c.name}</option>`).join('')}
+              ${partners.map(c => `<option value="${c.id}"${period.partner_id===c.id?' selected':''}>${escapeHtml(c.name)}</option>`).join('')}
             </select>
           </label>
           <label class="info-edit-field">
             <span>진행단계</span>
             <select id="edit-stage">
-              ${['10%','50%','70%','90%','계약완료','실주'].map(v => `<option value="${v}"${period.stage===v?' selected':''}>${v}</option>`).join('')}
+              ${['10%','50%','70%','90%','계약완료','실주'].map(v => `<option value="${escapeHtml(v)}"${period.stage===v?' selected':''}>${escapeHtml(v)}</option>`).join('')}
             </select>
           </label>
           <label class="info-edit-field chk-inline">
@@ -949,9 +955,9 @@ async function switchToMultiView() {
   // 헤더 — 기본정보만 표시
   document.getElementById('contract-info').innerHTML = `
     <div class="info-row">
-      <span class="info-item"><b>사업코드</b> ${currentContract.contract_code || '-'}</span>
-      <span class="info-item"><b>사업유형</b> ${currentContract.contract_type}</span>
-      <span class="info-item"><b>${getTermLabel('customer', '고객')}</b> ${currentContract.end_partner_name || '-'}</span>
+      <span class="info-item"><b>사업코드</b> ${escapeHtml(currentContract.contract_code || '-')}</span>
+      <span class="info-item"><b>사업유형</b> ${escapeHtml(currentContract.contract_type || '-')}</span>
+      <span class="info-item"><b>${escapeHtml(getTermLabel('customer', '고객'))}</b> ${escapeHtml(currentContract.end_partner_name || '-')}</span>
       <span class="info-item">
         <button class="btn btn-secondary btn-sm" onclick="openEditContractInfo()">수정</button>
       </span>
@@ -1737,7 +1743,7 @@ async function reloadLedger() {
   const allocations = allocRes.ok ? await allocRes.json() : [];
   _buildAllocationMap(allocations);
   const _dl = document.getElementById('partner-list');
-  if (_dl) _dl.innerHTML = partners.map(c => `<option value="${c.name}">`).join('');
+  if (_dl) _dl.innerHTML = partners.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
   fullLedger = ledger;
   fullReceipts = receipts;
   fullAllocations = allocations;
@@ -1920,8 +1926,8 @@ async function _openAddPeriodModal() {
 
   // 매출처
   const custSel = document.getElementById('add-period-partner');
-  custSel.innerHTML = `<option value="">-- ${getTermLabel('customer', '고객')} 동일 --</option>` +
-    partners.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  custSel.innerHTML = `<option value="">-- ${escapeHtml(getTermLabel('customer', '고객'))} 동일 --</option>` +
+    partners.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
   const defaultCustId = prev?.partner_id || currentContract?.end_partner_id || '';
   custSel.value = String(defaultCustId);
 
@@ -2481,7 +2487,7 @@ class PartnerCellEditor {
     if (keyword && !partners.find(c => c.name.toLowerCase() === keyword)) {
       const similar = this._findSimilar(this.input.value.trim());
       if (similar.length) {
-        html += `<div class="cust-similar-warn">⚠ 유사 거래처: ${similar.map(c => `<b>${c.name}</b>`).join(', ')}</div>`;
+        html += `<div class="cust-similar-warn">⚠ 유사 거래처: ${similar.map(c => `<b>${escapeHtml(c.name)}</b>`).join(', ')}</div>`;
       }
     }
 

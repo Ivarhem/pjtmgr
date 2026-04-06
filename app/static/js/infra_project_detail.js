@@ -244,7 +244,13 @@ async function loadDeliverables() {
 /* ── 요약 카드 ── */
 async function loadSummaryCards(projectId) {
   try {
-    const assets = await apiFetch(`/api/v1/assets?partner_id=${_PROJECT_PARTNER_ID}&period_id=${projectId}`);
+    let partnerId = _PROJECT_PARTNER_ID;
+    if (!partnerId) {
+      const period = await apiFetch(`/api/v1/contract-periods/${projectId}`);
+      partnerId = period.partner_id;
+      _PROJECT_PARTNER_ID = partnerId;
+    }
+    const assets = await apiFetch(`/api/v1/assets?partner_id=${partnerId}&period_id=${projectId}`);
     document.getElementById('card-asset-count').textContent =
       Array.isArray(assets) ? `${assets.length} 대` : '-';
   } catch (e) {

@@ -474,15 +474,15 @@ async function loadContractTypeTable() {
   const tbody = document.getElementById("contract-type-tbody");
   tbody.innerHTML = types.map((dt) => `
     <tr class="${dt.is_active ? "" : "row-inactive"}">
-      <td><span class="cell-code">${dt.code}</span></td>
-      <td>${dt.label}</td>
+      <td><span class="cell-code">${escapeHtml(dt.code)}</span></td>
+      <td>${escapeHtml(dt.label)}</td>
       <td class="cell-center">${dt.sort_order}</td>
       <td class="cell-center">${dt.default_gp_pct != null ? `${dt.default_gp_pct}%` : '<span class="cell-muted">-</span>'}</td>
       <td class="cell-center">${inspectionText(dt)}</td>
       <td class="cell-center cell-text-sm">${invoiceText(dt)}</td>
       <td class="cell-center">${dt.is_active ? '<span class="badge-active">활성</span>' : '<span class="badge-inactive">비활성</span>'}</td>
       <td class="cell-center">
-        <button class="btn btn-secondary btn-xs" onclick="openContractTypeModal('${dt.code}')">수정</button>
+        <button class="btn btn-secondary btn-xs" onclick="openContractTypeModal(${JSON.stringify(dt.code)})">수정</button>
       </td>
     </tr>
   `).join("");
@@ -597,15 +597,15 @@ async function loadTermConfigTable() {
   const tbody = document.getElementById("term-config-tbody");
   tbody.innerHTML = terms.map((term) => `
     <tr class="${term.is_active ? "" : "row-inactive"}">
-      <td class="cell-center"><span class="badge-category" data-cat="${term.category}">${CATEGORY_LABELS[term.category] || term.category}</span></td>
-      <td><span class="cell-code">${term.term_key}</span></td>
-      <td>${term.standard_label_ko}</td>
-      <td>${term.default_ui_label}</td>
-      <td>${term.is_customized ? `<span class="badge-customized">${term.custom_ui_label}</span>` : '<span class="cell-muted">-</span>'}</td>
+      <td class="cell-center"><span class="badge-category" data-cat="${escapeHtml(term.category)}">${escapeHtml(CATEGORY_LABELS[term.category] || term.category)}</span></td>
+      <td><span class="cell-code">${escapeHtml(term.term_key)}</span></td>
+      <td>${escapeHtml(term.standard_label_ko)}</td>
+      <td>${escapeHtml(term.default_ui_label)}</td>
+      <td>${term.is_customized ? `<span class="badge-customized">${escapeHtml(term.custom_ui_label)}</span>` : '<span class="cell-muted">-</span>'}</td>
       <td class="cell-center">${term.is_active ? '<span class="badge-active">활성</span>' : '<span class="badge-inactive">비활성</span>'}</td>
       <td class="cell-center">
-        <button class="btn btn-secondary btn-xs" onclick="openTermModal('${term.term_key}')">수정</button>
-        ${term.is_customized ? `<button class="btn btn-secondary btn-xs" onclick="resetTermLabel('${term.term_key}')">초기화</button>` : ""}
+        <button class="btn btn-secondary btn-xs" onclick="openTermModal(${JSON.stringify(term.term_key)})">수정</button>
+        ${term.is_customized ? `<button class="btn btn-secondary btn-xs" onclick="resetTermLabel(${JSON.stringify(term.term_key)})">초기화</button>` : ""}
       </td>
     </tr>
   `).join("");
