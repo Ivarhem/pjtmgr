@@ -75,22 +75,26 @@ def get_asset_endpoint(
 def update_asset_endpoint(
     asset_id: int,
     payload: AssetUpdate,
+    layout_id: int | None = None,
+    lang: str | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> AssetRead:
     asset = update_asset(db, asset_id, payload, current_user)
-    return enrich_asset_with_catalog_kind(db, asset)
+    return enrich_asset_with_catalog_kind(db, asset, layout_id=layout_id, lang=lang)
 
 
 @router.patch("/{asset_id}/current-role", response_model=AssetRead)
 def update_asset_current_role_endpoint(
     asset_id: int,
     payload: AssetCurrentRoleUpdate,
+    layout_id: int | None = None,
+    lang: str | None = None,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> AssetRead:
     asset = update_asset_current_role(db, asset_id, payload.asset_role_id, current_user)
-    return enrich_asset_with_catalog_kind(db, asset)
+    return enrich_asset_with_catalog_kind(db, asset, layout_id=layout_id, lang=lang)
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)

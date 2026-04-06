@@ -278,7 +278,13 @@ def enrich_assets_with_period(
     return result
 
 
-def enrich_asset_with_catalog_kind(db: Session, asset: Asset) -> dict:
+def enrich_asset_with_catalog_kind(
+    db: Session,
+    asset: Asset,
+    *,
+    layout_id: int | None = None,
+    lang: str | None = None,
+) -> dict:
     from app.modules.common.models.contract_period import ContractPeriod
     from app.modules.infra.models.period_asset import PeriodAsset
     from app.modules.infra.models.product_catalog import ProductCatalog
@@ -312,12 +318,18 @@ def enrich_asset_with_catalog_kind(db: Session, asset: Asset) -> dict:
         if rack is not None:
             d["rack_label"] = rack.rack_name or rack.rack_code
     d["rack_is_fallback_text"] = bool(not asset.rack_id and asset.rack_no)
+    period_link = db.scalar(
+        select(PeriodAsset).where(PeriodAsset.asset_id == asset.id).order_by(PeriodAsset.id.asc())
+    )
+    _period_id = period_link.contract_period_id if period_link else None
     classification_info = _build_classification_info(
         db,
         catalog,
-        period_id=None,
+        period_id=_period_id,
         category=asset.category,
         subcategory=asset.subcategory,
+        layout_id=layout_id,
+        lang=lang,
     )
     d["classification_path"] = classification_info["path"]
     d["classification_is_fallback_text"] = classification_info["is_fallback_text"]
@@ -326,12 +338,9 @@ def enrich_asset_with_catalog_kind(db: Session, asset: Asset) -> dict:
     d["classification_level_3_name"] = classification_info["levels"][2]
     d["classification_level_4_name"] = classification_info["levels"][3]
     d["classification_level_5_name"] = classification_info["levels"][4]
-    period_link = db.scalar(
-        select(PeriodAsset).where(PeriodAsset.asset_id == asset.id).order_by(PeriodAsset.id.asc())
-    )
     if period_link is not None:
-        d["period_id"] = period_link.contract_period_id
-        period = db.get(ContractPeriod, period_link.contract_period_id)
+        d["period_id"] = _period_id
+        period = db.get(ContractPeriod, _period_id)
         if period is not None:
             d["period_label"] = period.period_label
             d["contract_name"] = period.contract.contract_name if period.contract else None

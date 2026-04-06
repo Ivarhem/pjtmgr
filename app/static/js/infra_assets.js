@@ -802,6 +802,15 @@ function applyAssetRowUpdate(row, updated) {
   gridApi?.refreshCells({ force: true });
 }
 
+function _assetPatchUrl(path) {
+  const params = new URLSearchParams();
+  const layoutId = localStorage.getItem("catalog_layout_preset_id");
+  if (layoutId) params.set("layout_id", layoutId);
+  if (_catalogLabelLang) params.set("lang", _catalogLabelLang);
+  const qs = params.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 async function handleGridCellValueChanged(event) {
   if (!event?.data || event.newValue === event.oldValue) return;
   const row = event.data;
@@ -809,7 +818,7 @@ async function handleGridCellValueChanged(event) {
   try {
     let updated;
     if (field === "current_role_id") {
-      updated = await apiFetch(`/api/v1/assets/${row.id}/current-role`, {
+      updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}/current-role`), {
         method: "PATCH",
         body: { asset_role_id: row.current_role_id || null },
       });
@@ -820,19 +829,19 @@ async function handleGridCellValueChanged(event) {
         gridApi?.refreshCells({ rowNodes: [event.node], force: true });
         return;
       }
-      updated = await apiFetch(`/api/v1/assets/${row.id}`, {
+      updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}`), {
         method: "PATCH",
         body: { model_id: val._catalogModelId },
       });
       row.model = updated.model;
     } else if (field === "center_id" || field === "period_id") {
       const val = event.newValue === "" || event.newValue == null ? null : Number(event.newValue);
-      updated = await apiFetch(`/api/v1/assets/${row.id}`, {
+      updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}`), {
         method: "PATCH",
         body: { [field]: val },
       });
     } else {
-      updated = await apiFetch(`/api/v1/assets/${row.id}`, {
+      updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}`), {
         method: "PATCH",
         body: { [field]: row[field] || null },
       });
