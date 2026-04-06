@@ -2069,6 +2069,10 @@ function getCatalogCombobox() {
         const full = _catalogItemsCache.find((p) => String(p.id) === String(item.value));
         if (full) selectCatalogItem(full);
       },
+      footerAction: {
+        label: "+ 새 제품 등록",
+        onClick: () => openInlineCatalogForm(),
+      },
     });
     _catalogCombobox.bind();
   }

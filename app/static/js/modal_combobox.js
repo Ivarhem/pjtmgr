@@ -1,12 +1,13 @@
 /* ── Modal Combobox (검색 가능 드롭다운) ── */
 
 class ModalCombobox {
-  constructor({ inputId, hiddenId, dropdownId, onSelect, maxDisplay = 0 }) {
+  constructor({ inputId, hiddenId, dropdownId, onSelect, maxDisplay = 0, footerAction = null }) {
     this.input = document.getElementById(inputId);
     this.hidden = document.getElementById(hiddenId);
     this.dropdown = document.getElementById(dropdownId);
     this.onSelect = onSelect || (() => {});
     this.maxDisplay = maxDisplay;
+    this.footerAction = footerAction;   // { label, onClick } or null
     this.items = [];           /* { value, label, hint? } */
     this._focusIdx = -1;
     this._bound = false;
@@ -55,6 +56,17 @@ class ModalCombobox {
       empty.className = "modal-combobox-empty";
       empty.textContent = "검색 결과 없음";
       this.dropdown.appendChild(empty);
+      if (this.footerAction) {
+        const footer = document.createElement("div");
+        footer.className = "modal-combobox-footer-action";
+        footer.textContent = this.footerAction.label;
+        footer.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          this._close();
+          this.footerAction.onClick();
+        });
+        this.dropdown.appendChild(footer);
+      }
       setElementHidden(this.dropdown, false);
       return;
     }
@@ -83,6 +95,17 @@ class ModalCombobox {
       more.className = "modal-combobox-empty";
       more.textContent = `외 ${totalCount - this.maxDisplay}건 — 검색어를 더 입력하세요`;
       this.dropdown.appendChild(more);
+    }
+    if (this.footerAction) {
+      const footer = document.createElement("div");
+      footer.className = "modal-combobox-footer-action";
+      footer.textContent = this.footerAction.label;
+      footer.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        this._close();
+        this.footerAction.onClick();
+      });
+      this.dropdown.appendChild(footer);
     }
     setElementHidden(this.dropdown, false);
   }

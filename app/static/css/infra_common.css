@@ -1208,6 +1208,17 @@ body.dark-mode .catalog-primary-attribute-group {
   color: var(--text-muted, #94a3b8);
   text-align: center;
 }
+.modal-combobox-footer-action {
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-color, #3b82f6);
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+.modal-combobox-footer-action:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, var(--surface-color));
+}
 
 /* Alias tags in asset grid */
 .alias-tag {
