@@ -914,13 +914,30 @@ function renderProductSimilarityBox(result) {
     scoreSpan.className = "catalog-similarity-item-score";
     scoreSpan.textContent = "\uc720\uc0ac\ub3c4 " + item.score;
     li.appendChild(scoreSpan);
-    li.addEventListener("click", () => {
+    li.addEventListener("click", async () => {
       const vendorInput = document.getElementById("product-vendor");
       const vendorValue = document.getElementById("product-vendor-value");
       const nameInput = document.getElementById("product-name");
       if (vendorInput) vendorInput.value = item.vendor || "";
       if (vendorValue) vendorValue.value = item.vendor || "";
       if (nameInput) nameInput.value = item.name || "";
+      // 제품 상세에서 제품군/구현형태 자동 매핑
+      try {
+        const detail = await apiFetch("/api/v1/product-catalog/" + item.id);
+        const attrs = detail?.attributes || [];
+        const familyAttr = attrs.find((a) => a.attribute_key === "product_family");
+        const impAttr = attrs.find((a) => a.attribute_key === "imp_type");
+        if (familyAttr?.option_key) {
+          const familyInput = document.getElementById("product-family-input");
+          const familyHidden = document.getElementById("product-attr-product-family");
+          if (familyInput) familyInput.value = familyAttr.option_key;
+          if (familyHidden) familyHidden.value = familyAttr.option_key;
+        }
+        if (impAttr?.option_key) {
+          const impSelect = document.getElementById("product-attr-imp-type");
+          if (impSelect) impSelect.value = impAttr.option_key;
+        }
+      } catch (_) { /* 매핑 실패 시 무시 */ }
       resetProductSimilarityBox();
     });
     list.appendChild(li);
@@ -2108,6 +2125,7 @@ async function openCreateProduct() {
   document.getElementById("btn-save-product").textContent = "등록";
   resetProductSimilarityBox();
   productModal.showModal();
+  document.getElementById("product-name")?.focus();
 }
 
 async function openEditProduct() {
