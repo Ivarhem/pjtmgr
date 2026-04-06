@@ -31,7 +31,6 @@ let _catalogLayouts = [];
 let _catalogAttributeDefs = [];
 let _catalogClassificationSearchQuery = "";
 const _catalogAttributeOptionCache = new Map();
-let _productSimilarityTimer = null;
 let _catalogClassificationSchemeEditing = false;
 
 const CATALOG_LABEL_LANG_PREF_KEY = "catalog.label_lang";
@@ -880,64 +879,37 @@ function getCatalogAttributeValuesFromForm() {
   };
 }
 
+let _productNameListCache = [];
+
 function resetProductSimilarityBox() {
   if (_productNameCombobox) {
-    _productNameCombobox.setItems([]);
-    _productNameCombobox._close();
+    _productNameCombobox.reset();
   }
 }
 
-function renderProductSimilarityBox(items) {
-  const combo = getProductNameCombobox();
-  if (!items?.length) {
-    combo.setItems([]);
-    return;
-  }
-  combo.setItems(
-    items.map((item) => ({
-      value: String(item.id),
-      label: ((item.vendor || "") + " " + (item.name || "")).trim(),
-      hint: item.product_type || "",
-      aliases: [item.vendor || "", item.name || ""],
-      modelName: item.name || "",
-    }))
-  );
-  combo._filter();
-}
-
-async function checkProductSimilaritySuggestions() {
-  const name = document.getElementById("product-name")?.value?.trim() || "";
-  const excludeIdRaw = document.getElementById("product-id")?.value || "";
-  const excludeId = excludeIdRaw ? Number(excludeIdRaw) : null;
-  if (!name) {
-    resetProductSimilarityBox();
-    return;
-  }
+async function loadProductNameList(excludeId = null) {
   try {
-    const items = await apiFetch("/api/v1/product-catalog?q=" + encodeURIComponent(name));
-    const filtered = excludeId ? items.filter((p) => p.id !== excludeId) : items;
-    renderProductSimilarityBox(filtered);
-  } catch (err) {
-    console.error(err);
+    const items = await apiFetch("/api/v1/product-catalog");
+    _productNameListCache = items;
+    const combo = getProductNameCombobox();
+    combo.setItems(
+      items
+        .filter((item) => !excludeId || item.id !== excludeId)
+        .map((item) => ({
+          value: String(item.id),
+          label: ((item.vendor || "") + " " + (item.name || "")).trim(),
+          hint: item.product_type || "",
+          aliases: [item.vendor || "", item.name || ""],
+          modelName: item.name || "",
+        }))
+    );
+  } catch (e) {
+    console.error("product name list load error:", e);
   }
-}
-
-function scheduleProductSimilarityCheck() {
-  if (_productSimilarityTimer) clearTimeout(_productSimilarityTimer);
-  _productSimilarityTimer = setTimeout(() => {
-    checkProductSimilaritySuggestions().catch((err) => console.error(err));
-  }, 350);
 }
 
 function bindProductSimilarityInputs() {
-  getProductNameCombobox();  // ensure combobox is initialized and bound
-  const nameInput = document.getElementById("product-name");
-  if (nameInput) {
-    nameInput.addEventListener("input", scheduleProductSimilarityCheck);
-    nameInput.addEventListener("blur", () => {
-      checkProductSimilaritySuggestions().catch((err) => console.error(err));
-    });
-  }
+  getProductNameCombobox();
 }
 
 function buildCatalogAttributePayload(values) {
@@ -1018,8 +990,7 @@ function getProductNameCombobox() {
       inputId: "product-name",
       hiddenId: "product-name-ref-id",
       dropdownId: "product-name-dropdown",
-      maxDisplay: 10,
-      skipLocalFilter: true,
+      maxDisplay: 50,
       onSelect: async (item) => {
         await fillFormFromSimilarProduct(item.value);
         // ModalCombobox sets input to full label (vendor + name).
@@ -1108,10 +1079,7 @@ function getVendorCombobox() {
       inputId: "product-vendor",
       hiddenId: "product-vendor-value",
       dropdownId: "product-vendor-dropdown",
-      onSelect: () => {
-        /* vendor 선택 시 유사제품 체크 */
-        checkProductSimilaritySuggestions().catch((err) => console.error(err));
-      },
+      onSelect: () => {},
     });
     _vendorCombobox.bind();
   }
@@ -2017,6 +1985,7 @@ async function openCreateProduct() {
   document.getElementById("modal-product-title").textContent = "제품 등록";
   document.getElementById("btn-save-product").textContent = "등록";
   resetProductSimilarityBox();
+  await loadProductNameList();
   productModal.showModal();
   document.getElementById("product-name")?.focus();
 }
@@ -2045,7 +2014,7 @@ async function openEditProduct() {
     document.getElementById("product-reference-url").value = d.reference_url || "";
     document.getElementById("modal-product-title").textContent = "제품 수정";
     document.getElementById("btn-save-product").textContent = "저장";
-    checkProductSimilaritySuggestions().catch((err) => console.error(err));
+    await loadProductNameList(currentProductId);
     productModal.showModal();
   }).catch((err) => showToast(err.message, "error"));
 }
