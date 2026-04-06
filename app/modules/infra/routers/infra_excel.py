@@ -8,6 +8,7 @@ from app.core.database import get_db
 from app.core.exceptions import ValidationError
 from app.modules.infra.models.product_catalog import ProductCatalog
 from app.modules.infra.services.infra_exporter import export_partner
+from app.core.file_validation import validate_xlsx
 from app.modules.infra.services.infra_importer import (
     build_sample_template,
     import_inventory,
@@ -16,7 +17,6 @@ from app.modules.infra.services.infra_importer import (
     parse_inventory_sheet,
     parse_portmap_sheet,
     parse_subnet_sheet,
-    validate_xlsx,
 )
 from app.modules.infra.services.product_catalog_importer import (
     build_eosl_template,

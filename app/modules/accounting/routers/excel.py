@@ -6,7 +6,8 @@ from app.core.database import get_db
 from app.core.auth.dependencies import require_admin
 from app.modules.common.models.user import User
 from app.modules.accounting.services.exporter import build_template, build_template_contracts, build_template_forecast, build_template_actuals
-from app.modules.accounting.services.importer import parse_and_validate, import_data, import_forecast_sheet, import_actuals_sheet, validate_xlsx
+from app.modules.accounting.services.importer import parse_and_validate, import_data, import_forecast_sheet, import_actuals_sheet
+from app.core.file_validation import validate_xlsx
 from app.modules.accounting.services import contract as contract_svc
 from app.modules.accounting.services.contract_type_config import list_contract_types as _list_contract_types
 from app.core.exceptions import ValidationError
