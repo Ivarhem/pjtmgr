@@ -19,29 +19,8 @@ let _currentRoleAction = null;
 
 const roleColumnDefs = [
   { field: "role_name", headerName: "역할명", flex: 1, minWidth: 180, sort: "asc", editable: true },
-  { field: "role_type", headerName: "유형", width: 140, valueFormatter: (p) => p.value || "—" },
-  { field: "current_asset_name", headerName: "현재 자산", width: 180, valueFormatter: (p) => p.value || "미할당" },
-  { field: "current_asset_code", headerName: "현재 자산코드", width: 140, valueFormatter: (p) => p.value || "—" },
-  {
-    field: "current_asset_status",
-    headerName: "자산 상태",
-    width: 110,
-    valueFormatter: (p) => p.value ? getAssetStatusLabel(p.value) : "—",
-  },
-  {
-    field: "status",
-    headerName: "역할 상태",
-    width: 110,
-    editable: true,
-    cellEditor: "agSelectCellEditor",
-    cellEditorParams: { values: ["active", "inactive", "retired"] },
-    cellRenderer: (params) => {
-      const span = document.createElement("span");
-      span.className = "badge badge-" + (params.value || "planned");
-      span.textContent = ROLE_STATUS_LABELS[params.value] || params.value || "—";
-      return span;
-    },
-  },
+  { field: "current_asset_name", headerName: "현재 자산", flex: 1, minWidth: 180, valueFormatter: (p) => p.value || "미할당" },
+  { field: "current_asset_code", headerName: "자산코드", width: 140, valueFormatter: (p) => p.value || "—" },
 ];
 
 function getAssetStatusLabel(value) {
@@ -150,7 +129,6 @@ function renderRoleDetailTab(tab) {
 function renderRoleBasicTab(container) {
   const rows = [
     ["역할명", _selectedRole.role_name],
-    ["유형", _selectedRole.role_type || "—"],
     ["상태", ROLE_STATUS_LABELS[_selectedRole.status] || _selectedRole.status],
     ["현재 자산", _selectedRole.current_asset_name || "미할당"],
     ["현재 자산코드", _selectedRole.current_asset_code || "—"],
@@ -275,7 +253,6 @@ async function openRoleModal(role) {
   await populateRolePeriodSelect(role ? role.contract_period_id : getCtxProjectId());
   document.getElementById("asset-role-id").value = role ? role.id : "";
   document.getElementById("role-name").value = role ? role.role_name : "";
-  document.getElementById("role-type").value = role ? (role.role_type || "") : "";
   document.getElementById("role-status").value = role ? role.status : "active";
   document.getElementById("role-note").value = role ? (role.note || "") : "";
   document.getElementById("asset-role-modal-title").textContent = role ? "역할 수정" : "역할 등록";
@@ -293,7 +270,6 @@ async function saveRole() {
     partner_id: partnerId,
     contract_period_id: document.getElementById("role-period-id").value ? Number(document.getElementById("role-period-id").value) : null,
     role_name: document.getElementById("role-name").value.trim(),
-    role_type: document.getElementById("role-type").value.trim() || null,
     status: document.getElementById("role-status").value,
     note: document.getElementById("role-note").value.trim() || null,
   };
@@ -520,7 +496,6 @@ async function saveRoleAction() {
       return;
     }
     payload.new_role_name = newRoleName;
-    payload.new_role_type = document.getElementById("role-action-new-role-type").value.trim() || null;
     payload.new_contract_period_id = document.getElementById("role-action-new-period-id").value
       ? Number(document.getElementById("role-action-new-period-id").value)
       : null;

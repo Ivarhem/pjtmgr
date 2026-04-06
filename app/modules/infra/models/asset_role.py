@@ -18,6 +18,5 @@ class AssetRole(TimestampMixin, Base):
         index=True,
     )
     role_name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    role_type: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="active", index=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)

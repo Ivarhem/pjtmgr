@@ -248,7 +248,6 @@ def repurpose_asset_role_assignment(
     asset_role_id: int,
     *,
     new_role_name: str,
-    new_role_type: str | None,
     new_contract_period_id: int | None,
     occurred_at,
     note: str | None,
@@ -276,7 +275,6 @@ def repurpose_asset_role_assignment(
         partner_id=source_role.partner_id,
         contract_period_id=target_period_id,
         role_name=new_role_name,
-        role_type=new_role_type,
         status="active",
         note=note,
     )

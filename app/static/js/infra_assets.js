@@ -3072,7 +3072,6 @@ async function populateAssetRoleActionRoleSelect(selectedId) {
     const opt = document.createElement("option");
     opt.value = role.id;
     const parts = [role.role_name];
-    if (role.role_type) parts.push(role.role_type);
     if (role.current_asset_name) parts.push(`현재 ${role.current_asset_name}`);
     opt.textContent = parts.join(" / ");
     if (role.id === selectedId) opt.selected = true;
@@ -3129,7 +3128,6 @@ function toggleAssetRoleActionFields(actionType) {
   const showNewRole = actionType === "repurpose";
   document.getElementById("asset-role-action-asset-wrap").classList.toggle("is-hidden", !showAsset);
   document.getElementById("asset-role-action-new-role-name-wrap").classList.toggle("is-hidden", !showNewRole);
-  document.getElementById("asset-role-action-new-role-type-wrap").classList.toggle("is-hidden", !showNewRole);
   document.getElementById("asset-role-action-new-period-wrap").classList.toggle("is-hidden", !showNewRole);
 }
 
@@ -3186,7 +3184,6 @@ async function saveAssetRoleAction() {
       return;
     }
     payload.new_role_name = newRoleName;
-    payload.new_role_type = document.getElementById("asset-role-action-new-role-type").value.trim() || null;
     payload.new_contract_period_id = document.getElementById("asset-role-action-new-period-id").value
       ? Number(document.getElementById("asset-role-action-new-period-id").value)
       : null;

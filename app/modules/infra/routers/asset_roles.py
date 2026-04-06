@@ -182,7 +182,6 @@ def repurpose_asset_role_endpoint(
         db,
         asset_role_id,
         new_role_name=payload.new_role_name,
-        new_role_type=payload.new_role_type,
         new_contract_period_id=payload.new_contract_period_id,
         occurred_at=payload.occurred_at,
         note=payload.note,

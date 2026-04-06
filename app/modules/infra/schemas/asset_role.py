@@ -9,7 +9,6 @@ class AssetRoleCreate(BaseModel):
     partner_id: int
     contract_period_id: int | None = None
     role_name: str
-    role_type: str | None = None
     status: str = "active"
     note: str | None = None
 
@@ -17,7 +16,6 @@ class AssetRoleCreate(BaseModel):
 class AssetRoleUpdate(BaseModel):
     contract_period_id: int | None = None
     role_name: str | None = None
-    role_type: str | None = None
     status: str | None = None
     note: str | None = None
 
@@ -29,7 +27,6 @@ class AssetRoleRead(BaseModel):
     partner_id: int
     contract_period_id: int | None = None
     role_name: str
-    role_type: str | None = None
     status: str
     note: str | None = None
     current_asset_id: int | None = None

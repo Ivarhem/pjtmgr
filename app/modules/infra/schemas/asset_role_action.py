@@ -19,7 +19,6 @@ class AssetRoleFailoverAction(BaseModel):
 
 class AssetRoleRepurposeAction(BaseModel):
     new_role_name: str
-    new_role_type: str | None = None
     new_contract_period_id: int | None = None
     occurred_at: datetime | None = None
     note: str | None = None
