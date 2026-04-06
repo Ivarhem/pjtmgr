@@ -366,7 +366,11 @@ class RoleCellEditor {
       return { _roleId: this._selectedRoleId, _roleName: this.input.value.trim() };
     }
     const typed = this.input.value.trim();
-    if (!typed) return { _roleId: null, _roleName: "" };
+    if (!typed) {
+      // 빈 입력 시 자산명을 기본값으로 사용
+      const fallback = this.params.data?.asset_name || "";
+      return { _roleId: null, _roleName: fallback };
+    }
     return { _roleId: null, _roleName: typed };
   }
   destroy() { this.dropdown.remove(); }
@@ -423,7 +427,7 @@ const ASSET_INFO_COLS = [
   },
   {
     field: "current_role_id",
-    headerName: "현재 역할",
+    headerName: "역할명",
     width: 200,
     editable: () => isGridFieldEditable("current_role_id"),
     cellEditor: RoleCellEditor,
@@ -1017,7 +1021,7 @@ const DETAIL_TAB_FIELDS = {
         ["프로젝트코드", "project_asset_number"],
         ["고객 자산번호", "customer_asset_number"],
         ["자산명", "asset_name"],
-        ["현재 역할", "current_role_names", (v) => v && v.length ? v.join(", ") : "—"],
+        ["역할명", "current_role_names", (v) => v && v.length ? v.join(", ") : "—"],
         ["귀속사업", "period_id", () => _selectedAsset?.period_label || "—"],
         ["상위분류", "catalog_kind", (v) => CATALOG_KIND_LABELS[v] || v],
         ["분류 경로", "classification_path"],
