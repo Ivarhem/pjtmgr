@@ -352,11 +352,14 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
             for c in db.scalars(select(Center).where(Center.id.in_(center_ids)))
         }
 
-    # 벌크 조회: 카탈로그 속성 (domain, product_family)
+    # 벌크 조회: 카탈로그 속성 (domain, product_family) + vendor
     model_ids = {row.model_id for row in current_assignments if row.model_id}
     catalog_attr_map: dict[int, dict[str, str | None]] = {}
+    catalog_vendor_map: dict[int, str | None] = {}
     if model_ids:
         from app.modules.infra.services.product_catalog_attribute_service import get_product_attributes
+        catalogs = list(db.scalars(select(ProductCatalog).where(ProductCatalog.id.in_(model_ids))))
+        catalog_vendor_map = {c.id: c.vendor for c in catalogs}
         for mid in model_ids:
             attrs = get_product_attributes(db, mid)
             attr_dict: dict[str, str | None] = {}
@@ -383,6 +386,7 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
                 "current_asset_domain": catalog_attr_map.get(model_id, {}).get("domain") if model_id else None,
                 "current_asset_center_label": center_map.get(center_id) if center_id else None,
                 "current_asset_product_family": catalog_attr_map.get(model_id, {}).get("product_family") if model_id else None,
+                "current_asset_vendor": catalog_vendor_map.get(model_id) if model_id else None,
             },
         )
 
@@ -395,6 +399,7 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
         "current_asset_domain": None,
         "current_asset_center_label": None,
         "current_asset_product_family": None,
+        "current_asset_vendor": None,
     }
     result = []
     for role in roles:

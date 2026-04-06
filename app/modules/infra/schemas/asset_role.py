@@ -37,6 +37,7 @@ class AssetRoleRead(BaseModel):
     current_asset_domain: str | None = None
     current_asset_center_label: str | None = None
     current_asset_product_family: str | None = None
+    current_asset_vendor: str | None = None
     created_at: datetime
     updated_at: datetime
 

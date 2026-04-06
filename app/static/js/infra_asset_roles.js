@@ -87,10 +87,12 @@ function buildRoleTree(roles) {
     const domain = role.current_asset_domain || UNCLASSIFIED;
     const center = role.current_asset_center_label || UNCLASSIFIED;
     const family = role.current_asset_product_family || UNCLASSIFIED;
+    const vendor = role.current_asset_vendor || UNCLASSIFIED;
     if (!_roleTreeData[domain]) _roleTreeData[domain] = {};
     if (!_roleTreeData[domain][center]) _roleTreeData[domain][center] = {};
-    if (!_roleTreeData[domain][center][family]) _roleTreeData[domain][center][family] = [];
-    _roleTreeData[domain][center][family].push(role);
+    if (!_roleTreeData[domain][center][family]) _roleTreeData[domain][center][family] = {};
+    if (!_roleTreeData[domain][center][family][vendor]) _roleTreeData[domain][center][family][vendor] = [];
+    _roleTreeData[domain][center][family][vendor].push(role);
   });
 }
 
@@ -133,18 +135,43 @@ function renderRoleTree() {
       let centerHasVisibleChildren = false;
 
       familyKeys.forEach((family) => {
-        const count = families[family].length;
-        centerCount += count;
+        const vendors = families[family];
+        const vendorKeys = Object.keys(vendors).sort((a, b) => a.localeCompare(b, "ko-KR"));
 
-        if (query && !family.toLocaleLowerCase("ko-KR").includes(query)
+        const vendorUl = document.createElement("ul");
+        let familyCount = 0;
+        let familyHasVisibleChildren = false;
+
+        vendorKeys.forEach((vendor) => {
+          const count = vendors[vendor].length;
+          familyCount += count;
+
+          if (query && !vendor.toLocaleLowerCase("ko-KR").includes(query)
+              && !family.toLocaleLowerCase("ko-KR").includes(query)
+              && !center.toLocaleLowerCase("ko-KR").includes(query)
+              && !domain.toLocaleLowerCase("ko-KR").includes(query)) {
+            return;
+          }
+
+          const vendorKey = `${domain}>${center}>${family}>${vendor}`;
+          const isSelected = _selectedTreeNode === vendorKey;
+          vendorUl.appendChild(createTreeLeafNode(vendorKey, vendor, count, isSelected));
+          familyHasVisibleChildren = true;
+        });
+
+        centerCount += familyCount;
+
+        if (query && !familyHasVisibleChildren && !family.toLocaleLowerCase("ko-KR").includes(query)
             && !center.toLocaleLowerCase("ko-KR").includes(query)
             && !domain.toLocaleLowerCase("ko-KR").includes(query)) {
           return;
         }
 
         const familyKey = `${domain}>${center}>${family}`;
-        const isSelected = _selectedTreeNode === familyKey;
-        familyUl.appendChild(createTreeLeafNode(familyKey, family, count, isSelected));
+        const isFamilySelected = _selectedTreeNode === familyKey;
+        const familyForceExpanded = !!query;
+        const familyCollapsed = familyHasVisibleChildren && !familyForceExpanded && _roleTreeCollapsed.has(familyKey);
+        familyUl.appendChild(createTreeBranchNode(familyKey, family, familyCount, isFamilySelected, familyHasVisibleChildren, familyCollapsed, vendorUl));
         centerHasVisibleChildren = true;
       });
 
@@ -295,7 +322,8 @@ function doesRoleExternalFilterPass(node) {
     const domain = d.current_asset_domain || UNCLASSIFIED;
     const center = d.current_asset_center_label || UNCLASSIFIED;
     const family = d.current_asset_product_family || UNCLASSIFIED;
-    const roleKey = `${domain}>${center}>${family}`;
+    const vendor = d.current_asset_vendor || UNCLASSIFIED;
+    const roleKey = `${domain}>${center}>${family}>${vendor}`;
     if (!roleKey.startsWith(_selectedTreeNode)) return false;
   }
   const q = (document.getElementById("filter-role-search")?.value || "").trim().toLowerCase();
