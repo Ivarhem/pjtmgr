@@ -887,12 +887,9 @@ function resetProductSimilarityBox() {
   }
 }
 
-function renderProductSimilarityBox(result) {
+function renderProductSimilarityBox(items) {
   const combo = getProductNameCombobox();
-  const exactMatches = result?.exact_matches || [];
-  const similarMatches = result?.similar_matches || [];
-  const items = [...exactMatches, ...similarMatches];
-  if (!items.length) {
+  if (!items?.length) {
     combo.setItems([]);
     return;
   }
@@ -900,17 +897,15 @@ function renderProductSimilarityBox(result) {
     items.map((item) => ({
       value: String(item.id),
       label: ((item.vendor || "") + " " + (item.name || "")).trim(),
-      hint: "유사도 " + item.score,
+      hint: item.product_type ? (CATALOG_KIND_LABELS[item.product_type] || item.product_type) : "",
       aliases: [item.vendor || "", item.name || ""],
       modelName: item.name || "",
     }))
   );
-  // Re-trigger filter to show updated items against current input
   combo._filter();
 }
 
 async function checkProductSimilaritySuggestions() {
-  const vendor = document.getElementById("product-vendor-value")?.value?.trim() || "";
   const name = document.getElementById("product-name")?.value?.trim() || "";
   const excludeIdRaw = document.getElementById("product-id")?.value || "";
   const excludeId = excludeIdRaw ? Number(excludeIdRaw) : null;
@@ -919,15 +914,9 @@ async function checkProductSimilaritySuggestions() {
     return;
   }
   try {
-    const result = await apiFetch("/api/v1/product-catalog/similarity-check", {
-      method: "POST",
-      body: {
-        vendor,
-        name,
-        exclude_product_id: excludeId || null,
-      },
-    });
-    renderProductSimilarityBox(result);
+    const items = await apiFetch("/api/v1/product-catalog?q=" + encodeURIComponent(name));
+    const filtered = excludeId ? items.filter((p) => p.id !== excludeId) : items;
+    renderProductSimilarityBox(filtered);
   } catch (err) {
     console.error(err);
   }
