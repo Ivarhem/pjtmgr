@@ -446,6 +446,8 @@ function buildClassificationCols(depth) {
   return cols;
 }
 
+let _classificationDepth = 3;
+
 /** 자산정보 + 분류체계(동적) + 자산코드 순서로 columnDefs를 조립한다. */
 function buildColumnDefs() {
   const depth = _classificationDepth || 3;
@@ -485,7 +487,6 @@ const ASSET_DETAIL_LAST_PARTNER_KEY = "infra_assets_detail_last_partner_id";
 const ASSET_GRID_COLUMN_STATE_KEY = "infra_assets_grid_column_state_v4";
 const CLASSIFICATION_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 let _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
-let _classificationDepth = 3;
 let _catalogLabelLang = "ko";
 
 const INLINE_CATALOG_ATTRIBUTE_OPTIONS = {
