@@ -324,6 +324,10 @@ const ASSET_INFO_COLS = [
     width: 200,
     editable: () => isGridFieldEditable("current_role_id"),
     valueGetter: (p) => getRoleNameById(p.data?.current_role_id, p.data?.current_role_names),
+    valueSetter: (p) => {
+      p.data._pendingRoleName = p.newValue;
+      return p.newValue !== p.oldValue;
+    },
     cellClass: (p) => getGridCellClass("current_role_id", p.data),
   },
   { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
@@ -812,7 +816,8 @@ async function handleGridCellValueChanged(event) {
   try {
     let updated;
     if (field === "current_role_name_input") {
-      const roleName = (event.newValue || "").trim();
+      const roleName = (row._pendingRoleName || event.newValue || "").trim();
+      delete row._pendingRoleName;
       if (!roleName || roleName === "—") {
         updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}/current-role`), {
           method: "PATCH",
