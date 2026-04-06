@@ -3356,10 +3356,15 @@ initTextFilter("filter-search", loadAssets);
 initProjectFilterCheckbox(loadAssets);
 
 // Context selector change
-window.addEventListener("ctx-changed", () => {
+window.addEventListener("ctx-changed", async () => {
   closeDetail({ clearSelection: true });
-  loadGridRoleOptions();
-  loadClassificationLevelAliases();
+  const partnerId = getCtxPartnerId();
+  await Promise.all([
+    loadGridRoleOptions(),
+    loadLayoutCenters(partnerId),
+    loadPeriodsCache(partnerId),
+    loadClassificationLevelAliases(),
+  ]);
   loadAssets();
 });
 window.addEventListener("resize", () => {
