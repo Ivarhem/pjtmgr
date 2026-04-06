@@ -909,12 +909,15 @@ function _assetPatchUrl(path) {
   return qs ? `${path}?${qs}` : path;
 }
 
+let _cellChangeInProgress = false;
+
 async function handleGridCellValueChanged(event) {
+  if (_cellChangeInProgress) return;
   const row = event?.data;
   if (!row) return;
   const field = event.colDef.field;
-  // role 필드는 valueSetter 경유라 newValue/oldValue 비교 건너뜀
   if (field !== "current_role_name_input" && event.newValue === event.oldValue) return;
+  _cellChangeInProgress = true;
   try {
     let updated;
     if (field === "current_role_name_input") {
@@ -965,6 +968,7 @@ async function handleGridCellValueChanged(event) {
       if (!val || !val._catalogModelId) {
         row.model = event.oldValue;
         gridApi?.refreshCells({ rowNodes: [event.node], force: true });
+        _cellChangeInProgress = false;
         return;
       }
       updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}`), {
@@ -994,6 +998,8 @@ async function handleGridCellValueChanged(event) {
     row[field] = event.oldValue;
     gridApi?.refreshCells({ rowNodes: [event.node], force: true });
     showToast(err.message, "error");
+  } finally {
+    _cellChangeInProgress = false;
   }
 }
 
