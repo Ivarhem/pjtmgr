@@ -42,17 +42,17 @@
     </div>
   </div>
 
-  <div id="asset-splitter" class="asset-splitter hidden" aria-hidden="true"></div>
+  <div id="asset-splitter" class="asset-splitter is-hidden" aria-hidden="true"></div>
 
   <div class="asset-detail-handle-wrap">
     <button class="asset-detail-minimize" id="btn-minimize-detail" title="상세 패널 열기/닫기">❯</button>
   </div>
 
-  <div id="asset-detail-panel" class="asset-detail-panel hidden">
+  <div id="asset-detail-panel" class="asset-detail-panel is-hidden">
     <div class="asset-detail-empty" id="asset-detail-empty">
       자산을 선택하면 오른쪽에서 상세 정보를 확인할 수 있습니다.
     </div>
-    <div id="asset-detail-shell" class="hidden">
+    <div id="asset-detail-shell" class="is-hidden">
       <div class="detail-header">
         <span id="detail-asset-name" class="detail-title"></span>
         <div class="detail-header-actions">
@@ -101,14 +101,14 @@
             <div id="catalog-dropdown" class="modal-combobox-dropdown is-hidden"></div>
           </div>
         </label>
-        <div id="catalog-summary" class="catalog-summary full-width hidden"></div>
+        <div id="catalog-summary" class="catalog-summary full-width is-hidden"></div>
         <div class="modal-actions modal-actions-compact full-width">
-          <button type="button" class="btn btn-secondary btn-sm hidden" id="btn-clear-catalog">선택 해제</button>
+          <button type="button" class="btn btn-secondary btn-sm is-hidden" id="btn-clear-catalog">선택 해제</button>
         </div>
       </div>
     </fieldset>
 
-    <fieldset id="inline-catalog-form" class="modal-group hidden">
+    <fieldset id="inline-catalog-form" class="modal-group is-hidden">
       <legend class="modal-group-title">새 제품 등록</legend>
       <div class="form-grid">
         <label>제조사 <span class="text-danger">*</span> <input type="text" id="inline-vendor" required></label>
@@ -316,7 +316,7 @@
             <option value="custom">직접 입력</option>
           </select>
         </label>
-        <label id="ct-role-custom-wrap" class="full-width hidden">직접 입력 역할
+        <label id="ct-role-custom-wrap" class="full-width is-hidden">직접 입력 역할
           <input type="text" id="ct-role-custom" placeholder="예: 운영 총괄, 야간 담당">
         </label>
       </div>
@@ -456,22 +456,22 @@
           <input type="datetime-local" id="event-occurred-at">
         </label>
         <p class="modal-hint full-width" id="event-template-hint">이력 유형을 선택하면 요약과 상세 문구를 기본 제안합니다.</p>
-        <label id="event-related-asset-wrap" class="full-width hidden">관련 자산
+        <label id="event-related-asset-wrap" class="full-width is-hidden">관련 자산
           <select id="event-related-asset-id"></select>
         </label>
-        <label id="event-related-partner-wrap" class="full-width hidden">변경 대상 업체
+        <label id="event-related-partner-wrap" class="full-width is-hidden">변경 대상 업체
           <select id="event-related-partner-id"></select>
         </label>
-        <label id="event-from-use-wrap" class="hidden">이전 용도
+        <label id="event-from-use-wrap" class="is-hidden">이전 용도
           <input type="text" id="event-from-use" placeholder="예: 내부망 운영 방화벽">
         </label>
-        <label id="event-to-use-wrap" class="hidden">변경 용도
+        <label id="event-to-use-wrap" class="is-hidden">변경 용도
           <input type="text" id="event-to-use" placeholder="예: 개발 검증 방화벽">
         </label>
-        <label id="event-old-id-wrap" class="hidden">이전 식별정보
+        <label id="event-old-id-wrap" class="is-hidden">이전 식별정보
           <input type="text" id="event-old-id" placeholder="예: serial, asset number">
         </label>
-        <label id="event-new-id-wrap" class="hidden">신규 식별정보
+        <label id="event-new-id-wrap" class="is-hidden">신규 식별정보
           <input type="text" id="event-new-id" placeholder="예: 교체 후 serial">
         </label>
         <label class="full-width">요약 <input type="text" id="event-summary" required></label>
@@ -495,16 +495,16 @@
         <label class="full-width">대상 역할
           <select id="asset-role-action-role-id"></select>
         </label>
-        <label id="asset-role-action-asset-wrap" class="full-width hidden">대상 자산
+        <label id="asset-role-action-asset-wrap" class="full-width is-hidden">대상 자산
           <select id="asset-role-action-asset-id"></select>
         </label>
-        <label id="asset-role-action-new-role-name-wrap" class="full-width hidden">신규 역할명
+        <label id="asset-role-action-new-role-name-wrap" class="full-width is-hidden">신규 역할명
           <input type="text" id="asset-role-action-new-role-name" placeholder="예: 개발 검증 방화벽">
         </label>
-        <label id="asset-role-action-new-role-type-wrap" class="hidden">신규 역할 유형
+        <label id="asset-role-action-new-role-type-wrap" class="is-hidden">신규 역할 유형
           <input type="text" id="asset-role-action-new-role-type" placeholder="예: firewall">
         </label>
-        <label id="asset-role-action-new-period-wrap" class="hidden">신규 귀속사업
+        <label id="asset-role-action-new-period-wrap" class="is-hidden">신규 귀속사업
           <select id="asset-role-action-new-period-id"></select>
         </label>
         <label>발생 시각

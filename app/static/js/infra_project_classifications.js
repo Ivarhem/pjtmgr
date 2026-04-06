@@ -169,8 +169,8 @@ function renderPageState() {
   const btnInit = document.getElementById("btn-init-classification");
   const btnEditScheme = document.getElementById("btn-edit-classification-scheme");
   const btnAddRoot = document.getElementById("btn-add-classification-root");
-  empty.classList.toggle("hidden", hasProject);
-  layout.classList.toggle("hidden", !hasProject);
+  empty.classList.toggle("is-hidden", hasProject);
+  layout.classList.toggle("is-hidden", !hasProject);
   btnInit.disabled = !hasProject;
   btnEditScheme.disabled = !hasProject || !_currentScheme;
   btnAddRoot.disabled = !hasProject || !_currentScheme;
@@ -294,13 +294,13 @@ function renderDetail() {
   btnDeleteNode.disabled = !node;
   if (!node) {
     applyClassificationAliases(null);
-    empty.classList.remove("hidden");
-    content.classList.add("hidden");
+    empty.classList.remove("is-hidden");
+    content.classList.add("is-hidden");
     return;
   }
   applyClassificationAliases(node);
-  empty.classList.add("hidden");
-  content.classList.remove("hidden");
+  empty.classList.add("is-hidden");
+  content.classList.remove("is-hidden");
   const parent = _classificationNodes.find((item) => item.id === node.parent_id);
   document.getElementById("classification-detail-title").textContent = node.node_name;
   document.getElementById("classification-detail-help").textContent = "선택한 분류 노드의 경로와 운영 메모를 확인할 수 있습니다.";

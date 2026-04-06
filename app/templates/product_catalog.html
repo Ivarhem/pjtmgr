@@ -30,7 +30,7 @@
         <div class="classification-summary-stats" id="catalog-classification-summary-stats"></div>
         <button class="btn btn-secondary btn-sm classification-summary-edit-btn" id="btn-catalog-classification-edit-toggle">편집</button>
       </div>
-      <div class="classification-toolbar hidden" id="catalog-classification-edit-toolbar">
+      <div class="classification-toolbar is-hidden" id="catalog-classification-edit-toolbar">
         <div class="classification-actions">
           <div class="classification-actions-main">
             <button class="btn btn-primary btn-sm" id="btn-catalog-classification-add-root">최상위 추가</button>
@@ -72,13 +72,13 @@
       <div id="grid-catalog" class="ag-theme-quartz catalog-grid"></div>
     </div>
 
-    <div id="catalog-splitter" class="catalog-splitter hidden" aria-hidden="true"></div>
+    <div id="catalog-splitter" class="catalog-splitter is-hidden" aria-hidden="true"></div>
 
     <div class="catalog-detail-handle-wrap">
       <button class="catalog-detail-minimize" id="btn-minimize-catalog-detail" title="상세 패널 열기/닫기">❯</button>
     </div>
 
-    <div class="catalog-detail-panel hidden" id="detail-panel">
+    <div class="catalog-detail-panel is-hidden" id="detail-panel">
       <div class="catalog-detail-empty" id="detail-empty">
         <p>가운데 목록에서 제품을 선택하세요.</p>
       </div>
@@ -430,7 +430,7 @@
         <label>속성값 키 <input type="text" id="catalog-classification-node-code" required></label>
         <label>영문명 <input type="text" id="catalog-classification-node-name" required></label>
         <label>한글명 <input type="text" id="catalog-classification-node-name-kr"></label>
-        <label class="hidden" id="catalog-classification-node-domain-wrap">도메인
+        <label class="is-hidden" id="catalog-classification-node-domain-wrap">도메인
           <select id="catalog-classification-node-domain">
             <option value="">도메인 선택</option>
           </select>

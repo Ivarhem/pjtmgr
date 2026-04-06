@@ -931,7 +931,7 @@ function showAssetDetail(asset) {
 function syncAssetDetailTabs(kind) {
   const connectionsTab = document.querySelector('.detail-tabs .tab-btn[data-dtab="connections"]');
   if (!connectionsTab) return;
-  connectionsTab.classList.toggle("hidden", false);
+  connectionsTab.classList.toggle("is-hidden", false);
   if (!["overview", "operations", "connections", "history"].includes(_currentTab)) {
     _currentTab = "overview";
   }
@@ -991,10 +991,10 @@ function syncAssetLayoutState(isOpen) {
   const handle = document.getElementById("btn-minimize-detail");
   if (!layout || !panel || !shell || !empty || !splitter || !handle) return;
   layout.classList.toggle("is-detail-open", isOpen);
-  panel.classList.toggle("hidden", !isOpen);
-  shell.classList.toggle("hidden", !isOpen);
-  empty.classList.toggle("hidden", isOpen);
-  splitter.classList.toggle("hidden", !isOpen);
+  panel.classList.toggle("is-hidden", !isOpen);
+  shell.classList.toggle("is-hidden", !isOpen);
+  empty.classList.toggle("is-hidden", isOpen);
+  splitter.classList.toggle("is-hidden", !isOpen);
   handle.textContent = isOpen ? "❮" : "❯";
   localStorage.setItem(ASSET_DETAIL_OPEN_KEY, isOpen ? "1" : "0");
   if (isOpen) {
@@ -1428,7 +1428,7 @@ async function openContactModal(ct) {
 
 function syncContactRoleInput() {
   const preset = document.getElementById("ct-role-preset").value;
-  document.getElementById("ct-role-custom-wrap").classList.toggle("hidden", preset !== "custom");
+  document.getElementById("ct-role-custom-wrap").classList.toggle("is-hidden", preset !== "custom");
 }
 
 function setContactRoleValue(role) {
@@ -1816,7 +1816,7 @@ async function buildDetailEditFields(tab) {
       let searchTimer = null;
       input.addEventListener("input", () => {
         const q = input.value.trim();
-        if (!q) { dd.classList.add("hidden"); return; }
+        if (!q) { dd.classList.add("is-hidden"); return; }
         clearTimeout(searchTimer);
         searchTimer = setTimeout(async () => {
           try {
@@ -1838,7 +1838,7 @@ async function buildDetailEditFields(tab) {
                 div.addEventListener("click", () => {
                   hiddenId.value = item.id;
                   input.value = itemLabel;
-                  dd.classList.add("hidden");
+                  dd.classList.add("is-hidden");
                 });
               }
               dd.appendChild(div);
@@ -1846,9 +1846,9 @@ async function buildDetailEditFields(tab) {
             const addDiv = document.createElement("div");
             addDiv.className = "catalog-dropdown-add";
             addDiv.textContent = "+ 새 제품 등록";
-            addDiv.addEventListener("click", () => { dd.classList.add("hidden"); openInlineCatalogForm(); });
+            addDiv.addEventListener("click", () => { dd.classList.add("is-hidden"); openInlineCatalogForm(); });
             dd.appendChild(addDiv);
-            dd.classList.remove("hidden");
+            dd.classList.remove("is-hidden");
           } catch (e) { showToast(e.message, "error"); }
         }, 300);
       });
@@ -2171,10 +2171,10 @@ function clearSelectedCatalog({ keepSearch = false } = {}) {
     combo.reset();
   }
   const summary = document.getElementById("catalog-summary");
-  summary.classList.add("hidden");
+  summary.classList.add("is-hidden");
   summary.textContent = "";
   summary.classList.remove("placeholder-style");
-  document.getElementById("btn-clear-catalog").classList.add("hidden");
+  document.getElementById("btn-clear-catalog").classList.add("is-hidden");
   updateAssetNameHint("카탈로그를 선택하면 자산명이 자동 제안됩니다.");
   updateAssetHostnameHint("호스트명은 자산명 기준으로 자동 제안됩니다.");
   updateAssetRoleSuggestionHint("역할명 추천은 자산명 기준으로 참고용 제안만 제공합니다. 자동 선택되지 않습니다.");
@@ -2244,7 +2244,7 @@ async function openCreateModal() {
   _assetHostnameTouched = false;
   clearSelectedCatalog();
   document.getElementById("catalog-kind-filter-modal").value = "hardware";
-  document.getElementById("inline-catalog-form").classList.add("hidden");
+  document.getElementById("inline-catalog-form").classList.add("is-hidden");
   document.getElementById("asset-project-code").value = "";
   document.getElementById("asset-customer-code").value = "";
   document.getElementById("asset-hostname").value = "";
@@ -2525,7 +2525,7 @@ function updateEventTypeFields() {
     newId: "event-new-id-wrap",
   };
   Object.entries(map).forEach(([key, id]) => {
-    document.getElementById(id).classList.toggle("hidden", !visible.has(key));
+    document.getElementById(id).classList.toggle("is-hidden", !visible.has(key));
   });
 }
 
@@ -2577,7 +2577,7 @@ async function populateRelationAssetSelect() {
 function selectCatalogItem(item) {
   document.getElementById("catalog-id").value = item.id;
   document.getElementById("catalog-search").value = ((item.vendor || "") + " " + (item.name || "")).trim();
-  document.getElementById("btn-clear-catalog").classList.remove("hidden");
+  document.getElementById("btn-clear-catalog").classList.remove("is-hidden");
 
   // 요약 표시
   const summary = document.getElementById("catalog-summary");
@@ -2586,7 +2586,7 @@ function selectCatalogItem(item) {
     " | 제조사: " + (item.vendor || "-") +
     " | 모델: " + (item.name || "-") +
     " | 분류경로: " + buildCatalogClassificationPath(item);
-  summary.classList.remove("hidden");
+  summary.classList.remove("is-hidden");
   if (item.is_placeholder) {
     summary.classList.add("placeholder-style");
   } else {
@@ -2614,7 +2614,7 @@ function selectCatalogItem(item) {
 async function openInlineCatalogForm() {
   getCatalogCombobox()._close();
   const form = document.getElementById("inline-catalog-form");
-  form.classList.remove("hidden");
+  form.classList.remove("is-hidden");
   document.getElementById("inline-vendor").value = "";
   document.getElementById("inline-model").value = "";
   document.getElementById("inline-kind").value = document.getElementById("catalog-kind-filter-modal").value || "hardware";
@@ -2701,7 +2701,7 @@ async function saveInlineCatalog() {
         attributes: buildInlineCatalogAttributePayload(attrValues),
       },
     });
-    document.getElementById("inline-catalog-form").classList.add("hidden");
+    document.getElementById("inline-catalog-form").classList.add("is-hidden");
     selectCatalogItem(item);
     showToast("제품이 등록되었습니다.");
   } catch (e) { showToast(e.message, "error"); }
@@ -2862,10 +2862,10 @@ async function populateAssetRoleActionPeriodSelect(selectedId) {
 function toggleAssetRoleActionFields(actionType) {
   const showAsset = actionType === "replacement" || actionType === "failover";
   const showNewRole = actionType === "repurpose";
-  document.getElementById("asset-role-action-asset-wrap").classList.toggle("hidden", !showAsset);
-  document.getElementById("asset-role-action-new-role-name-wrap").classList.toggle("hidden", !showNewRole);
-  document.getElementById("asset-role-action-new-role-type-wrap").classList.toggle("hidden", !showNewRole);
-  document.getElementById("asset-role-action-new-period-wrap").classList.toggle("hidden", !showNewRole);
+  document.getElementById("asset-role-action-asset-wrap").classList.toggle("is-hidden", !showAsset);
+  document.getElementById("asset-role-action-new-role-name-wrap").classList.toggle("is-hidden", !showNewRole);
+  document.getElementById("asset-role-action-new-role-type-wrap").classList.toggle("is-hidden", !showNewRole);
+  document.getElementById("asset-role-action-new-period-wrap").classList.toggle("is-hidden", !showNewRole);
 }
 
 async function openAssetRoleActionModal(actionType) {
@@ -3048,7 +3048,7 @@ document.getElementById("inline-kind").addEventListener("change", (event) => {
   }
 });
 document.getElementById("btn-inline-cancel").addEventListener("click", () => {
-  document.getElementById("inline-catalog-form").classList.add("hidden");
+  document.getElementById("inline-catalog-form").classList.add("is-hidden");
 });
 document.getElementById("btn-minimize-detail").addEventListener("click", toggleDetailPanel);
 

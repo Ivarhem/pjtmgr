@@ -117,11 +117,11 @@ document.getElementById("filter-search").addEventListener("keydown", (e) => {
 // ── 자산 Import ──
 document.getElementById("btn-asset-import-toggle")?.addEventListener("click", () => {
   const panel = document.getElementById("asset-import-panel");
-  panel.classList.toggle("hidden");
-  if (!panel.classList.contains("hidden")) _loadImportProjects();
+  panel.classList.toggle("is-hidden");
+  if (!panel.classList.contains("is-hidden")) _loadImportProjects();
 });
 document.getElementById("btn-asset-import-close")?.addEventListener("click", () => {
-  document.getElementById("asset-import-panel").classList.add("hidden");
+  document.getElementById("asset-import-panel").classList.add("is-hidden");
 });
 
 function _loadImportProjects() {

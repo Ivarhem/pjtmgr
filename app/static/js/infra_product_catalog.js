@@ -390,7 +390,7 @@ function applyCatalogPermissionState() {
   setButtonAvailability("btn-catalog-classification-add-child", canTaxonomy && !!getSelectedCatalogClassificationNode(), "카탈로그 기준 관리 권한이 없습니다.");
   setButtonAvailability("btn-catalog-classification-scheme-save-preset", canTaxonomy, "카탈로그 기준 관리 권한이 없습니다.");
   const editToolbar = document.getElementById("catalog-classification-edit-toolbar");
-  if (editToolbar) editToolbar.classList.toggle("hidden", !_catalogClassificationEditMode || !canTaxonomy);
+  if (editToolbar) editToolbar.classList.toggle("is-hidden", !_catalogClassificationEditMode || !canTaxonomy);
   const editToggle = document.getElementById("btn-catalog-classification-edit-toggle");
   if (editToggle) editToggle.textContent = _catalogClassificationEditMode ? "편집 종료" : "편집";
 }
@@ -1246,7 +1246,7 @@ async function populateCatalogClassificationNodeDomainSelect(selectedDomainOptio
   const attributeKey = document.getElementById("catalog-classification-node-parent")?.dataset.attributeKey || "";
   if (!wrap) return;
   const isProductFamily = attributeKey === "product_family";
-  wrap.classList.toggle("hidden", !isProductFamily);
+  wrap.classList.toggle("is-hidden", !isProductFamily);
   if (!isProductFamily) return;
   const options = await loadCatalogAttributeOptions("domain", true);
   fillCatalogAttributeSelect(
@@ -1644,10 +1644,10 @@ function setCatalogDetailOpen(isOpen) {
   const handle = document.getElementById("btn-minimize-catalog-detail");
   if (!panel || !detailPanel || !detailContent || !detailEmpty || !splitter || !handle) return;
   panel.classList.toggle("is-detail-open", !!isOpen);
-  detailPanel.classList.toggle("hidden", !isOpen);
+  detailPanel.classList.toggle("is-hidden", !isOpen);
   detailContent.classList.toggle("is-hidden", !isOpen || !currentProductId);
   detailEmpty.classList.toggle("is-hidden", !!currentProductId);
-  splitter.classList.toggle("hidden", !isOpen);
+  splitter.classList.toggle("is-hidden", !isOpen);
   handle.textContent = isOpen ? "❮" : "❯";
   localStorage.setItem(CATALOG_DETAIL_OPEN_KEY, isOpen ? "1" : "0");
 }

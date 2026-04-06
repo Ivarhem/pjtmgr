@@ -81,8 +81,8 @@ function renderSubnetList() {
 
 function showSubnetDetail(subnet) {
   const card = document.getElementById("subnet-detail-card");
-  if (!subnet) { card.classList.add("hidden"); return; }
-  card.classList.remove("hidden");
+  if (!subnet) { card.classList.add("is-hidden"); return; }
+  card.classList.remove("is-hidden");
   document.getElementById("subnet-detail-name").textContent = subnet.name + " (" + subnet.subnet + ")";
 
   const fields = document.getElementById("subnet-detail-fields");

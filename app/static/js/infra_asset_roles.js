@@ -94,14 +94,14 @@ function applyRoleQuickFilter() {
 
 function showRoleDetail(role) {
   _selectedRole = role;
-  document.getElementById("asset-role-detail-panel").classList.remove("hidden");
+  document.getElementById("asset-role-detail-panel").classList.remove("is-hidden");
   document.getElementById("detail-role-name").textContent = role.role_name;
   syncRoleActionButtons();
   renderRoleDetailTab("basic");
 }
 
 function closeRoleDetail() {
-  document.getElementById("asset-role-detail-panel").classList.add("hidden");
+  document.getElementById("asset-role-detail-panel").classList.add("is-hidden");
   _selectedRole = null;
   syncRoleActionButtons();
 }
@@ -477,10 +477,10 @@ async function populateRolePeriodSelectForAction(selectedId) {
 function toggleRoleActionFields(actionType) {
   const showAsset = actionType === "replacement" || actionType === "failover";
   const showNewRole = actionType === "repurpose";
-  document.getElementById("role-action-asset-wrap").classList.toggle("hidden", !showAsset);
-  document.getElementById("role-action-new-role-name-wrap").classList.toggle("hidden", !showNewRole);
-  document.getElementById("role-action-new-role-type-wrap").classList.toggle("hidden", !showNewRole);
-  document.getElementById("role-action-new-period-wrap").classList.toggle("hidden", !showNewRole);
+  document.getElementById("role-action-asset-wrap").classList.toggle("is-hidden", !showAsset);
+  document.getElementById("role-action-new-role-name-wrap").classList.toggle("is-hidden", !showNewRole);
+  document.getElementById("role-action-new-role-type-wrap").classList.toggle("is-hidden", !showNewRole);
+  document.getElementById("role-action-new-period-wrap").classList.toggle("is-hidden", !showNewRole);
 }
 
 async function saveRoleAction() {

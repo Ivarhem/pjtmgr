@@ -370,9 +370,9 @@ function setMdmSimilarPanelOpen(isOpen) {
   const btn = document.getElementById("btn-mdm-similar-toggle");
   if (!splitter || !handleWrap || !panel || !btn) return;
 
-  splitter.classList.toggle("hidden", !isOpen);
-  handleWrap.classList.toggle("hidden", !isOpen);
-  panel.classList.toggle("hidden", !isOpen);
+  splitter.classList.toggle("is-hidden", !isOpen);
+  handleWrap.classList.toggle("is-hidden", !isOpen);
+  panel.classList.toggle("is-hidden", !isOpen);
   btn.textContent = isOpen ? "\u276E" : "\u276F";
   localStorage.setItem(MDM_SIMILAR_OPEN_KEY, isOpen ? "1" : "0");
 }
@@ -409,7 +409,7 @@ async function loadMdmSimilarProducts(product, showDismissed = false) {
   if (!listEl || !emptyEl) return;
 
   listEl.textContent = "";
-  emptyEl.classList.add("hidden");
+  emptyEl.classList.add("is-hidden");
 
   try {
     const result = await apiFetch("/api/v1/product-catalog/similarity-check", {
@@ -426,7 +426,7 @@ async function loadMdmSimilarProducts(product, showDismissed = false) {
     const dismissedItems = (showDismissed && result.dismissed_matches) ? result.dismissed_matches : [];
 
     if (!items.length && !dismissedItems.length) {
-      emptyEl.classList.remove("hidden");
+      emptyEl.classList.remove("is-hidden");
       return;
     }
 
@@ -439,7 +439,7 @@ async function loadMdmSimilarProducts(product, showDismissed = false) {
     }
   } catch (err) {
     console.error("similarity check failed:", err);
-    emptyEl.classList.remove("hidden");
+    emptyEl.classList.remove("is-hidden");
   }
 }
 
@@ -525,7 +525,7 @@ function renderMdmSimilarCard(item, targetProduct, isDismissed = false) {
         card.remove();
         const listEl = document.getElementById("mdm-similar-list");
         if (listEl && !listEl.children.length) {
-          document.getElementById("mdm-similar-empty")?.classList.remove("hidden");
+          document.getElementById("mdm-similar-empty")?.classList.remove("is-hidden");
         }
         showToast("\uc720\uc0ac \uad00\uacc4\ub97c \ubb34\uc2dc\ud588\uc2b5\ub2c8\ub2e4.", "success");
         if (_integrityVendorOriginal) {

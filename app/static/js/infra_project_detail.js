@@ -1230,10 +1230,10 @@ document.getElementById("btn-export-project")?.addEventListener("click", () => {
 
 // ── Asset Import (프로젝트 상세 내) ──
 document.getElementById("btn-asset-import")?.addEventListener("click", () => {
-  document.getElementById("asset-import-panel").classList.toggle("hidden");
+  document.getElementById("asset-import-panel").classList.toggle("is-hidden");
 });
 document.getElementById("btn-asset-import-close")?.addEventListener("click", () => {
-  document.getElementById("asset-import-panel").classList.add("hidden");
+  document.getElementById("asset-import-panel").classList.add("is-hidden");
 });
 document.getElementById("btn-asset-import-run")?.addEventListener("click", async () => {
   const fileInput = document.getElementById("asset-import-file");
