@@ -81,7 +81,7 @@ function showRoleDetail(role) {
   document.getElementById("role-info-note").textContent = role.note || "—";
 
   syncRoleActionButtons();
-  loadRoleAssignments();
+  loadCurrentAssignments();
 }
 
 function closeRoleDetail() {
@@ -104,82 +104,134 @@ function syncRoleActionButtons() {
   });
 }
 
-/* ── Assignments ── */
+/* ── Current Assignments Grid ── */
 
-async function loadRoleAssignments() {
-  const container = document.getElementById("role-assignments-content");
-  container.textContent = "";
-  if (!_selectedRole) return;
+let assignmentGridApi;
 
+const assignmentColDefs = [
+  { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 160, valueFormatter: (p) => p.value || "—" },
+  { field: "asset_code", headerName: "자산코드", width: 140, valueFormatter: (p) => p.value || "—" },
+  { field: "assignment_type", headerName: "할당유형", width: 100, valueFormatter: (p) => ASSIGNMENT_TYPE_LABELS[p.value] || p.value || "—" },
+  { field: "valid_from", headerName: "시작일", width: 110, valueFormatter: (p) => p.value || "—" },
+  { field: "valid_to", headerName: "종료일", width: 110, valueFormatter: (p) => p.value || "현재" },
+  { field: "note", headerName: "비고", width: 150, valueFormatter: (p) => p.value || "" },
+];
+
+function initAssignmentGrid() {
+  const el = document.getElementById("grid-role-assignments");
+  if (!el || assignmentGridApi) return;
+  assignmentGridApi = agGrid.createGrid(el, {
+    columnDefs: assignmentColDefs,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true },
+    rowSelection: "single",
+    animateRows: true,
+    enableCellTextSelection: true,
+    domLayout: "autoHeight",
+    ...buildStandardGridBehavior({
+      type: 'modal-edit',
+      onEdit: (data) => openRoleAssignmentModal(data),
+    }),
+  });
+}
+
+async function loadCurrentAssignments() {
+  if (!assignmentGridApi) initAssignmentGrid();
+  if (!_selectedRole) {
+    assignmentGridApi?.setGridOption("rowData", []);
+    return;
+  }
   try {
     const rows = await apiFetch(`/api/v1/asset-roles/${_selectedRole.id}/assignments`);
-
-    if (!rows.length) {
-      const empty = document.createElement("p");
-      empty.className = "text-muted asset-subtable-empty";
-      empty.textContent = "아직 등록된 할당 이력이 없습니다.";
-      container.appendChild(empty);
-      return;
-    }
-
-    const timeline = document.createElement("div");
-    timeline.className = "asset-timeline";
-    rows.forEach((row) => {
-      const item = document.createElement("article");
-      item.className = "asset-timeline-item";
-
-      const marker = document.createElement("div");
-      marker.className = "asset-timeline-marker asset-timeline-marker-" + (row.is_current ? "current" : "history");
-
-      const main = document.createElement("div");
-      main.className = "asset-timeline-main";
-
-      const meta = document.createElement("div");
-      meta.className = "asset-timeline-meta";
-      const typeBadge = document.createElement("span");
-      typeBadge.className = "badge";
-      typeBadge.textContent = ASSIGNMENT_TYPE_LABELS[row.assignment_type] || row.assignment_type;
-      const dateSpan = document.createElement("span");
-      dateSpan.textContent = `${row.valid_from || "시작 미기재"} ~ ${row.valid_to || "현재"}`;
-      meta.append(typeBadge, dateSpan);
-      if (row.is_current) {
-        const currentBadge = document.createElement("span");
-        currentBadge.className = "badge badge-active";
-        currentBadge.textContent = "현재 담당";
-        meta.appendChild(currentBadge);
-      }
-
-      const title = document.createElement("div");
-      title.className = "asset-timeline-title";
-      title.textContent = [row.asset_name, row.asset_code].filter(Boolean).join(" / ") || "미지정 자산";
-
-      main.append(meta, title);
-      if (row.note) {
-        const body = document.createElement("div");
-        body.className = "asset-timeline-body";
-        body.textContent = row.note;
-        main.appendChild(body);
-      }
-
-      const actions = document.createElement("div");
-      actions.className = "asset-timeline-actions";
-      const editBtn = document.createElement("button");
-      editBtn.className = "asset-subtable-action";
-      editBtn.textContent = "수정";
-      editBtn.addEventListener("click", () => openRoleAssignmentModal(row));
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "asset-subtable-action danger";
-      deleteBtn.textContent = "삭제";
-      deleteBtn.addEventListener("click", () => deleteRoleAssignment(row));
-      actions.append(editBtn, deleteBtn);
-
-      item.append(marker, main, actions);
-      timeline.appendChild(item);
-    });
-    container.appendChild(timeline);
+    const current = rows.filter((r) => r.is_current);
+    assignmentGridApi.setGridOption("rowData", current);
   } catch (err) {
     showToast(err.message, "error");
   }
+}
+
+/* ── Assignment History Modal ── */
+
+async function openRoleHistoryModal() {
+  if (!_selectedRole) return;
+  const container = document.getElementById("role-history-content");
+  container.textContent = "";
+  document.getElementById("role-history-modal-title").textContent = `${_selectedRole.role_name} — 할당 이력`;
+
+  try {
+    const rows = await apiFetch(`/api/v1/asset-roles/${_selectedRole.id}/assignments`);
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "text-muted";
+      empty.textContent = "할당 이력이 없습니다.";
+      container.appendChild(empty);
+    } else {
+      const timeline = document.createElement("div");
+      timeline.className = "asset-timeline";
+      rows.forEach((row) => {
+        const item = document.createElement("article");
+        item.className = "asset-timeline-item";
+
+        const marker = document.createElement("div");
+        marker.className = "asset-timeline-marker asset-timeline-marker-" + (row.is_current ? "current" : "history");
+
+        const main = document.createElement("div");
+        main.className = "asset-timeline-main";
+
+        const meta = document.createElement("div");
+        meta.className = "asset-timeline-meta";
+        const typeBadge = document.createElement("span");
+        typeBadge.className = "badge";
+        typeBadge.textContent = ASSIGNMENT_TYPE_LABELS[row.assignment_type] || row.assignment_type;
+        const dateSpan = document.createElement("span");
+        dateSpan.textContent = `${row.valid_from || "시작 미기재"} ~ ${row.valid_to || "현재"}`;
+        meta.append(typeBadge, dateSpan);
+        if (row.is_current) {
+          const currentBadge = document.createElement("span");
+          currentBadge.className = "badge badge-active";
+          currentBadge.textContent = "현재 담당";
+          meta.appendChild(currentBadge);
+        }
+
+        const title = document.createElement("div");
+        title.className = "asset-timeline-title";
+        title.textContent = [row.asset_name, row.asset_code].filter(Boolean).join(" / ") || "미지정 자산";
+        main.append(meta, title);
+        if (row.note) {
+          const body = document.createElement("div");
+          body.className = "asset-timeline-body";
+          body.textContent = row.note;
+          main.appendChild(body);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "asset-timeline-actions";
+        const editBtn = document.createElement("button");
+        editBtn.className = "asset-subtable-action";
+        editBtn.textContent = "수정";
+        editBtn.addEventListener("click", () => {
+          document.getElementById("modal-role-history").close();
+          openRoleAssignmentModal(row);
+        });
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "asset-subtable-action danger";
+        deleteBtn.textContent = "삭제";
+        deleteBtn.addEventListener("click", async () => {
+          await deleteRoleAssignment(row);
+          openRoleHistoryModal();
+        });
+        actions.append(editBtn, deleteBtn);
+
+        item.append(marker, main, actions);
+        timeline.appendChild(item);
+      });
+      container.appendChild(timeline);
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+
+  document.getElementById("modal-role-history").showModal();
 }
 
 /* ── Role CRUD ── */
@@ -509,6 +561,8 @@ document.getElementById("btn-edit-role").addEventListener("click", () => {
 });
 document.getElementById("btn-delete-role").addEventListener("click", deleteRole);
 document.getElementById("btn-add-role-assignment").addEventListener("click", () => openRoleAssignmentModal());
+document.getElementById("btn-role-history").addEventListener("click", openRoleHistoryModal);
+document.getElementById("btn-close-role-history").addEventListener("click", () => document.getElementById("modal-role-history").close());
 document.getElementById("btn-cancel-role").addEventListener("click", () => document.getElementById("modal-asset-role").close());
 document.getElementById("btn-save-role").addEventListener("click", saveRole);
 document.getElementById("btn-cancel-role-assignment").addEventListener("click", () => document.getElementById("modal-role-assignment").close());
