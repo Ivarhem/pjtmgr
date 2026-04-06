@@ -906,7 +906,23 @@ function renderProductSimilarityBox(result) {
   list.replaceChildren();
   items.forEach((item) => {
     const li = document.createElement("li");
-    li.innerHTML = `${escapeHtml(item.vendor)} ${escapeHtml(item.name)}<span class="catalog-similarity-item-score">유사도 ${item.score}</span>`;
+    li.style.cursor = "pointer";
+    const textSpan = document.createElement("span");
+    textSpan.textContent = (item.vendor || "") + " " + (item.name || "");
+    li.appendChild(textSpan);
+    const scoreSpan = document.createElement("span");
+    scoreSpan.className = "catalog-similarity-item-score";
+    scoreSpan.textContent = "\uc720\uc0ac\ub3c4 " + item.score;
+    li.appendChild(scoreSpan);
+    li.addEventListener("click", () => {
+      const vendorInput = document.getElementById("product-vendor");
+      const vendorValue = document.getElementById("product-vendor-value");
+      const nameInput = document.getElementById("product-name");
+      if (vendorInput) vendorInput.value = item.vendor || "";
+      if (vendorValue) vendorValue.value = item.vendor || "";
+      if (nameInput) nameInput.value = item.name || "";
+      resetProductSimilarityBox();
+    });
     list.appendChild(li);
   });
   box.classList.remove("hidden");
@@ -917,7 +933,7 @@ async function checkProductSimilaritySuggestions() {
   const name = document.getElementById("product-name")?.value?.trim() || "";
   const excludeIdRaw = document.getElementById("product-id")?.value || "";
   const excludeId = excludeIdRaw ? Number(excludeIdRaw) : null;
-  if (!vendor || !name) {
+  if (!name) {
     resetProductSimilarityBox();
     return;
   }

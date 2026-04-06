@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class CatalogSimilarityCheckRequest(BaseModel):
-    vendor: str
+    vendor: str = ""
     name: str
     exclude_product_id: int | None = None
     include_dismissed: bool = False
