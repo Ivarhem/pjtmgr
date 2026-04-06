@@ -456,7 +456,7 @@ const ASSET_INFO_COLS = [
     valueFormatter: (p) => {
       if (!p.value) return p.data?.center || "—";
       const c = _layoutCentersCache.find((x) => x.id === Number(p.value));
-      return c ? c.name : (p.data?.center_label || "—");
+      return c ? c.center_name : (p.data?.center_label || "—");
     },
     editable: () => isGridFieldEditable("center_id"),
     cellEditor: "agSelectCellEditor",
@@ -465,7 +465,7 @@ const ASSET_INFO_COLS = [
       formatValue: (v) => {
         if (!v) return "—";
         const c = _layoutCentersCache.find((x) => String(x.id) === String(v));
-        return c ? c.name : v;
+        return c ? c.center_name : v;
       },
     }),
     cellClass: (p) => getGridCellClass("center_id", p.data),
