@@ -297,41 +297,15 @@ function getRoleNameById(roleId, fallbackNames) {
   return match?.role_name || fallbackNames?.[0] || "—";
 }
 
-const columnDefs = [
-  { field: "asset_code", headerName: "코드", width: 120, sort: "asc", editable: false, cellClass: () => getGridCellClass("asset_code") },
-  {
-    field: "project_asset_number",
-    headerName: "프로젝트코드",
-    width: 160,
-    editable: () => isGridFieldEditable("project_asset_number"),
-    valueFormatter: (p) => p.value || "—",
-    cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
-  },
-  {
-    field: "period_id",
-    headerName: "귀속프로젝트",
-    width: 220,
-    valueGetter: (p) => p.data?.contract_name || p.data?.period_label || "—",
-    editable: () => isGridFieldEditable("period_id"),
-    cellEditor: "agSelectCellEditor",
-    cellEditorParams: () => ({
-      values: ["", ..._periodsCache.map((p) => String(p.id))],
-      formatValue: (v) => {
-        if (!v) return "—";
-        const p = _periodsCache.find((x) => String(x.id) === String(v));
-        return p ? (p.contract_name || p.period_label || v) : v;
-      },
-    }),
-    valueParser: (p) => (p.newValue === "" || p.newValue == null ? null : Number(p.newValue)),
-    cellClass: (p) => getGridCellClass("period_id"),
-  },
+/* ── 자산 정보 컬럼 (분류체계 앞) ── */
+const ASSET_INFO_COLS = [
   {
     field: "asset_name", headerName: "자산명", flex: 1.2, minWidth: 220,
     editable: () => isGridFieldEditable("asset_name"),
     cellRenderer: (params) => {
       const wrapper = document.createElement("span");
       wrapper.textContent = params.value;
-      const aliases = params.data.aliases;
+      const aliases = params.data?.aliases;
       if (aliases && aliases.length) {
         aliases.forEach(a => {
           const tag = document.createElement("span");
@@ -358,7 +332,18 @@ const columnDefs = [
     valueParser: (p) => (p.newValue === "" || p.newValue == null ? null : Number(p.newValue)),
     cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
   },
-  { field: "customer_asset_number", headerName: "고객 자산번호", width: 150, valueFormatter: (p) => p.value || "—", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
+  { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
+  {
+    field: "model", headerName: "모델명", width: 190,
+    valueFormatter: (p) => {
+      if (p.value && typeof p.value === "object") return p.value.display || "—";
+      return p.value || "—";
+    },
+    editable: () => isGridFieldEditable("model"),
+    cellEditor: CatalogCellEditor,
+    cellClass: (p) => getGridCellClass(p.colDef.field),
+  },
+  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("serial_no"), cellClass: (p) => getGridCellClass(p.colDef.field) },
   {
     field: "center_id",
     headerName: "센터정보",
@@ -376,23 +361,6 @@ const columnDefs = [
     }),
     cellClass: (p) => getGridCellClass("center_id", p.data),
   },
-  { field: "classification_level_1_name", headerName: "대구분", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_1_name", p.data) },
-  { field: "classification_level_2_name", headerName: "중구분", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_2_name", p.data) },
-  { field: "classification_level_3_name", headerName: "소구분", width: 140, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass("classification_level_3_name", p.data) },
-  { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
-  { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
-  {
-    field: "model", headerName: "모델명", width: 190,
-    valueFormatter: (p) => {
-      if (p.value && typeof p.value === "object") return p.value.display || "—";
-      return p.value || "—";
-    },
-    editable: () => isGridFieldEditable("model"),
-    cellEditor: CatalogCellEditor,
-    cellClass: (p) => getGridCellClass(p.colDef.field),
-  },
-  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("serial_no"), cellClass: (p) => getGridCellClass(p.colDef.field) },
-  { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
   {
     field: "environment",
     headerName: "환경",
@@ -428,6 +396,64 @@ const columnDefs = [
   },
 ];
 
+/* ── 자산 코드/관리 컬럼 (분류체계 뒤) ── */
+const ASSET_CODE_COLS = [
+  { field: "asset_code", headerName: "코드", width: 120, sort: "asc", editable: false, cellClass: () => getGridCellClass("asset_code") },
+  {
+    field: "project_asset_number",
+    headerName: "프로젝트코드",
+    width: 160,
+    editable: () => isGridFieldEditable("project_asset_number"),
+    valueFormatter: (p) => p.value || "—",
+    cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
+  },
+  { field: "customer_asset_number", headerName: "고객 자산번호", width: 150, valueFormatter: (p) => p.value || "—", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
+  {
+    field: "period_id",
+    headerName: "귀속프로젝트",
+    width: 220,
+    valueGetter: (p) => p.data?.contract_name || p.data?.period_label || "—",
+    editable: () => isGridFieldEditable("period_id"),
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: () => ({
+      values: ["", ..._periodsCache.map((p) => String(p.id))],
+      formatValue: (v) => {
+        if (!v) return "—";
+        const p = _periodsCache.find((x) => String(x.id) === String(v));
+        return p ? (p.contract_name || p.period_label || v) : v;
+      },
+    }),
+    valueParser: (p) => (p.newValue === "" || p.newValue == null ? null : Number(p.newValue)),
+    cellClass: (p) => getGridCellClass("period_id"),
+  },
+  { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+  { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+];
+
+/** 분류체계 깊이에 따라 동적 컬럼을 생성한다. */
+function buildClassificationCols(depth) {
+  const cols = [];
+  for (let i = 1; i <= depth; i++) {
+    cols.push({
+      field: `classification_level_${i}_name`,
+      headerName: _classificationLevelAliases[i - 1] || `${i}레벨`,
+      width: 130,
+      valueFormatter: (p) => p.value || "—",
+      editable: false,
+      cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
+    });
+  }
+  return cols;
+}
+
+/** 자산정보 + 분류체계(동적) + 자산코드 순서로 columnDefs를 조립한다. */
+function buildColumnDefs() {
+  const depth = _classificationDepth || 3;
+  return [...ASSET_INFO_COLS, ...buildClassificationCols(depth), ...ASSET_CODE_COLS];
+}
+
+let columnDefs = buildColumnDefs();
+
 let gridApi;
 let _selectedAsset = null;
 let _editMode = false;
@@ -456,9 +482,10 @@ const ASSET_LAYOUT_MAX_WIDTH = 75;
 const ASSET_DETAIL_OPEN_KEY = "infra_assets_detail_open";
 const ASSET_DETAIL_LAST_ID_KEY = "infra_assets_detail_last_id";
 const ASSET_DETAIL_LAST_PARTNER_KEY = "infra_assets_detail_last_partner_id";
-const ASSET_GRID_COLUMN_STATE_KEY = "infra_assets_grid_column_state_v3";
+const ASSET_GRID_COLUMN_STATE_KEY = "infra_assets_grid_column_state_v4";
 const CLASSIFICATION_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 let _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
+let _classificationDepth = 3;
 let _catalogLabelLang = "ko";
 
 const INLINE_CATALOG_ATTRIBUTE_OPTIONS = {
@@ -593,14 +620,7 @@ function getClassificationLevelHeader(level) {
 
 function applyClassificationLevelHeaders() {
   if (!gridApi) return;
-  const headerMap = {
-    classification_level_1_name: getClassificationLevelHeader(1),
-    classification_level_2_name: getClassificationLevelHeader(2),
-    classification_level_3_name: getClassificationLevelHeader(3),
-  };
-  columnDefs.forEach((col) => {
-    if (headerMap[col.field]) col.headerName = headerMap[col.field];
-  });
+  columnDefs = buildColumnDefs();
   _suppressColumnSave = true;
   gridApi.setGridOption("columnDefs", columnDefs);
   const restored = restoreGridColumnState();
@@ -624,10 +644,13 @@ async function loadClassificationLevelAliases() {
     if (targetLayout?.id) {
       const detail = await apiFetch(`/api/v1/classification-layouts/${targetLayout.id}`);
       if (detail?.levels?.length) {
+        _classificationDepth = detail.levels.length;
         detail.levels.forEach((level) => {
           const idx = Math.max(Number(level.level_no || 1) - 1, 0);
           if (level.alias) _classificationLevelAliases[idx] = level.alias;
         });
+      } else if (detail?.depth_count) {
+        _classificationDepth = detail.depth_count;
       }
     }
   } catch { /* 기본값 유지 */ }
