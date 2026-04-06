@@ -319,22 +319,12 @@ const ASSET_INFO_COLS = [
     cellClass: (p) => getGridCellClass(p.colDef.field),
   },
   {
-    field: "current_role_id",
+    field: "current_role_name_input",
     headerName: "현재 역할",
     width: 200,
     editable: () => isGridFieldEditable("current_role_id"),
-    valueFormatter: (p) => getRoleNameById(p.value, p.data?.current_role_names),
-    valueGetter: (p) => {
-      // 표시용: 역할명 반환 (편집 시 텍스트로 진입)
-      const roleId = p.data?.current_role_id;
-      return getRoleNameById(roleId, p.data?.current_role_names);
-    },
-    valueSetter: (p) => {
-      // 입력값을 _pendingRoleName에 임시 저장, onCellValueChanged에서 처리
-      p.data._pendingRoleName = p.newValue;
-      return true;
-    },
-    cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
+    valueGetter: (p) => getRoleNameById(p.data?.current_role_id, p.data?.current_role_names),
+    cellClass: (p) => getGridCellClass("current_role_id", p.data),
   },
   { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
   {
@@ -821,22 +811,18 @@ async function handleGridCellValueChanged(event) {
   const field = event.colDef.field;
   try {
     let updated;
-    if (field === "current_role_id") {
-      const roleName = (row._pendingRoleName || "").trim();
-      delete row._pendingRoleName;
+    if (field === "current_role_name_input") {
+      const roleName = (event.newValue || "").trim();
       if (!roleName || roleName === "—") {
-        // 역할 해제
         updated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${row.id}/current-role`), {
           method: "PATCH",
           body: { asset_role_id: null },
         });
       } else {
-        // 기존 역할에서 이름으로 검색
         let role = _assetRoleOptions.find(
           (r) => r.role_name === roleName || r.role_name.toLowerCase() === roleName.toLowerCase()
         );
         if (!role) {
-          // 자동 생성: 활성 상태, 현재 선택 프로젝트
           const periodId = getCtxProjectId() || null;
           const partnerId = getCtxPartnerId();
           const created = await apiFetch("/api/v1/asset-roles", {
