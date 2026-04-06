@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}자산 역할 뷰{% endblock %}
+{% block title %}역할 기준 보기{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="/static/css/infra_common.css">
@@ -9,47 +9,75 @@
 <div class="tab-nav">
   <a href="/assets" class="tab-btn">자산 목록</a>
   <a href="/asset-roles" class="tab-btn active">역할 기준 보기</a>
-  <div class="tab-nav-actions">
-    <button class="btn btn-primary" id="btn-add-role">역할 등록</button>
-  </div>
 </div>
 
-<div class="filter-bar">
-  <label>검색
-    <input type="text" id="filter-role-search" placeholder="역할명, 유형, 현재 자산명">
-  </label>
-  <label>상태
-    <select id="filter-role-status">
-      <option value="">전체</option>
-      <option value="active">활성</option>
-      <option value="inactive">비활성</option>
-      <option value="retired">종료</option>
-    </select>
-  </label>
-</div>
-
-<div class="card">
-  <div id="grid-asset-roles" class="ag-theme-quartz infra-grid infra-grid-480"></div>
-</div>
-
-<div id="asset-role-detail-panel" class="detail-panel is-hidden">
-  <div class="detail-header">
-    <span id="detail-role-name" class="detail-title"></span>
-    <div class="detail-header-actions">
-      <button class="btn btn-sm btn-secondary" id="btn-role-replacement">교체</button>
-      <button class="btn btn-sm btn-secondary" id="btn-role-failover">장애대체</button>
-      <button class="btn btn-sm btn-secondary" id="btn-role-repurpose">용도전환</button>
-      <button class="btn btn-sm btn-secondary" id="btn-add-role-assignment">할당 추가</button>
-      <button class="btn btn-sm btn-secondary" id="btn-edit-role">수정</button>
-      <button class="btn btn-sm btn-danger" id="btn-delete-role">삭제</button>
-      <button class="btn btn-sm" id="btn-close-role-detail" title="닫기">&times;</button>
+<div class="mdm-layout" id="role-layout">
+  <!-- 좌: 역할 목록 -->
+  <section class="mdm-list-panel" id="role-list-panel" style="flex:0 0 30%">
+    <div class="mdm-panel-toolbar">
+      <input type="text" class="input-search" id="filter-role-search" placeholder="역할명 검색">
+      <button type="button" class="btn btn-primary btn-sm" id="btn-add-role">+ 신규</button>
     </div>
-  </div>
-  <div class="detail-tabs">
-    <button class="tab-btn active" data-rtab="basic">기본 정보</button>
-    <button class="tab-btn" data-rtab="assignments">할당 이력</button>
-  </div>
-  <div id="asset-role-detail-content" class="detail-body"></div>
+    <div id="grid-asset-roles" class="ag-theme-quartz mdm-list-grid"></div>
+  </section>
+
+  <!-- 스플리터 -->
+  <div class="mdm-splitter" id="role-splitter"></div>
+
+  <!-- 우: 상세 -->
+  <section class="mdm-detail-panel" id="role-detail-panel">
+    <div id="role-detail-empty" class="mdm-detail-empty">
+      <p>좌측에서 역할을 선택하거나<br>새 역할을 추가하세요.</p>
+    </div>
+    <div id="role-detail-content" class="is-hidden">
+      <!-- 상단: 역할 정보 -->
+      <div class="mdm-detail-section mdm-vendor-info">
+        <div class="mdm-vendor-header">
+          <h3 id="role-detail-title">역할 정보</h3>
+          <div class="mdm-vendor-header-actions">
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-role-replacement">교체</button>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-role-failover">장애대체</button>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-role-repurpose">용도전환</button>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-edit-role">수정</button>
+            <button type="button" class="btn btn-sm btn-danger" id="btn-delete-role">삭제</button>
+          </div>
+        </div>
+        <div class="mdm-vendor-body">
+          <div class="mdm-vendor-fields">
+            <div class="mdm-field-row">
+              <span class="mdm-field-label">역할명</span>
+              <span class="mdm-field-value" id="role-info-name">—</span>
+            </div>
+            <div class="mdm-field-row">
+              <span class="mdm-field-label">상태</span>
+              <span class="mdm-field-value" id="role-info-status">—</span>
+            </div>
+            <div class="mdm-field-row">
+              <span class="mdm-field-label">귀속사업</span>
+              <span class="mdm-field-value" id="role-info-period">—</span>
+            </div>
+            <div class="mdm-field-row">
+              <span class="mdm-field-label">현재 자산</span>
+              <span class="mdm-field-value" id="role-info-current-asset">미할당</span>
+            </div>
+          </div>
+          <div class="mdm-vendor-memo">
+            <span class="mdm-field-label">비고</span>
+            <p id="role-info-note" class="mdm-memo-text">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단: 할당 이력 (=제품 목록 위치) -->
+      <div class="mdm-detail-section mdm-product-section">
+        <div class="mdm-panel-toolbar">
+          <h3>할당 이력</h3>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-add-role-assignment">할당 추가</button>
+        </div>
+        <div id="role-assignments-content"></div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <dialog id="modal-asset-role" class="modal modal-md">
