@@ -49,6 +49,11 @@
 - 정책 정의/적용 UI를 메뉴에서 제거함 (DB 테이블, 모델, API 라우터는 유지)
 - 향후 재설계 후 구현 예정 — 현재 PolicyDefinition/PolicyAssignment 모델과 API는 동작하지만 UI 접근 경로 없음
 
+## 라우터 비즈니스 로직 (리팩터링 대상)
+
+- `app/modules/infra/routers/infra_excel.py`: `_build_catalog_lookup()`, `_enrich_catalog_preview_rows()` 함수가 라우터 내에서 DB 쿼리 + 도메인 로직 수행 — 서비스 레이어로 이동 필요
+- `app/modules/infra/routers/asset_roles.py`: create/get/update 엔드포인트에서 `list_asset_roles()` 전체 호출 후 list comprehension으로 1건 추출 — 서비스에 단건 조회 함수 추가 필요
+
 ## 발행일 휴일 조정
 
 - 공휴일 달력 미적용 (`invoice_holiday_adjust` 필드만 존재)

@@ -1810,7 +1810,7 @@ async function buildDetailEditFields(tab) {
       wrap.appendChild(hiddenId);
 
       const dd = document.createElement("div");
-      dd.className = "catalog-dropdown hidden";
+      dd.className = "catalog-dropdown is-hidden";
       wrap.appendChild(dd);
 
       let searchTimer = null;

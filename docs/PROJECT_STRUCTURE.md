@@ -18,6 +18,7 @@ app/
     ├── base_model.py                # TimestampMixin, 공통 Base
     ├── code_generator.py            # 계층적 코드 채번 (고객·사업·기간 코드)
     ├── _normalize.py                # 날짜/월 정규화 (normalize_month, normalize_date)
+    ├── file_validation.py           # 파일 업로드 검증 (xlsx/csv)
     ├── pages.py                     # 공통 페이지 라우터 (/, /index 등)
     ├── auth/                        # 인증/인가
     │   ├── authorization.py         # can_*() 공통 권한 함수, 모듈 접근 제어

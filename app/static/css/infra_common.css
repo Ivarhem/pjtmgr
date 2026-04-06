@@ -76,7 +76,7 @@
   border-bottom-color: var(--primary-color);
 }
 
-.tab-content.hidden { display: none; }
+.tab-content.is-hidden { display: none; }
 
 .placeholder-message {
   padding: 3rem;
@@ -1511,7 +1511,7 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
-.catalog-dropdown.hidden { display: none; }
+.catalog-dropdown.is-hidden { display: none; }
 .catalog-dropdown-item {
   padding: 8px 12px;
   cursor: pointer;

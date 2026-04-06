@@ -36,9 +36,9 @@ const _tabLoaded = {};
 
 function activateTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.add('is-hidden'));
   document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
-  document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+  document.getElementById(`tab-${tabId}`).classList.remove('is-hidden');
 
   if (!_tabLoaded[tabId]) {
     _tabLoaded[tabId] = true;
