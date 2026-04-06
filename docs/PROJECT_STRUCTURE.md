@@ -527,6 +527,7 @@ docs/
 │   ├── infra.md                # 인프라모듈 용어, 데이터 원칙
 │   └── agent_workflow.md       # 멀티에이전트 작업 오케스트레이션 기준
 └── agents/
+    ├── README.md                # 역할 카드 인덱스와 사용 시점 안내
     ├── planner.md              # 작업 분해, 범위/완료 조건 정리
     ├── impact-analyzer.md      # 영향 범위, 의존성, 전역 상태 조사
     ├── implementer.md          # 구현 역할 카드

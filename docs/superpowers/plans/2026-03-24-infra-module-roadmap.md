@@ -2,6 +2,7 @@
 
 > 인프라모듈 구현의 **단일 실행 기준 문서**.
 > 세부 설계가 필요할 때만 관련 spec/plan을 참고하고, 실제 우선순위 판단과 세션 시작 기준은 이 문서를 따른다.
+> 멀티에이전트로 진행할 때는 벤더 전용 sub-skill 이름 대신 `docs/guidelines/agent_workflow.md`와 필요한 `docs/agents/*.md`를 기준으로 역할을 나눈다.
 
 **Goal:** 인프라모듈을 `자산 원장 안정화 -> 자산 의존 기능 확장 -> 독립 기능 구현 -> 고도화` 순서로 완성한다.
 
@@ -30,6 +31,7 @@
   - reference: 특정 기능의 세부 설계/코드 뼈대 참고
   - archive 후보: 방향 전환 전의 과거 계획
 - 새 세션에서 작업을 시작할 때는 먼저 이 문서를 읽고, 필요한 경우에만 세부 문서를 추가로 연다.
+- 과거 plan 문서 상단에 남아 있는 `For agentic workers` 문구는 historical note로만 본다. 현재 세션의 역할 분리 기준은 `docs/guidelines/agent_workflow.md`다.
 
 ---
 
