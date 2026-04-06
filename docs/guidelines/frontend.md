@@ -242,3 +242,18 @@
 - `singleClickEdit: true`는 사용하지 않는다. 모든 인라인 편집은 더블클릭으로 시작.
 - 새 그리드를 추가할 때 반드시 `buildStandardGridBehavior()`를 사용한다.
 - `onRowClicked`, `onRowDoubleClicked`를 직접 설정하지 않고 헬퍼를 통해 설정한다.
+- "테이블 편집" 같은 모드 토글 버튼은 만들지 않는다 — editable 컬럼은 항상 더블클릭으로 편집 가능.
+
+### 하이브리드 인라인 편집
+
+그리드 셀 편집과 모달 편집을 병행한다. 기준:
+
+- **인라인 (더블클릭):** 텍스트 1줄, 드롭다운, 날짜, 숫자 등 단순 필드
+- **모달 (버튼 또는 액션):** textarea, 참조 검색, 다중 필드 동시 입력, 신규 생성
+
+인라인 편집 구현 패턴:
+
+1. columnDefs에 `editable: true` + 필요 시 `cellEditor: "agSelectCellEditor"`
+2. `buildStandardGridBehavior()`에 `onCellValueChanged` 핸들러 전달
+3. 핸들러에서 `PATCH /api/v1/{resource}/{id}` 호출, 실패 시 `oldValue` 복원 + `refreshCells`
+4. `singleClickEdit: true`는 사용 금지 — 더블클릭 편집만 허용

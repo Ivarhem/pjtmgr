@@ -11,6 +11,9 @@ const assignColDefs = [
   { field: "asset_id", headerName: "자산 ID", width: 90 },
   {
     field: "status", headerName: "상태", width: 100,
+    editable: true,
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: ["not_checked", "compliant", "non_compliant", "exception", "not_applicable"] },
     cellRenderer: (params) => {
       const span = document.createElement("span");
       span.className = "badge badge-" + params.value;
@@ -18,10 +21,10 @@ const assignColDefs = [
       return span;
     },
   },
-  { field: "checked_by", headerName: "확인자", width: 120 },
-  { field: "checked_date", headerName: "확인일", width: 120, valueFormatter: (p) => fmtDate(p.value) },
-  { field: "exception_reason", headerName: "예외 사유", flex: 1, minWidth: 160 },
-  { field: "evidence_note", headerName: "증적 메모", width: 150 },
+  { field: "checked_by", headerName: "확인자", width: 120, editable: true },
+  { field: "checked_date", headerName: "확인일", width: 120, editable: true, valueFormatter: (p) => fmtDate(p.value) },
+  { field: "exception_reason", headerName: "예외 사유", flex: 1, minWidth: 160, editable: true },
+  { field: "evidence_note", headerName: "증적 메모", width: 150, editable: true },
   {
     headerName: "", width: 120, sortable: false, filter: false,
     cellRenderer: (params) => {
@@ -92,6 +95,7 @@ function initGrid() {
     ...buildStandardGridBehavior({
       type: 'modal-edit',
       onEdit: (data) => openEditAssignment(data),
+      onCellValueChanged: handleAssignmentCellChanged,
     }),
   });
   loadDropdowns();
@@ -170,6 +174,22 @@ async function deleteAssignment(assign) {
       loadAssignments();
     } catch (err) { showToast(err.message, "error"); }
   });
+}
+
+async function handleAssignmentCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue || !data.id) return;
+  try {
+    await apiFetch(`/api/v1/policy-assignments/${data.id}`, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue },
+    });
+    showToast("저장되었습니다.", "success");
+  } catch (err) {
+    showToast(err.message, "error");
+    data[colDef.field] = oldValue;
+    assignGridApi.refreshCells({ rowNodes: [event.node], force: true });
+  }
 }
 
 /* ── Events ── */

@@ -612,7 +612,6 @@ function initCatalogGrid() {
     ...buildStandardGridBehavior({
       type: 'detail-panel',
       onSelect: (data) => selectProduct(data),
-      onEdit: (data) => openEditProduct(),
     }),
     onColumnMoved: saveCatalogGridColumnState,
     onColumnVisible: saveCatalogGridColumnState,

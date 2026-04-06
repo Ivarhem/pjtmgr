@@ -112,12 +112,18 @@ const phaseColDefs = [
     field: "phase_type",
     headerName: "단계",
     width: 120,
+    editable: true,
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: ["analysis", "design", "build", "test", "stabilize"] },
     valueFormatter: (p) => PHASE_TYPE_MAP[p.value] || p.value,
   },
   {
     field: "status",
     headerName: "상태",
     width: 100,
+    editable: true,
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: ["not_started", "in_progress", "completed"] },
     cellRenderer: (params) => {
       const label = PHASE_STATUS_MAP[params.value] || params.value;
       const span = document.createElement("span");
@@ -187,11 +193,14 @@ const deliverableColDefs = [
       return ph ? (PHASE_TYPE_MAP[ph.phase_type] || ph.phase_type) : params.value;
     },
   },
-  { field: "name", headerName: "산출물명", flex: 1, minWidth: 200 },
+  { field: "name", headerName: "산출물명", flex: 1, minWidth: 200, editable: true },
   {
     field: "is_submitted",
     headerName: "제출",
     width: 80,
+    editable: true,
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: [true, false] },
     cellRenderer: (params) => {
       const span = document.createElement("span");
       span.className = "badge " + (params.value ? "badge-active" : "badge-planned");
@@ -201,7 +210,7 @@ const deliverableColDefs = [
   },
   { field: "submitted_at", headerName: "제출일", width: 120, valueFormatter: (p) => fmtDate(p.value) },
   { field: "description", headerName: "설명", width: 200 },
-  { field: "note", headerName: "비고", width: 150 },
+  { field: "note", headerName: "비고", width: 150, editable: true },
   {
     headerName: "",
     width: 120,
@@ -312,6 +321,40 @@ function renderPhaseTimeline(phaseList) {
   });
 }
 
+/* ── Inline edit handlers ── */
+async function handlePhaseCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue || !data.id) return;
+  try {
+    await apiFetch(`/api/v1/period-phases/${data.id}`, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue },
+    });
+    showToast("저장되었습니다.", "success");
+    renderPhaseTimeline(phases);
+  } catch (err) {
+    showToast(err.message, "error");
+    data[colDef.field] = oldValue;
+    phaseGridApi.refreshCells({ rowNodes: [event.node], force: true });
+  }
+}
+
+async function handleDeliverableCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue || !data.id) return;
+  try {
+    await apiFetch(`/api/v1/period-deliverables/${data.id}`, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue },
+    });
+    showToast("저장되었습니다.", "success");
+  } catch (err) {
+    showToast(err.message, "error");
+    data[colDef.field] = oldValue;
+    deliverableGridApi.refreshCells({ rowNodes: [event.node], force: true });
+  }
+}
+
 /* ── Init ── */
 function initGrids() {
   phaseGridApi = agGrid.createGrid(document.getElementById("grid-phases"), {
@@ -324,6 +367,7 @@ function initGrids() {
     ...buildStandardGridBehavior({
       type: 'modal-edit',
       onEdit: (data) => openEditPhase(data),
+      onCellValueChanged: handlePhaseCellChanged,
     }),
   });
 
@@ -337,6 +381,7 @@ function initGrids() {
     ...buildStandardGridBehavior({
       type: 'modal-edit',
       onEdit: (data) => openEditDeliverable(data),
+      onCellValueChanged: handleDeliverableCellChanged,
     }),
   });
 

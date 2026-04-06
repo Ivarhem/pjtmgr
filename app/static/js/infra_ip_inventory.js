@@ -16,11 +16,11 @@ const ipColDefs = [
   { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc" },
   { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_MAP[p.value] || p.value },
   { field: "interface_name", headerName: "인터페이스", width: 120 },
-  { field: "hostname", headerName: "호스트명", width: 130 },
-  { field: "service_name", headerName: "서비스명", width: 130 },
-  { field: "zone", headerName: "존", width: 100 },
-  { field: "vlan_id", headerName: "VLAN", width: 80 },
-  { field: "note", headerName: "비고", flex: 1, minWidth: 150 },
+  { field: "hostname", headerName: "호스트명", width: 130, editable: true },
+  { field: "service_name", headerName: "서비스명", width: 130, editable: true },
+  { field: "zone", headerName: "존", width: 100, editable: true },
+  { field: "vlan_id", headerName: "VLAN", width: 80, editable: true },
+  { field: "note", headerName: "비고", flex: 1, minWidth: 150, editable: true },
   {
     headerName: "", width: 120, sortable: false, filter: false,
     cellRenderer: (params) => {
@@ -158,6 +158,7 @@ function initPage() {
       type: 'modal-edit',
       onEdit: (data) => openEditIp(data),
     }),
+    onCellValueChanged: handleIpCellChanged,
   });
   loadSubnets();
   loadIps();
@@ -342,6 +343,24 @@ async function deleteIp(ip) {
       } catch (err) { showToast(err.message, "error"); }
     }
   );
+}
+
+/* ── Inline Edit ── */
+
+async function handleIpCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue || !data.id) return;
+  try {
+    await apiFetch(`/api/v1/asset-ips/${data.id}`, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue },
+    });
+    showToast("저장되었습니다.", "success");
+  } catch (err) {
+    showToast(err.message, "error");
+    data[colDef.field] = oldValue;
+    ipGridApi.refreshCells({ rowNodes: [event.node], force: true });
+  }
 }
 
 /* ── Events ── */

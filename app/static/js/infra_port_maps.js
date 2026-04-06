@@ -6,19 +6,20 @@ const PORTMAP_STATUS_MAP = {
 
 const columnDefs = [
   { field: "seq", headerName: "순번", width: 70 },
-  { field: "cable_no", headerName: "케이블번호", width: 110 },
-  { field: "connection_type", headerName: "연결유형", width: 110 },
+  { field: "cable_no", headerName: "케이블번호", width: 110, editable: true },
+  { field: "connection_type", headerName: "연결유형", width: 110, editable: true, cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["fiber", "utp", "dac", "console", "serial", "other"] } },
   { field: "src_hostname", headerName: "출발 호스트", width: 130 },
   { field: "src_port_name", headerName: "출발 포트", width: 100 },
   { field: "src_zone", headerName: "출발 존", width: 90 },
   { field: "dst_hostname", headerName: "도착 호스트", width: 130 },
   { field: "dst_port_name", headerName: "도착 포트", width: 100 },
   { field: "dst_zone", headerName: "도착 존", width: 90 },
-  { field: "cable_type", headerName: "케이블종류", width: 100 },
-  { field: "cable_speed", headerName: "속도", width: 80 },
-  { field: "purpose", headerName: "용도", flex: 1, minWidth: 120 },
+  { field: "cable_type", headerName: "케이블종류", width: 100, editable: true, cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["SM", "MM", "UTP", "STP", "DAC", "other"] } },
+  { field: "cable_speed", headerName: "속도", width: 80, editable: true, cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["100M", "1G", "10G", "25G", "40G", "100G", "other"] } },
+  { field: "purpose", headerName: "용도", flex: 1, minWidth: 120, editable: true },
   {
-    field: "status", headerName: "상태", width: 80,
+    field: "status", headerName: "상태", width: 80, editable: true,
+    cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["required", "open", "closed", "pending"] },
     cellRenderer: (params) => {
       const span = document.createElement("span");
       span.className = "badge badge-" + params.value;
@@ -68,6 +69,7 @@ function initGrid() {
       type: 'modal-edit',
       onEdit: (data) => openEditModal(data),
     }),
+    onCellValueChanged: handlePortMapCellChanged,
   });
   loadPortMaps();
 }
@@ -174,6 +176,24 @@ async function deletePortMap(pm) {
       loadPortMaps();
     } catch (err) { showToast(err.message, "error"); }
   });
+}
+
+/* ── Inline Edit ── */
+
+async function handlePortMapCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue || !data.id) return;
+  try {
+    await apiFetch(`/api/v1/port-maps/${data.id}`, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue },
+    });
+    showToast("저장되었습니다.", "success");
+  } catch (err) {
+    showToast(err.message, "error");
+    data[colDef.field] = oldValue;
+    gridApi.refreshCells({ rowNodes: [event.node], force: true });
+  }
 }
 
 /* ── Events ── */

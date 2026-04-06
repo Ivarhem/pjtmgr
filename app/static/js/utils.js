@@ -1351,6 +1351,9 @@ function buildStandardGridBehavior(opts = {}) {
       if (onEdit) {
         result.onRowDoubleClicked = (e) => { if (e.data) onEdit(e.data, e); };
       }
+      if (onCellValueChanged) {
+        result.onCellValueChanged = onCellValueChanged;
+      }
       break;
 
     case 'readonly':

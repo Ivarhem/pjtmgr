@@ -18,7 +18,7 @@ let _rolePartnerAssetsCache = [];
 let _currentRoleAction = null;
 
 const roleColumnDefs = [
-  { field: "role_name", headerName: "역할명", flex: 1, minWidth: 180, sort: "asc" },
+  { field: "role_name", headerName: "역할명", flex: 1, minWidth: 180, sort: "asc", editable: true },
   { field: "role_type", headerName: "유형", width: 140, valueFormatter: (p) => p.value || "—" },
   { field: "current_asset_name", headerName: "현재 자산", width: 180, valueFormatter: (p) => p.value || "미할당" },
   { field: "current_asset_code", headerName: "현재 자산코드", width: 140, valueFormatter: (p) => p.value || "—" },
@@ -32,6 +32,9 @@ const roleColumnDefs = [
     field: "status",
     headerName: "역할 상태",
     width: 110,
+    editable: true,
+    cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: ["active", "inactive", "retired"] },
     cellRenderer: (params) => {
       const span = document.createElement("span");
       span.className = "badge badge-" + (params.value || "planned");
@@ -62,7 +65,7 @@ async function initRoleGrid() {
     ...buildStandardGridBehavior({
       type: 'detail-panel',
       onSelect: (data) => showRoleDetail(data),
-      onEdit: (data) => openRoleModal(data),
+      onCellValueChanged: handleRoleCellChanged,
     }),
   });
   if (getCtxPartnerId()) loadAssetRoles();
@@ -542,6 +545,25 @@ async function saveRoleAction() {
     }
   } catch (err) {
     showToast(err.message, "error");
+  }
+}
+
+async function handleRoleCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue || !data.id) return;
+  try {
+    await apiFetch(`/api/v1/asset-roles/${data.id}`, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue },
+    });
+    showToast("저장되었습니다.", "success");
+    if (colDef.field === "status" || colDef.field === "role_name") {
+      showRoleDetail(data);
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+    data[colDef.field] = oldValue;
+    roleGridApi.refreshCells({ rowNodes: [event.node], force: true });
   }
 }
 

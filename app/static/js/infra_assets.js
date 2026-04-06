@@ -267,7 +267,7 @@ class CatalogCellEditor {
 }
 
 function isGridFieldEditable(field) {
-  return _gridEditMode && GRID_EDITABLE_FIELDS.has(field);
+  return GRID_EDITABLE_FIELDS.has(field);
 }
 
 function isRawFallbackField(field, row = {}) {
@@ -282,9 +282,7 @@ function isRawFallbackField(field, row = {}) {
 
 function getGridCellClass(field, row = null) {
   const classes = [];
-  if (_gridEditMode) {
-    classes.push(GRID_EDITABLE_FIELDS.has(field) ? "infra-cell-editable" : "infra-cell-readonly");
-  }
+  if (GRID_EDITABLE_FIELDS.has(field)) classes.push("infra-cell-editable");
   if (isRawFallbackField(field, row)) classes.push("infra-cell-rawtext");
   return classes.join(" ");
 }
@@ -402,7 +400,6 @@ let _eventSummaryTouched = false;
 let _eventDetailTouched = false;
 let _currentAssetRoleAction = null;
 let _detailEscArmedAt = 0;
-let _gridEditMode = false;
 let _assetRoleOptions = [];
 let _layoutCentersCache = [];
 const _layoutRoomsCache = new Map();
@@ -702,13 +699,6 @@ async function initGrid() {
   if (getCtxPartnerId()) loadAssets();
 }
 
-function syncGridEditButton() {
-  const btn = document.getElementById("btn-toggle-grid-edit");
-  if (!btn) return;
-  btn.classList.toggle("is-active", _gridEditMode);
-  btn.classList.toggle("btn-toggle-edit", true);
-  btn.textContent = _gridEditMode ? "편집 종료" : "테이블 편집";
-}
 
 function applyAssetRowUpdate(row, updated) {
   Object.assign(row, updated);
@@ -2969,12 +2959,6 @@ async function saveAssetRoleAction() {
 document.addEventListener("DOMContentLoaded", async () => {
   initAssetSplitter();
   initGrid();
-  syncGridEditButton();
-});
-document.getElementById("btn-toggle-grid-edit").addEventListener("click", () => {
-  _gridEditMode = !_gridEditMode;
-  syncGridEditButton();
-  gridApi?.refreshCells({ force: true });
 });
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-asset").addEventListener("click", () => modal.close());
