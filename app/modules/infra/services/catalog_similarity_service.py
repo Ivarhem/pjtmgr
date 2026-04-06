@@ -217,6 +217,8 @@ def recalc_similar_counts(db: Session, product_ids: list[int]) -> None:
         product.similar_count = count
 
     db.commit()
+    from app.modules.infra.services.product_catalog_service import invalidate_product_list_cache
+    invalidate_product_list_cache(db)
 
 
 def recalc_all_similar_counts(db: Session) -> int:
