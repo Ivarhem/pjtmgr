@@ -1088,24 +1088,13 @@ const DETAIL_TAB_FIELDS = {
       ],
     },
     {
-      title: "네트워크 및 서비스",
-      description: "호스트명, IP, 서비스 식별에 필요한 값을 모아 봅니다.",
+      title: "호스트 / 서비스",
+      description: "호스트명, 서비스 식별에 필요한 값을 모아 봅니다.",
       fields: [
         ["호스트명", "hostname"],
         ["클러스터", "cluster"],
         ["서비스명", "service_name"],
         ["존", "zone"],
-        ["서비스 IP", "service_ip"],
-        ["관리 IP", "mgmt_ip"],
-      ],
-    },
-    {
-      title: "담당자 메모",
-      description: "자산에 직접 기록된 기본 담당자 정보를 빠르게 확인합니다.",
-      fields: [
-        ["주 담당자", "primary_contact_name"],
-        ["부 담당자", "secondary_contact_name"],
-        ["비고", "note"],
       ],
     },
   ],
@@ -1146,11 +1135,6 @@ const DETAIL_EDIT_FIELDS = {
     ["클러스터", "cluster"],
     ["서비스명", "service_name"],
     ["존", "zone"],
-    ["서비스 IP", "service_ip"],
-    ["관리 IP", "mgmt_ip"],
-    ["주 담당자", "primary_contact_name"],
-    ["부 담당자", "secondary_contact_name"],
-    ["비고", "note"],
   ],
 };
 
@@ -1167,10 +1151,7 @@ function showAssetDetail(asset) {
 }
 
 function syncAssetDetailTabs(kind) {
-  const connectionsTab = document.querySelector('.detail-tabs .tab-btn[data-dtab="connections"]');
-  if (!connectionsTab) return;
-  connectionsTab.classList.toggle("is-hidden", false);
-  if (!["overview", "operations", "connections", "history"].includes(_currentTab)) {
+  if (!["overview", "operations", "network", "contacts", "history"].includes(_currentTab)) {
     _currentTab = "overview";
   }
 }
@@ -1347,10 +1328,14 @@ function renderDetailTab(tab) {
 
   if (!_selectedAsset) return;
 
-  if (tab === "connections") { renderConnectionsTab(container); return; }
+  if (tab === "network") { renderNetworkTab(container); return; }
+  if (tab === "contacts") { renderContactsGroupTab(container); return; }
   if (tab === "history") { renderHistoryTab(container); return; }
 
   renderStructuredDetailTab(tab, container);
+
+  if (tab === "overview") renderOverviewSubSections(container);
+  if (tab === "operations") renderOperationsSubSections(container);
 }
 
 function getDetailFieldValue(key, fmt) {
@@ -1428,24 +1413,60 @@ function renderStructuredDetailTab(tab, container) {
   container.appendChild(wrap);
 }
 
-async function renderConnectionsTab(container) {
-  const groups = [
-    ["소프트웨어", "연결된 소프트웨어와 라이선스 정보를 관리합니다.", renderSoftwareTab],
-    ["IP 할당", "서비스/관리 IP와 인터페이스 연결 정보를 관리합니다.", renderIpTab],
-    ["담당자", "운영과 보안, 시스템 담당자를 연결합니다.", renderContactsTab],
-    ["관련업체", "유지보수사, 공급사, 운영사 등 연관 업체를 관리합니다.", renderRelatedPartnersTab],
-    ["자산 관계", "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.", renderRelationsTab],
-    ["별칭", "고객사명, 레거시명, 내부명을 함께 관리합니다.", renderAliasesTab],
-  ];
-
+async function renderOverviewSubSections(container) {
   const wrap = document.createElement("div");
   wrap.className = "asset-detail-sections";
   container.appendChild(wrap);
-
+  const groups = [
+    ["별칭", "고객사명, 레거시명, 내부명을 함께 관리합니다.", renderAliasesTab],
+  ];
   for (const [title, description, renderer] of groups) {
     const section = createDetailSectionCard(title, description);
     wrap.appendChild(section);
-    // eslint-disable-next-line no-await-in-loop
+    await renderer(section);
+  }
+}
+
+async function renderOperationsSubSections(container) {
+  const wrap = document.createElement("div");
+  wrap.className = "asset-detail-sections";
+  container.appendChild(wrap);
+  const groups = [
+    ["설치 소프트웨어", "이 자산에 설치된 소프트웨어를 관리합니다.", renderSoftwareTab],
+    ["자산 관계", "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.", renderRelationsTab],
+  ];
+  for (const [title, description, renderer] of groups) {
+    const section = createDetailSectionCard(title, description);
+    wrap.appendChild(section);
+    await renderer(section);
+  }
+}
+
+async function renderNetworkTab(container) {
+  const wrap = document.createElement("div");
+  wrap.className = "asset-detail-sections";
+  container.appendChild(wrap);
+  const groups = [
+    ["IP 할당", "인터페이스에 IP를 할당합니다.", renderIpTab],
+  ];
+  for (const [title, description, renderer] of groups) {
+    const section = createDetailSectionCard(title, description);
+    wrap.appendChild(section);
+    await renderer(section);
+  }
+}
+
+async function renderContactsGroupTab(container) {
+  const wrap = document.createElement("div");
+  wrap.className = "asset-detail-sections";
+  container.appendChild(wrap);
+  const groups = [
+    ["담당자", "운영과 보안, 시스템 담당자를 연결합니다.", renderContactsTab],
+    ["관련업체", "유지보수사, 공급사, 운영사 등 연관 업체를 관리합니다.", renderRelatedPartnersTab],
+  ];
+  for (const [title, description, renderer] of groups) {
+    const section = createDetailSectionCard(title, description);
+    wrap.appendChild(section);
     await renderer(section);
   }
 }
@@ -1573,7 +1594,7 @@ async function saveSoftware() {
     }
     document.getElementById("modal-software").close();
     showToast(swId ? "수정되었습니다." : "추가되었습니다.");
-    renderDetailTab("connections");
+    renderDetailTab("operations");
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -1582,7 +1603,7 @@ async function deleteSoftware(sw) {
     try {
       await apiFetch("/api/v1/asset-software/" + sw.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("connections");
+      renderDetailTab("operations");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -1646,7 +1667,7 @@ async function saveIp() {
     }
     document.getElementById("modal-ip").close();
     showToast(ipId ? "수정되었습니다." : "추가되었습니다.");
-    renderDetailTab("connections");
+    renderDetailTab("network");
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -1655,7 +1676,7 @@ async function deleteIp(ip) {
     try {
       await apiFetch("/api/v1/asset-ips/" + ip.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("connections");
+      renderDetailTab("network");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -1743,7 +1764,7 @@ async function saveContact() {
     }
     document.getElementById("modal-contact").close();
     showToast(ctId ? "수정되었습니다." : "연결되었습니다.");
-    renderDetailTab("connections");
+    renderDetailTab("contacts");
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -1752,7 +1773,7 @@ async function deleteContact(ct) {
     try {
       await apiFetch("/api/v1/asset-contacts/" + ct.id, { method: "DELETE" });
       showToast("해제되었습니다.");
-      renderDetailTab("connections");
+      renderDetailTab("contacts");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -1862,7 +1883,7 @@ async function saveRelatedPartner() {
     }
     document.getElementById("modal-related-partner").close();
     showToast(relationId ? "수정되었습니다." : "관련업체가 연결되었습니다.");
-    renderDetailTab("connections");
+    renderDetailTab("contacts");
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -1871,7 +1892,7 @@ async function deleteRelatedPartner(rel) {
     try {
       await apiFetch("/api/v1/asset-related-partners/" + rel.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("connections");
+      renderDetailTab("contacts");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -1934,7 +1955,7 @@ async function saveRelation() {
     await apiFetch("/api/v1/asset-relations", { method: "POST", body: payload });
     document.getElementById("modal-relation").close();
     showToast("관계가 추가되었습니다.");
-    renderDetailTab("connections");
+    renderDetailTab("operations");
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -1943,7 +1964,7 @@ async function deleteRelation(rel) {
     try {
       await apiFetch("/api/v1/asset-relations/" + rel.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("connections");
+      renderDetailTab("operations");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -2000,7 +2021,7 @@ async function saveAlias() {
     }
     document.getElementById("modal-alias").close();
     showToast(aliasId ? "수정되었습니다." : "추가되었습니다.");
-    renderDetailTab("connections");
+    renderDetailTab("overview");
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -2009,7 +2030,7 @@ async function deleteAlias(alias) {
     try {
       await apiFetch("/api/v1/asset-aliases/" + alias.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("connections");
+      renderDetailTab("overview");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
