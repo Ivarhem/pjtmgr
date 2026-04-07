@@ -296,8 +296,7 @@ app/modules/infra/
 │   ├── racks.py                 # /api/v1/racks
 │   └── pages.py                 # 인프라 HTML 페이지 렌더링
 └── templates/
-    ├── infra_projects.html      # 계약단위 목록 (/periods)
-    ├── infra_project_detail.html # 계약단위 상세 (탭 구조)
+    ├── infra_projects.html      # 계약단위 목록 (/periods, 상세 인라인 패널 포함)
     ├── infra_project_classifications.html # 프로젝트 분류체계
     ├── infra_assets.html        # 자산 목록
     ├── infra_asset_roles.html   # 자산 역할 관리
@@ -373,8 +372,7 @@ app/static/
 │   ├── infra_product_catalog.js # 제품 카탈로그
 │   ├── infra_catalog_integrity.js # 카탈로그 기준정보 관리 (제조사·제품·별칭)
 │   ├── infra_project_classifications.js # 프로젝트 분류체계
-│   ├── infra_projects.js        # 인프라 계약단위 목록
-│   ├── infra_project_detail.js  # 인프라 계약단위 상세
+│   ├── infra_projects.js        # 인프라 계약단위 목록 (상세 인라인 패널 포함)
 │   └── lucide.js                # 아이콘 라이브러리
 ├── css/
 │   ├── base.css                 # 전역 스타일, CSS 변수 (light/dark)
