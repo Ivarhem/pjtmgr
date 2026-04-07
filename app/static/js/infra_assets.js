@@ -23,6 +23,10 @@ const CATALOG_KIND_LABELS = {
   dataset: "데이터셋",
 };
 
+const IP_TYPE_SHORT = {
+  service: "서비스", mgmt: "관리", vip: "VIP", secondary: "보조",
+};
+
 const RELATION_TYPE_LABELS = {
   HOSTS: "호스팅함",
   INSTALLED_ON: "설치됨",
@@ -1444,28 +1448,11 @@ async function renderOperationsSubSections(container) {
 }
 
 async function renderNetworkTab(container) {
-  const wrap = document.createElement("div");
-  wrap.className = "asset-detail-sections";
-  container.appendChild(wrap);
-  const groups = [
-    ["인터페이스", "물리/논리 인터페이스를 관리합니다.", renderInterfacesTab],
-    ["IP 할당", "인터페이스에 IP를 할당합니다.", renderIpTab],
-  ];
-  for (const [title, description, renderer] of groups) {
-    const section = createDetailSectionCard(title, description);
-    wrap.appendChild(section);
-    await renderer(section);
-  }
-}
-
-/* ── 인터페이스 탭 ── */
-
-async function renderInterfacesTab(container) {
   const hdr = document.createElement("div");
   hdr.className = "asset-subtab-header";
   const title = document.createElement("span");
   title.className = "asset-subtab-title";
-  title.textContent = "인터페이스 목록";
+  title.textContent = "인터페이스 & IP";
   hdr.appendChild(title);
 
   const btnGroup = document.createElement("span");
@@ -1479,30 +1466,53 @@ async function renderInterfacesTab(container) {
     btnGroup.appendChild(btnGen);
   }
 
-  const btnAdd = document.createElement("button");
-  btnAdd.className = "btn btn-sm btn-primary";
-  btnAdd.textContent = "+ 추가";
-  btnAdd.addEventListener("click", () => openInterfaceModal());
-  btnGroup.appendChild(btnAdd);
+  const btnAddIf = document.createElement("button");
+  btnAddIf.className = "btn btn-sm btn-primary";
+  btnAddIf.textContent = "+ 인터페이스";
+  btnAddIf.addEventListener("click", () => openInterfaceModal());
+  btnGroup.appendChild(btnAddIf);
+
+  const btnEdit = document.createElement("button");
+  btnEdit.className = "btn btn-sm btn-secondary";
+  btnEdit.textContent = "상세 편집";
+  btnEdit.addEventListener("click", openNetworkEditModal);
+  btnGroup.appendChild(btnEdit);
+
   hdr.appendChild(btnGroup);
   container.appendChild(hdr);
 
   try {
-    const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces");
-    const sorted = sortInterfacesHierarchically(data);
+    const [ifaces, ips] = await Promise.all([
+      apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces"),
+      apiFetch("/api/v1/assets/" + _selectedAsset.id + "/ips"),
+    ]);
+
+    const ipMap = {};
+    ips.forEach(ip => {
+      const key = ip.interface_id;
+      if (!ipMap[key]) ipMap[key] = [];
+      ipMap[key].push(ip);
+    });
+
+    const sorted = sortInterfacesHierarchically(ifaces);
+    sorted.forEach(iface => {
+      const ifIps = ipMap[iface.id] || [];
+      iface._ip_summary = ifIps.length
+        ? ifIps.map(ip => {
+            let s = ip.ip_address;
+            if (ip.ip_type) s += " (" + (IP_TYPE_SHORT[ip.ip_type] || ip.ip_type) + ")";
+            if (ip.is_primary) s += " ●";
+            return s;
+          }).join(", ")
+        : "—";
+    });
 
     _subTable(container, [
-      { label: "이름", field: "name", fmt: (v, row) => {
-        const indent = row.parent_id ? "  └ " : "";
-        return indent + v;
-      }},
+      { label: "이름", field: "name", fmt: (v, row) => row.parent_id ? "  └ " + v : v },
       { label: "유형", field: "if_type" },
       { label: "속도", field: "speed" },
-      { label: "미디어", field: "media_type" },
-      { label: "슬롯", field: "slot" },
       { label: "Admin", field: "admin_status" },
-      { label: "Oper", field: "oper_status" },
-      { label: "MAC", field: "mac_address" },
+      { label: "IP 할당", field: "_ip_summary", className: "asset-subtable-cell-wide" },
     ], sorted, [
       { label: "수정", handler: (r) => openInterfaceModal(r) },
       { label: "삭제", danger: true, handler: (r) => deleteInterface(r) },
@@ -1559,6 +1569,9 @@ async function saveInterface() {
     document.getElementById("modal-interface").close();
     showToast(ifaceId ? "수정되었습니다." : "추가되었습니다.");
     renderDetailTab("network");
+    if (document.getElementById("modal-network-edit").open) {
+      openNetworkEditModal();
+    }
   } catch (e) { showToast(e.message, "error"); }
 }
 
@@ -1794,6 +1807,227 @@ async function deleteLicense(lic) {
       renderDetailTab("overview");
     } catch (e) { showToast(e.message, "error"); }
   });
+}
+
+/* ── 네트워크 상세 편집 모달 (AG Grid) ── */
+
+let _netEditGridApi = null;
+
+async function openNetworkEditModal() {
+  const modal = document.getElementById("modal-network-edit");
+
+  const [ifaces, ips] = await Promise.all([
+    apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces"),
+    apiFetch("/api/v1/assets/" + _selectedAsset.id + "/ips"),
+  ]);
+
+  const ipMap = {};
+  ips.forEach(ip => {
+    if (!ipMap[ip.interface_id]) ipMap[ip.interface_id] = [];
+    ipMap[ip.interface_id].push(ip);
+  });
+
+  const sorted = sortInterfacesHierarchically(ifaces);
+  const rows = [];
+  for (const iface of sorted) {
+    const ifIps = ipMap[iface.id] || [null];
+    for (let i = 0; i < ifIps.length; i++) {
+      const ip = ifIps[i];
+      rows.push({
+        _iface_id: iface.id,
+        _ip_id: ip ? ip.id : null,
+        _is_first_row: i === 0,
+        if_name: iface.name,
+        if_type: iface.if_type,
+        speed: iface.speed,
+        admin_status: iface.admin_status,
+        parent_id: iface.parent_id,
+        ip_address: ip ? ip.ip_address : null,
+        ip_type: ip ? ip.ip_type : null,
+        hostname: ip ? ip.hostname : null,
+        is_primary: ip ? ip.is_primary : false,
+        service_name: ip ? ip.service_name : null,
+        vlan_id: ip ? ip.vlan_id : null,
+      });
+    }
+  }
+
+  const gridEl = document.getElementById("grid-network-edit");
+
+  if (_netEditGridApi) {
+    _netEditGridApi.setGridOption("rowData", rows);
+  } else {
+    const colDefs = [
+      { field: "if_name", headerName: "IF이름", width: 130, editable: p => p.data._is_first_row,
+        cellStyle: p => p.data._is_first_row ? {} : { color: "#999" } },
+      { field: "if_type", headerName: "유형", width: 90, editable: p => p.data._is_first_row,
+        cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["physical", "lag", "virtual"] },
+        cellStyle: p => p.data._is_first_row ? {} : { color: "#999" } },
+      { field: "speed", headerName: "속도", width: 80, editable: p => p.data._is_first_row,
+        cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["", "100M", "1G", "10G", "25G", "40G", "100G"] },
+        cellStyle: p => p.data._is_first_row ? {} : { color: "#999" } },
+      { field: "admin_status", headerName: "Admin", width: 80, editable: p => p.data._is_first_row,
+        cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["up", "down"] },
+        cellStyle: p => p.data._is_first_row ? {} : { color: "#999" } },
+      { field: "ip_address", headerName: "IP 주소", width: 150, editable: true },
+      { field: "ip_type", headerName: "IP 유형", width: 90, editable: true,
+        cellEditor: "agSelectCellEditor", cellEditorParams: { values: ["service", "mgmt", "vip", "secondary"] } },
+      { field: "hostname", headerName: "호스트명", width: 120, editable: true },
+      { field: "is_primary", headerName: "대표", width: 60,
+        cellRenderer: p => p.value ? "●" : "",
+        editable: true, cellEditor: "agSelectCellEditor", cellEditorParams: { values: [true, false] },
+        valueFormatter: p => p.value ? "●" : "" },
+      {
+        headerName: "", width: 80, sortable: false, filter: false,
+        cellRenderer: (params) => {
+          const wrap = document.createElement("span");
+          wrap.className = "gap-sm infra-inline-flex";
+          if (params.data._ip_id) {
+            const btnDel = document.createElement("button");
+            btnDel.className = "btn btn-xs btn-danger";
+            btnDel.textContent = "삭제";
+            btnDel.addEventListener("click", () => deleteNetEditIp(params.data));
+            wrap.appendChild(btnDel);
+          }
+          if (params.data._is_first_row) {
+            const btnDelIf = document.createElement("button");
+            btnDelIf.className = "btn btn-xs btn-secondary";
+            btnDelIf.textContent = "IF삭제";
+            btnDelIf.addEventListener("click", () => deleteNetEditIface(params.data));
+            wrap.appendChild(btnDelIf);
+          }
+          return wrap;
+        },
+      },
+    ];
+
+    _netEditGridApi = agGrid.createGrid(gridEl, {
+      columnDefs: colDefs,
+      rowData: rows,
+      defaultColDef: { resizable: true, sortable: false, filter: false },
+      animateRows: true,
+      enableCellTextSelection: true,
+      rowSelection: "single",
+      onCellValueChanged: handleNetEditCellChanged,
+      getRowStyle: (params) => {
+        if (params.data.parent_id && params.data._is_first_row) return { paddingLeft: "20px" };
+        return null;
+      },
+    });
+
+    addCopyPasteHandler(gridEl, _netEditGridApi, {
+      editableFields: ["if_name", "if_type", "speed", "admin_status", "ip_address", "ip_type", "hostname"],
+      onPaste: () => {},
+    });
+  }
+
+  modal.showModal();
+}
+
+async function handleNetEditCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue) return;
+
+  const field = colDef.field;
+
+  if (["if_name", "if_type", "speed", "admin_status"].includes(field)) {
+    if (!data._iface_id) return;
+    const ifPayload = {};
+    if (field === "if_name") ifPayload.name = newValue;
+    else ifPayload[field] = newValue || null;
+    try {
+      await apiFetch("/api/v1/asset-interfaces/" + data._iface_id, { method: "PATCH", body: ifPayload });
+    } catch (err) {
+      showToast(err.message, "error");
+      data[field] = oldValue;
+      _netEditGridApi.refreshCells({ rowNodes: [event.node], force: true });
+    }
+    return;
+  }
+
+  if (["ip_address", "ip_type", "hostname", "is_primary", "service_name", "vlan_id"].includes(field)) {
+    if (data._ip_id) {
+      const ipPayload = { [field]: newValue || null };
+      try {
+        await apiFetch("/api/v1/asset-ips/" + data._ip_id, { method: "PATCH", body: ipPayload });
+      } catch (err) {
+        showToast(err.message, "error");
+        data[field] = oldValue;
+        _netEditGridApi.refreshCells({ rowNodes: [event.node], force: true });
+      }
+    } else if (field === "ip_address" && newValue) {
+      try {
+        const result = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/ips", {
+          method: "POST",
+          body: {
+            interface_id: data._iface_id,
+            ip_address: newValue,
+            ip_type: data.ip_type || "service",
+            is_primary: false,
+          },
+        });
+        data._ip_id = result.id;
+      } catch (err) {
+        showToast(err.message, "error");
+        data[field] = oldValue;
+        _netEditGridApi.refreshCells({ rowNodes: [event.node], force: true });
+      }
+    }
+  }
+}
+
+async function deleteNetEditIp(rowData) {
+  if (!rowData._ip_id) return;
+  try {
+    await apiFetch("/api/v1/asset-ips/" + rowData._ip_id, { method: "DELETE" });
+    showToast("IP 삭제됨");
+    openNetworkEditModal();
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+async function deleteNetEditIface(rowData) {
+  if (!rowData._iface_id) return;
+  confirmDelete("인터페이스 '" + rowData.if_name + "'을(를) 삭제하시겠습니까?", async () => {
+    try {
+      await apiFetch("/api/v1/asset-interfaces/" + rowData._iface_id, { method: "DELETE" });
+      showToast("인터페이스 삭제됨");
+      openNetworkEditModal();
+    } catch (e) { showToast(e.message, "error"); }
+  });
+}
+
+function addNetEditIfaceRow() {
+  if (!_netEditGridApi) return;
+  openInterfaceModal();
+}
+
+async function addNetEditIpRow() {
+  if (!_netEditGridApi) return;
+  const selected = _netEditGridApi.getSelectedRows();
+  if (!selected.length) { showToast("인터페이스 행을 선택하세요.", "warning"); return; }
+  const ifaceId = selected[0]._iface_id;
+  if (!ifaceId) { showToast("저장된 인터페이스를 선택하세요.", "warning"); return; }
+
+  const allRows = [];
+  _netEditGridApi.forEachNode(n => allRows.push(n.data));
+  let insertIdx = allRows.length;
+  for (let i = allRows.length - 1; i >= 0; i--) {
+    if (allRows[i]._iface_id === ifaceId) { insertIdx = i + 1; break; }
+  }
+  const newRow = {
+    _iface_id: ifaceId,
+    _ip_id: null,
+    _is_first_row: false,
+    if_name: selected[0].if_name,
+    if_type: selected[0].if_type,
+    speed: selected[0].speed,
+    admin_status: selected[0].admin_status,
+    parent_id: selected[0].parent_id,
+    ip_address: null, ip_type: "service", hostname: null,
+    is_primary: false, service_name: null, vlan_id: null,
+  };
+  allRows.splice(insertIdx, 0, newRow);
+  _netEditGridApi.setGridOption("rowData", allRows);
 }
 
 /* ── IP 할당 탭 ── */
@@ -3549,6 +3783,12 @@ document.getElementById("btn-cancel-alias").addEventListener("click", () => docu
 document.getElementById("btn-save-alias").addEventListener("click", saveAlias);
 document.getElementById("btn-cancel-iface").addEventListener("click", () => document.getElementById("modal-interface").close());
 document.getElementById("btn-save-iface").addEventListener("click", saveInterface);
+document.getElementById("btn-netedit-close").addEventListener("click", () => {
+  document.getElementById("modal-network-edit").close();
+  renderDetailTab("network");
+});
+document.getElementById("btn-netedit-add-iface").addEventListener("click", addNetEditIfaceRow);
+document.getElementById("btn-netedit-add-ip").addEventListener("click", addNetEditIpRow);
 document.getElementById("btn-cancel-lic").addEventListener("click", () => document.getElementById("modal-license").close());
 document.getElementById("btn-save-lic").addEventListener("click", saveLicense);
 document.getElementById("btn-cancel-event").addEventListener("click", () => document.getElementById("modal-event").close());

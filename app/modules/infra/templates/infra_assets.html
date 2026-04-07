@@ -476,6 +476,21 @@
   </div>
 </dialog>
 
+<!-- 네트워크 상세 편집 모달 -->
+<dialog id="modal-network-edit" class="modal-dialog modal-xl">
+  <div class="modal-content" style="height:80vh;display:flex;flex-direction:column;">
+    <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+      <h3>네트워크 상세 편집</h3>
+      <div class="gap-sm">
+        <button class="btn btn-sm btn-secondary" id="btn-netedit-add-iface">+ 인터페이스</button>
+        <button class="btn btn-sm btn-primary" id="btn-netedit-add-ip">+ IP</button>
+        <button class="btn btn-sm btn-secondary" id="btn-netedit-close">닫기</button>
+      </div>
+    </div>
+    <div id="grid-network-edit" class="ag-theme-alpine" style="flex:1;"></div>
+  </div>
+</dialog>
+
 <!-- 라이선스 추가/수정 모달 -->
 <dialog id="modal-license" class="modal-dialog">
   <div class="modal-content">
