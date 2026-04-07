@@ -38,7 +38,7 @@ def get_asset_license(db: Session, license_id: int) -> AssetLicense:
 def create_asset_license(
     db: Session, payload: AssetLicenseCreate, current_user: User
 ) -> AssetLicense:
-    _require_edit(current_user)
+    _require_inventory_edit(current_user)
     _ensure_asset_exists(db, payload.asset_id)
 
     lic = AssetLicense(**payload.model_dump())
@@ -60,7 +60,7 @@ def create_asset_license(
 def update_asset_license(
     db: Session, license_id: int, payload: AssetLicenseUpdate, current_user: User
 ) -> AssetLicense:
-    _require_edit(current_user)
+    _require_inventory_edit(current_user)
     lic = get_asset_license(db, license_id)
     changes = payload.model_dump(exclude_unset=True)
 
@@ -82,7 +82,7 @@ def update_asset_license(
 
 
 def delete_asset_license(db: Session, license_id: int, current_user: User) -> None:
-    _require_edit(current_user)
+    _require_inventory_edit(current_user)
     lic = get_asset_license(db, license_id)
     audit.log(
         db,
@@ -107,6 +107,6 @@ def _ensure_asset_exists(db: Session, asset_id: int) -> None:
         raise NotFoundError("Asset not found")
 
 
-def _require_edit(current_user: User) -> None:
+def _require_inventory_edit(current_user: User) -> None:
     if not can_edit_inventory(current_user):
         raise PermissionDeniedError("Inventory edit permission required")
