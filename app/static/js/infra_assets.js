@@ -1447,6 +1447,7 @@ async function renderNetworkTab(container) {
   wrap.className = "asset-detail-sections";
   container.appendChild(wrap);
   const groups = [
+    ["인터페이스", "물리/논리 인터페이스를 관리합니다.", renderInterfacesTab],
     ["IP 할당", "인터페이스에 IP를 할당합니다.", renderIpTab],
   ];
   for (const [title, description, renderer] of groups) {
@@ -1454,6 +1455,129 @@ async function renderNetworkTab(container) {
     wrap.appendChild(section);
     await renderer(section);
   }
+}
+
+/* ── 인터페이스 탭 ── */
+
+async function renderInterfacesTab(container) {
+  const hdr = document.createElement("div");
+  hdr.className = "asset-subtab-header";
+  const title = document.createElement("span");
+  title.className = "asset-subtab-title";
+  title.textContent = "인터페이스 목록";
+  hdr.appendChild(title);
+
+  const btnGroup = document.createElement("span");
+  btnGroup.className = "gap-sm";
+
+  if (_selectedAsset.hardware_model_id) {
+    const btnGen = document.createElement("button");
+    btnGen.className = "btn btn-sm btn-secondary";
+    btnGen.textContent = "카탈로그에서 생성";
+    btnGen.addEventListener("click", generateInterfacesFromCatalog);
+    btnGroup.appendChild(btnGen);
+  }
+
+  const btnAdd = document.createElement("button");
+  btnAdd.className = "btn btn-sm btn-primary";
+  btnAdd.textContent = "+ 추가";
+  btnAdd.addEventListener("click", () => openInterfaceModal());
+  btnGroup.appendChild(btnAdd);
+  hdr.appendChild(btnGroup);
+  container.appendChild(hdr);
+
+  try {
+    const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces");
+    const sorted = sortInterfacesHierarchically(data);
+
+    _subTable(container, [
+      { label: "이름", field: "name", fmt: (v, row) => {
+        const indent = row.parent_id ? "  └ " : "";
+        return indent + v;
+      }},
+      { label: "유형", field: "if_type" },
+      { label: "속도", field: "speed" },
+      { label: "미디어", field: "media_type" },
+      { label: "슬롯", field: "slot" },
+      { label: "Admin", field: "admin_status" },
+      { label: "Oper", field: "oper_status" },
+      { label: "MAC", field: "mac_address" },
+    ], sorted, [
+      { label: "수정", handler: (r) => openInterfaceModal(r) },
+      { label: "삭제", danger: true, handler: (r) => deleteInterface(r) },
+    ]);
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+function sortInterfacesHierarchically(ifaces) {
+  const lags = ifaces.filter(i => i.if_type === "lag");
+  const members = ifaces.filter(i => i.parent_id != null);
+  const others = ifaces.filter(i => i.if_type !== "lag" && i.parent_id == null);
+  const result = [];
+  for (const lag of lags) {
+    result.push(lag);
+    result.push(...members.filter(m => m.parent_id === lag.id));
+  }
+  result.push(...others);
+  return result;
+}
+
+function openInterfaceModal(iface) {
+  const m = document.getElementById("modal-interface");
+  document.getElementById("iface-id").value = iface ? iface.id : "";
+  document.getElementById("iface-name").value = iface ? iface.name : "";
+  document.getElementById("iface-type").value = iface ? iface.if_type : "physical";
+  document.getElementById("iface-speed").value = iface ? (iface.speed || "") : "";
+  document.getElementById("iface-media").value = iface ? (iface.media_type || "") : "";
+  document.getElementById("iface-slot").value = iface ? (iface.slot || "") : "";
+  document.getElementById("iface-mac").value = iface ? (iface.mac_address || "") : "";
+  document.getElementById("iface-admin-status").value = iface ? iface.admin_status : "up";
+  document.getElementById("iface-description").value = iface ? (iface.description || "") : "";
+  document.getElementById("modal-interface-title").textContent = iface ? "인터페이스 수정" : "인터페이스 추가";
+  m.showModal();
+}
+
+async function saveInterface() {
+  const ifaceId = document.getElementById("iface-id").value;
+  const payload = {
+    name: document.getElementById("iface-name").value,
+    if_type: document.getElementById("iface-type").value,
+    speed: document.getElementById("iface-speed").value || null,
+    media_type: document.getElementById("iface-media").value || null,
+    slot: document.getElementById("iface-slot").value || null,
+    mac_address: document.getElementById("iface-mac").value || null,
+    admin_status: document.getElementById("iface-admin-status").value,
+    description: document.getElementById("iface-description").value || null,
+  };
+  try {
+    if (ifaceId) {
+      await apiFetch("/api/v1/asset-interfaces/" + ifaceId, { method: "PATCH", body: payload });
+    } else {
+      await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces", { method: "POST", body: payload });
+    }
+    document.getElementById("modal-interface").close();
+    showToast(ifaceId ? "수정되었습니다." : "추가되었습니다.");
+    renderDetailTab("network");
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+async function deleteInterface(iface) {
+  confirmDelete("인터페이스 '" + iface.name + "'을(를) 삭제하시겠습니까?", async () => {
+    try {
+      await apiFetch("/api/v1/asset-interfaces/" + iface.id, { method: "DELETE" });
+      showToast("삭제되었습니다.");
+      renderDetailTab("network");
+    } catch (e) { showToast(e.message, "error"); }
+  });
+}
+
+async function generateInterfacesFromCatalog() {
+  if (!confirm("카탈로그 스펙에서 인터페이스를 자동 생성합니다. 진행하시겠습니까?")) return;
+  try {
+    const result = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces/generate", { method: "POST" });
+    showToast(result.length + "개 인터페이스가 생성되었습니다.");
+    renderDetailTab("network");
+  } catch (e) { showToast(e.message, "error"); }
 }
 
 async function renderContactsGroupTab(container) {
@@ -3347,6 +3471,8 @@ document.getElementById("btn-cancel-rel").addEventListener("click", () => docume
 document.getElementById("btn-save-rel").addEventListener("click", saveRelation);
 document.getElementById("btn-cancel-alias").addEventListener("click", () => document.getElementById("modal-alias").close());
 document.getElementById("btn-save-alias").addEventListener("click", saveAlias);
+document.getElementById("btn-cancel-iface").addEventListener("click", () => document.getElementById("modal-interface").close());
+document.getElementById("btn-save-iface").addEventListener("click", saveInterface);
 document.getElementById("btn-cancel-event").addEventListener("click", () => document.getElementById("modal-event").close());
 document.getElementById("btn-save-event").addEventListener("click", saveEvent);
 document.getElementById("btn-cancel-asset-detail-edit").addEventListener("click", closeDetailEditModal);

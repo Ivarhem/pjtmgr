@@ -435,6 +435,61 @@
   </div>
 </dialog>
 
+<!-- 인터페이스 모달 -->
+<dialog id="modal-interface" class="modal modal-md">
+  <h2 id="modal-interface-title">인터페이스 추가</h2>
+  <p class="modal-desc">물리/논리 인터페이스 정보를 입력합니다.</p>
+  <form id="form-interface">
+    <input type="hidden" id="iface-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">인터페이스 정보</legend>
+      <div class="form-grid">
+        <label>이름 <input type="text" id="iface-name" placeholder="ge-0/0/1" required></label>
+        <label>유형
+          <select id="iface-type">
+            <option value="physical">physical</option>
+            <option value="lag">lag</option>
+            <option value="virtual">virtual</option>
+          </select>
+        </label>
+        <label>속도
+          <select id="iface-speed">
+            <option value="">-</option>
+            <option value="100M">100M</option>
+            <option value="1G">1G</option>
+            <option value="10G">10G</option>
+            <option value="25G">25G</option>
+            <option value="40G">40G</option>
+            <option value="100G">100G</option>
+          </select>
+        </label>
+        <label>미디어
+          <select id="iface-media">
+            <option value="">-</option>
+            <option value="copper">copper</option>
+            <option value="sfp">sfp</option>
+            <option value="sfp+">sfp+</option>
+            <option value="qsfp28">qsfp28</option>
+          </select>
+        </label>
+        <label>슬롯 <input type="text" id="iface-slot" placeholder="Slot1"></label>
+        <label>MAC <input type="text" id="iface-mac" placeholder="AA:BB:CC:DD:EE:FF"></label>
+        <label>Admin 상태
+          <select id="iface-admin-status">
+            <option value="up">up</option>
+            <option value="down">down</option>
+          </select>
+        </label>
+        <label>설명 <input type="text" id="iface-description"></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-iface">취소</button>
+    <button class="btn btn-primary" id="btn-save-iface">저장</button>
+  </div>
+</dialog>
+
 <!-- 변경 이력 추가 모달 -->
 <dialog id="modal-event" class="modal modal-md">
   <h2>변경 이력 추가</h2>
