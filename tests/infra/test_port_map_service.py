@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.exceptions import BusinessRuleError, NotFoundError
+from app.core.exceptions import NotFoundError
 from app.modules.common.models.partner import Partner
-from app.modules.infra.schemas.asset import AssetCreate
+from app.modules.infra.models.asset import Asset
+from app.modules.infra.models.asset_interface import AssetInterface
+from app.modules.infra.models.product_catalog import ProductCatalog
 from app.modules.infra.schemas.port_map import PortMapCreate, PortMapUpdate
-from app.modules.infra.services.asset_service import create_asset
 from app.modules.infra.services.network_service import (
     create_port_map,
     delete_port_map,
@@ -27,35 +28,62 @@ def _make_admin_user(db_session, admin_role_id: int):
     return user
 
 
+_partner_seq = 0
+
+
 def _make_partner(db_session, name="테스트고객", bno="123-45-67890"):
-    partner = Partner(name=name, business_no=bno)
+    global _partner_seq
+    _partner_seq += 1
+    partner = Partner(name=name, business_no=bno, partner_code=f"Z{_partner_seq:03d}")
     db_session.add(partner)
     db_session.flush()
     return partner
 
 
-def _make_asset(db, partner_id: int, name: str, admin):
-    return create_asset(
-        db,
-        AssetCreate(partner_id=partner_id, asset_name=name, asset_type="server"),
-        admin,
+_catalog_seq = 0
+
+
+def _make_catalog(db_session, vendor: str = "TestVendor", name: str = "TestModel"):
+    global _catalog_seq
+    _catalog_seq += 1
+    catalog = ProductCatalog(
+        vendor=vendor, name=f"{name}-{_catalog_seq}", product_type="hardware"
     )
+    db_session.add(catalog)
+    db_session.flush()
+    return catalog
+
+
+def _make_asset(db, partner_id: int, name: str, admin):
+    catalog = _make_catalog(db, name=f"Model-{name}")
+    asset = Asset(partner_id=partner_id, asset_name=name, model_id=catalog.id)
+    db.add(asset)
+    db.commit()
+    db.refresh(asset)
+    return asset
+
+
+def _make_interface(db, asset_id: int, name: str = "eth0") -> AssetInterface:
+    iface = AssetInterface(asset_id=asset_id, name=name, if_type="physical")
+    db.add(iface)
+    db.flush()
+    return iface
 
 
 def test_create_and_list_port_maps(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     partner = _make_partner(db_session)
-    src = _make_asset(db_session, partner.id, "WEB-01", admin)
-    dst = _make_asset(db_session, partner.id, "DB-01", admin)
+    src_asset = _make_asset(db_session, partner.id, "WEB-01", admin)
+    dst_asset = _make_asset(db_session, partner.id, "DB-01", admin)
+    src_iface = _make_interface(db_session, src_asset.id, "eth0")
+    dst_iface = _make_interface(db_session, dst_asset.id, "eth0")
 
     create_port_map(
         db_session,
         PortMapCreate(
             partner_id=partner.id,
-            src_asset_id=src.id,
-            src_ip="10.10.1.10",
-            dst_asset_id=dst.id,
-            dst_ip="10.10.1.20",
+            src_interface_id=src_iface.id,
+            dst_interface_id=dst_iface.id,
             protocol="tcp",
             port=5432,
             purpose="PostgreSQL",
@@ -81,8 +109,8 @@ def test_create_port_map_requires_existing_partner(
         )
 
 
-def test_create_port_map_with_nullable_assets(db_session, admin_role_id) -> None:
-    """External segment: src/dst asset not specified, only IPs."""
+def test_create_port_map_with_nullable_interfaces(db_session, admin_role_id) -> None:
+    """External segment: src/dst interface not specified."""
     admin = _make_admin_user(db_session, admin_role_id)
     partner = _make_partner(db_session)
 
@@ -90,33 +118,46 @@ def test_create_port_map_with_nullable_assets(db_session, admin_role_id) -> None
         db_session,
         PortMapCreate(
             partner_id=partner.id,
-            src_ip="203.0.113.1",
-            dst_ip="10.10.1.10",
             port=443,
             purpose="External HTTPS",
         ),
         admin,
     )
 
-    assert pm.src_asset_id is None
-    assert pm.dst_asset_id is None
-    assert pm.src_ip == "203.0.113.1"
+    assert pm.src_interface_id is None
+    assert pm.dst_interface_id is None
 
 
-def test_create_port_map_rejects_asset_from_other_partner(
+def test_create_port_map_rejects_nonexistent_src_interface(
     db_session, admin_role_id
 ) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
-    partner1 = _make_partner(db_session, name="고객1", bno="111-11-11111")
-    partner2 = _make_partner(db_session, name="고객2", bno="222-22-22222")
-    asset_other = _make_asset(db_session, partner2.id, "SRV-OTHER", admin)
+    partner = _make_partner(db_session)
 
-    with pytest.raises(BusinessRuleError):
+    with pytest.raises(NotFoundError):
         create_port_map(
             db_session,
             PortMapCreate(
-                partner_id=partner1.id,
-                src_asset_id=asset_other.id,
+                partner_id=partner.id,
+                src_interface_id=9999,
+                port=80,
+            ),
+            admin,
+        )
+
+
+def test_create_port_map_rejects_nonexistent_dst_interface(
+    db_session, admin_role_id
+) -> None:
+    admin = _make_admin_user(db_session, admin_role_id)
+    partner = _make_partner(db_session)
+
+    with pytest.raises(NotFoundError):
+        create_port_map(
+            db_session,
+            PortMapCreate(
+                partner_id=partner.id,
+                dst_interface_id=9999,
                 port=80,
             ),
             admin,
@@ -142,6 +183,26 @@ def test_update_port_map(db_session, admin_role_id) -> None:
     assert updated.port == 443
     assert updated.purpose == "HTTPS"
     assert updated.status == "approved"
+
+
+def test_update_port_map_rejects_nonexistent_interface(
+    db_session, admin_role_id
+) -> None:
+    admin = _make_admin_user(db_session, admin_role_id)
+    partner = _make_partner(db_session)
+    pm = create_port_map(
+        db_session,
+        PortMapCreate(partner_id=partner.id, port=80, purpose="HTTP"),
+        admin,
+    )
+
+    with pytest.raises(NotFoundError):
+        update_port_map(
+            db_session,
+            pm.id,
+            PortMapUpdate(src_interface_id=9999),
+            admin,
+        )
 
 
 def test_delete_port_map(db_session, admin_role_id) -> None:

@@ -193,11 +193,18 @@ def list_port_maps(
     stmt = select(PortMap).where(PortMap.partner_id == partner_id)
     if period_id is not None:
         asset_ids = get_period_asset_ids(db, period_id)
+        # Filter by interfaces belonging to period assets
+        iface_ids_stmt = (
+            select(AssetInterface.id).where(AssetInterface.asset_id.in_(asset_ids))
+        )
         stmt = stmt.where(
             or_(
-                PortMap.src_asset_id.in_(asset_ids),
-                PortMap.dst_asset_id.in_(asset_ids),
-                and_(PortMap.src_asset_id.is_(None), PortMap.dst_asset_id.is_(None)),
+                PortMap.src_interface_id.in_(iface_ids_stmt),
+                PortMap.dst_interface_id.in_(iface_ids_stmt),
+                and_(
+                    PortMap.src_interface_id.is_(None),
+                    PortMap.dst_interface_id.is_(None),
+                ),
             )
         )
     return list(db.scalars(stmt.order_by(PortMap.id.asc())))
@@ -214,10 +221,14 @@ def create_port_map(db: Session, payload: PortMapCreate, current_user) -> PortMa
     _require_inventory_edit(current_user)
     ensure_partner_exists(db, payload.partner_id)
 
-    if payload.src_asset_id is not None:
-        _ensure_asset_belongs_to_partner(db, payload.src_asset_id, payload.partner_id)
-    if payload.dst_asset_id is not None:
-        _ensure_asset_belongs_to_partner(db, payload.dst_asset_id, payload.partner_id)
+    if payload.src_interface_id is not None:
+        iface = db.get(AssetInterface, payload.src_interface_id)
+        if iface is None:
+            raise NotFoundError("Source interface not found")
+    if payload.dst_interface_id is not None:
+        iface = db.get(AssetInterface, payload.dst_interface_id)
+        if iface is None:
+            raise NotFoundError("Destination interface not found")
 
     port_map = PortMap(**payload.model_dump())
     db.add(port_map)
@@ -237,14 +248,14 @@ def update_port_map(
     port_map = get_port_map(db, port_map_id)
     changes = payload.model_dump(exclude_unset=True)
 
-    if "src_asset_id" in changes and changes["src_asset_id"] is not None:
-        _ensure_asset_belongs_to_partner(
-            db, changes["src_asset_id"], port_map.partner_id
-        )
-    if "dst_asset_id" in changes and changes["dst_asset_id"] is not None:
-        _ensure_asset_belongs_to_partner(
-            db, changes["dst_asset_id"], port_map.partner_id
-        )
+    if "src_interface_id" in changes and changes["src_interface_id"] is not None:
+        iface = db.get(AssetInterface, changes["src_interface_id"])
+        if iface is None:
+            raise NotFoundError("Source interface not found")
+    if "dst_interface_id" in changes and changes["dst_interface_id"] is not None:
+        iface = db.get(AssetInterface, changes["dst_interface_id"])
+        if iface is None:
+            raise NotFoundError("Destination interface not found")
 
     for field, value in changes.items():
         setattr(port_map, field, value)
