@@ -288,6 +288,22 @@ def enrich_port_map(pm: PortMap, iface_map: dict[int, dict]) -> dict:
     return data
 
 
+def list_port_maps_enriched(
+    db: Session, partner_id: int, period_id: int | None = None
+) -> list[dict]:
+    """포트맵 목록을 자산/인터페이스 역참조 필드 포함하여 반환."""
+    port_maps = list_port_maps(db, partner_id, period_id)
+    iface_map = build_interface_map(db, port_maps)
+    return [enrich_port_map(pm, iface_map) for pm in port_maps]
+
+
+def list_partner_ips_enriched(db: Session, partner_id: int) -> list[dict]:
+    """업체 전체 IP 인벤토리를 인터페이스/자산 역참조 필드 포함하여 반환."""
+    ips = list_partner_ips(db, partner_id)
+    iface_map = build_ip_interface_map(db, ips)
+    return [enrich_asset_ip(ip, iface_map) for ip in ips]
+
+
 # ── PortMap ──
 
 

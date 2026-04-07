@@ -8,13 +8,11 @@ from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.asset_ip import AssetIPCreate, AssetIPRead, AssetIPUpdate
 from app.modules.infra.services.network_service import (
-    build_ip_interface_map,
     create_asset_ip,
     delete_asset_ip,
-    enrich_asset_ip,
     get_asset_ip,
     list_asset_ips,
-    list_partner_ips,
+    list_partner_ips_enriched,
     update_asset_ip,
 )
 
@@ -58,9 +56,7 @@ def list_partner_ips_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[AssetIPRead]:
-    ips = list_partner_ips(db, partner_id)
-    iface_map = build_ip_interface_map(db, ips)
-    return [AssetIPRead(**enrich_asset_ip(ip, iface_map)) for ip in ips]
+    return [AssetIPRead(**ip) for ip in list_partner_ips_enriched(db, partner_id)]
 
 
 @router.get(
