@@ -42,6 +42,7 @@ from app.modules.infra.models import (  # noqa: F401
     AssetIP,
     AssetRelation,
     AssetSoftware,
+    AssetLicense,
     HardwareInterface,
     HardwareSpec,
     IpSubnet,

@@ -38,6 +38,7 @@ from app.modules.infra.models.classification_layout_level_key import Classificat
 from app.modules.infra.models.product_catalog_list_cache import ProductCatalogListCache
 from app.modules.infra.models.product_similarity_dismissal import ProductSimilarityDismissal
 from app.modules.infra.models.asset_interface import AssetInterface
+from app.modules.infra.models.asset_license import AssetLicense
 
 __all__ = [
     "PeriodPhase",
@@ -79,4 +80,5 @@ __all__ = [
     "ProductCatalogListCache",
     "ProductSimilarityDismissal",
     "AssetInterface",
+    "AssetLicense",
 ]

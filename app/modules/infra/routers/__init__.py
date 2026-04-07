@@ -16,6 +16,7 @@ from app.modules.infra.routers.policy_assignments import (
 )
 from app.modules.infra.routers.asset_contacts import router as asset_contacts_router
 from app.modules.infra.routers.asset_softwares import router as asset_software_router
+from app.modules.infra.routers.asset_licenses import router as asset_licenses_router
 from app.modules.infra.routers.period_assets import router as period_assets_router
 from app.modules.infra.routers.asset_relations import router as asset_relations_router
 from app.modules.infra.routers.period_partners import router as period_partners_router
@@ -59,6 +60,7 @@ api_router.include_router(policies_router)
 api_router.include_router(policy_assignments_router)
 api_router.include_router(asset_contacts_router)
 api_router.include_router(asset_software_router)
+api_router.include_router(asset_licenses_router)
 api_router.include_router(period_assets_router)
 api_router.include_router(asset_relations_router)
 api_router.include_router(period_partners_router)
