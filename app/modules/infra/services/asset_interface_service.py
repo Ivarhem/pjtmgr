@@ -8,6 +8,7 @@ from app.core.exceptions import (
     DuplicateError,
     NotFoundError,
 )
+from app.modules.common.models.user import User
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_interface import AssetInterface
 from app.modules.infra.models.hardware_interface import HardwareInterface
@@ -43,7 +44,7 @@ def get_interface(db: Session, interface_id: int) -> AssetInterface:
 
 
 def create_interface(
-    db: Session, payload: AssetInterfaceCreate, current_user
+    db: Session, payload: AssetInterfaceCreate, current_user: User
 ) -> AssetInterface:
     _require_inventory_edit(current_user)
     _ensure_asset_exists(db, payload.asset_id)
@@ -61,7 +62,7 @@ def create_interface(
 
 
 def update_interface(
-    db: Session, interface_id: int, payload: AssetInterfaceUpdate, current_user
+    db: Session, interface_id: int, payload: AssetInterfaceUpdate, current_user: User
 ) -> AssetInterface:
     _require_inventory_edit(current_user)
     iface = get_interface(db, interface_id)
@@ -81,7 +82,7 @@ def update_interface(
     return iface
 
 
-def delete_interface(db: Session, interface_id: int, current_user) -> None:
+def delete_interface(db: Session, interface_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     iface = get_interface(db, interface_id)
     db.delete(iface)
@@ -89,7 +90,7 @@ def delete_interface(db: Session, interface_id: int, current_user) -> None:
 
 
 def set_lag_members(
-    db: Session, lag_id: int, member_ids: list[int], current_user
+    db: Session, lag_id: int, member_ids: list[int], current_user: User
 ) -> None:
     _require_inventory_edit(current_user)
     lag = get_interface(db, lag_id)
@@ -119,7 +120,7 @@ def set_lag_members(
 
 
 def generate_interfaces_from_catalog(
-    db: Session, asset_id: int, current_user
+    db: Session, asset_id: int, current_user: User
 ) -> list[AssetInterface]:
     _require_inventory_edit(current_user)
     asset = _ensure_asset_exists(db, asset_id)
