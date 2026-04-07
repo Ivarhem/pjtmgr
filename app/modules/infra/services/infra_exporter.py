@@ -12,9 +12,11 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import NotFoundError
 from app.modules.common.models.partner import Partner
 from app.modules.infra.models.asset import Asset
+from app.modules.infra.models.asset_interface import AssetInterface
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
 from app.modules.infra.models.period_asset import PeriodAsset
+from app.modules.infra.services.network_service import build_interface_map
 
 # -- 헤더 / 필드 매핑 --
 
@@ -74,26 +76,35 @@ _PORTMAP_HEADERS = [
     ("Seq", "seq"),
     ("요약", "summary"),
     ("연결유형", "connection_type"),
-    ("출발 호스트명", "src_hostname"),
-    ("출발 IP", "src_ip"),
-    ("출발 Slot", "src_slot"),
-    ("출발 Port", "src_port_name"),
-    ("출발 Zone", "src_zone"),
-    ("출발 VLAN", "src_vlan"),
-    ("도착 호스트명", "dst_hostname"),
-    ("도착 IP", "dst_ip"),
-    ("도착 Slot", "dst_slot"),
-    ("도착 Port", "dst_port_name"),
-    ("도착 Zone", "dst_zone"),
-    ("도착 VLAN", "dst_vlan"),
-    ("프로토콜", "protocol"),
-    ("포트", "port"),
+    ("출발 자산", None),        # denormalized via interface map
+    ("출발 IF", None),          # denormalized via interface map
+    ("출발 호스트", None),      # denormalized via interface map
+    ("출발 Zone", None),        # denormalized via interface map
+    ("도착 자산", None),        # denormalized via interface map
+    ("도착 IF", None),          # denormalized via interface map
+    ("도착 호스트", None),      # denormalized via interface map
+    ("도착 Zone", None),        # denormalized via interface map
+    ("Protocol", "protocol"),
+    ("Port", "port"),
     ("용도", "purpose"),
     ("상태", "status"),
     ("케이블유형", "cable_type"),
     ("케이블속도", "cable_speed"),
     ("케이블번호", "cable_no"),
     ("비고", "note"),
+]
+
+_INTERFACE_HEADERS = [
+    ("자산명", None),           # denormalized from Asset
+    ("IF이름", "name"),
+    ("유형", "if_type"),
+    ("속도", "speed"),
+    ("미디어", "media_type"),
+    ("슬롯", "slot"),
+    ("Admin", "admin_status"),
+    ("Oper", "oper_status"),
+    ("MAC", "mac_address"),
+    ("설명", "description"),
 ]
 
 # -- 스타일 --
@@ -126,7 +137,7 @@ def _auto_width(ws, headers: list[tuple[str, str | None]]) -> None:
 
 
 def export_partner(db: Session, partner_id: int, period_id: int | None = None) -> bytes:
-    """업체 데이터를 3개 시트(Inventory, IP대역, Portmap)로 Export. period_id 지정 시 해당 기간 자산만 필터."""
+    """업체 데이터를 4개 시트(Inventory, IP대역, Portmap, Interfaces)로 Export. period_id 지정 시 해당 기간 자산만 필터."""
     if db.get(Partner, partner_id) is None:
         raise NotFoundError("Partner not found")
 
@@ -185,14 +196,56 @@ def export_partner(db: Session, partner_id: int, period_id: int | None = None) -
             .order_by(PortMap.id.asc())
         )
     )
+    iface_map = build_interface_map(db, portmaps)
     _write_header(ws_pm, _PORTMAP_HEADERS)
     for row_idx, pm in enumerate(portmaps, 2):
-        for col_idx, (_, field) in enumerate(_PORTMAP_HEADERS, 1):
-            val = getattr(pm, field, None)
+        src = iface_map.get(pm.src_interface_id) if pm.src_interface_id is not None else None
+        dst = iface_map.get(pm.dst_interface_id) if pm.dst_interface_id is not None else None
+        # Denormalized values keyed by header label
+        denorm: dict[str, object] = {
+            "출발 자산": src["asset_name"] if src else None,
+            "출발 IF": src["iface_name"] if src else None,
+            "출발 호스트": src["hostname"] if src else None,
+            "출발 Zone": src["zone"] if src else None,
+            "도착 자산": dst["asset_name"] if dst else None,
+            "도착 IF": dst["iface_name"] if dst else None,
+            "도착 호스트": dst["hostname"] if dst else None,
+            "도착 Zone": dst["zone"] if dst else None,
+        }
+        for col_idx, (label, field) in enumerate(_PORTMAP_HEADERS, 1):
+            if field is None:
+                val = denorm.get(label)
+            else:
+                val = getattr(pm, field, None)
             if val is not None:
                 val = str(val) if not isinstance(val, int) else val
             ws_pm.cell(row=row_idx, column=col_idx, value=val)
     _auto_width(ws_pm, _PORTMAP_HEADERS)
+
+    # Sheet 4: Interfaces
+    ws_if = wb.create_sheet("04. Interfaces")
+    iface_stmt = (
+        select(AssetInterface, Asset.asset_name)
+        .join(Asset, AssetInterface.asset_id == Asset.id)
+        .where(Asset.partner_id == partner_id)
+        .order_by(Asset.asset_name, AssetInterface.sort_order, AssetInterface.id)
+    )
+    if period_asset_ids is not None:
+        iface_stmt = (
+            iface_stmt.where(Asset.id.in_(period_asset_ids))
+            if period_asset_ids
+            else iface_stmt.where(Asset.id == -1)
+        )
+    ifaces = list(db.execute(iface_stmt))
+    _write_header(ws_if, _INTERFACE_HEADERS)
+    for row_idx, (iface, asset_name) in enumerate(ifaces, 2):
+        ws_if.cell(row=row_idx, column=1, value=asset_name)  # 자산명 (denormalized)
+        for col_idx, (_, field) in enumerate(_INTERFACE_HEADERS[1:], 2):
+            val = getattr(iface, field, None)
+            if val is not None:
+                val = str(val)
+            ws_if.cell(row=row_idx, column=col_idx, value=val)
+    _auto_width(ws_if, _INTERFACE_HEADERS)
 
     # 바이트 출력
     buf = BytesIO()
