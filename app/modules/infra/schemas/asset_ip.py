@@ -19,6 +19,7 @@ class AssetIPCreate(BaseModel):
 
 
 class AssetIPUpdate(BaseModel):
+    interface_id: int | None = None
     ip_subnet_id: int | None = None
     ip_address: str | None = None
     ip_type: str | None = None
@@ -46,3 +47,7 @@ class AssetIPRead(BaseModel):
     note: str | None
     created_at: datetime
     updated_at: datetime
+    # Enriched fields (not in DB, populated by router)
+    asset_name: str | None = None
+    interface_name: str | None = None
+    if_type: str | None = None

@@ -183,6 +183,48 @@ def delete_asset_ip(db: Session, ip_id: int, current_user) -> None:
     db.commit()
 
 
+# ── AssetIP helpers ──
+
+
+def build_ip_interface_map(
+    db: Session, asset_ips: list[AssetIP]
+) -> dict[int, dict]:
+    """Collect interface_ids from asset_ips and return enrichment dict keyed by interface_id."""
+    iface_ids: set[int] = {ip.interface_id for ip in asset_ips if ip.interface_id}
+    if not iface_ids:
+        return {}
+
+    rows = db.execute(
+        select(
+            AssetInterface.id,
+            AssetInterface.name,
+            AssetInterface.if_type,
+            Asset.asset_name,
+        )
+        .join(Asset, AssetInterface.asset_id == Asset.id)
+        .where(AssetInterface.id.in_(iface_ids))
+    ).all()
+
+    return {
+        row.id: {
+            "interface_name": row.name,
+            "if_type": row.if_type,
+            "asset_name": row.asset_name,
+        }
+        for row in rows
+    }
+
+
+def enrich_asset_ip(ip: AssetIP, iface_map: dict[int, dict]) -> dict:
+    """Convert AssetIP ORM to dict enriched with interface/asset fields."""
+    data = {col.name: getattr(ip, col.name) for col in ip.__table__.columns}
+    info = iface_map.get(ip.interface_id)
+    data["asset_name"] = info["asset_name"] if info else None
+    data["interface_name"] = info["interface_name"] if info else None
+    data["if_type"] = info["if_type"] if info else None
+    return data
+
+
 # ── PortMap helpers ──
 
 

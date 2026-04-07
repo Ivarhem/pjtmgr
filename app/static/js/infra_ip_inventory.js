@@ -15,7 +15,9 @@ let _selectedSubnet = null;
 const ipColDefs = [
   { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc" },
   { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_MAP[p.value] || p.value },
+  { field: "asset_name", headerName: "자산", width: 130 },
   { field: "interface_name", headerName: "인터페이스", width: 120 },
+  { field: "if_type", headerName: "IF유형", width: 80 },
   { field: "hostname", headerName: "호스트명", width: 130, editable: true },
   { field: "service_name", headerName: "서비스명", width: 130, editable: true },
   { field: "zone", headerName: "존", width: 100, editable: true },
@@ -117,6 +119,8 @@ async function loadIps() {
   } catch (err) { showToast(err.message, "error"); }
 }
 
+let _cachedAssets = [];
+
 async function loadDropdowns() {
   const cid = getCtxPartnerId();
   if (!cid) return;
@@ -126,14 +130,7 @@ async function loadDropdowns() {
       apiFetch("/api/v1/ip-subnets?partner_id=" + cid),
     ]);
 
-    const assetSelect = document.getElementById("ip-asset-id");
-    while (assetSelect.firstChild) assetSelect.removeChild(assetSelect.firstChild);
-    assets.forEach(a => {
-      const opt = document.createElement("option");
-      opt.value = a.id;
-      opt.textContent = a.asset_name;
-      assetSelect.appendChild(opt);
-    });
+    _cachedAssets = assets;
 
     const subnetSelect = document.getElementById("ip-subnet-id");
     while (subnetSelect.options.length > 1) subnetSelect.remove(1);
@@ -142,6 +139,25 @@ async function loadDropdowns() {
       opt.value = s.id;
       opt.textContent = s.name + " (" + s.subnet + ")";
       subnetSelect.appendChild(opt);
+    });
+  } catch { /* ignore */ }
+}
+
+async function loadInterfacesForAsset(assetId) {
+  const ifSelect = document.getElementById("ip-interface-id");
+  while (ifSelect.options.length > 0) ifSelect.remove(0);
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "인터페이스 선택";
+  ifSelect.appendChild(placeholder);
+  if (!assetId) return;
+  try {
+    const interfaces = await apiFetch("/api/v1/assets/" + assetId + "/interfaces");
+    interfaces.forEach(iface => {
+      const opt = document.createElement("option");
+      opt.value = iface.id;
+      opt.textContent = iface.name + (iface.if_type ? " (" + iface.if_type + ")" : "");
+      ifSelect.appendChild(opt);
     });
   } catch { /* ignore */ }
 }
@@ -272,26 +288,37 @@ function openCreateIp() {
   resetIpForm();
   document.getElementById("modal-ip-title").textContent = "IP 등록";
   document.getElementById("btn-save-ip").textContent = "등록";
+  // Reset asset search and interface dropdown
+  document.getElementById("ip-asset-search").value = "";
+  const ifSelect = document.getElementById("ip-interface-id");
+  while (ifSelect.options.length > 0) ifSelect.remove(0);
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "자산을 먼저 선택하세요";
+  ifSelect.appendChild(placeholder);
   ipModal.showModal();
 }
 
-function openEditIp(ip) {
+async function openEditIp(ip) {
   document.getElementById("ip-id").value = ip.id;
-  document.getElementById("ip-asset-id").value = ip.asset_id;
   document.getElementById("ip-subnet-id").value = ip.ip_subnet_id || "";
   document.getElementById("ip-address").value = ip.ip_address;
   document.getElementById("ip-type").value = ip.ip_type;
-  document.getElementById("ip-interface").value = ip.interface_name || "";
   document.getElementById("ip-note").value = ip.note || "";
   document.getElementById("ip-zone").value = ip.zone || "";
   document.getElementById("ip-service-name").value = ip.service_name || "";
   document.getElementById("ip-hostname").value = ip.hostname || "";
   document.getElementById("ip-vlan-id").value = ip.vlan_id || "";
-  document.getElementById("ip-network").value = ip.network || "";
-  document.getElementById("ip-netmask").value = ip.netmask || "";
-  document.getElementById("ip-gateway").value = ip.gateway || "";
-  document.getElementById("ip-dns-primary").value = ip.dns_primary || "";
-  document.getElementById("ip-dns-secondary").value = ip.dns_secondary || "";
+  // Populate asset search and interface dropdown
+  document.getElementById("ip-asset-search").value = ip.asset_name || "";
+  // Find the asset_id from the cached list by name (or use interface lookup)
+  let assetId = null;
+  if (ip.asset_name) {
+    const match = _cachedAssets.find(a => a.asset_name === ip.asset_name);
+    if (match) assetId = match.id;
+  }
+  await loadInterfacesForAsset(assetId);
+  document.getElementById("ip-interface-id").value = ip.interface_id || "";
   document.getElementById("modal-ip-title").textContent = "IP 수정";
   document.getElementById("btn-save-ip").textContent = "저장";
   ipModal.showModal();
@@ -299,24 +326,25 @@ function openEditIp(ip) {
 
 async function saveIp() {
   const ipId = document.getElementById("ip-id").value;
+  const interfaceIdVal = document.getElementById("ip-interface-id").value;
   const subnetVal = document.getElementById("ip-subnet-id").value;
+
+  if (!interfaceIdVal) {
+    showToast("인터페이스를 선택하세요.", "warning");
+    return;
+  }
+
   const payload = {
-    asset_id: Number(document.getElementById("ip-asset-id").value),
+    interface_id: Number(interfaceIdVal),
     ip_subnet_id: subnetVal ? Number(subnetVal) : null,
     ip_address: document.getElementById("ip-address").value,
     ip_type: document.getElementById("ip-type").value,
-    interface_name: document.getElementById("ip-interface").value || null,
     is_primary: false,
     note: document.getElementById("ip-note").value || null,
     zone: document.getElementById("ip-zone").value || null,
     service_name: document.getElementById("ip-service-name").value || null,
     hostname: document.getElementById("ip-hostname").value || null,
     vlan_id: document.getElementById("ip-vlan-id").value || null,
-    network: document.getElementById("ip-network").value || null,
-    netmask: document.getElementById("ip-netmask").value || null,
-    gateway: document.getElementById("ip-gateway").value || null,
-    dns_primary: document.getElementById("ip-dns-primary").value || null,
-    dns_secondary: document.getElementById("ip-dns-secondary").value || null,
   };
 
   try {
@@ -324,7 +352,8 @@ async function saveIp() {
       await apiFetch("/api/v1/asset-ips/" + ipId, { method: "PATCH", body: payload });
       showToast("IP가 수정되었습니다.");
     } else {
-      await apiFetch("/api/v1/asset-ips", { method: "POST", body: payload });
+      // Create uses the interface-scoped endpoint
+      await apiFetch("/api/v1/interfaces/" + interfaceIdVal + "/ips", { method: "POST", body: payload });
       showToast("IP가 등록되었습니다.");
     }
     ipModal.close();
@@ -374,6 +403,17 @@ document.getElementById("btn-save-subnet").addEventListener("click", saveSubnet)
 document.getElementById("btn-add-ip").addEventListener("click", openCreateIp);
 document.getElementById("btn-cancel-ip").addEventListener("click", () => ipModal.close());
 document.getElementById("btn-save-ip").addEventListener("click", saveIp);
+
+// Asset search → load interfaces
+document.getElementById("ip-asset-search").addEventListener("input", (e) => {
+  const query = e.target.value.trim().toLowerCase();
+  if (!query) {
+    loadInterfacesForAsset(null);
+    return;
+  }
+  const match = _cachedAssets.find(a => a.asset_name.toLowerCase().includes(query));
+  if (match) loadInterfacesForAsset(match.id);
+});
 document.getElementById("btn-edit-subnet-detail").addEventListener("click", () => openEditSubnet());
 document.getElementById("btn-delete-subnet-detail").addEventListener("click", () => deleteSubnet());
 

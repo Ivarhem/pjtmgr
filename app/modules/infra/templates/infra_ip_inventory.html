@@ -133,8 +133,14 @@
   <form id="form-ip" class="form-grid">
     <input type="hidden" id="ip-id">
     <label>
-      자산
-      <select id="ip-asset-id" required></select>
+      자산 검색
+      <input type="text" id="ip-asset-search" placeholder="자산명 입력..." autocomplete="off">
+    </label>
+    <label>
+      인터페이스
+      <select id="ip-interface-id" required>
+        <option value="">자산을 먼저 선택하세요</option>
+      </select>
     </label>
     <label>
       IP 대역
@@ -157,44 +163,20 @@
       </select>
     </label>
     <label>
-      인터페이스명
-      <input type="text" id="ip-interface" placeholder="eth0">
-    </label>
-    <label>
-      존
-      <input type="text" id="ip-zone">
+      호스트명
+      <input type="text" id="ip-hostname">
     </label>
     <label>
       서비스명
       <input type="text" id="ip-service-name">
     </label>
     <label>
-      호스트명
-      <input type="text" id="ip-hostname">
+      존
+      <input type="text" id="ip-zone">
     </label>
     <label>
       VLAN ID
       <input type="text" id="ip-vlan-id">
-    </label>
-    <label>
-      네트워크
-      <input type="text" id="ip-network" placeholder="10.10.1.0">
-    </label>
-    <label>
-      넷마스크
-      <input type="text" id="ip-netmask" placeholder="255.255.255.0">
-    </label>
-    <label>
-      게이트웨이
-      <input type="text" id="ip-gateway">
-    </label>
-    <label>
-      기본 DNS
-      <input type="text" id="ip-dns-primary">
-    </label>
-    <label>
-      보조 DNS
-      <input type="text" id="ip-dns-secondary">
     </label>
     <label class="full-width">
       비고
