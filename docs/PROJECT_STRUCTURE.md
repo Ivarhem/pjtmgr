@@ -157,6 +157,7 @@ app/modules/infra/
 │   ├── asset_alias.py           # AssetAlias (자산 별칭)
 │   ├── asset_interface.py        # AssetInterface (자산 인터페이스/포트)
 │   ├── asset_ip.py              # AssetIP (자산 IP)
+│   ├── asset_license.py         # AssetLicense (자산 라이선스)
 │   ├── asset_contact.py         # AssetContact (자산 담당자 매핑)
 │   ├── asset_relation.py        # AssetRelation (자산 간 관계)
 │   ├── asset_event.py           # AssetEvent (자산 변경이력)
@@ -198,6 +199,7 @@ app/modules/infra/
 │   ├── asset_alias.py           # 자산 별칭 스키마
 │   ├── asset_interface.py       # 자산 인터페이스 스키마
 │   ├── asset_ip.py              # 자산 IP 스키마
+│   ├── asset_license.py         # 자산 라이선스 스키마
 │   ├── asset_contact.py         # 자산 담당자 스키마
 │   ├── asset_relation.py        # 자산 관계 스키마
 │   ├── asset_event.py           # 자산 변경이력 스키마
@@ -234,6 +236,7 @@ app/modules/infra/
 │   ├── phase_service.py         # 계약단위 단계 CRUD
 │   ├── asset_service.py         # 자산/자산IP/담당자 CRUD
 │   ├── asset_interface_service.py # 자산 인터페이스 CRUD
+│   ├── asset_license_service.py # 자산 라이선스 CRUD
 │   ├── asset_alias_service.py   # 자산 별칭 CRUD
 │   ├── asset_event_service.py   # 자산 변경이력 CRUD
 │   ├── asset_related_partner_service.py # 자산 관련업체 CRUD
@@ -268,6 +271,7 @@ app/modules/infra/
 │   ├── asset_aliases.py         # /api/v1/assets/{id}/aliases, /api/v1/asset-aliases/{id}
 │   ├── asset_interfaces.py      # /api/v1/assets/{id}/interfaces
 │   ├── asset_ips.py             # /api/v1/.../ips
+│   ├── asset_licenses.py        # /api/v1/assets/{id}/licenses
 │   ├── asset_contacts.py        # /api/v1/.../contacts
 │   ├── asset_events.py          # /api/v1/.../asset-events
 │   ├── asset_related_partners.py # /api/v1/asset-related-partners

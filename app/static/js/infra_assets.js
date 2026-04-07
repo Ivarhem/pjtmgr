@@ -2030,91 +2030,6 @@ async function addNetEditIpRow() {
   _netEditGridApi.setGridOption("rowData", allRows);
 }
 
-/* ── IP 할당 탭 ── */
-
-async function renderIpTab(container) {
-  _subTabHeader(container, "IP 할당", () => openIpModal());
-  try {
-    const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/ips");
-    _subTable(container, [
-      { label: "IP 주소", field: "ip_address" },
-      { label: "유형", field: "ip_type" },
-      { label: "인터페이스", field: "interface_name" },
-      { label: "호스트명", field: "hostname" },
-      { label: "VLAN", field: "vlan_id" },
-      { label: "대표", field: "is_primary", fmt: v => v ? "●" : "" },
-    ], data, [
-      { label: "수정", handler: (r) => openIpModal(r) },
-      { label: "삭제", danger: true, handler: (r) => deleteIp(r) },
-    ]);
-  } catch (e) { showToast(e.message, "error"); }
-}
-
-async function openIpModal(ip) {
-  const m = document.getElementById("modal-ip");
-  const sel = document.getElementById("ip-interface-id");
-  while (sel.options.length > 1) sel.remove(1);
-  try {
-    const ifaces = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces");
-    ifaces.forEach(iface => {
-      const opt = document.createElement("option");
-      opt.value = iface.id;
-      opt.textContent = iface.name + " (" + iface.if_type + ")";
-      sel.appendChild(opt);
-    });
-  } catch { /* empty dropdown */ }
-
-  document.getElementById("ip-id").value = ip ? ip.id : "";
-  document.getElementById("ip-interface-id").value = ip ? (ip.interface_id || "") : "";
-  document.getElementById("ip-address").value = ip ? ip.ip_address : "";
-  document.getElementById("ip-type").value = ip ? ip.ip_type : "service";
-  document.getElementById("ip-is-primary").checked = ip ? ip.is_primary : false;
-  document.getElementById("ip-hostname").value = ip ? (ip.hostname || "") : "";
-  document.getElementById("ip-service-name").value = ip ? (ip.service_name || "") : "";
-  document.getElementById("ip-zone").value = ip ? (ip.zone || "") : "";
-  document.getElementById("ip-vlan").value = ip ? (ip.vlan_id || "") : "";
-  document.getElementById("ip-note").value = ip ? (ip.note || "") : "";
-  document.getElementById("modal-ip-title").textContent = ip ? "IP 수정" : "IP 추가";
-  m.showModal();
-}
-
-async function saveIp() {
-  const ipId = document.getElementById("ip-id").value;
-  const interfaceId = document.getElementById("ip-interface-id").value;
-  if (!interfaceId) { showToast("인터페이스를 선택하세요.", "warning"); return; }
-  const payload = {
-    interface_id: Number(interfaceId),
-    ip_address: document.getElementById("ip-address").value,
-    ip_type: document.getElementById("ip-type").value,
-    is_primary: document.getElementById("ip-is-primary").checked,
-    hostname: document.getElementById("ip-hostname").value || null,
-    service_name: document.getElementById("ip-service-name").value || null,
-    zone: document.getElementById("ip-zone").value || null,
-    vlan_id: document.getElementById("ip-vlan").value || null,
-    note: document.getElementById("ip-note").value || null,
-  };
-  try {
-    if (ipId) {
-      await apiFetch("/api/v1/asset-ips/" + ipId, { method: "PATCH", body: payload });
-    } else {
-      await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/ips", { method: "POST", body: payload });
-    }
-    document.getElementById("modal-ip").close();
-    showToast(ipId ? "수정되었습니다." : "추가되었습니다.");
-    renderDetailTab("network");
-  } catch (e) { showToast(e.message, "error"); }
-}
-
-async function deleteIp(ip) {
-  confirmDelete("IP '" + ip.ip_address + "'을(를) 삭제하시겠습니까?", async () => {
-    try {
-      await apiFetch("/api/v1/asset-ips/" + ip.id, { method: "DELETE" });
-      showToast("삭제되었습니다.");
-      renderDetailTab("network");
-    } catch (e) { showToast(e.message, "error"); }
-  });
-}
-
 /* ── 담당자 탭 ── */
 
 async function renderContactsTab(container) {
@@ -3772,7 +3687,6 @@ document.querySelectorAll(".detail-tabs .tab-btn").forEach(btn => {
 document.getElementById("btn-cancel-sw").addEventListener("click", () => document.getElementById("modal-software").close());
 document.getElementById("btn-save-sw").addEventListener("click", saveSoftware);
 document.getElementById("btn-cancel-ip").addEventListener("click", () => document.getElementById("modal-ip").close());
-document.getElementById("btn-save-ip").addEventListener("click", saveIp);
 document.getElementById("btn-cancel-ct").addEventListener("click", () => document.getElementById("modal-contact").close());
 document.getElementById("btn-save-ct").addEventListener("click", saveContact);
 document.getElementById("btn-cancel-rp").addEventListener("click", () => document.getElementById("modal-related-partner").close());
