@@ -1366,3 +1366,168 @@ function buildStandardGridBehavior(opts = {}) {
 
   return result;
 }
+
+// ── AG-Grid 공통 복사/붙여넣기 핸들러 ─────────────────────────────────
+
+/**
+ * AG-Grid 공통 복사/붙여넣기 핸들러.
+ *
+ * @param {HTMLElement} gridEl  - 그리드 래퍼 DOM 엘리먼트
+ * @param {object} gridApi      - AG-Grid API 인스턴스
+ * @param {object} opts
+ * @param {string[]} opts.editableFields  - 붙여넣기 대상 필드명 배열
+ * @param {boolean}  [opts.autoCreateRows=false] - 행 자동 추가 여부
+ * @param {function} [opts.onPaste]  - 붙여넣기 후 콜백 (changes: Array<{rowIndex, field, oldValue, newValue}>)
+ * @param {function} [opts.onCopy]   - 복사 후 콜백 (data: string[][])
+ * @param {object}   [opts.typeMap]  - 컬럼별 타입 힌트 {field: 'number' | {type:'enum', values:[...]}}
+ */
+function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
+  const {
+    editableFields = [],
+    autoCreateRows = false,
+    onPaste = null,
+    onCopy = null,
+    typeMap = {},
+  } = opts;
+
+  let _undoStack = [];
+
+  // ── Copy (Ctrl+C) ──
+  gridEl.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey && e.key === 'c') && !(e.metaKey && e.key === 'c')) return;
+    // Don't intercept if user is editing a cell
+    if (gridApi.getEditingCells && gridApi.getEditingCells().length > 0) return;
+
+    const ranges = gridApi.getCellRanges?.();
+    if (!ranges || ranges.length === 0) return;
+
+    const range = ranges[0];
+    const cols = range.columns.map(c => c.getColId());
+    const startRow = Math.min(range.startRow.rowIndex, range.endRow.rowIndex);
+    const endRow = Math.max(range.startRow.rowIndex, range.endRow.rowIndex);
+
+    const rows = [];
+    for (let ri = startRow; ri <= endRow; ri++) {
+      const node = gridApi.getDisplayedRowAtIndex(ri);
+      if (!node || !node.data) continue;
+      rows.push(cols.map(col => {
+        const val = node.data[col];
+        return val != null ? String(val) : '';
+      }));
+    }
+
+    const tsv = rows.map(r => r.join('\t')).join('\n');
+    navigator.clipboard.writeText(tsv).catch(() => {});
+    e.preventDefault();
+
+    if (onCopy) onCopy(rows);
+  });
+
+  // ── Paste (Ctrl+V) ──
+  gridEl.addEventListener('paste', (e) => {
+    const focused = gridApi.getFocusedCell();
+    if (!focused) return;
+    // Don't intercept if user is editing a cell
+    if (gridApi.getEditingCells && gridApi.getEditingCells().length > 0) return;
+
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain');
+    if (!text) return;
+    e.preventDefault();
+    e.stopPropagation();
+    gridApi.stopEditing();
+
+    const pasteRows = text.trim().split('\n').map(r => r.split('\t'));
+    const startRowIdx = focused.rowIndex;
+
+    // Build ordered list of editable columns
+    const allCols = gridApi.getColumnDefs()
+      .map(c => c.field)
+      .filter(f => f && editableFields.includes(f));
+
+    const focusedField = focused.column.getColId();
+    const colStart = allCols.indexOf(focusedField);
+    if (colStart < 0) return;
+
+    const changes = [];
+    const totalRowsNeeded = startRowIdx + pasteRows.length;
+    const currentRowCount = gridApi.getDisplayedRowCount();
+
+    // Auto-create rows if needed
+    if (autoCreateRows && totalRowsNeeded > currentRowCount) {
+      const newRows = [];
+      for (let i = 0; i < totalRowsNeeded - currentRowCount; i++) {
+        newRows.push({});
+      }
+      gridApi.applyTransaction({ add: newRows });
+    }
+
+    for (let ri = 0; ri < pasteRows.length; ri++) {
+      const rowIdx = startRowIdx + ri;
+      const node = gridApi.getDisplayedRowAtIndex(rowIdx);
+      if (!node || !node.data) continue;
+
+      for (let ci = 0; ci < pasteRows[ri].length; ci++) {
+        const field = allCols[colStart + ci];
+        if (!field) continue;
+
+        let value = pasteRows[ri][ci].trim();
+        const oldValue = node.data[field];
+
+        // Type conversion
+        const hint = typeMap[field];
+        if (hint === 'number') {
+          const parsed = Number(value.replace(/[^0-9.\-]/g, ''));
+          value = isNaN(parsed) ? 0 : parsed;
+        } else if (hint && hint.type === 'enum') {
+          if (!hint.values.includes(value)) value = oldValue;
+        }
+
+        changes.push({ rowIndex: rowIdx, field, oldValue, newValue: value });
+        node.data[field] = value;
+      }
+    }
+
+    // Refresh UI
+    const affectedNodes = [];
+    for (let ri = 0; ri < pasteRows.length; ri++) {
+      const node = gridApi.getDisplayedRowAtIndex(startRowIdx + ri);
+      if (node) affectedNodes.push(node);
+    }
+    gridApi.refreshCells({ rowNodes: affectedNodes, force: true });
+
+    // Flash pasted cells
+    const flashCols = [...new Set(changes.map(c => c.field))];
+    gridApi.flashCells({
+      rowNodes: affectedNodes,
+      columns: flashCols,
+      flashDuration: 300,
+      fadeDuration: 200,
+    });
+
+    // Save for undo
+    _undoStack.push(changes);
+
+    if (onPaste) onPaste(changes);
+  });
+
+  // ── Undo (Ctrl+Z) ──
+  gridEl.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey && e.key === 'z') && !(e.metaKey && e.key === 'z')) return;
+    if (_undoStack.length === 0) return;
+    // Don't intercept if user is editing a cell
+    if (gridApi.getEditingCells && gridApi.getEditingCells().length > 0) return;
+
+    const lastChanges = _undoStack.pop();
+    const affectedNodes = new Set();
+
+    for (const { rowIndex, field, oldValue } of lastChanges) {
+      const node = gridApi.getDisplayedRowAtIndex(rowIndex);
+      if (!node || !node.data) continue;
+      node.data[field] = oldValue;
+      affectedNodes.add(node);
+    }
+
+    gridApi.refreshCells({ rowNodes: [...affectedNodes], force: true });
+    e.preventDefault();
+  });
+}
