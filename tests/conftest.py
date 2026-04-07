@@ -34,6 +34,7 @@ from app.modules.accounting.models import (  # noqa: F401
 from app.modules.infra.models import (  # noqa: F401
     Asset,
     AssetEvent,
+    AssetInterface,
     AssetRelatedPartner,
     AssetRole,
     AssetRoleAssignment,

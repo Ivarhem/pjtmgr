@@ -155,6 +155,7 @@ app/modules/infra/
 │   ├── period_deliverable.py    # PeriodDeliverable (산출물)
 │   ├── asset.py                 # Asset (기술 자산)
 │   ├── asset_alias.py           # AssetAlias (자산 별칭)
+│   ├── asset_interface.py        # AssetInterface (자산 인터페이스/포트)
 │   ├── asset_ip.py              # AssetIP (자산 IP)
 │   ├── asset_contact.py         # AssetContact (자산 담당자 매핑)
 │   ├── asset_relation.py        # AssetRelation (자산 간 관계)
@@ -517,6 +518,7 @@ alembic/
     ├── 0060_product_similar_count.py             # 제품 유사 개수 컬럼 추가
     ├── 0061_drop_contract_period_classification_layout_fk.py # contract_periods 분류 레이아웃 FK 제거
     ├── 0062_drop_asset_role_type.py                 # asset_roles.role_type 컬럼 제거
+    ├── 0063_create_asset_interfaces.py              # asset_interfaces 테이블 생성
     └── 91fa5696df75_add_catalog_vendor_meta_table.py # 카탈로그 제조사 메타 테이블
 ```
 
