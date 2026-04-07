@@ -63,7 +63,6 @@ def list_assets(
             | Asset.project_asset_number.ilike(like)
             | Asset.customer_asset_number.ilike(like)
             | Asset.hostname.ilike(like)
-            | Asset.service_ip.ilike(like)
             | Asset.equipment_id.ilike(like)
             | Asset.asset_code.ilike(like)
             | alias_exists

@@ -39,8 +39,6 @@ _COLUMN_MAP: dict[int, str] = {
     16: "cluster",
     17: "service_name",
     18: "zone",
-    19: "service_ip",
-    20: "mgmt_ip",
     21: "size_unit",
     22: "lc_count",
     23: "ha_count",
@@ -259,8 +257,6 @@ def parse_inventory_sheet(file_bytes: bytes, partner_id: int) -> dict:
                 "vendor": asset_data.get("vendor"),
                 "model": asset_data.get("model"),
                 "serial_no": asset_data.get("serial_no"),
-                "service_ip": asset_data.get("service_ip"),
-                "mgmt_ip": asset_data.get("mgmt_ip"),
                 "status": asset_data["status"],
                 "errors": row_errors if row_errors else None,
             }

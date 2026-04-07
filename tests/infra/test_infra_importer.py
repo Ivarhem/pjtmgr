@@ -79,8 +79,6 @@ def _make_data_row(
     vendor: str = "Dell",
     model_name: str = "R740",
     serial_no: str = "SN001",
-    service_ip: str = "10.0.1.1",
-    mgmt_ip: str = "10.0.2.1",
 ) -> list:
     """35개 컬럼의 데이터 행 생성 헬퍼."""
     row = [""] * 35
@@ -101,8 +99,8 @@ def _make_data_row(
     row[15] = ""            # 클러스터
     row[16] = ""            # 업무명
     row[17] = ""            # Zone
-    row[18] = service_ip    # Service IP
-    row[19] = mgmt_ip       # MGMT IP
+    row[18] = ""            # (reserved)
+    row[19] = ""            # (reserved)
     row[20] = "2"           # Size(unit)
     row[21] = ""            # LC수량
     row[22] = ""            # HA수량

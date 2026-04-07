@@ -57,8 +57,6 @@ class Asset(TimestampMixin, Base):
     cluster: Mapped[str | None] = mapped_column(String(200), nullable=True)
     service_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     zone: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    service_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    mgmt_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Hardware Config
     size_unit: Mapped[int | None] = mapped_column(Integer, nullable=True)

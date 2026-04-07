@@ -49,8 +49,6 @@ class AssetUpdate(BaseModel):
     cluster: str | None = None
     service_name: str | None = None
     zone: str | None = None
-    service_ip: str | None = None
-    mgmt_ip: str | None = None
     # Hardware Config
     size_unit: int | None = None
     lc_count: int | None = None
@@ -114,8 +112,6 @@ class AssetRead(BaseModel):
     cluster: str | None = None
     service_name: str | None = None
     zone: str | None = None
-    service_ip: str | None = None
-    mgmt_ip: str | None = None
     # Hardware Config
     size_unit: int | None = None
     lc_count: int | None = None

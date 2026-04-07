@@ -18,8 +18,6 @@ class ImportPreviewRow(BaseModel):
     vendor: str | None = None
     model: str | None = None
     serial_no: str | None = None
-    service_ip: str | None = None
-    mgmt_ip: str | None = None
     status: str | None = None
     errors: list[str] | None = None
 

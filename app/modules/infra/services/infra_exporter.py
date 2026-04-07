@@ -40,8 +40,6 @@ _INVENTORY_HEADERS = [
     ("클러스터", "cluster"),
     ("서비스명", "service_name"),
     ("Zone", "zone"),
-    ("서비스IP", "service_ip"),
-    ("관리IP", "mgmt_ip"),
     ("Size(U)", "size_unit"),
     ("LC", "lc_count"),
     ("HA", "ha_count"),
