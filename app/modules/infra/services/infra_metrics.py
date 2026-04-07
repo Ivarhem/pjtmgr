@@ -8,6 +8,7 @@ from app.modules.common.models.audit_log import AuditLog
 from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.user import User
 from app.modules.infra.models.asset import Asset
+from app.modules.infra.models.asset_interface import AssetInterface
 from app.modules.infra.models.asset_ip import AssetIP
 from app.modules.infra.models.period_asset import PeriodAsset
 from app.modules.infra.models.period_deliverable import PeriodDeliverable
@@ -29,8 +30,8 @@ def get_period_summary(db: Session, contract_period_id: int) -> dict:
     ip_count = db.scalar(
         select(func.count())
         .select_from(AssetIP)
-        .join(Asset, AssetIP.asset_id == Asset.id)
-        .where(Asset.id.in_(asset_ids_q))
+        .join(AssetInterface, AssetIP.interface_id == AssetInterface.id)
+        .where(AssetInterface.asset_id.in_(asset_ids_q))
     ) or 0
 
     compliance = get_policy_compliance_rate(db, contract_period_id)

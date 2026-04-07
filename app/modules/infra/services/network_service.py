@@ -12,6 +12,7 @@ from app.core.exceptions import (
 )
 from app.modules.common.services import audit
 from app.modules.infra.models.asset import Asset
+from app.modules.infra.models.asset_interface import AssetInterface
 from app.modules.infra.models.asset_ip import AssetIP
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
@@ -105,7 +106,8 @@ def list_asset_ips(db: Session, asset_id: int) -> list[AssetIP]:
     return list(
         db.scalars(
             select(AssetIP)
-            .where(AssetIP.asset_id == asset_id)
+            .join(AssetInterface, AssetIP.interface_id == AssetInterface.id)
+            .where(AssetInterface.asset_id == asset_id)
             .order_by(AssetIP.ip_address.asc())
         )
     )
@@ -117,7 +119,8 @@ def list_partner_ips(db: Session, partner_id: int) -> list[AssetIP]:
     return list(
         db.scalars(
             select(AssetIP)
-            .join(Asset, AssetIP.asset_id == Asset.id)
+            .join(AssetInterface, AssetIP.interface_id == AssetInterface.id)
+            .join(Asset, AssetInterface.asset_id == Asset.id)
             .where(Asset.partner_id == partner_id)
             .order_by(AssetIP.ip_address.asc())
         )
@@ -133,7 +136,10 @@ def get_asset_ip(db: Session, ip_id: int) -> AssetIP:
 
 def create_asset_ip(db: Session, payload: AssetIPCreate, current_user) -> AssetIP:
     _require_inventory_edit(current_user)
-    asset = _ensure_asset_exists(db, payload.asset_id)
+    iface = db.get(AssetInterface, payload.interface_id)
+    if iface is None:
+        raise NotFoundError("Interface not found")
+    asset = db.get(Asset, iface.asset_id)
 
     if payload.ip_subnet_id is not None:
         _ensure_subnet_exists(db, payload.ip_subnet_id)
@@ -158,7 +164,8 @@ def update_asset_ip(
         _ensure_subnet_exists(db, changes["ip_subnet_id"])
 
     if "ip_address" in changes and changes["ip_address"] != asset_ip.ip_address:
-        asset = db.get(Asset, asset_ip.asset_id)
+        iface = db.get(AssetInterface, asset_ip.interface_id)
+        asset = db.get(Asset, iface.asset_id)
         _ensure_ip_unique_in_partner(db, asset.partner_id, changes["ip_address"], ip_id)
 
     for field, value in changes.items():
@@ -291,7 +298,8 @@ def _ensure_ip_unique_in_partner(
     """업체 범위 내 IP 중복 검증."""
     stmt = (
         select(AssetIP)
-        .join(Asset, AssetIP.asset_id == Asset.id)
+        .join(AssetInterface, AssetIP.interface_id == AssetInterface.id)
+        .join(Asset, AssetInterface.asset_id == Asset.id)
         .where(Asset.partner_id == partner_id, AssetIP.ip_address == ip_address)
     )
     existing = db.scalar(stmt)

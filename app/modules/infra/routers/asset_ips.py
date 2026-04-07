@@ -33,17 +33,17 @@ def list_asset_ips_endpoint(
 
 
 @router.post(
-    "/api/v1/assets/{asset_id}/ips",
+    "/api/v1/interfaces/{interface_id}/ips",
     response_model=AssetIPRead,
     status_code=status.HTTP_201_CREATED,
 )
-def create_asset_ip_endpoint(
-    asset_id: int,
+def create_interface_ip_endpoint(
+    interface_id: int,
     payload: AssetIPCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> AssetIPRead:
-    payload.asset_id = asset_id
+    payload.interface_id = interface_id
     return create_asset_ip(db, payload, current_user)
 
 

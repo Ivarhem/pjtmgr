@@ -519,6 +519,7 @@ alembic/
     ├── 0061_drop_contract_period_classification_layout_fk.py # contract_periods 분류 레이아웃 FK 제거
     ├── 0062_drop_asset_role_type.py                 # asset_roles.role_type 컬럼 제거
     ├── 0063_create_asset_interfaces.py              # asset_interfaces 테이블 생성
+    ├── 0064_asset_ip_interface_fk.py                # asset_ips: asset_id → interface_id FK 전환
     └── 91fa5696df75_add_catalog_vendor_meta_table.py # 카탈로그 제조사 메타 테이블
 ```
 
