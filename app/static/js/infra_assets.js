@@ -1419,6 +1419,7 @@ async function renderOverviewSubSections(container) {
   container.appendChild(wrap);
   const groups = [
     ["별칭", "고객사명, 레거시명, 내부명을 함께 관리합니다.", renderAliasesTab],
+    ["라이선스", "이 자산 자체의 라이선스 정보를 관리합니다.", renderLicensesTab],
   ];
   for (const [title, description, renderer] of groups) {
     const section = createDetailSectionCard(title, description);
@@ -1676,8 +1677,6 @@ async function renderSoftwareTab(container) {
     _subTable(container, [
       { label: "소프트웨어명", field: "software_name" },
       { label: "버전", field: "version" },
-      { label: "라이선스", field: "license_type" },
-      { label: "수량", field: "license_count" },
       { label: "관계", field: "relation_type" },
       { label: "비고", field: "note" },
     ], data, [
@@ -1692,8 +1691,6 @@ function openSoftwareModal(sw) {
   document.getElementById("sw-id").value = sw ? sw.id : "";
   document.getElementById("sw-name").value = sw ? sw.software_name : "";
   document.getElementById("sw-version").value = sw ? (sw.version || "") : "";
-  document.getElementById("sw-license-type").value = sw ? (sw.license_type || "") : "";
-  document.getElementById("sw-license-count").value = sw ? (sw.license_count != null ? sw.license_count : "") : "";
   document.getElementById("sw-relation-type").value = sw ? sw.relation_type : "installed";
   document.getElementById("sw-note").value = sw ? (sw.note || "") : "";
   document.getElementById("modal-software-title").textContent = sw ? "소프트웨어 수정" : "소프트웨어 추가";
@@ -1705,8 +1702,6 @@ async function saveSoftware() {
   const payload = {
     software_name: document.getElementById("sw-name").value,
     version: document.getElementById("sw-version").value || null,
-    license_type: document.getElementById("sw-license-type").value || null,
-    license_count: document.getElementById("sw-license-count").value ? Number(document.getElementById("sw-license-count").value) : null,
     relation_type: document.getElementById("sw-relation-type").value,
     note: document.getElementById("sw-note").value || null,
   };
@@ -1728,6 +1723,75 @@ async function deleteSoftware(sw) {
       await apiFetch("/api/v1/asset-software/" + sw.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
       renderDetailTab("operations");
+    } catch (e) { showToast(e.message, "error"); }
+  });
+}
+
+/* ── 라이선스 탭 ── */
+
+const LICENSE_TYPE_MAP = {
+  perpetual: "영구", subscription: "구독", eval: "평가", oem: "OEM",
+};
+
+async function renderLicensesTab(container) {
+  _subTabHeader(container, "라이선스", () => openLicenseModal());
+  try {
+    const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/licenses");
+    _subTable(container, [
+      { label: "유형", field: "license_type", fmt: (v) => LICENSE_TYPE_MAP[v] || v },
+      { label: "라이선스 키", field: "license_key" },
+      { label: "귀속", field: "licensed_to" },
+      { label: "시작일", field: "start_date" },
+      { label: "만료일", field: "end_date" },
+      { label: "메모", field: "note" },
+    ], data, [
+      { label: "수정", handler: (r) => openLicenseModal(r) },
+      { label: "삭제", danger: true, handler: (r) => deleteLicense(r) },
+    ]);
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+function openLicenseModal(lic) {
+  const m = document.getElementById("modal-license");
+  document.getElementById("lic-id").value = lic ? lic.id : "";
+  document.getElementById("lic-type").value = lic ? lic.license_type : "perpetual";
+  document.getElementById("lic-key").value = lic ? (lic.license_key || "") : "";
+  document.getElementById("lic-licensed-to").value = lic ? (lic.licensed_to || "") : "";
+  document.getElementById("lic-start-date").value = lic ? (lic.start_date || "") : "";
+  document.getElementById("lic-end-date").value = lic ? (lic.end_date || "") : "";
+  document.getElementById("lic-note").value = lic ? (lic.note || "") : "";
+  document.getElementById("modal-license-title").textContent = lic ? "라이선스 수정" : "라이선스 추가";
+  m.showModal();
+}
+
+async function saveLicense() {
+  const licId = document.getElementById("lic-id").value;
+  const payload = {
+    license_type: document.getElementById("lic-type").value,
+    license_key: document.getElementById("lic-key").value || null,
+    licensed_to: document.getElementById("lic-licensed-to").value || null,
+    start_date: document.getElementById("lic-start-date").value || null,
+    end_date: document.getElementById("lic-end-date").value || null,
+    note: document.getElementById("lic-note").value || null,
+  };
+  try {
+    if (licId) {
+      await apiFetch("/api/v1/asset-licenses/" + licId, { method: "PATCH", body: payload });
+    } else {
+      await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/licenses", { method: "POST", body: payload });
+    }
+    document.getElementById("modal-license").close();
+    showToast(licId ? "수정되었습니다." : "추가되었습니다.");
+    renderDetailTab("overview");
+  } catch (e) { showToast(e.message, "error"); }
+}
+
+async function deleteLicense(lic) {
+  confirmDelete("라이선스를 삭제하시겠습니까?", async () => {
+    try {
+      await apiFetch("/api/v1/asset-licenses/" + lic.id, { method: "DELETE" });
+      showToast("삭제되었습니다.");
+      renderDetailTab("overview");
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -3485,6 +3549,8 @@ document.getElementById("btn-cancel-alias").addEventListener("click", () => docu
 document.getElementById("btn-save-alias").addEventListener("click", saveAlias);
 document.getElementById("btn-cancel-iface").addEventListener("click", () => document.getElementById("modal-interface").close());
 document.getElementById("btn-save-iface").addEventListener("click", saveInterface);
+document.getElementById("btn-cancel-lic").addEventListener("click", () => document.getElementById("modal-license").close());
+document.getElementById("btn-save-lic").addEventListener("click", saveLicense);
 document.getElementById("btn-cancel-event").addEventListener("click", () => document.getElementById("modal-event").close());
 document.getElementById("btn-save-event").addEventListener("click", saveEvent);
 document.getElementById("btn-cancel-asset-detail-edit").addEventListener("click", closeDetailEditModal);

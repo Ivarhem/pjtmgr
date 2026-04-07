@@ -217,7 +217,7 @@
 <!-- 소프트웨어 추가/수정 모달 -->
 <dialog id="modal-software" class="modal modal-md">
   <h2 id="modal-software-title">소프트웨어 추가</h2>
-  <p class="modal-desc">자산에 연결된 소프트웨어와 라이선스 정보를 관리합니다.</p>
+  <p class="modal-desc">자산에 연결된 소프트웨어 정보를 관리합니다.</p>
   <form id="form-software">
     <input type="hidden" id="sw-id">
     <fieldset class="modal-group">
@@ -233,13 +233,6 @@
           </select>
         </label>
         <label>비고 <input type="text" id="sw-note"></label>
-      </div>
-    </fieldset>
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">라이선스</legend>
-      <div class="form-grid">
-        <label>라이선스 유형 <input type="text" id="sw-license-type"></label>
-        <label>라이선스 수량 <input type="number" id="sw-license-count" min="0"></label>
       </div>
     </fieldset>
   </form>
@@ -480,6 +473,33 @@
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-iface">취소</button>
     <button class="btn btn-primary" id="btn-save-iface">저장</button>
+  </div>
+</dialog>
+
+<!-- 라이선스 추가/수정 모달 -->
+<dialog id="modal-license" class="modal-dialog">
+  <div class="modal-content">
+    <h3 id="modal-license-title">라이선스 추가</h3>
+    <input type="hidden" id="lic-id">
+    <div class="form-grid">
+      <label>유형
+        <select id="lic-type">
+          <option value="perpetual">영구</option>
+          <option value="subscription">구독</option>
+          <option value="eval">평가</option>
+          <option value="oem">OEM</option>
+        </select>
+      </label>
+      <label>라이선스 키 <input type="text" id="lic-key"></label>
+      <label>귀속 <input type="text" id="lic-licensed-to"></label>
+      <label>시작일 <input type="date" id="lic-start-date"></label>
+      <label>만료일 <input type="date" id="lic-end-date"></label>
+      <label>메모 <input type="text" id="lic-note"></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-cancel-lic">취소</button>
+      <button class="btn btn-primary" id="btn-save-lic">저장</button>
+    </div>
   </div>
 </dialog>
 
