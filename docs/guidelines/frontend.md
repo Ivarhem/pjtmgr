@@ -281,6 +281,15 @@
 
 기존 커스텀 에디터: `CatalogCellEditor` (모델명), `RoleCellEditor` (역할명)
 
+### 클립보드 복사/붙여넣기 핸들러
+
+`addCopyPasteHandler(gridEl, gridApi, opts)` (utils.js)는 AG-Grid 편집 가능 그리드에 Ctrl+C/V/Z (복사/붙여넣기/실행취소) 기능을 추가한다.
+
+- `gridEl`: 그리드 DOM 엘리먼트
+- `gridApi`: AG-Grid API 인스턴스
+- `opts`: `{ onPaste(rows), onUndo() }` 콜백 (선택)
+- 새 편집 가능 그리드를 만들 때 `gridReady` 이벤트 후 호출한다.
+
 ### 자산 그리드 컬럼 구성
 
 자산 그리드의 columnDefs는 3개 파트로 조립된다:

@@ -115,6 +115,18 @@
   - 카탈로그, 분류체계, 자산처럼 탐색형 2~3단 패널 화면은 새로고침/재진입 후에도 직전 상태를 최대한 유지한다.
   - 저장 단위는 화면 범위로 나누고, 프로젝트 컨텍스트 의존 상태는 가능하면 프로젝트별 key로 분리한다.
 
+## 인터페이스 모델 (AssetInterface)
+
+- `AssetInterface` 테이블은 자산별 물리/논리 인터페이스 인스턴스를 관리한다.
+  - `interface_type`: `physical` (물리 포트), `lag` (LAG/본딩 그룹), `virtual` (VLAN 서브인터페이스 등)
+  - LAG/virtual 인터페이스는 `parent_id` FK로 물리 인터페이스에 종속된다.
+  - `hardware_interface_id` FK로 카탈로그 HardwareInterface 스펙과 연결 가능 (nullable).
+- **IP 할당은 인터페이스를 통해 수행한다.** `AssetIP.interface_id` FK가 `AssetInterface`를 가리킨다. 자산에 직접 IP를 할당하는 경로는 없다.
+- **포트맵은 인터페이스 FK를 사용한다.** `PortMap.src_interface_id`, `PortMap.dst_interface_id`로 연결 구간을 표현한다. 기존 24개 텍스트 필드(`src_port`, `dst_port` 등)는 제거되었다.
+- **카탈로그 자동 생성:** 자산에 카탈로그(ProductCatalog)를 연결하면, 해당 카탈로그의 `HardwareInterface` 스펙을 기반으로 `AssetInterface` 인스턴스를 자동 생성할 수 있다.
+
+---
+
 ## 자산명 / 역할명 규칙
 
 - `asset_name`은 물리 자산명이다.

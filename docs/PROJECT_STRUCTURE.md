@@ -196,6 +196,7 @@ app/modules/infra/
 │   ├── period_deliverable.py    # 산출물 스키마
 │   ├── asset.py                 # 자산 스키마
 │   ├── asset_alias.py           # 자산 별칭 스키마
+│   ├── asset_interface.py       # 자산 인터페이스 스키마
 │   ├── asset_ip.py              # 자산 IP 스키마
 │   ├── asset_contact.py         # 자산 담당자 스키마
 │   ├── asset_relation.py        # 자산 관계 스키마
@@ -232,6 +233,7 @@ app/modules/infra/
 ├── services/
 │   ├── phase_service.py         # 계약단위 단계 CRUD
 │   ├── asset_service.py         # 자산/자산IP/담당자 CRUD
+│   ├── asset_interface_service.py # 자산 인터페이스 CRUD
 │   ├── asset_alias_service.py   # 자산 별칭 CRUD
 │   ├── asset_event_service.py   # 자산 변경이력 CRUD
 │   ├── asset_related_partner_service.py # 자산 관련업체 CRUD
@@ -264,6 +266,7 @@ app/modules/infra/
 │   ├── period_deliverables.py   # /api/v1/contract-periods/{id}/deliverables
 │   ├── assets.py                # /api/v1/assets
 │   ├── asset_aliases.py         # /api/v1/assets/{id}/aliases, /api/v1/asset-aliases/{id}
+│   ├── asset_interfaces.py      # /api/v1/assets/{id}/interfaces
 │   ├── asset_ips.py             # /api/v1/.../ips
 │   ├── asset_contacts.py        # /api/v1/.../contacts
 │   ├── asset_events.py          # /api/v1/.../asset-events
@@ -427,6 +430,7 @@ tests/
 ├── infra/
 │   ├── test_phase_service.py
 │   ├── test_asset_service.py
+│   ├── test_asset_interface_service.py
 │   ├── test_asset_contact_service.py
 │   ├── test_asset_event_service.py
 │   ├── test_asset_related_partner_service.py
@@ -520,6 +524,8 @@ alembic/
     ├── 0062_drop_asset_role_type.py                 # asset_roles.role_type 컬럼 제거
     ├── 0063_create_asset_interfaces.py              # asset_interfaces 테이블 생성
     ├── 0064_asset_ip_interface_fk.py                # asset_ips: asset_id → interface_id FK 전환
+    ├── 0065_port_map_interface_fk.py                # port_maps: src/dst interface FK 전환
+    ├── 0066_drop_asset_ip_fields.py                 # assets: service_ip/mgmt_ip 컬럼 제거
     └── 91fa5696df75_add_catalog_vendor_meta_table.py # 카탈로그 제조사 메타 테이블
 ```
 

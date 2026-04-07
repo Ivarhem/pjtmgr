@@ -360,6 +360,23 @@
 
 ---
 
+## Asset Interface L3 모델링 (2026-04-07)
+
+**결정:** AssetInterface 테이블을 신설하여 자산별 물리/논리 인터페이스 인스턴스를 관리한다. AssetIP는 interface FK로, PortMap은 src/dst interface FK로 전환하여 SSOT를 달성. 제로베이스이므로 데이터 마이그레이션 없이 Big Bang 전환.
+
+**이유:**
+
+- Asset에 직접 IP를 할당하는 구조로는 인터페이스별 IP 관리, LAG/VLAN 표현이 불가능
+- PortMap의 24개 텍스트 필드(src_port, dst_port 등)는 정규화되지 않아 정합성 유지 어려움
+- 카탈로그 HardwareInterface 스펙 → 실제 인터페이스 인스턴스 자동 생성으로 연결
+
+**영향:**
+
+- migrations 0063-0066 (테이블 생성, FK 전환, 레거시 컬럼 삭제)
+- 설계 스펙: `docs/superpowers/specs/2026-04-07-asset-interface-l3-design.md`
+
+---
+
 ## common 모델의 infra FK 분리 (2026-04)
 
 **결정:** `ContractPeriod.classification_layout_id` FK를 제거한다 (migration 0061).
