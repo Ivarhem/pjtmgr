@@ -1445,23 +1445,46 @@ async function renderOperationsSubSections(container) {
   }
 }
 
-async function renderNetworkTab(container) {
-  _subTabHeader(container, "인터페이스 & IP", () => openInterfaceModal());
+let _networkGridApi = null;
 
-  // Add "카탈로그에서 생성" button if applicable
-  if (_selectedAsset.hardware_model_id) {
-    const existingHeader = container.querySelector(".asset-subtab-header");
-    if (existingHeader) {
-      const btnGen = document.createElement("button");
-      btnGen.className = "btn btn-sm btn-secondary";
-      btnGen.textContent = "카탈로그에서 생성";
-      btnGen.style.marginRight = "4px";
-      btnGen.addEventListener("click", generateInterfacesFromCatalog);
-      // Insert before the "+ 추가" button
-      const addBtn = existingHeader.querySelector(".btn-primary");
-      if (addBtn) existingHeader.insertBefore(btnGen, addBtn);
-    }
+async function renderNetworkTab(container) {
+  if (_networkGridApi) {
+    _networkGridApi.destroy();
+    _networkGridApi = null;
   }
+
+  // Header with buttons
+  const hdr = document.createElement("div");
+  hdr.className = "asset-subtab-header";
+  const title = document.createElement("span");
+  title.className = "asset-subtab-title";
+  title.textContent = "인터페이스 & IP";
+  hdr.appendChild(title);
+
+  const btnGroup = document.createElement("span");
+  btnGroup.className = "gap-sm";
+
+  if (_selectedAsset.hardware_model_id) {
+    const btnGen = document.createElement("button");
+    btnGen.className = "btn btn-sm btn-secondary";
+    btnGen.textContent = "카탈로그에서 생성";
+    btnGen.addEventListener("click", generateInterfacesFromCatalog);
+    btnGroup.appendChild(btnGen);
+  }
+
+  const btnAdd = document.createElement("button");
+  btnAdd.className = "btn btn-sm btn-primary";
+  btnAdd.textContent = "+ 인터페이스";
+  btnAdd.addEventListener("click", () => openInterfaceModal());
+  btnGroup.appendChild(btnAdd);
+
+  hdr.appendChild(btnGroup);
+  container.appendChild(hdr);
+
+  // Grid container — explicit height, same pattern as other grids
+  const gridEl = document.createElement("div");
+  gridEl.className = "ag-theme-quartz infra-grid-mid";
+  container.appendChild(gridEl);
 
   try {
     const [ifaces, ips] = await Promise.all([
@@ -1512,16 +1535,49 @@ async function renderNetworkTab(container) {
       }
     });
 
-    _subTable(container, [
-      { label: "이름", field: "name", fmt: (v, row) => row.parent_id ? "  \u2514 " + v : v },
-      { label: "유형", field: "if_type" },
-      { label: "속도", field: "_speed_display" },
-      { label: "상태", field: "admin_status" },
-      { label: "IP 할당", field: "_ip_summary", className: "asset-subtable-cell-wide" },
-    ], sorted, [
-      { label: "수정", handler: (r) => openInterfaceModal(r) },
-      { label: "삭제", danger: true, handler: (r) => deleteInterface(r) },
-    ]);
+    const colDefs = [
+      { field: "name", headerName: "이름", width: 140,
+        cellRenderer: (p) => {
+          const el = document.createElement("span");
+          el.textContent = (p.data.parent_id ? "  \u2514 " : "") + p.value;
+          return el;
+        }},
+      { field: "if_type", headerName: "유형", width: 90 },
+      { field: "_speed_display", headerName: "속도", width: 100 },
+      { field: "admin_status", headerName: "상태", width: 80 },
+      { field: "_ip_summary", headerName: "IP 할당", flex: 1, minWidth: 200 },
+      {
+        headerName: "", width: 100, sortable: false, filter: false,
+        cellRenderer: (params) => {
+          const wrap = document.createElement("span");
+          wrap.className = "gap-sm infra-inline-flex";
+          const btnEdit = document.createElement("button");
+          btnEdit.className = "btn btn-xs btn-secondary";
+          btnEdit.textContent = "수정";
+          btnEdit.addEventListener("click", (e) => { e.stopPropagation(); openInterfaceModal(params.data); });
+          const btnDel = document.createElement("button");
+          btnDel.className = "btn btn-xs btn-danger";
+          btnDel.textContent = "삭제";
+          btnDel.addEventListener("click", (e) => { e.stopPropagation(); deleteInterface(params.data); });
+          wrap.appendChild(btnEdit);
+          wrap.appendChild(btnDel);
+          return wrap;
+        },
+      },
+    ];
+
+    _networkGridApi = agGrid.createGrid(gridEl, {
+      columnDefs: colDefs,
+      rowData: sorted,
+      defaultColDef: { resizable: true, sortable: true, filter: false },
+      rowSelection: "single",
+      animateRows: true,
+      enableCellTextSelection: true,
+      ...buildStandardGridBehavior({
+        type: 'modal-edit',
+        onEdit: (data) => openInterfaceModal(data),
+      }),
+    });
   } catch (e) { showToast(e.message, "error"); }
 }
 
