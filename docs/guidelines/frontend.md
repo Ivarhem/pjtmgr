@@ -281,6 +281,10 @@
 
 기존 커스텀 에디터: `CatalogCellEditor` (모델명), `RoleCellEditor` (역할명)
 
+**콤보박스 에디터 재사용:** 텍스트 입력+드롭다운 필터링이 필요한 셀 에디터는 `createComboBoxCellEditor(opts)` (utils.js) 헬퍼로 생성한다. 동일 패턴의 클래스를 파일마다 반복 정의하지 않는다. opts: `getItems(params)` (동기/비동기), `getDisplayValue(item)`, `onSelect(item, params)`.
+
+**공유 상수:** 상태값/분류값 레이블 맵(예: `IP_TYPE_LABELS`, `ASSET_STATUS_MAP`)은 `utils.js`에 한 곳에서 정의하고 개별 JS 파일에서 재정의하지 않는다.
+
 ### 클립보드 복사/붙여넣기 핸들러
 
 `addCopyPasteHandler(gridEl, gridApi, opts)` (utils.js)는 AG-Grid 편집 가능 그리드에 Ctrl+C/V/Z (복사/붙여넣기/실행취소) 기능을 추가한다.

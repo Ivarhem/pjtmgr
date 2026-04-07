@@ -76,11 +76,11 @@
   - 서비스 레벨: 외부 입력을 그대로 신뢰하지 말고 허용값 집합을 다시 검증한다.
   - DB 레벨: 기존 마이그레이션 비용과 호환성을 위해 문자열 컬럼 유지가 기본이다. 실제 DB enum 타입 도입은 별도 아키텍처 결정 없이는 진행하지 않는다.
 - 새 상태값/분류값을 추가할 때는 문자열 literal을 여러 서비스/JS 파일에 흩뿌리지 말고, 스키마 또는 상수 모듈을 source of truth로 삼는다.
-- 포트맵은 자산 간 연결뿐 아니라 외부 구간 표현을 위해 `src_asset_id`, `dst_asset_id`를 nullable로 둘 수 있다.
+- 포트맵은 `src_interface_id`, `dst_interface_id` FK로 인터페이스 기반 연결을 표현한다. 외부 장비는 자산으로 등록 후 인터페이스를 생성하여 연결한다.
 - 정책 적용 상태는 `not_checked`, `compliant`, `non_compliant`, `exception`, `not_applicable` 범위를 기본값으로 사용한다.
 - 연락처는 업체에 소속되고, 자산에는 매핑(AssetContact)으로 연결한다.
 - 인프라 CRUD(계약단위/자산/IP대역/포트맵/정책)는 `audit.log()`로 감사 로그를 기록한다.
-- Excel Import/Export는 업체 단위로 수행한다. Export 시 옵션 계약단위 필터로 해당 계약단위 자산만 포함 가능. 3시트(Inventory/IP대역/Portmap) 구조.
+- Excel Import/Export는 업체 단위로 수행한다. Export 시 옵션 계약단위 필터로 해당 계약단위 자산만 포함 가능. 4시트(Inventory/IP대역/Portmap/Interfaces) 구조.
 - 제품 카탈로그 Import는 글로벌(partner_id 불필요). `spec` 도메인(제품+HW스펙)과 `eosl` 도메인(EOS/EOSL 날짜)으로 분리.
 - `ContractPeriod`는 common 모듈에 위치하며, infra에서 `contract_period_id` FK로 참조한다. infra → common 방향 import만 허용.
 - 프로젝트별 분류 레이아웃 연결은 `ContractPeriod.classification_layout_id` 숫자 필드로 유지하되, common ORM이 infra 테이블 FK를 직접 참조하지 않도록 관리한다.
