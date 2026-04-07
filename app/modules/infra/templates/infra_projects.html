@@ -13,19 +13,63 @@
 
 {% block content %}
 <div class="page-header">
-  <h1>프로젝트 목록</h1>
+  <h1>프로젝트</h1>
   <div class="infra-inline-actions">
     <label class="chk-inline"><input type="checkbox" id="chk-active-projects" checked> 완료되지 않은 사업만</label>
     <button class="btn btn-primary" id="btn-add-project">프로젝트 등록</button>
   </div>
 </div>
 
-<p class="text-secondary text-sm mb-md">
-  선택한 고객사의 인프라 수행 프로젝트와 단계, 산출물 기준을 관리합니다.
-</p>
+<div id="project-layout" class="asset-layout">
+  <!-- Left: Project list grid -->
+  <div class="asset-list-panel">
+    <div class="card">
+      <div id="grid-projects" class="ag-theme-quartz infra-grid"></div>
+    </div>
+  </div>
 
-<div class="card mb-md">
-  <div id="grid-projects" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
+  <div id="project-splitter" class="asset-splitter is-hidden" aria-hidden="true"></div>
+
+  <div class="asset-detail-handle-wrap">
+    <button class="asset-detail-minimize" id="btn-minimize-detail" title="상세 패널 열기/닫기">&#10095;</button>
+  </div>
+
+  <!-- Right: Project detail panel -->
+  <div id="project-detail-panel" class="asset-detail-panel is-hidden">
+    <div class="asset-detail-empty" id="project-detail-empty">
+      프로젝트를 선택하면 상세 정보를 확인할 수 있습니다.
+    </div>
+    <div id="project-detail-shell" class="is-hidden">
+      <div class="detail-header">
+        <span class="detail-title" id="detail-project-name"></span>
+      </div>
+      <div class="detail-body" id="project-detail-content">
+        <!-- Info card -->
+        <div class="info-card" id="project-info"></div>
+
+        <!-- Phase timeline -->
+        <div class="phase-timeline" id="phase-timeline"></div>
+
+        <!-- Phases -->
+        <div class="page-header mt-md">
+          <h3>단계</h3>
+          <button class="btn btn-sm btn-primary" id="btn-add-phase">단계 등록</button>
+        </div>
+        <div class="card mb-md">
+          <div id="grid-phases" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
+        </div>
+
+        <!-- Deliverables -->
+        <div class="page-header mt-md">
+          <h3>산출물</h3>
+          <button class="btn btn-sm btn-primary" id="btn-add-deliverable">산출물 등록</button>
+        </div>
+        <div class="card">
+          <div id="grid-deliverables" class="ag-theme-quartz infra-grid infra-grid-dashboard-side"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ 모달: 프로젝트 등록/수정 ═══ -->
@@ -80,6 +124,87 @@
   <div class="modal-actions">
     <button class="btn btn-secondary" id="btn-cancel-project">취소</button>
     <button class="btn btn-primary" id="btn-save-project">등록</button>
+  </div>
+</dialog>
+
+<!-- ═══ 모달: 단계 등록/수정 ═══ -->
+<dialog id="modal-phase" class="modal">
+  <h2 id="modal-phase-title">단계 등록</h2>
+  <form id="form-phase" class="form-grid">
+    <input type="hidden" id="phase-id">
+    <label>
+      단계 유형
+      <select id="phase-type" required>
+        <option value="analysis">분석</option>
+        <option value="design">설계</option>
+        <option value="build">구축</option>
+        <option value="test">시험</option>
+        <option value="stabilize">안정화</option>
+      </select>
+    </label>
+    <label>
+      상태
+      <select id="phase-status">
+        <option value="not_started">미시작</option>
+        <option value="in_progress">진행중</option>
+        <option value="completed">완료</option>
+      </select>
+    </label>
+    <label class="full-width">
+      업무 범위
+      <textarea id="phase-task-scope" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      산출물 메모
+      <textarea id="phase-deliverables-note" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      주의사항
+      <textarea id="phase-cautions" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-phase">취소</button>
+    <button class="btn btn-primary" id="btn-save-phase">등록</button>
+  </div>
+</dialog>
+
+<!-- ═══ 모달: 산출물 등록/수정 ═══ -->
+<dialog id="modal-deliverable" class="modal">
+  <h2 id="modal-deliverable-title">산출물 등록</h2>
+  <form id="form-deliverable" class="form-grid">
+    <input type="hidden" id="deliverable-id">
+    <label>
+      소속 단계
+      <select id="deliverable-phase-id" required></select>
+    </label>
+    <label>
+      산출물명
+      <input type="text" id="deliverable-name" required>
+    </label>
+    <label>
+      제출 여부
+      <select id="deliverable-is-submitted">
+        <option value="false">미제출</option>
+        <option value="true">제출</option>
+      </select>
+    </label>
+    <label>
+      제출일
+      <input type="date" id="deliverable-submitted-at">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="deliverable-description" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="deliverable-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-deliverable">취소</button>
+    <button class="btn btn-primary" id="btn-save-deliverable">등록</button>
   </div>
 </dialog>
 {% endblock %}

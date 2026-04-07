@@ -518,14 +518,13 @@ async function initContextSelectors() {
     if (projDisplay) projDisplay.classList.add('has-project');
     if (projClear) projClear.classList.remove('is-hidden');
   }
-  // 사이드바 프로젝트 링크 즉시 설정
+  // 사이드바 프로젝트 링크 즉시 설정 (항상 /periods — 상세는 인라인 패널)
   const _navLink = document.getElementById('nav-project-link');
   if (_navLink) {
+    _navLink.href = '/periods';
     if (_cachedProjectId) {
-      _navLink.href = '/periods/' + _cachedProjectId;
       _navLink.dataset.hasProject = '1';
     } else {
-      _navLink.href = '#';
       _navLink.dataset.hasProject = '';
     }
     _navLink.addEventListener('click', (e) => {
@@ -676,10 +675,10 @@ async function initContextSelectors() {
       projClear.classList.toggle('is-hidden', !item);
     }
     localStorage.setItem('infra.ctx_project_label', item ? item.label : '');
-    // 사이드바 프로젝트 메뉴 링크 동적 변경
+    // 사이드바 프로젝트 메뉴 링크 (항상 /periods — 상세는 인라인 패널)
     const navLink = document.getElementById('nav-project-link');
     if (navLink) {
-      navLink.href = item ? '/periods/' + item.id : '#';
+      navLink.href = '/periods';
       navLink.dataset.hasProject = item ? '1' : '';
     }
     if (item && item.id) {
