@@ -31,227 +31,39 @@ async function _loadPmInterfaces(assetId) {
   }
 }
 
-/* ── AssetCellEditor (combo-box, PartnerCellEditor 패턴) ── */
-class AssetCellEditor {
-  init(params) {
-    this.value = params.value || "";
-    this.params = params;
-    this.selectedAssetId = null;
+/* ── AssetCellEditor (createComboBoxCellEditor 사용) ── */
+const AssetCellEditor = createComboBoxCellEditor({
+  getItems: () => _pmAssets.map(a => ({
+    id: a.id,
+    label: a.asset_name || "",
+    sub: a.hostname || "",
+  })),
+  getDisplayValue: (item) => item.label,
+  onSelect: (item, params) => {
+    const side = params.colDef.field.startsWith("src_") ? "src" : "dst";
+    params.data[side + "_asset_id"] = item.id;
+  },
+});
 
-    this.container = document.createElement("div");
-    this.container.className = "ag-cell-partner-editor";
-
-    this.input = document.createElement("input");
-    this.input.type = "text";
-    this.input.value = this.value;
-    this.input.className = "ag-cell-input-editor";
-    this.container.appendChild(this.input);
-
-    this.dropdown = document.createElement("div");
-    this.dropdown.className = "ag-cell-partner-dropdown is-hidden";
-    document.body.appendChild(this.dropdown);
-
-    this.input.addEventListener("input", () => this._renderList());
-    this.input.addEventListener("focus", () => this._renderList());
-    this.input.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        const first = this.dropdown.querySelector(".cust-option");
-        if (first) first.focus();
-      }
-      if (e.key === "Escape") {
-        setElementHidden(this.dropdown, true);
-      }
-      if (e.key === "Enter") {
-        const match = _pmAssets.find(a => a.asset_name === this.input.value.trim());
-        if (match) {
-          this.value = match.asset_name;
-          this.selectedAssetId = match.id;
-          this.params.stopEditing();
-        }
-      }
-    });
-  }
-
-  _renderList() {
-    const keyword = this.input.value.trim().toLowerCase();
-    const filtered = keyword
-      ? _pmAssets.filter(a =>
-          (a.asset_name || "").toLowerCase().includes(keyword) ||
-          (a.hostname || "").toLowerCase().includes(keyword))
-      : _pmAssets;
-    const limited = filtered.slice(0, 50);
-
-    // Build dropdown with safe DOM
-    this.dropdown.textContent = "";
-    limited.forEach(a => {
-      const opt = document.createElement("div");
-      opt.className = "cust-option";
-      opt.tabIndex = -1;
-      opt.dataset.id = a.id;
-      opt.dataset.name = a.asset_name || "";
-      opt.dataset.hostname = a.hostname || "";
-      opt.textContent = a.asset_name + (a.hostname ? " (" + a.hostname + ")" : "");
-
-      opt.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        this.value = a.asset_name;
-        this.selectedAssetId = a.id;
-        this.input.value = this.value;
-        setElementHidden(this.dropdown, true);
-        this.params.stopEditing();
-      });
-      opt.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          this.value = a.asset_name;
-          this.selectedAssetId = a.id;
-          this.input.value = this.value;
-          setElementHidden(this.dropdown, true);
-          this.params.stopEditing();
-        }
-        if (e.key === "ArrowDown" && opt.nextElementSibling) { e.preventDefault(); opt.nextElementSibling.focus(); }
-        if (e.key === "ArrowUp" && opt.previousElementSibling) { e.preventDefault(); opt.previousElementSibling.focus(); }
-      });
-      this.dropdown.appendChild(opt);
-    });
-
-    // Position dropdown
-    const rect = this.input.getBoundingClientRect();
-    this.dropdown.style.left = rect.left + "px";
-    this.dropdown.style.top = rect.bottom + "px";
-    this.dropdown.style.width = Math.max(rect.width, 220) + "px";
-    setElementHidden(this.dropdown, false);
-  }
-
-  getGui() { return this.container; }
-  afterGuiAttached() { this.input.focus(); this.input.select(); }
-  getValue() { return this.value; }
-  destroy() { this.dropdown.remove(); }
-  isPopup() { return true; }
-}
-
-/* ── InterfaceCellEditor (linked to row's asset) ── */
-class InterfaceCellEditor {
-  init(params) {
-    this.value = params.value || "";
-    this.params = params;
-    this.selectedIfaceId = null;
-    this.interfaces = [];
-
-    this.container = document.createElement("div");
-    this.container.className = "ag-cell-partner-editor";
-
-    this.input = document.createElement("input");
-    this.input.type = "text";
-    this.input.value = this.value;
-    this.input.className = "ag-cell-input-editor";
-    this.container.appendChild(this.input);
-
-    this.dropdown = document.createElement("div");
-    this.dropdown.className = "ag-cell-partner-dropdown is-hidden";
-    document.body.appendChild(this.dropdown);
-
-    // Determine which side: src or dst
-    const field = params.colDef.field;
-    this._side = field.startsWith("src_") ? "src" : "dst";
-    const assetIdKey = this._side + "_asset_id";
-    this._assetId = params.data[assetIdKey];
-
-    this.input.addEventListener("input", () => this._renderList());
-    this.input.addEventListener("focus", () => this._loadAndRender());
-    this.input.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        const first = this.dropdown.querySelector(".cust-option");
-        if (first) first.focus();
-      }
-      if (e.key === "Escape") {
-        setElementHidden(this.dropdown, true);
-      }
-      if (e.key === "Enter") {
-        const match = this.interfaces.find(i => i.name === this.input.value.trim());
-        if (match) {
-          this.value = match.name;
-          this.selectedIfaceId = match.id;
-          this.params.stopEditing();
-        }
-      }
-    });
-  }
-
-  async _loadAndRender() {
-    if (this._assetId) {
-      this.interfaces = await _loadPmInterfaces(this._assetId);
-    } else {
-      this.interfaces = [];
-    }
-    this._renderList();
-  }
-
-  _renderList() {
-    const keyword = this.input.value.trim().toLowerCase();
-    const filtered = keyword
-      ? this.interfaces.filter(i => (i.name || "").toLowerCase().includes(keyword))
-      : this.interfaces;
-    const limited = filtered.slice(0, 50);
-
-    this.dropdown.textContent = "";
-
-    if (!this._assetId) {
-      const msg = document.createElement("div");
-      msg.className = "cust-similar-warn";
-      msg.textContent = "자산을 먼저 선택하세요";
-      this.dropdown.appendChild(msg);
-    } else if (limited.length === 0) {
-      const msg = document.createElement("div");
-      msg.className = "cust-similar-warn";
-      msg.textContent = "인터페이스 없음";
-      this.dropdown.appendChild(msg);
-    } else {
-      limited.forEach(iface => {
-        const opt = document.createElement("div");
-        opt.className = "cust-option";
-        opt.tabIndex = -1;
-        opt.dataset.id = iface.id;
-        opt.dataset.name = iface.name || "";
-        opt.textContent = iface.name || "(이름 없음)";
-
-        opt.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          this.value = iface.name;
-          this.selectedIfaceId = iface.id;
-          this.input.value = this.value;
-          setElementHidden(this.dropdown, true);
-          this.params.stopEditing();
-        });
-        opt.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            this.value = iface.name;
-            this.selectedIfaceId = iface.id;
-            this.input.value = this.value;
-            setElementHidden(this.dropdown, true);
-            this.params.stopEditing();
-          }
-          if (e.key === "ArrowDown" && opt.nextElementSibling) { e.preventDefault(); opt.nextElementSibling.focus(); }
-          if (e.key === "ArrowUp" && opt.previousElementSibling) { e.preventDefault(); opt.previousElementSibling.focus(); }
-        });
-        this.dropdown.appendChild(opt);
-      });
-    }
-
-    const rect = this.input.getBoundingClientRect();
-    this.dropdown.style.left = rect.left + "px";
-    this.dropdown.style.top = rect.bottom + "px";
-    this.dropdown.style.width = Math.max(rect.width, 200) + "px";
-    setElementHidden(this.dropdown, false);
-  }
-
-  getGui() { return this.container; }
-  afterGuiAttached() { this.input.focus(); this.input.select(); }
-  getValue() { return this.value; }
-  destroy() { this.dropdown.remove(); }
-  isPopup() { return true; }
-}
+/* ── InterfaceCellEditor (createComboBoxCellEditor 사용, async getItems) ── */
+const InterfaceCellEditor = createComboBoxCellEditor({
+  getItems: async (params) => {
+    const side = params.colDef.field.startsWith("src_") ? "src" : "dst";
+    const assetId = params.data[side + "_asset_id"];
+    if (!assetId) return [];
+    const ifaces = await _loadPmInterfaces(assetId);
+    return ifaces.map(i => ({
+      id: i.id,
+      label: i.name || "(이름 없음)",
+      sub: i.if_type ? (i.if_type + (i.speed ? ", " + i.speed : "")) : "",
+    }));
+  },
+  getDisplayValue: (item) => item.label,
+  onSelect: (item, params) => {
+    const side = params.colDef.field.startsWith("src_") ? "src" : "dst";
+    params.data[side + "_interface_id"] = item.id;
+  },
+});
 
 /* ── Column Definitions ── */
 const columnDefs = [

@@ -281,6 +281,14 @@ function fmtKoreanCurrency(n) {
 /** 퍼센트 포맷 (0.7 → '70.0%') */
 const fmtPct = (n) => n != null && !isNaN(n) ? (n * 100).toFixed(1) + '%' : '-';
 
+/** AssetIP.ip_type 정규 값 → 한국어 레이블 (백엔드 스키마 기준) */
+const IP_TYPE_LABELS = {
+  service: "서비스",
+  mgmt: "관리",
+  vip: "VIP",
+  secondary: "보조",
+};
+
 function isElementHidden(el) {
   return !el || el.classList.contains('is-hidden');
 }
@@ -1530,4 +1538,167 @@ function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
     gridApi.refreshCells({ rowNodes: [...affectedNodes], force: true });
     e.preventDefault();
   });
+}
+
+// ── ComboBox Cell Editor Factory ─────────────────────────────────
+
+/**
+ * AG Grid 콤보박스 셀 에디터 팩토리.
+ * sync/async getItems 모두 지원. textContent 사용 (XSS 방지).
+ *
+ * @param {Object} opts
+ * @param {function(params): Array|Promise<Array>} opts.getItems
+ *   에디터가 열릴 때 표시할 항목을 반환. 각 항목은 { id, label, sub? }.
+ *   sync 또는 async 모두 가능.
+ * @param {function(item): string} opts.getDisplayValue
+ *   셀 확정 후 셀에 표시할 문자열.
+ * @param {function(item, params): void} [opts.onSelect]
+ *   항목 선택 시 호출되는 콜백. row data 갱신 등에 사용.
+ * @param {number} [opts.maxItems=50]
+ *   드롭다운에 표시할 최대 항목 수.
+ * @param {string} [opts.placeholder="검색..."]
+ *   입력 필드 placeholder.
+ * @returns {class} AG Grid ICellEditor 구현 클래스
+ */
+function createComboBoxCellEditor(opts) {
+  const {
+    getItems,
+    getDisplayValue,
+    onSelect,
+    maxItems = 50,
+    placeholder = "검색...",
+  } = opts;
+
+  return class ComboBoxCellEditor {
+    init(params) {
+      this._params = params;
+      this._value = params.value || "";
+      this._selectedItem = null;
+
+      // Container
+      this._container = document.createElement("div");
+      this._container.className = "ag-cell-partner-editor";
+
+      // Input
+      this._input = document.createElement("input");
+      this._input.type = "text";
+      this._input.value = this._value;
+      this._input.className = "ag-cell-input-editor";
+      this._input.placeholder = placeholder;
+      this._container.appendChild(this._input);
+
+      // Dropdown — appended to body so it escapes cell overflow clipping
+      this._dropdown = document.createElement("div");
+      this._dropdown.className = "ag-cell-partner-dropdown is-hidden";
+      document.body.appendChild(this._dropdown);
+
+      // Items cache (populated async on first open)
+      this._items = null;
+
+      this._input.addEventListener("input", () => this._renderList());
+      this._input.addEventListener("focus", () => this._loadAndRender());
+      this._input.addEventListener("keydown", (e) => this._onInputKeydown(e));
+    }
+
+    async _loadAndRender() {
+      if (this._items === null) {
+        const result = getItems(this._params);
+        this._items = (result instanceof Promise) ? await result : result;
+      }
+      this._renderList();
+    }
+
+    _renderList() {
+      const items = this._items || [];
+      const keyword = this._input.value.trim().toLowerCase();
+      const filtered = keyword
+        ? items.filter(item =>
+            (item.label || "").toLowerCase().includes(keyword) ||
+            (item.sub || "").toLowerCase().includes(keyword))
+        : items;
+      const limited = filtered.slice(0, maxItems);
+
+      this._dropdown.textContent = "";
+
+      if (limited.length === 0) {
+        const msg = document.createElement("div");
+        msg.className = "cust-similar-warn";
+        msg.textContent = items.length === 0 ? "항목 없음" : "검색 결과 없음";
+        this._dropdown.appendChild(msg);
+      } else {
+        limited.forEach(item => {
+          const opt = document.createElement("div");
+          opt.className = "cust-option";
+          opt.tabIndex = -1;
+          opt.dataset.id = item.id;
+          opt.textContent = item.label + (item.sub ? " (" + item.sub + ")" : "");
+
+          opt.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            this._selectItem(item);
+          });
+          opt.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") { this._selectItem(item); return; }
+            if (e.key === "ArrowDown" && opt.nextElementSibling) {
+              e.preventDefault(); opt.nextElementSibling.focus();
+            }
+            if (e.key === "ArrowUp" && opt.previousElementSibling) {
+              e.preventDefault(); opt.previousElementSibling.focus();
+            }
+            if (e.key === "Escape") {
+              setElementHidden(this._dropdown, true);
+              this._input.focus();
+            }
+          });
+          this._dropdown.appendChild(opt);
+        });
+      }
+
+      // Position below the input
+      const rect = this._input.getBoundingClientRect();
+      this._dropdown.style.left = rect.left + "px";
+      this._dropdown.style.top = rect.bottom + "px";
+      this._dropdown.style.width = Math.max(rect.width, 220) + "px";
+      setElementHidden(this._dropdown, false);
+    }
+
+    _selectItem(item) {
+      this._selectedItem = item;
+      this._value = getDisplayValue(item);
+      this._input.value = this._value;
+      setElementHidden(this._dropdown, true);
+      if (onSelect) onSelect(item, this._params);
+      this._params.stopEditing();
+    }
+
+    _onInputKeydown(e) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const first = this._dropdown.querySelector(".cust-option");
+        if (first) first.focus();
+        return;
+      }
+      if (e.key === "Escape") {
+        setElementHidden(this._dropdown, true);
+        return;
+      }
+      if (e.key === "Enter") {
+        const items = this._items || [];
+        const match = items.find(
+          item => (item.label || "").toLowerCase() === this._input.value.trim().toLowerCase()
+        );
+        if (match) this._selectItem(match);
+      }
+    }
+
+    /** 선택된 항목 반환 (커스텀 메서드) */
+    getSelectedItem() { return this._selectedItem; }
+
+    // AG Grid ICellEditor interface
+    getGui() { return this._container; }
+    afterGuiAttached() { this._input.focus(); this._input.select(); }
+    getValue() { return this._value; }
+    isPopup() { return true; }
+    destroy() { this._dropdown.remove(); }
+  };
 }

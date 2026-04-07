@@ -3,9 +3,7 @@
 const SUBNET_ROLE_MAP = {
   service: "서비스", management: "관리", backup: "백업", dmz: "DMZ", other: "기타",
 };
-const IP_TYPE_MAP = {
-  service: "서비스", management: "관리", backup: "백업", vip: "VIP", other: "기타",
-};
+// IP_TYPE_MAP → utils.js의 IP_TYPE_LABELS 사용
 
 let ipGridApi;
 let _subnets = [];
@@ -14,7 +12,7 @@ let _selectedSubnet = null;
 /* ── IP Grid columns ── */
 const ipColDefs = [
   { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc" },
-  { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_MAP[p.value] || p.value },
+  { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_LABELS[p.value] || p.value },
   { field: "asset_name", headerName: "자산", width: 130 },
   { field: "interface_name", headerName: "인터페이스", width: 120 },
   { field: "if_type", headerName: "IF유형", width: 80 },

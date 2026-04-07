@@ -23,9 +23,7 @@ const CATALOG_KIND_LABELS = {
   dataset: "데이터셋",
 };
 
-const IP_TYPE_SHORT = {
-  service: "서비스", mgmt: "관리", vip: "VIP", secondary: "보조",
-};
+// IP_TYPE_SHORT → utils.js의 IP_TYPE_LABELS 사용
 
 const RELATION_TYPE_LABELS = {
   HOSTS: "호스팅함",
@@ -1500,7 +1498,7 @@ async function renderNetworkTab(container) {
       iface._ip_summary = ifIps.length
         ? ifIps.map(ip => {
             let s = ip.ip_address;
-            if (ip.ip_type) s += " (" + (IP_TYPE_SHORT[ip.ip_type] || ip.ip_type) + ")";
+            if (ip.ip_type) s += " (" + (IP_TYPE_LABELS[ip.ip_type] || ip.ip_type) + ")";
             if (ip.is_primary) s += " ●";
             return s;
           }).join(", ")
