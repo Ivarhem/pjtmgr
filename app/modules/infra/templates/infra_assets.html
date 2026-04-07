@@ -250,43 +250,36 @@
 </dialog>
 
 <!-- IP 할당 추가/수정 모달 -->
-<dialog id="modal-ip" class="modal modal-lg">
-  <h2 id="modal-ip-title">IP 추가</h2>
-  <p class="modal-desc">IP 주소와 네트워크 연결 정보를 자산에 연결합니다.</p>
-  <form id="form-ip">
+<dialog id="modal-ip" class="modal-dialog">
+  <div class="modal-content">
+    <h3 id="modal-ip-title">IP 추가</h3>
     <input type="hidden" id="ip-id">
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">주소 정보</legend>
-      <div class="form-grid">
-        <label>IP 주소 <input type="text" id="ip-address" required></label>
-        <label>유형
-          <select id="ip-type">
-            <option value="service">서비스</option>
-            <option value="management">관리</option>
-            <option value="heartbeat">하트비트</option>
-            <option value="backup">백업</option>
-            <option value="other">기타</option>
-          </select>
-        </label>
-        <label>인터페이스 <input type="text" id="ip-interface"></label>
-        <label>호스트명 <input type="text" id="ip-hostname"></label>
-      </div>
-    </fieldset>
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">네트워크</legend>
-      <div class="form-grid">
-        <label>VLAN <input type="text" id="ip-vlan"></label>
-        <label>네트워크 <input type="text" id="ip-network"></label>
-        <label>서브넷 마스크 <input type="text" id="ip-netmask"></label>
-        <label>게이트웨이 <input type="text" id="ip-gateway"></label>
-        <label class="chk-inline full-width"><input type="checkbox" id="ip-is-primary"> 대표 IP</label>
-        <label class="full-width">비고 <input type="text" id="ip-note"></label>
-      </div>
-    </fieldset>
-  </form>
-  <div class="modal-actions">
-    <button class="btn btn-secondary" id="btn-cancel-ip">취소</button>
-    <button class="btn btn-primary" id="btn-save-ip">저장</button>
+    <div class="form-grid">
+      <label>인터페이스
+        <select id="ip-interface-id"><option value="">— 선택 —</option></select>
+      </label>
+      <label>IP 주소 <input type="text" id="ip-address"></label>
+      <label>유형
+        <select id="ip-type">
+          <option value="service">서비스</option>
+          <option value="mgmt">관리</option>
+          <option value="vip">VIP</option>
+          <option value="secondary">보조</option>
+        </select>
+      </label>
+      <label class="form-check">
+        <input type="checkbox" id="ip-is-primary"> 대표 IP
+      </label>
+      <label>호스트명 <input type="text" id="ip-hostname"></label>
+      <label>서비스명 <input type="text" id="ip-service-name"></label>
+      <label>존 <input type="text" id="ip-zone"></label>
+      <label>VLAN <input type="text" id="ip-vlan"></label>
+      <label>비고 <input type="text" id="ip-note"></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-cancel-ip">취소</button>
+      <button class="btn btn-primary" id="btn-save-ip">저장</button>
+    </div>
   </div>
 </dialog>
 

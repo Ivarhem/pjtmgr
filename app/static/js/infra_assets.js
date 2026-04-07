@@ -1752,18 +1752,29 @@ async function renderIpTab(container) {
   } catch (e) { showToast(e.message, "error"); }
 }
 
-function openIpModal(ip) {
+async function openIpModal(ip) {
   const m = document.getElementById("modal-ip");
+  const sel = document.getElementById("ip-interface-id");
+  while (sel.options.length > 1) sel.remove(1);
+  try {
+    const ifaces = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/interfaces");
+    ifaces.forEach(iface => {
+      const opt = document.createElement("option");
+      opt.value = iface.id;
+      opt.textContent = iface.name + " (" + iface.if_type + ")";
+      sel.appendChild(opt);
+    });
+  } catch { /* empty dropdown */ }
+
   document.getElementById("ip-id").value = ip ? ip.id : "";
+  document.getElementById("ip-interface-id").value = ip ? (ip.interface_id || "") : "";
   document.getElementById("ip-address").value = ip ? ip.ip_address : "";
   document.getElementById("ip-type").value = ip ? ip.ip_type : "service";
-  document.getElementById("ip-interface").value = ip ? (ip.interface_name || "") : "";
-  document.getElementById("ip-hostname").value = ip ? (ip.hostname || "") : "";
-  document.getElementById("ip-vlan").value = ip ? (ip.vlan_id || "") : "";
-  document.getElementById("ip-network").value = ip ? (ip.network || "") : "";
-  document.getElementById("ip-netmask").value = ip ? (ip.netmask || "") : "";
-  document.getElementById("ip-gateway").value = ip ? (ip.gateway || "") : "";
   document.getElementById("ip-is-primary").checked = ip ? ip.is_primary : false;
+  document.getElementById("ip-hostname").value = ip ? (ip.hostname || "") : "";
+  document.getElementById("ip-service-name").value = ip ? (ip.service_name || "") : "";
+  document.getElementById("ip-zone").value = ip ? (ip.zone || "") : "";
+  document.getElementById("ip-vlan").value = ip ? (ip.vlan_id || "") : "";
   document.getElementById("ip-note").value = ip ? (ip.note || "") : "";
   document.getElementById("modal-ip-title").textContent = ip ? "IP 수정" : "IP 추가";
   m.showModal();
@@ -1771,16 +1782,17 @@ function openIpModal(ip) {
 
 async function saveIp() {
   const ipId = document.getElementById("ip-id").value;
+  const interfaceId = document.getElementById("ip-interface-id").value;
+  if (!interfaceId) { showToast("인터페이스를 선택하세요.", "warning"); return; }
   const payload = {
+    interface_id: Number(interfaceId),
     ip_address: document.getElementById("ip-address").value,
     ip_type: document.getElementById("ip-type").value,
-    interface_name: document.getElementById("ip-interface").value || null,
-    hostname: document.getElementById("ip-hostname").value || null,
-    vlan_id: document.getElementById("ip-vlan").value || null,
-    network: document.getElementById("ip-network").value || null,
-    netmask: document.getElementById("ip-netmask").value || null,
-    gateway: document.getElementById("ip-gateway").value || null,
     is_primary: document.getElementById("ip-is-primary").checked,
+    hostname: document.getElementById("ip-hostname").value || null,
+    service_name: document.getElementById("ip-service-name").value || null,
+    zone: document.getElementById("ip-zone").value || null,
+    vlan_id: document.getElementById("ip-vlan").value || null,
     note: document.getElementById("ip-note").value || null,
   };
   try {
