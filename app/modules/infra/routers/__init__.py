@@ -40,6 +40,9 @@ from app.modules.infra.routers.catalog_attributes import (
 from app.modules.infra.routers.classification_layouts import (
     router as classification_layouts_router,
 )
+from app.modules.infra.routers.asset_interfaces import (
+    router as asset_interfaces_router,
+)
 from app.modules.infra.routers.catalog_integrity import (
     router as catalog_integrity_router,
 )
@@ -72,6 +75,7 @@ api_router.include_router(rooms_router)
 api_router.include_router(racks_router)
 api_router.include_router(catalog_attributes_router)
 api_router.include_router(classification_layouts_router)
+api_router.include_router(asset_interfaces_router)
 api_router.include_router(catalog_integrity_router)
 api_router.include_router(pages_router)
 
