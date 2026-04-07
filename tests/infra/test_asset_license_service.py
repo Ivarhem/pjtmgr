@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, PermissionDeniedError
 from app.modules.common.models.partner import Partner
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.product_catalog import ProductCatalog
@@ -151,6 +151,52 @@ def test_delete_asset_license_not_found(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     with pytest.raises(NotFoundError):
         delete_asset_license(db_session, 99999, admin)
+
+
+def _make_readonly_user(db_session, readonly_role_id: int):
+    """Create a user with no infra edit permission (영업담당자 role)."""
+    from app.modules.common.models.user import User
+
+    user = User(login_id="readonly_lic", name="ReadOnly", role_id=readonly_role_id)
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+def test_permission_denied_for_non_admin(db_session, admin_role_id, user_role_id) -> None:
+    """A user without inventory edit permission cannot create, update, or delete licenses."""
+    admin = _make_admin_user(db_session, admin_role_id)
+    readonly = _make_readonly_user(db_session, user_role_id)
+    asset = _make_asset(db_session)
+
+    # Create a license as admin first so update/delete tests have a target.
+    lic = create_asset_license(
+        db_session,
+        AssetLicenseCreate(asset_id=asset.id, license_type="OEM"),
+        admin,
+    )
+
+    # create — should be blocked
+    with pytest.raises(PermissionDeniedError):
+        create_asset_license(
+            db_session,
+            AssetLicenseCreate(asset_id=asset.id, license_type="volume"),
+            readonly,
+        )
+
+    # update — should be blocked
+    with pytest.raises(PermissionDeniedError):
+        update_asset_license(
+            db_session,
+            lic.id,
+            AssetLicenseUpdate(license_type="subscription"),
+            readonly,
+        )
+
+    # delete — should be blocked
+    with pytest.raises(PermissionDeniedError):
+        delete_asset_license(db_session, lic.id, readonly)
 
 
 def test_multiple_licenses_per_asset(db_session, admin_role_id) -> None:
