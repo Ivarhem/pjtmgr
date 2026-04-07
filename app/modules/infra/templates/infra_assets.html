@@ -421,7 +421,60 @@
   </div>
 </dialog>
 
-<!-- Interface and network edit modals removed — inline AG Grid in network tab replaces them -->
+<!-- 인터페이스 추가/수정 모달 -->
+<dialog id="modal-interface" class="modal-dialog">
+  <div class="modal-content">
+    <h3 id="modal-interface-title">인터페이스 추가</h3>
+    <input type="hidden" id="iface-id">
+    <div class="form-grid">
+      <label>이름 <input type="text" id="iface-name" placeholder="ge-0/0/1"></label>
+      <label>유형
+        <select id="iface-type">
+          <option value="physical">physical</option>
+          <option value="lag">lag</option>
+          <option value="virtual">virtual</option>
+        </select>
+      </label>
+      <label>속도
+        <select id="iface-speed">
+          <option value="">-</option>
+          <option value="100M">100M</option>
+          <option value="1G">1G</option>
+          <option value="10G">10G</option>
+          <option value="25G">25G</option>
+          <option value="40G">40G</option>
+          <option value="100G">100G</option>
+        </select>
+      </label>
+      <label>미디어
+        <select id="iface-media">
+          <option value="">-</option>
+          <option value="copper">copper</option>
+          <option value="sfp">sfp</option>
+          <option value="sfp+">sfp+</option>
+          <option value="qsfp28">qsfp28</option>
+        </select>
+      </label>
+      <label>슬롯 <input type="text" id="iface-slot" placeholder="Slot1"></label>
+      <label>MAC <input type="text" id="iface-mac" placeholder="AA:BB:CC:DD:EE:FF"></label>
+      <label>상태
+        <select id="iface-admin-status">
+          <option value="up">up</option>
+          <option value="down">down</option>
+        </select>
+      </label>
+      <label>설명 <input type="text" id="iface-description"></label>
+    </div>
+    <div id="iface-lag-members" class="is-hidden" style="margin-top:12px;">
+      <div class="modal-group-title">LAG 멤버 (물리 인터페이스)</div>
+      <div id="iface-lag-member-list" class="form-grid" style="gap:4px;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-cancel-iface">취소</button>
+      <button class="btn btn-primary" id="btn-save-iface">저장</button>
+    </div>
+  </div>
+</dialog>
 
 <!-- 라이선스 추가/수정 모달 -->
 <dialog id="modal-license" class="modal-dialog">
