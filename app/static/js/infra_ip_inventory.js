@@ -43,9 +43,17 @@ const ipColDefs = [
 
 /* ── Data Loading ── */
 
+function _setIpInventoryEmptyState(isEmpty) {
+  const guide = document.getElementById("ctx-empty-ip-inventory");
+  const content = document.getElementById("ip-inventory-content");
+  if (guide) guide.style.display = isEmpty ? "" : "none";
+  if (content) content.style.display = isEmpty ? "none" : "";
+}
+
 async function loadSubnets() {
   const cid = getCtxPartnerId();
-  if (!cid) { _subnets = []; renderSubnetList(); return; }
+  if (!cid) { _subnets = []; renderSubnetList(); _setIpInventoryEmptyState(true); return; }
+  _setIpInventoryEmptyState(false);
   try {
     _subnets = await apiFetch("/api/v1/ip-subnets?partner_id=" + cid);
   } catch { _subnets = []; }

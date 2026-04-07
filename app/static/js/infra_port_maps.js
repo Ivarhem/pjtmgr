@@ -125,9 +125,17 @@ let gridApi;
 
 /* ── Data Loading ── */
 
+function _setPortMapsEmptyState(isEmpty) {
+  const guide = document.getElementById("ctx-empty-portmaps");
+  const content = document.getElementById("portmaps-content");
+  if (guide) guide.style.display = isEmpty ? "" : "none";
+  if (content) content.style.display = isEmpty ? "none" : "";
+}
+
 async function loadPortMaps() {
   const cid = getCtxPartnerId();
-  if (!cid) { gridApi.setGridOption("rowData", []); return; }
+  if (!cid) { gridApi.setGridOption("rowData", []); _setPortMapsEmptyState(true); return; }
+  _setPortMapsEmptyState(false);
 
   // Load assets cache, clear interface cache
   await _loadPmAssets();
