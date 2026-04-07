@@ -183,6 +183,69 @@ def delete_asset_ip(db: Session, ip_id: int, current_user) -> None:
     db.commit()
 
 
+# ── PortMap helpers ──
+
+
+def build_interface_map(
+    db: Session, port_maps: list[PortMap]
+) -> dict[int, dict]:
+    """Collect src/dst interface IDs from port_maps and return enrichment dict."""
+    iface_ids: set[int] = set()
+    for pm in port_maps:
+        if pm.src_interface_id is not None:
+            iface_ids.add(pm.src_interface_id)
+        if pm.dst_interface_id is not None:
+            iface_ids.add(pm.dst_interface_id)
+
+    if not iface_ids:
+        return {}
+
+    rows = db.execute(
+        select(
+            AssetInterface.id,
+            AssetInterface.name,
+            Asset.id.label("asset_id"),
+            Asset.asset_name,
+            Asset.hostname,
+            Asset.zone,
+        )
+        .join(Asset, AssetInterface.asset_id == Asset.id)
+        .where(AssetInterface.id.in_(iface_ids))
+    ).all()
+
+    return {
+        row.id: {
+            "asset_id": row.asset_id,
+            "asset_name": row.asset_name,
+            "hostname": row.hostname,
+            "iface_name": row.name,
+            "zone": row.zone,
+        }
+        for row in rows
+    }
+
+
+def enrich_port_map(pm: PortMap, iface_map: dict[int, dict]) -> dict:
+    """Convert PortMap ORM to dict enriched with denormalized interface/asset fields."""
+    data = {col.name: getattr(pm, col.name) for col in pm.__table__.columns}
+
+    src_info = iface_map.get(pm.src_interface_id) if pm.src_interface_id is not None else None
+    data["src_asset_id"] = src_info["asset_id"] if src_info else None
+    data["src_asset_name"] = src_info["asset_name"] if src_info else None
+    data["src_hostname"] = src_info["hostname"] if src_info else None
+    data["src_interface_name"] = src_info["iface_name"] if src_info else None
+    data["src_zone"] = src_info["zone"] if src_info else None
+
+    dst_info = iface_map.get(pm.dst_interface_id) if pm.dst_interface_id is not None else None
+    data["dst_asset_id"] = dst_info["asset_id"] if dst_info else None
+    data["dst_asset_name"] = dst_info["asset_name"] if dst_info else None
+    data["dst_hostname"] = dst_info["hostname"] if dst_info else None
+    data["dst_interface_name"] = dst_info["iface_name"] if dst_info else None
+    data["dst_zone"] = dst_info["zone"] if dst_info else None
+
+    return data
+
+
 # ── PortMap ──
 
 

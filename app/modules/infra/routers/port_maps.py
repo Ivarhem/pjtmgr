@@ -12,8 +12,10 @@ from app.modules.infra.schemas.port_map import (
     PortMapUpdate,
 )
 from app.modules.infra.services.network_service import (
+    build_interface_map,
     create_port_map,
     delete_port_map,
+    enrich_port_map,
     get_port_map,
     list_port_maps,
     update_port_map,
@@ -30,7 +32,9 @@ def list_port_maps_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> list[PortMapRead]:
-    return list_port_maps(db, partner_id, period_id)
+    port_maps = list_port_maps(db, partner_id, period_id)
+    iface_map = build_interface_map(db, port_maps)
+    return [PortMapRead(**enrich_port_map(pm, iface_map)) for pm in port_maps]
 
 
 @router.post(

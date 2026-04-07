@@ -67,3 +67,15 @@ class PortMapRead(BaseModel):
     cable_category: str | None
     created_at: datetime
     updated_at: datetime
+
+    # Denormalized fields enriched at query time
+    src_asset_id: int | None = None
+    src_asset_name: str | None = None
+    src_hostname: str | None = None
+    src_interface_name: str | None = None
+    src_zone: str | None = None
+    dst_asset_id: int | None = None
+    dst_asset_name: str | None = None
+    dst_hostname: str | None = None
+    dst_interface_name: str | None = None
+    dst_zone: str | None = None
