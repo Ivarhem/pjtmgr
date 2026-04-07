@@ -19,6 +19,8 @@
 | 정책 적용 상태 (PolicyAssignment) | 고객사/자산 단위 정책 준수 현황 |
 | 자산 담당자 매핑 (AssetContact) | 특정 자산과 담당자(PartnerContact)의 역할 연결 |
 | 자산 소프트웨어 (AssetSoftware) | 자산에 설치/연동된 SW 정보. relation_type: installed/calls/depends_on |
+| 자산 라이선스 (AssetLicense) | 자산에 귀속된 HW 라이선스. 유형, 키, 귀속, 기간 관리 |
+| 자산 인터페이스 (AssetInterface) | 물리/논리 인터페이스 인스턴스. IP 할당과 포트맵의 기준점 |
 | 제품 카탈로그 (ProductCatalog) | 글로벌 HW 제품 정보 (partner_id 없음). vendor+name 유니크 |
 | HW 스펙 (HardwareSpec) | 제품 카탈로그 1:1 물리 사양 (size_unit, 전원, CPU, 메모리 등) |
 | HW 인터페이스 (HardwareInterface) | 제품 카탈로그 1:N 포트/인터페이스 사양 |
@@ -33,7 +35,10 @@
 ## 데이터 원칙
 
 - **업체 중심 구조**: `Asset`, `IpSubnet`, `PortMap`, `PolicyAssignment`는 `partner_id` FK로 업체에 귀속된다. `ContractPeriod`는 `partner_id` NOT NULL로 업체에 종속된다.
-- `Asset`을 중심으로 `AssetIP`, `PortMap`, `AssetContact`, `AssetSoftware`가 연결된다.
+- `Asset`을 중심으로 `AssetIP`, `PortMap`, `AssetContact`, `AssetSoftware`, `AssetInterface`, `AssetLicense`가 연결된다.
+- **AssetIP는 인터페이스를 통해 자산과 연결된다.** `AssetIP.interface_id` FK가 `AssetInterface`를 가리키며, asset_id 직접 연결은 제거되었다.
+- **PortMap은 인터페이스 FK로 연결 구간을 표현한다.** `PortMap.src_interface_id`, `PortMap.dst_interface_id` FK 사용. 기존 텍스트 필드(`src_port`, `dst_port` 등 24개)는 제거되었다.
+- **AssetSoftware에서 `license_type`/`license_count` 컬럼은 제거되었다.** HW 라이선스는 `AssetLicense`로 관리하고, SW 자체를 별도 자산으로 등록하는 방식을 사용한다.
 - `Asset.hardware_model_id` FK로 `ProductCatalog`와 연결 (nullable, SET NULL). 기존 vendor/model 컬럼은 하위호환 유지.
 - `ProductCatalog`는 글로벌 리소스 (partner_id 없음). `HardwareSpec` 1:1, `HardwareInterface` 1:N 하위 리소스.
 - `ProductCatalog`는 사용자 입장에서 제품 등록/조회/편집을 처리하는 메인 화면으로 동작한다.
@@ -124,6 +129,7 @@
 - **IP 할당은 인터페이스를 통해 수행한다.** `AssetIP.interface_id` FK가 `AssetInterface`를 가리킨다. 자산에 직접 IP를 할당하는 경로는 없다.
 - **포트맵은 인터페이스 FK를 사용한다.** `PortMap.src_interface_id`, `PortMap.dst_interface_id`로 연결 구간을 표현한다. 기존 24개 텍스트 필드(`src_port`, `dst_port` 등)는 제거되었다.
 - **카탈로그 자동 생성:** 자산에 카탈로그(ProductCatalog)를 연결하면, 해당 카탈로그의 `HardwareInterface` 스펙을 기반으로 `AssetInterface` 인스턴스를 자동 생성할 수 있다.
+- **자산 상세 화면은 5탭 구조다:** `개요` / `운영` / `네트워크` / `업체·담당` / `이력`. 인터페이스 패널과 IP/포트맵 연결은 `네트워크` 탭에서 관리한다.
 
 ---
 
