@@ -1539,6 +1539,49 @@ function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
   });
 }
 
+// ── TaggedHeaderComponent ─────────────────────────────────────────
+/**
+ * AG Grid 커스텀 헤더 컴포넌트.
+ * headerName 옆에 필드 태그(필수/고유 등)를 표시하며,
+ * body.hide-desc 클래스가 있을 때 태그를 자동으로 숨긴다.
+ *
+ * 사용법 (컬럼 정의):
+ *   headerComponent: TaggedHeaderComponent,
+ *   headerComponentParams: { tags: ["필수", "고유"] },
+ */
+class TaggedHeaderComponent {
+  init(params) {
+    this.params = params;
+    this.el = document.createElement("div");
+    this.el.style.display = "inline-flex";
+    this.el.style.alignItems = "center";
+    this.el.style.gap = "4px";
+
+    const label = document.createElement("span");
+    label.textContent = params.displayName;
+    this.el.appendChild(label);
+
+    const tags = params.tags || [];
+    tags.forEach(tag => {
+      const span = document.createElement("span");
+      span.className = "field-tag " + (tag === "필수" ? "field-tag-required" : tag === "고유" ? "field-tag-unique" : "");
+      span.textContent = tag;
+      this.el.appendChild(span);
+    });
+
+    if (params.enableSorting) {
+      this.el.style.cursor = "pointer";
+      this.el.addEventListener("click", (e) => {
+        params.progressSort(e.shiftKey);
+      });
+    }
+  }
+
+  getGui() { return this.el; }
+  refresh() { return false; }
+  destroy() {}
+}
+
 // ── ComboBox Cell Editor Factory ─────────────────────────────────
 
 /**

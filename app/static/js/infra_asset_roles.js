@@ -30,7 +30,9 @@ const ROLE_DETAIL_OPEN_KEY = "role_detail_open";
 const UNCLASSIFIED = "미분류";
 
 const roleColumnDefs = [
-  { field: "role_name", headerName: "역할명", flex: 1, minWidth: 150, sort: "asc" },
+  { field: "role_name", headerName: "역할명", flex: 1, minWidth: 150, sort: "asc",
+    headerComponent: TaggedHeaderComponent,
+    headerComponentParams: { tags: ["필수", "고유"] } },
 ];
 
 /* ── Grid ── */

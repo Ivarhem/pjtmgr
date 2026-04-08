@@ -468,6 +468,7 @@ body.mobile-nav-open .mobile-nav-toggle .icon-close { display: block; }
 }
 .subnav-links a.active .subnav-sub { color: var(--primary-color); opacity: 0.8; }
 body.hide-desc .subnav-sub { display: none; }
+body.hide-desc .field-tag { display: none; }
 
 /* 페이지 내 도움말 텍스트 */
 .data-note {

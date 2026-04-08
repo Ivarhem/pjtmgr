@@ -410,6 +410,8 @@ function getRoleNameById(roleId, fallbackNames) {
 const ASSET_INFO_COLS = [
   {
     field: "asset_name", headerName: "자산명", flex: 1.2, minWidth: 220,
+    headerComponent: TaggedHeaderComponent,
+    headerComponentParams: { tags: ["필수", "고유"] },
     editable: () => isGridFieldEditable("asset_name"),
     cellRenderer: (params) => {
       const wrapper = document.createElement("span");

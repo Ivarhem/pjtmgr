@@ -11,7 +11,9 @@ let _selectedSubnet = null;
 
 /* ── IP Grid columns ── */
 const ipColDefs = [
-  { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc" },
+  { field: "ip_address", headerName: "IP 주소", width: 160, sort: "asc",
+    headerComponent: TaggedHeaderComponent,
+    headerComponentParams: { tags: ["필수"] } },
   { field: "ip_type", headerName: "용도", width: 100, valueFormatter: p => IP_TYPE_LABELS[p.value] || p.value },
   { field: "asset_name", headerName: "자산", width: 130 },
   { field: "interface_name", headerName: "인터페이스", width: 120 },
