@@ -362,9 +362,8 @@ function renderEmptyContent() {
 }
 
 function syncButtons() {
-  const type = _selectedNode ? _selectedNode.type : null;
-  document.getElementById("btn-add-room").disabled = !(type === "center" || type === "floor");
-  document.getElementById("btn-add-rack").disabled = type !== "room";
+  document.getElementById("btn-add-room").disabled = !_selectedCenterId;
+  document.getElementById("btn-add-rack").disabled = !_selectedRoomId;
 }
 
 /* ── Content Views ── */
@@ -1088,11 +1087,34 @@ function initTreeSplitter() {
   });
 }
 
+/* ── Label Base Setting ── */
+
+async function loadLabelBaseSetting() {
+  const pid = getCtxProjectId();
+  if (!pid) return;
+  try {
+    const period = await apiFetch("/api/v1/contract-periods/" + pid);
+    if (period.rack_label_base) {
+      document.getElementById("rack-label-base").value = period.rack_label_base;
+    }
+  } catch { /* default */ }
+}
+
 /* ── Event Listeners ── */
 
 document.addEventListener("DOMContentLoaded", () => {
   initTreeSplitter();
-  loadTree().catch(err => showToast(err.message, "error"));
+  loadTree()
+    .then(() => loadLabelBaseSetting())
+    .catch(err => showToast(err.message, "error"));
+});
+
+document.getElementById("rack-label-base").addEventListener("change", () => {
+  if (_selectedNode && _selectedNode.type === "rack") {
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRackView(content, _selectedNode.data);
+  }
 });
 
 window.addEventListener("ctx-changed", () => {
@@ -1100,7 +1122,9 @@ window.addEventListener("ctx-changed", () => {
   _selectedCenterId = null;
   _selectedRoomId = null;
   _treeCollapsed.clear();
-  loadTree().catch(err => showToast(err.message, "error"));
+  loadTree()
+    .then(() => loadLabelBaseSetting())
+    .catch(err => showToast(err.message, "error"));
 });
 
 document.getElementById("btn-add-center").addEventListener("click", () => openCenterModal());
