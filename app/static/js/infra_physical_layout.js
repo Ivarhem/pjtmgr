@@ -656,34 +656,209 @@ function _enableRackDrag(grid, racks, roomId) {
   });
 }
 
-function renderRackView(container, rack) {
-  const wrapper = createContentWrapper();
-  container.appendChild(wrapper);
+async function renderRackView(container, rack) {
+  // Fetch assets for this rack
+  let assets = [];
+  try {
+    assets = await apiFetch("/api/v1/racks/" + rack.id + "/assets");
+  } catch { /* empty */ }
 
-  wrapper.appendChild(createContentHeader(
-    "\uD83D\uDCBD", rack.rack_name || rack.rack_code,
-    () => openRackModal(rack),
-    () => deleteRack(rack),
-  ));
+  const totalU = rack.total_units || 42;
+  const labelBase = document.getElementById("rack-label-base")?.value || "start";
 
-  // Info card
+  // Header
+  const header = document.createElement("div");
+  header.className = "layout-view-header";
+  const h3 = document.createElement("h3");
+  h3.textContent = (rack.rack_name || rack.rack_code) + " (" + totalU + "U)";
+  header.appendChild(h3);
+
+  const actions = document.createElement("div");
+  actions.className = "gap-sm";
+  const btnEdit = document.createElement("button");
+  btnEdit.className = "btn btn-sm btn-secondary";
+  btnEdit.textContent = "랙 수정";
+  btnEdit.addEventListener("click", () => openRackModal(rack));
+  actions.appendChild(btnEdit);
+  header.appendChild(actions);
+  container.appendChild(header);
+
+  // Usage summary
+  const placed = assets.filter(a => a.rack_start_unit != null);
+  const unplaced = assets.filter(a => a.rack_start_unit == null);
+  const usedU = placed.reduce((sum, a) => sum + ((a.rack_end_unit || a.rack_start_unit) - a.rack_start_unit + 1), 0);
   const info = document.createElement("div");
-  info.className = "card";
-  info.style.padding = "16px";
-  appendFieldRow(info, "\uB799\uCF54\uB4DC", rack.rack_code);
-  appendFieldRow(info, "\uB799\uBA85", rack.rack_name || "\u2014");
-  appendFieldRow(info, "\uCD1D U", String(rack.total_units));
-  appendFieldRow(info, "\uC704\uCE58\uC0C1\uC138", rack.location_detail || "\u2014");
-  appendFieldRow(info, "\uC0C1\uD0DC", createStatusBadge(rack.is_active));
-  appendFieldRow(info, "\uBE44\uACE0", rack.note || "\u2014");
-  wrapper.appendChild(info);
+  info.className = "layout-view-info";
+  info.textContent = "사용 " + usedU + "U / " + totalU + "U (" + Math.round(usedU / totalU * 100) + "%) | 장비 " + assets.length + "대 (미배치 " + unplaced.length + ")";
+  container.appendChild(info);
 
-  // Placeholder for equipment layout
-  const p = document.createElement("p");
-  p.className = "text-muted";
-  p.style.marginTop = "16px";
-  p.textContent = "\uC7A5\uBE44 \uBC30\uCE58\uB3C4\uAC00 \uC5EC\uAE30\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.";
-  wrapper.appendChild(p);
+  // Build slot map
+  const slotMap = {}; // u -> asset or null
+  for (let u = 1; u <= totalU; u++) slotMap[u] = null;
+  placed.forEach(a => {
+    const start = a.rack_start_unit;
+    const end = a.rack_end_unit || start;
+    for (let u = start; u <= end; u++) slotMap[u] = a;
+  });
+
+  // U diagram
+  const diagram = document.createElement("div");
+  diagram.className = "u-diagram";
+  container.appendChild(diagram);
+
+  // Determine display order
+  const uOrder = [];
+  if (labelBase === "start") {
+    for (let u = totalU; u >= 1; u--) uOrder.push(u); // top=42, bottom=1
+  } else {
+    for (let u = 1; u <= totalU; u++) uOrder.push(u); // top=1, bottom=42
+  }
+
+  const renderedAssets = new Set(); // track which assets already have a block rendered
+
+  uOrder.forEach(u => {
+    const slot = document.createElement("div");
+    slot.className = "u-slot";
+    slot.dataset.unit = u;
+
+    const numEl = document.createElement("span");
+    numEl.className = "u-slot-number";
+    numEl.textContent = u;
+    slot.appendChild(numEl);
+
+    const contentEl = document.createElement("div");
+    contentEl.className = "u-slot-content";
+
+    const asset = slotMap[u];
+    if (asset && !renderedAssets.has(asset.id)) {
+      renderedAssets.add(asset.id);
+      const sizeU = (asset.rack_end_unit || asset.rack_start_unit) - asset.rack_start_unit + 1;
+      const block = document.createElement("div");
+      block.className = "equipment-block";
+      if (asset.environment) block.classList.add("env-" + asset.environment);
+      block.draggable = true;
+      block.dataset.assetId = asset.id;
+      block.dataset.sizeUnit = sizeU;
+      block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "");
+      if (sizeU > 1) {
+        block.style.height = (sizeU * 24 - 2) + "px"; // each slot is 24px
+        block.style.position = "relative";
+        block.style.zIndex = "1";
+      }
+
+      // Drag start
+      block.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("application/x-asset-id", String(asset.id));
+        e.dataTransfer.setData("application/x-size-unit", String(sizeU));
+        e.dataTransfer.effectAllowed = "move";
+        block.classList.add("is-dragging");
+      });
+      block.addEventListener("dragend", () => block.classList.remove("is-dragging"));
+
+      contentEl.appendChild(block);
+    } else if (asset && renderedAssets.has(asset.id)) {
+      // This slot is part of a multi-U equipment — leave content empty (the block spans visually)
+      contentEl.classList.add("u-slot-occupied");
+    }
+
+    // Drop zone handlers
+    slot.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      slot.classList.add("drop-target");
+    });
+    slot.addEventListener("dragleave", () => slot.classList.remove("drop-target"));
+    slot.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      slot.classList.remove("drop-target");
+      const assetId = Number(e.dataTransfer.getData("application/x-asset-id"));
+      const sizeUnit = Number(e.dataTransfer.getData("application/x-size-unit")) || 1;
+      const targetU = Number(slot.dataset.unit);
+
+      // Check if placement is valid
+      if (!_canPlaceAt(slotMap, targetU, sizeUnit, totalU, assetId)) {
+        showToast("해당 위치에 배치할 수 없습니다. (" + sizeUnit + "U 연속 빈 공간 필요)", "warning");
+        return;
+      }
+
+      try {
+        await apiFetch("/api/v1/assets/" + assetId, {
+          method: "PATCH",
+          body: {
+            rack_start_unit: targetU,
+            rack_end_unit: targetU + sizeUnit - 1,
+          },
+        });
+        showToast("장비 배치 완료");
+        // Re-render
+        const content = document.getElementById("layout-content");
+        content.textContent = "";
+        renderRackView(content, rack);
+      } catch (err) { showToast(err.message, "error"); }
+    });
+
+    slot.appendChild(contentEl);
+    diagram.appendChild(slot);
+  });
+
+  // Unplaced section
+  if (unplaced.length) {
+    const section = document.createElement("div");
+    section.className = "unplaced-section";
+    const title = document.createElement("div");
+    title.className = "unplaced-title";
+    title.textContent = "미배치 장비 (" + unplaced.length + ")";
+    section.appendChild(title);
+
+    unplaced.forEach(a => {
+      const item = document.createElement("div");
+      item.className = "unplaced-item";
+      item.draggable = true;
+      item.dataset.assetId = a.id;
+      item.dataset.sizeUnit = a.size_unit || 1;
+      item.textContent = a.asset_name + (a.size_unit ? " (" + a.size_unit + "U)" : "");
+
+      item.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("application/x-asset-id", String(a.id));
+        e.dataTransfer.setData("application/x-size-unit", String(a.size_unit || 1));
+        e.dataTransfer.effectAllowed = "move";
+        item.classList.add("is-dragging");
+      });
+      item.addEventListener("dragend", () => item.classList.remove("is-dragging"));
+
+      section.appendChild(item);
+    });
+
+    // Drop zone for "unplace" — drag back to unplaced
+    section.addEventListener("dragover", (e) => { e.preventDefault(); section.classList.add("drop-target"); });
+    section.addEventListener("dragleave", () => section.classList.remove("drop-target"));
+    section.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      section.classList.remove("drop-target");
+      const assetId = Number(e.dataTransfer.getData("application/x-asset-id"));
+      if (!assetId) return;
+      try {
+        await apiFetch("/api/v1/assets/" + assetId, {
+          method: "PATCH",
+          body: { rack_start_unit: null, rack_end_unit: null },
+        });
+        showToast("장비 배치 해제");
+        const content = document.getElementById("layout-content");
+        content.textContent = "";
+        renderRackView(content, rack);
+      } catch (err) { showToast(err.message, "error"); }
+    });
+
+    container.appendChild(section);
+  }
+}
+
+function _canPlaceAt(slotMap, startU, sizeUnit, totalU, excludeAssetId) {
+  for (let u = startU; u < startU + sizeUnit; u++) {
+    if (u < 1 || u > totalU) return false;
+    const occupant = slotMap[u];
+    if (occupant && occupant.id !== excludeAssetId) return false;
+  }
+  return true;
 }
 
 /* ── Helpers ── */
