@@ -46,6 +46,8 @@ class Asset(TimestampMixin, Base):
     equipment_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     rack_no: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rack_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    rack_start_unit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rack_end_unit: Mapped[int | None] = mapped_column(Integer, nullable=True)
     phase: Mapped[str | None] = mapped_column(String(50), nullable=True)
     received_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)

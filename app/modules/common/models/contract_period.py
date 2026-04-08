@@ -26,6 +26,7 @@ class ContractPeriod(TimestampMixin, Base):
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     is_planned: Mapped[bool] = mapped_column(Boolean, default=True)
     notes: Mapped[str | None] = mapped_column(String(500))
+    rack_label_base: Mapped[str] = mapped_column(String(10), default="start")
 
     contract: Mapped["Contract"] = relationship(back_populates="periods")
     owner: Mapped["User | None"] = relationship(foreign_keys=[owner_user_id])

@@ -22,6 +22,7 @@ class RackUpdate(BaseModel):
     location_detail: str | None = None
     is_active: bool | None = None
     note: str | None = None
+    sort_order: int | None = None
 
 
 class RackRead(BaseModel):
@@ -39,5 +40,6 @@ class RackRead(BaseModel):
     location_detail: str | None = None
     is_active: bool
     note: str | None = None
+    sort_order: int = 0
     created_at: datetime
     updated_at: datetime

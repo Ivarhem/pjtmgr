@@ -12,6 +12,7 @@ class RoomCreate(BaseModel):
     floor: str | None = None
     is_active: bool = True
     note: str | None = None
+    racks_per_row: int = 6
 
 
 class RoomUpdate(BaseModel):
@@ -20,6 +21,7 @@ class RoomUpdate(BaseModel):
     floor: str | None = None
     is_active: bool | None = None
     note: str | None = None
+    racks_per_row: int | None = None
 
 
 class RoomRead(BaseModel):
@@ -34,6 +36,7 @@ class RoomRead(BaseModel):
     floor: str | None = None
     is_active: bool
     note: str | None = None
+    racks_per_row: int = 6
     rack_count: int = 0
     created_at: datetime
     updated_at: datetime
