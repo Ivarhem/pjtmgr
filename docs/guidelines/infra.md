@@ -86,6 +86,10 @@
 - 프로젝트별 분류 레이아웃 연결은 `ContractPeriod.classification_layout_id` 숫자 필드로 유지하되, common ORM이 infra 테이블 FK를 직접 참조하지 않도록 관리한다.
   - 실제 레이아웃 해석과 검증 책임은 infra 서비스(`classification_layout_service` 등)에 둔다.
   - DB FK/인덱스 변경이 필요하면 common 모델 변경과 별도 migration으로 따라간다.
+- 배치 페이지는 트리 탐색(센터 > 층 > 전산실 > 랙) + 시각화(랙 격자, U 다이어그램) 구조다.
+- 랙 U 위치는 EIA-310 표준(하단=1U)으로 저장한다. 표시 방향(Start/End)은 프로젝트 설정(`ContractPeriod.rack_label_base`)으로 제어한다.
+- 랙 배치 순서는 `Rack.sort_order`로 관리하며 드래그로 재배치 가능하다.
+- 장비의 랙 내 위치는 `Asset.rack_start_unit`/`rack_end_unit`(정수)로 저장한다. 드래그로 배치 가능하다.
 
 ## 상태값 / 코드값 규칙
 
