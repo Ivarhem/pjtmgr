@@ -2875,7 +2875,7 @@ async function openCreateModal() {
     if (pid) periodSel.value = pid;
   } catch (_) { /* ignore */ }
 
-  await loadCatalogListForModal("hardware");
+  await loadCatalogListForModal("");
   modal.showModal();
   updateAssetSaveState();
   document.getElementById("catalog-search").focus();

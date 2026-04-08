@@ -85,18 +85,8 @@
   <form id="form-asset">
     <fieldset class="modal-group">
       <legend class="modal-group-title">제품 선택</legend>
+      <input type="hidden" id="catalog-kind-filter-modal" value="hardware">
       <div class="form-grid">
-        <label>
-          상위분류
-          <select id="catalog-kind-filter-modal">
-            <option value="hardware">하드웨어</option>
-            <option value="software">소프트웨어</option>
-            <option value="model">모델</option>
-            <option value="service">서비스</option>
-            <option value="business_capability">업무기능</option>
-            <option value="dataset">데이터셋</option>
-          </select>
-        </label>
         <label class="full-width"><span class="label-text">카탈로그 제품<span class="req">*</span></span>
           <div class="modal-combobox">
             <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
