@@ -48,6 +48,8 @@ from app.modules.infra.routers.catalog_integrity import (
     router as catalog_integrity_router,
 )
 from app.modules.infra.routers.pages import router as pages_router
+from app.modules.infra.routers.rack_lines import router as rack_lines_router
+from app.modules.infra.routers.code_generation import router as code_generation_router
 
 api_router = APIRouter(dependencies=[require_module_access("infra", "read")])
 api_router.include_router(period_phases_router)
@@ -80,5 +82,7 @@ api_router.include_router(classification_layouts_router)
 api_router.include_router(asset_interfaces_router)
 api_router.include_router(catalog_integrity_router)
 api_router.include_router(pages_router)
+api_router.include_router(rack_lines_router)
+api_router.include_router(code_generation_router)
 
 __all__ = ["api_router"]
