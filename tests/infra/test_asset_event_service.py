@@ -136,5 +136,5 @@ def test_asset_event_includes_related_asset_and_actor(db_session, admin_role_id)
     events = list_asset_events(db_session, asset.id)
     assert events[0].related_asset_id == replacement_asset.id
     assert events[0].related_asset_name == replacement_asset.asset_name
-    assert events[0].related_asset_code == replacement_asset.system_id
+    assert events[0].related_asset_system_id == replacement_asset.system_id
     assert events[0].created_by_user_name == admin.name

@@ -118,7 +118,7 @@ def _serialize_asset_event(
             "summary": event.summary,
             "detail": event.detail,
             "related_asset_name": related_asset_name,
-            "related_asset_code": related_asset_system_id,
+            "related_asset_system_id": related_asset_system_id,
             "created_by_user_name": created_by_user_name,
             "system_id_snapshot": event.system_id_snapshot,
             "asset_name_snapshot": event.asset_name_snapshot,

@@ -122,8 +122,8 @@ function formatDateTime(value) {
 
 function buildAssetEventMeta(row) {
   const meta = [];
-  if (row.related_asset_name || row.related_asset_code) {
-    meta.push(`관련 자산: ${[row.related_asset_name, row.related_asset_code].filter(Boolean).join(" / ")}`);
+  if (row.related_asset_name || row.related_asset_system_id) {
+    meta.push(`관련 자산: ${[row.related_asset_name, row.related_asset_system_id].filter(Boolean).join(" / ")}`);
   }
   if (row.created_by_user_name) {
     meta.push(`기록자: ${row.created_by_user_name}`);
