@@ -81,7 +81,7 @@
     <div class="modal-group full-width">
       <div class="modal-group-title">기본 정보</div>
       <div class="form-grid">
-        <label>사업명<span class="req">*</span>
+        <label><span class="label-text">사업명<span class="req">*</span></span>
           <input type="text" id="project-name" required>
         </label>
         <label>
@@ -131,7 +131,7 @@
   <h2 id="modal-phase-title">단계 등록</h2>
   <form id="form-phase" class="form-grid">
     <input type="hidden" id="phase-id">
-    <label>단계 유형<span class="req">*</span>
+    <label><span class="label-text">단계 유형<span class="req">*</span></span>
       <select id="phase-type" required>
         <option value="analysis">분석</option>
         <option value="design">설계</option>
@@ -172,10 +172,10 @@
   <h2 id="modal-deliverable-title">산출물 등록</h2>
   <form id="form-deliverable" class="form-grid">
     <input type="hidden" id="deliverable-id">
-    <label>소속 단계<span class="req">*</span>
+    <label><span class="label-text">소속 단계<span class="req">*</span></span>
       <select id="deliverable-phase-id" required></select>
     </label>
-    <label>산출물명<span class="req">*</span>
+    <label><span class="label-text">산출물명<span class="req">*</span></span>
       <input type="text" id="deliverable-name" required>
     </label>
     <label>
