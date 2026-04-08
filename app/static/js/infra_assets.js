@@ -688,7 +688,7 @@ function buildCatalogClassificationPath(item) {
 function updateAssetClassificationPreview(text) {
   const preview = document.getElementById("asset-classification-preview");
   if (!preview) return;
-  preview.textContent = text || "카탈로그 제품을 선택하면 분류 경로가 표시됩니다.";
+  preview.textContent = text || "—";
 }
 
 async function loadLayoutCenters(partnerId) {
@@ -2704,22 +2704,16 @@ function updateAssetSaveState() {
   btn.disabled = !ready;
 }
 
-function updateAssetNameHint(text) {
-  const hint = document.getElementById("asset-name-hint");
-  if (!hint) return;
-  hint.textContent = text;
+function updateAssetNameHint(_text) {
+  // hint element removed from modal — no-op
 }
 
-function updateAssetHostnameHint(text) {
-  const hint = document.getElementById("asset-hostname-hint");
-  if (!hint) return;
-  hint.textContent = text;
+function updateAssetHostnameHint(_text) {
+  // hint element removed from modal — no-op
 }
 
-function updateAssetRoleSuggestionHint(text) {
-  const hint = document.getElementById("asset-role-suggestion-hint");
-  if (!hint) return;
-  hint.textContent = text;
+function updateAssetRoleSuggestionHint(_text) {
+  // hint element removed from modal — no-op
 }
 
 function normalizeRoleNameCandidate(name) {
@@ -2760,14 +2754,8 @@ function clearSelectedCatalog({ keepSearch = false } = {}) {
   } else {
     combo.reset();
   }
-  const summary = document.getElementById("catalog-summary");
-  summary.classList.add("is-hidden");
-  summary.textContent = "";
-  summary.classList.remove("placeholder-style");
   document.getElementById("btn-clear-catalog").classList.add("is-hidden");
-  updateAssetNameHint("카탈로그를 선택하면 자산명이 자동 제안됩니다.");
-  updateAssetHostnameHint("호스트명은 자산명 기준으로 자동 제안됩니다.");
-  updateAssetRoleSuggestionHint("역할명 추천은 자산명 기준으로 참고용 제안만 제공합니다. 자동 선택되지 않습니다.");
+  updateAssetClassificationPreview("—");
   updateAssetSaveState();
 }
 
@@ -2841,8 +2829,7 @@ async function openCreateModal() {
   fillSelectOptions(document.getElementById("asset-center-id"), [], "id", (item) => item.id, "-- 선택 안함 --");
   fillSelectOptions(document.getElementById("asset-room-id"), [], "id", (item) => item.id, "-- 센터 선택 --", null, true);
   fillSelectOptions(document.getElementById("asset-rack-id"), [], "id", (item) => item.id, "-- 전산실 선택 --", null, true);
-  updateAssetRoleSuggestionHint("역할명 추천은 자산명 기준으로 참고용 제안만 제공합니다. 자동 선택되지 않습니다.");
-  updateAssetClassificationPreview("");
+  updateAssetClassificationPreview("—");
 
   // 귀속사업 드롭다운 채우기
   const periodSel = document.getElementById("asset-period");
@@ -3169,19 +3156,6 @@ function selectCatalogItem(item) {
   document.getElementById("catalog-search").value = ((item.vendor || "") + " " + (item.name || "")).trim();
   document.getElementById("btn-clear-catalog").classList.remove("is-hidden");
 
-  // 요약 표시
-  const summary = document.getElementById("catalog-summary");
-  const kindLabel = CATALOG_KIND_LABELS[item.product_type] || item.product_type || "-";
-  summary.textContent = "상위분류: " + kindLabel +
-    " | 제조사: " + (item.vendor || "-") +
-    " | 모델: " + (item.name || "-") +
-    " | 분류경로: " + buildCatalogClassificationPath(item);
-  summary.classList.remove("is-hidden");
-  if (item.is_placeholder) {
-    summary.classList.add("placeholder-style");
-  } else {
-    summary.classList.remove("placeholder-style");
-  }
   const suggestedName = suggestUniqueAssetName(suggestAssetNameBase(item));
   const assetNameInput = document.getElementById("asset-name");
   if (suggestedName && (!_assetNameTouched || !assetNameInput.value.trim())) {
@@ -3700,9 +3674,7 @@ document.getElementById("asset-period").addEventListener("change", async () => {
   updateAssetSaveState();
   await refreshAssetClassificationSelect();
 });
-document.getElementById("btn-open-classification-schemes").addEventListener("click", () => {
-  window.location.href = getClassificationManagementUrl();
-});
+// btn-open-classification-schemes removed from modal
 document.getElementById("asset-center-id").addEventListener("change", async (event) => {
   const centerId = event.target.value ? Number(event.target.value) : null;
   const rooms = centerId ? await loadLayoutRooms(centerId) : [];
