@@ -1,105 +1,46 @@
 {% extends "base.html" %}
-{% block title %}물리배치{% endblock %}
+{% block title %}배치 - 프로젝트관리{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="/static/css/infra_common.css">
 {% endblock %}
 
 {% block content %}
-<div class="infra-inline-actions mb-md">
-  <button class="btn btn-secondary" id="btn-add-center">센터 등록</button>
-  <button class="btn btn-secondary" id="btn-add-room" disabled>전산실 등록</button>
-  <button class="btn btn-primary" id="btn-add-rack" disabled>랙 등록</button>
+<div class="page-header">
+  <h1><i data-lucide="layout-grid" class="icon-sm"></i> 배치</h1>
+  <div class="infra-inline-actions">
+    <select id="rack-label-base" class="select-sm" title="U 라벨 기준">
+      <option value="start">U 기준: Start (하→상)</option>
+      <option value="end">U 기준: End (상→하)</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" id="btn-add-center">센터 등록</button>
+    <button class="btn btn-secondary btn-sm" id="btn-add-room" disabled>전산실 등록</button>
+    <button class="btn btn-primary btn-sm" id="btn-add-rack" disabled>랙 등록</button>
+  </div>
 </div>
 
-<p class="text-secondary text-sm mb-md">
-  현재 고객사와 프로젝트 범위를 기준으로 센터, 전산실, 랙 구조와 자산 배치 기준을 관리합니다.
-</p>
-
-<div class="placeholder-message infra-layout-help">
-  배치도 시각화는 후속 단계에서 구현합니다. 현재는 자산의 센터/랙 정보를 참조할 기준 데이터로 센터, 전산실, 랙을 등록·관리합니다.
-</div>
-
-<div class="physical-layout-admin physical-layout-admin-3col">
-  <section class="card physical-panel">
-    <div class="panel-header">
-      <div>
-        <h3><i data-lucide="building" class="icon-sm"></i> 센터</h3>
-        <p class="text-muted physical-panel-help">센터 생성 시 기본 전산실 `MAIN`이 자동 생성됩니다.</p>
-      </div>
+<div class="catalog-layout" id="layout-shell">
+  <!-- Left: Tree -->
+  <section class="catalog-category-panel" id="layout-tree-panel">
+    <div class="catalog-category-header">
+      <h2>배치 구조</h2>
     </div>
-    <div class="physical-table-wrap">
-      <table class="physical-table">
-        <thead>
-          <tr>
-            <th>센터코드</th>
-            <th>센터명</th>
-            <th>위치</th>
-            <th>전산실</th>
-            <th>랙</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="center-table-body">
-          <tr><td colspan="6" class="placeholder-message">고객사를 선택하면 센터를 불러옵니다.</td></tr>
-        </tbody>
-      </table>
+    <div id="layout-tree" class="classification-tree">
+      <p class="text-muted" style="padding:12px;">고객사를 선택하면 배치 구조를 표시합니다.</p>
     </div>
   </section>
 
-  <section class="card physical-panel">
-    <div class="panel-header">
-      <div>
-        <h3 id="room-panel-title"><i data-lucide="door-open" class="icon-sm"></i> 전산실</h3>
-        <p class="text-muted physical-panel-help" id="room-panel-help">센터를 선택하면 전산실 목록을 볼 수 있습니다.</p>
-      </div>
-    </div>
-    <div class="physical-table-wrap">
-      <table class="physical-table">
-        <thead>
-          <tr>
-            <th>전산실코드</th>
-            <th>전산실명</th>
-            <th>층</th>
-            <th>랙</th>
-            <th>상태</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="room-table-body">
-          <tr><td colspan="6" class="placeholder-message">센터를 먼저 선택하세요.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+  <div class="catalog-category-splitter" id="layout-category-splitter"></div>
 
-  <section class="card physical-panel">
-    <div class="panel-header">
-      <div>
-        <h3 id="rack-panel-title"><i data-lucide="hard-drive" class="icon-sm"></i> 랙</h3>
-        <p class="text-muted physical-panel-help" id="rack-panel-help">전산실을 선택하면 랙 목록을 볼 수 있습니다.</p>
-      </div>
+  <!-- Right: Content -->
+  <div class="catalog-main-panel" id="layout-content">
+    <div class="placeholder-message" style="margin:auto;">
+      <p>왼쪽 트리에서 센터, 전산실 또는 랙을 선택하세요.</p>
     </div>
-    <div class="physical-table-wrap">
-      <table class="physical-table">
-        <thead>
-          <tr>
-            <th>랙코드</th>
-            <th>랙명</th>
-            <th>총 U</th>
-            <th>위치상세</th>
-            <th>상태</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="rack-table-body">
-          <tr><td colspan="6" class="placeholder-message">전산실을 먼저 선택하세요.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+  </div>
 </div>
 
+<!-- Modal: Center -->
 <dialog id="modal-center" class="modal modal-md">
   <h2 id="modal-center-title">센터 등록</h2>
   <p class="modal-desc">센터 저장 후 기본 전산실 `MAIN`이 함께 생성됩니다.</p>
@@ -127,6 +68,7 @@
   </div>
 </dialog>
 
+<!-- Modal: Room -->
 <dialog id="modal-room" class="modal modal-md">
   <h2 id="modal-room-title">전산실 등록</h2>
   <p class="modal-desc">선택한 센터 아래에 전산실 정보를 등록합니다.</p>
@@ -138,6 +80,7 @@
         <label>전산실코드 <input type="text" id="room-code" readonly placeholder="저장 시 자동생성"></label>
         <label><span class="label-text">전산실명<span class="req">*</span></span> <input type="text" id="room-name" required></label>
         <label>층 <input type="text" id="room-floor" placeholder="예: B2 / 3F"></label>
+        <label>랙 열 수 <input type="number" id="room-racks-per-row" min="1" value="4" placeholder="기본 4"></label>
         <label>상태
           <select id="room-active">
             <option value="true">활성</option>
@@ -154,6 +97,7 @@
   </div>
 </dialog>
 
+<!-- Modal: Rack -->
 <dialog id="modal-rack" class="modal modal-md">
   <h2 id="modal-rack-title">랙 등록</h2>
   <p class="modal-desc">선택한 전산실 아래에 랙 정보를 등록합니다.</p>
