@@ -12,6 +12,8 @@ class CenterCreate(BaseModel):
     location: str | None = None
     is_active: bool = True
     note: str | None = None
+    prefix: str | None = None
+    project_code: str | None = None
 
 
 class CenterUpdate(BaseModel):
@@ -20,6 +22,8 @@ class CenterUpdate(BaseModel):
     location: str | None = None
     is_active: bool | None = None
     note: str | None = None
+    prefix: str | None = None
+    project_code: str | None = None
 
 
 class CenterRead(BaseModel):
@@ -27,11 +31,14 @@ class CenterRead(BaseModel):
 
     id: int
     partner_id: int
+    system_id: str | None = None
     center_code: str
     center_name: str
     location: str | None = None
     is_active: bool
     note: str | None = None
+    prefix: str | None = None
+    project_code: str | None = None
     room_count: int = 0
     rack_count: int = 0
     created_at: datetime

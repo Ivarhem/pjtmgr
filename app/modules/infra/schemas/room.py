@@ -13,6 +13,10 @@ class RoomCreate(BaseModel):
     is_active: bool = True
     note: str | None = None
     racks_per_row: int = 6
+    prefix: str | None = None
+    project_code: str | None = None
+    grid_cols: int = 10
+    grid_rows: int = 12
 
 
 class RoomUpdate(BaseModel):
@@ -22,6 +26,10 @@ class RoomUpdate(BaseModel):
     is_active: bool | None = None
     note: str | None = None
     racks_per_row: int | None = None
+    prefix: str | None = None
+    project_code: str | None = None
+    grid_cols: int | None = None
+    grid_rows: int | None = None
 
 
 class RoomRead(BaseModel):
@@ -29,6 +37,7 @@ class RoomRead(BaseModel):
 
     id: int
     center_id: int
+    system_id: str | None = None
     center_code: str | None = None
     center_name: str | None = None
     room_code: str
@@ -38,5 +47,9 @@ class RoomRead(BaseModel):
     note: str | None = None
     racks_per_row: int = 6
     rack_count: int = 0
+    prefix: str | None = None
+    project_code: str | None = None
+    grid_cols: int = 10
+    grid_rows: int = 12
     created_at: datetime
     updated_at: datetime

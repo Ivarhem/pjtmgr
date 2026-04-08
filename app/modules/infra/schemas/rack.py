@@ -23,6 +23,7 @@ class RackUpdate(BaseModel):
     is_active: bool | None = None
     note: str | None = None
     sort_order: int | None = None
+    project_code: str | None = None
 
 
 class RackRead(BaseModel):
@@ -30,6 +31,7 @@ class RackRead(BaseModel):
 
     id: int
     room_id: int
+    system_id: str | None = None
     room_code: str | None = None
     room_name: str | None = None
     center_code: str | None = None
@@ -41,5 +43,8 @@ class RackRead(BaseModel):
     is_active: bool
     note: str | None = None
     sort_order: int = 0
+    project_code: str | None = None
+    rack_line_id: int | None = None
+    line_position: int | None = None
     created_at: datetime
     updated_at: datetime
