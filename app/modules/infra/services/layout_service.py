@@ -8,9 +8,11 @@ from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError
 from app.modules.common.models.partner import Partner
 from app.modules.infra.models.center import Center
 from app.modules.infra.models.rack import Rack
+from app.modules.infra.models.rack_line import RackLine
 from app.modules.infra.models.room import Room
 from app.modules.infra.schemas.center import CenterCreate, CenterUpdate
 from app.modules.infra.schemas.rack import RackCreate, RackUpdate
+from app.modules.infra.schemas.rack_line import RackLineCreate, RackLineUpdate
 from app.modules.infra.schemas.room import RoomCreate, RoomUpdate
 from app.modules.infra.services.code_generation_service import (
     build_center_system_id,
@@ -294,6 +296,100 @@ def delete_rack(db: Session, rack_id: int, current_user) -> None:
     db.commit()
 
 
+def list_rack_lines(db: Session, room_id: int) -> list[dict]:
+    get_room(db, room_id)
+    lines = list(
+        db.scalars(
+            select(RackLine).where(RackLine.room_id == room_id).order_by(RackLine.col_index.asc(), RackLine.id.asc())
+        )
+    )
+    result = []
+    for line in lines:
+        racks = list(
+            db.scalars(select(Rack).where(Rack.rack_line_id == line.id).order_by(Rack.line_position.asc(), Rack.id.asc()))
+        )
+        result.append(
+            {
+                "id": line.id,
+                "room_id": line.room_id,
+                "line_name": line.line_name,
+                "col_index": line.col_index,
+                "slot_count": line.slot_count,
+                "disabled_slots": line.disabled_slots or [],
+                "sort_order": line.sort_order,
+                "prefix": line.prefix,
+                "created_at": line.created_at,
+                "updated_at": line.updated_at,
+                "racks": [
+                    {
+                        "id": r.id,
+                        "rack_code": r.rack_code,
+                        "rack_name": r.rack_name,
+                        "system_id": r.system_id,
+                        "project_code": r.project_code,
+                        "line_position": r.line_position,
+                        "total_units": r.total_units,
+                    }
+                    for r in racks
+                ],
+            }
+        )
+    return result
+
+
+def get_rack_line(db: Session, line_id: int) -> RackLine:
+    line = db.get(RackLine, line_id)
+    if line is None:
+        raise NotFoundError("RackLine not found")
+    return line
+
+
+def create_rack_line(db: Session, room_id: int, payload: RackLineCreate, current_user) -> RackLine:
+    _require_inventory_edit(current_user)
+    room = get_room(db, room_id)
+    if payload.col_index < 0 or payload.col_index >= room.grid_cols:
+        raise BusinessRuleError(
+            f"col_index는 0 이상 {room.grid_cols - 1} 이하여야 합니다.", status_code=422
+        )
+    _ensure_rack_line_col_unique(db, room_id, payload.col_index)
+    line = RackLine(room_id=room_id, **payload.model_dump())
+    db.add(line)
+    db.commit()
+    db.refresh(line)
+    return line
+
+
+def update_rack_line(db: Session, line_id: int, payload: RackLineUpdate, current_user) -> RackLine:
+    _require_inventory_edit(current_user)
+    line = get_rack_line(db, line_id)
+    changes = payload.model_dump(exclude_unset=True)
+    next_col = changes.get("col_index", line.col_index)
+    if next_col != line.col_index:
+        room = get_room(db, line.room_id)
+        if next_col < 0 or next_col >= room.grid_cols:
+            raise BusinessRuleError(
+                f"col_index는 0 이상 {room.grid_cols - 1} 이하여야 합니다.", status_code=422
+            )
+        _ensure_rack_line_col_unique(db, line.room_id, next_col, line.id)
+    for field, value in changes.items():
+        setattr(line, field, value)
+    db.commit()
+    db.refresh(line)
+    return line
+
+
+def delete_rack_line(db: Session, line_id: int, current_user) -> None:
+    _require_inventory_edit(current_user)
+    line = get_rack_line(db, line_id)
+    # Nullify FK on racks belonging to this line
+    racks = list(db.scalars(select(Rack).where(Rack.rack_line_id == line.id)))
+    for rack in racks:
+        rack.rack_line_id = None
+        rack.line_position = None
+    db.delete(line)
+    db.commit()
+
+
 def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
     """해당 랙에 배치된 자산 목록 (rack_start_unit 순 정렬)."""
     from app.modules.infra.models.asset import Asset
@@ -364,6 +460,19 @@ def _ensure_rack_code_unique(db: Session, room_id: int, rack_code: str, rack_id:
     if rack_id is not None and existing.id == rack_id:
         return
     raise DuplicateError("같은 전산실에 이미 등록된 랙 코드입니다.")
+
+
+def _ensure_rack_line_col_unique(
+    db: Session, room_id: int, col_index: int, line_id: int | None = None
+) -> None:
+    existing = db.scalar(
+        select(RackLine).where(RackLine.room_id == room_id, RackLine.col_index == col_index)
+    )
+    if existing is None:
+        return
+    if line_id is not None and existing.id == line_id:
+        return
+    raise DuplicateError("같은 전산실에 이미 등록된 열 위치(col_index)입니다.")
 
 
 def _ensure_total_units(total_units: int) -> None:
