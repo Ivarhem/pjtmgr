@@ -24,6 +24,7 @@
   - 테이블 열 너비: `style="width:..."` 대신 CSS 클래스 또는 `<col>` 사용
   - 공통 상태 전환은 `utils.js` helper와 `is-hidden`, `is-disabled` 같은 상태 클래스를 우선 사용
   - 예외: `position: fixed` 드롭다운의 동적 좌표 계산(`el.style.left/top/width`)은 허용
+  - `infra_common.css`에 정의된 유틸리티 클래스를 우선 사용: `form-grid-1-2`, `form-grid-1-1`, `flex-col-gap-sm`, `m-0`, `mt-md`, `p-md`, `mx-auto`, `gap-xs`, `form-divider`, `placeholder-sub`
 
 ## CSS 작업 규칙
 
@@ -283,7 +284,15 @@
 
 **콤보박스 에디터 재사용:** 텍스트 입력+드롭다운 필터링이 필요한 셀 에디터는 `createComboBoxCellEditor(opts)` (utils.js) 헬퍼로 생성한다. 동일 패턴의 클래스를 파일마다 반복 정의하지 않는다. opts: `getItems(params)` (동기/비동기), `getDisplayValue(item)`, `onSelect(item, params)`.
 
-**공유 상수:** 상태값/분류값 레이블 맵(예: `IP_TYPE_LABELS`, `ASSET_STATUS_MAP`)은 `utils.js`에 한 곳에서 정의하고 개별 JS 파일에서 재정의하지 않는다.
+**공유 상수:** 상태값/분류값 레이블 맵은 `utils.js`에 한 곳에서 정의하고 개별 JS 파일에서 재정의하지 않는다. 현재 정의된 공유 상수:
+
+| 상수 | 용도 |
+| --- | --- |
+| `ASSET_STATUS_MAP` | 자산 상태 (planned/standby/active/decommissioned) |
+| `ENV_MAP` | 환경 (prod/dev/staging/dr) |
+| `CATALOG_KIND_LABELS` | 카탈로그 종류 (hardware/software/model/...) |
+
+새 상태값/분류값 맵이 2개 이상 파일에서 필요하면 `utils.js`에 추가한다.
 
 ### 클립보드 복사/붙여넣기 핸들러
 

@@ -128,8 +128,8 @@ let gridApi;
 function _setPortMapsEmptyState(isEmpty) {
   const guide = document.getElementById("ctx-empty-portmaps");
   const content = document.getElementById("portmaps-content");
-  if (guide) guide.style.display = isEmpty ? "" : "none";
-  if (content) content.style.display = isEmpty ? "none" : "";
+  if (guide) guide.classList.toggle("is-hidden", !isEmpty);
+  if (content) content.classList.toggle("is-hidden", isEmpty);
 }
 
 async function loadPortMaps() {

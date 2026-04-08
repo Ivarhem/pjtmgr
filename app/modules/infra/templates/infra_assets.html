@@ -10,11 +10,13 @@
   <a href="/assets" class="tab-btn active">자산 목록</a>
   <a href="/asset-roles" class="tab-btn">역할 기준 보기</a>
   <div class="tab-nav-actions">
-    <button class="btn btn-danger btn-sm" id="btn-delete-selected" style="display:none">선택 삭제</button>
-    <button class="btn btn-secondary" id="btn-import-asset">Import</button>
-    <button class="btn btn-secondary" id="btn-add-asset-row">+ 행 추가</button>
-    <button class="btn btn-primary" id="btn-save-new-assets" style="display:none">저장</button>
-    <button class="btn btn-primary" id="btn-add-asset">자산 등록</button>
+    <button class="btn btn-danger btn-sm is-hidden" id="btn-delete-selected">선택 삭제</button>
+    <button class="btn btn-secondary btn-sm" id="btn-toggle-edit">편집</button>
+    <button class="btn btn-primary btn-sm is-hidden" id="btn-save-edit">저장</button>
+    <button class="btn btn-secondary btn-sm is-hidden" id="btn-cancel-edit">취소</button>
+    <button class="btn btn-secondary btn-sm" id="btn-import-asset">Import</button>
+    <button class="btn btn-primary btn-sm is-hidden" id="btn-save-new-assets">저장</button>
+    <button class="btn btn-primary btn-sm" id="btn-add-asset">자산 등록</button>
   </div>
 </div>
 
@@ -36,12 +38,30 @@
   </label>
 </div>
 
+<div id="edit-mode-bar" class="edit-mode-bar is-hidden">
+  <span class="edit-mode-label">편집 모드</span>
+  <span class="edit-mode-count" id="edit-mode-count">변경 0건</span>
+  <span class="edit-mode-errors is-hidden" id="edit-mode-errors">오류 0건</span>
+  <span class="edit-mode-separator">|</span>
+  <span class="edit-mode-selection is-hidden" id="edit-mode-selection">
+    <span id="edit-mode-sel-count">0행 선택</span>
+    <label>귀속프로젝트 <select id="bulk-period-id" class="select-sm"><option value="">--</option></select></label>
+    <label>센터 <select id="bulk-center-id" class="select-sm"><option value="">--</option></select></label>
+    <label>환경 <select id="bulk-environment" class="select-sm"><option value="">--</option></select></label>
+    <label>상태 <select id="bulk-status" class="select-sm"><option value="">--</option></select></label>
+    <button class="btn btn-primary btn-xs" id="btn-bulk-apply">선택 행에 적용</button>
+  </span>
+</div>
+
 <div id="asset-layout" class="asset-layout">
   <div class="asset-list-panel">
     <div class="asset-grid-toolbar">
     </div>
     <div class="card">
       <div id="grid-assets" class="ag-theme-quartz infra-grid"></div>
+      <div class="grid-add-row-bar">
+        <button id="btn-add-asset-row-bottom" class="grid-add-row-btn" type="button">+ 자산 추가</button>
+      </div>
     </div>
   </div>
 
@@ -127,12 +147,12 @@
       </div>
     </fieldset>
 
-    <div class="form-grid" style="grid-template-columns: 1fr 2fr;">
+    <div class="form-grid form-grid-1-2">
       <label><span class="label-text">자산명<span class="field-tag field-tag-required">필수</span><span class="field-tag field-tag-unique">고유</span></span>
         <input type="text" id="asset-name" required placeholder="장비 식별명">
       </label>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <label style="margin:0;"><span class="label-text">카탈로그 제품<span class="field-tag field-tag-required">필수</span></span>
+      <div class="flex-col-gap-sm">
+        <label class="m-0"><span class="label-text">카탈로그 제품<span class="field-tag field-tag-required">필수</span></span>
           <div class="modal-combobox">
             <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
             <input type="hidden" id="catalog-id">
@@ -157,8 +177,8 @@
       </label>
 
     </div>
-    <div style="border-top:1px solid var(--border-color-light);margin:8px 0;"></div>
-    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+    <div class="form-divider"></div>
+    <div class="form-grid form-grid-1-1">
       <label>
         프로젝트코드
         <input type="text" id="asset-project-code" placeholder="수행 기준 관리번호">
@@ -431,9 +451,9 @@
       </label>
       <label>설명 <input type="text" id="iface-description"></label>
     </div>
-    <div id="iface-lag-members" class="is-hidden" style="margin-top:12px;">
+    <div id="iface-lag-members" class="is-hidden mt-md">
       <div class="modal-group-title">LAG 멤버 (물리 인터페이스)</div>
-      <div id="iface-lag-member-list" class="form-grid" style="gap:4px;"></div>
+      <div id="iface-lag-member-list" class="form-grid gap-xs"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="btn-cancel-iface">취소</button>

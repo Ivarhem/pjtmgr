@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from app.core.auth.dependencies import get_current_user
 from app.modules.common.models.user import User
 from app.core.database import get_db
-from app.modules.infra.schemas.asset import AssetCreate, AssetCurrentRoleUpdate, AssetRead, AssetUpdate
+from app.modules.infra.schemas.asset import AssetBulkUpdateRequest, AssetCreate, AssetCurrentRoleUpdate, AssetRead, AssetUpdate
 from app.modules.infra.services.asset_service import (
+    bulk_update_assets,
     create_asset,
     delete_asset,
     enrich_assets_with_aliases,
@@ -60,6 +61,18 @@ def create_asset_endpoint(
 ) -> AssetRead:
     asset = create_asset(db, payload, current_user)
     return enrich_asset_with_catalog_kind(db, asset)
+
+
+@router.patch("/bulk", response_model=list[AssetRead])
+def bulk_update_assets_endpoint(
+    payload: AssetBulkUpdateRequest,
+    layout_id: int | None = None,
+    lang: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[AssetRead]:
+    results = bulk_update_assets(db, payload.items, current_user)
+    return [enrich_asset_with_catalog_kind(db, a, layout_id=layout_id, lang=lang) for a in results]
 
 
 @router.get("/{asset_id}", response_model=AssetRead)

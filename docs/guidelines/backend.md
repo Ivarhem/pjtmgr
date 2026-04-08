@@ -45,7 +45,7 @@ accounting <-> infra   절대 금지
 - 테이블명: 복수 snake_case
 - 스키마 클래스: `{Model}{Operation}` (`Create`, `Update`, `Read`)
 - 서비스 함수(CRUD): `create_*`, `list_*`, `get_*`, `update_*`, `delete_*`
-- `get_all`, `add`, `set` 사용 금지
+- `get_all`, `add`, `set` 사용 금지 (서비스 함수명과 라우터 함수명 모두 적용)
 - 비-CRUD 서비스 함수는 동사_목적어 형태 사용
 - private 함수는 `_` 접두사 사용
 - SQLAlchemy Boolean 필터는 `.is_(True)`, `.is_(False)` 사용
@@ -60,6 +60,7 @@ accounting <-> infra   절대 금지
 - Upsert(생성-또는-갱신) 동작도 POST를 사용한다 (예: `POST /{부모}/{id}/{하위리소스}`)
 - 비-CRUD 동작은 `POST /{리소스}/{id}/{동작}` 패턴을 사용한다
 - 라우터는 `current_user`와 입력값을 service에 전달한다. 권한 검사는 **라우터의 coarse gate + 서비스의 최종 재검증** 구조를 따른다.
+- 라우터 URL/메서드를 변경하면, 해당 엔드포인트를 호출하는 JS(`apiFetch`, `fetch`)도 함께 수정한다.
 
 ## 도메인 용어 통일
 

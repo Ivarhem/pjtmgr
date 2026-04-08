@@ -1,27 +1,5 @@
 /* ── 자산 인벤토리 (고객사 중심) ── */
-
-const ENV_MAP = {
-  prod: "운영",
-  dev: "개발",
-  staging: "스테이징",
-  dr: "DR",
-};
-
-const ASSET_STATUS_MAP = {
-  planned: "도입예정",
-  standby: "대기",
-  active: "운영중",
-  decommissioned: "폐기",
-};
-
-const CATALOG_KIND_LABELS = {
-  hardware: "하드웨어",
-  software: "소프트웨어",
-  model: "모델",
-  service: "서비스",
-  business_capability: "업무기능",
-  dataset: "데이터셋",
-};
+/* ASSET_STATUS_MAP, ENV_MAP, CATALOG_KIND_LABELS → utils.js에서 전역 정의 */
 
 // IP_TYPE_SHORT → utils.js의 IP_TYPE_LABELS 사용
 
@@ -155,6 +133,244 @@ const GRID_EDITABLE_FIELDS = new Set([
   "period_id",
   "serial_no",
 ]);
+
+/* ── Edit mode state ── */
+let _editMode = false;
+const _dirtyRows = new Map();       // Map<rowId, {field: newValue}>
+const _originalValues = new Map();   // Map<rowId, {field: originalValue}>
+const _errorCells = new Map();       // Map<"rowId:field", errorMessage>
+
+const REQUIRED_FIELDS = new Set(["asset_name"]);
+
+function isEditMode() { return _editMode; }
+
+function toggleEditMode(force) {
+  _editMode = force !== undefined ? force : !_editMode;
+  document.body.classList.toggle("edit-mode-active", _editMode);
+  const btnToggle = document.getElementById("btn-toggle-edit");
+  const btnSave = document.getElementById("btn-save-edit");
+  const btnCancel = document.getElementById("btn-cancel-edit");
+  const bar = document.getElementById("edit-mode-bar");
+  if (_editMode) {
+    btnToggle.classList.add("is-hidden");
+    btnSave.classList.remove("is-hidden");
+    btnCancel.classList.remove("is-hidden");
+    bar.classList.remove("is-hidden");
+    _populateBulkSelects();
+  } else {
+    btnToggle.classList.remove("is-hidden");
+    btnSave.classList.add("is-hidden");
+    btnCancel.classList.add("is-hidden");
+    bar.classList.add("is-hidden");
+    gridApi.deselectAll();
+  }
+  _updateEditModeBar();
+  _updateBulkSelectionUI();
+  gridApi.refreshCells({ force: true });
+}
+
+function markDirty(rowId, field, newValue, oldValue) {
+  if (!_dirtyRows.has(rowId)) _dirtyRows.set(rowId, {});
+  if (!_originalValues.has(rowId)) _originalValues.set(rowId, {});
+  const dirty = _dirtyRows.get(rowId);
+  const originals = _originalValues.get(rowId);
+  if (!(field in originals)) originals[field] = oldValue;
+  if (newValue === originals[field]) {
+    delete dirty[field];
+    if (Object.keys(dirty).length === 0) {
+      _dirtyRows.delete(rowId);
+      _originalValues.delete(rowId);
+    }
+  } else {
+    dirty[field] = newValue;
+  }
+  validateCell(rowId, field, newValue);
+  _updateEditModeBar();
+}
+
+function isDirty(rowId, field) {
+  const d = _dirtyRows.get(rowId);
+  return d ? field in d : false;
+}
+
+function hasErrors() { return _errorCells.size > 0; }
+
+function validateCell(rowId, field, value) {
+  const key = `${rowId}:${field}`;
+  if (REQUIRED_FIELDS.has(field) && (!value || !String(value).trim())) {
+    _errorCells.set(key, "필수값입니다");
+    return false;
+  }
+  _errorCells.delete(key);
+  return true;
+}
+
+function getCellError(rowId, field) {
+  return _errorCells.get(`${rowId}:${field}`) || null;
+}
+
+function _updateEditModeBar() {
+  const countEl = document.getElementById("edit-mode-count");
+  const errorsEl = document.getElementById("edit-mode-errors");
+  const btnSave = document.getElementById("btn-save-edit");
+  if (countEl) countEl.textContent = `변경 ${_dirtyRows.size}건`;
+  if (errorsEl) {
+    const errCount = _errorCells.size;
+    errorsEl.textContent = `오류 ${errCount}건`;
+    errorsEl.classList.toggle("is-hidden", errCount === 0);
+  }
+  if (btnSave) btnSave.disabled = hasErrors();
+}
+
+async function saveEditMode() {
+  if (hasErrors()) { showToast("검증 오류가 있어 저장할 수 없습니다.", "warning"); return; }
+  if (_dirtyRows.size === 0) { showToast("변경사항이 없습니다.", "info"); toggleEditMode(false); return; }
+  const items = [];
+  for (const [rowId, changes] of _dirtyRows) items.push({ id: rowId, changes });
+  try {
+    const results = await apiFetch(_assetPatchUrl("/api/v1/assets/bulk"), {
+      method: "PATCH",
+      body: { items },
+    });
+    for (const updated of results) {
+      let node = null;
+      gridApi.forEachNode((n) => { if (n.data?.id === updated.id) node = n; });
+      if (node) applyAssetRowUpdate(node.data, updated);
+    }
+    showToast(`${results.length}건 자산이 업데이트되었습니다.`);
+    _dirtyRows.clear();
+    _originalValues.clear();
+    _errorCells.clear();
+    toggleEditMode(false);
+  } catch (err) {
+    showToast("저장 실패: " + err.message, "error");
+  }
+}
+
+function cancelEditMode() {
+  for (const [rowId, originals] of _originalValues) {
+    let node = null;
+    gridApi.forEachNode((n) => { if (n.data?.id === rowId) node = n; });
+    if (node) {
+      for (const [field, value] of Object.entries(originals)) node.data[field] = value;
+    }
+  }
+  _dirtyRows.clear();
+  _originalValues.clear();
+  _errorCells.clear();
+  toggleEditMode(false);
+  gridApi.refreshCells({ force: true });
+}
+
+/* ── 일괄 적용 (편집 모드) ── */
+
+function _populateBulkSelects() {
+  _populateSelectFromList("bulk-period-id", _periodsCache, (p) => ({ value: p.id, label: p.contract_name || p.period_label || String(p.id) }));
+  _populateSelectFromList("bulk-center-id", _layoutCentersCache, (c) => ({ value: c.id, label: c.center_name }));
+  _populateSelectFromEntries("bulk-environment", ENV_MAP);
+  _populateSelectFromEntries("bulk-status", ASSET_STATUS_MAP);
+}
+
+function _populateSelectFromList(elId, items, mapper) {
+  const sel = document.getElementById(elId);
+  sel.textContent = "";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "--";
+  sel.appendChild(blank);
+  for (const item of items) {
+    const { value, label } = mapper(item);
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+}
+
+function _populateSelectFromEntries(elId, map) {
+  const sel = document.getElementById(elId);
+  sel.textContent = "";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "--";
+  sel.appendChild(blank);
+  for (const [k, v] of Object.entries(map)) {
+    const opt = document.createElement("option");
+    opt.value = k;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  }
+}
+
+function _updateBulkSelectionUI() {
+  const bar = document.getElementById("edit-mode-bar");
+  const selPanel = document.getElementById("edit-mode-selection");
+  const countEl = document.getElementById("edit-mode-sel-count");
+  if (!selPanel || !bar) return;
+
+  const agSelected = gridApi.getSelectedNodes().length;
+  let chkSelected = 0;
+  gridApi.forEachNode((n) => { if (n.data?._selected) chkSelected++; });
+  const selCount = Math.max(agSelected, chkSelected);
+
+  if (_editMode && selCount > 0) {
+    // 편집 모드 + 선택 있음: 상태바는 이미 보이므로 선택 영역만 표시
+    selPanel.classList.remove("is-hidden");
+    if (countEl) countEl.textContent = `${selCount}행 선택`;
+  } else {
+    selPanel.classList.add("is-hidden");
+  }
+}
+
+function _applyBulkValues() {
+  const selected = gridApi.getSelectedNodes().filter(n => n.data);
+  if (!selected.length) { showToast("행을 먼저 선택하세요.", "warning"); return; }
+
+  const periodId = document.getElementById("bulk-period-id").value;
+  const centerId = document.getElementById("bulk-center-id").value;
+  const env = document.getElementById("bulk-environment").value;
+  const status = document.getElementById("bulk-status").value;
+
+  if (!periodId && !centerId && !env && !status) {
+    showToast("적용할 값을 선택하세요.", "warning");
+    return;
+  }
+
+  let count = 0;
+  for (const node of selected) {
+    const d = node.data;
+    if (periodId) {
+      const old = d.period_id;
+      d.period_id = Number(periodId);
+      if (d.id) markDirty(d.id, "period_id", d.period_id, old);
+    }
+    if (centerId) {
+      const old = d.center_id;
+      d.center_id = Number(centerId);
+      if (d.id) markDirty(d.id, "center_id", d.center_id, old);
+    }
+    if (env) {
+      const old = d.environment;
+      d.environment = env;
+      if (d.id) markDirty(d.id, "environment", env, old);
+    }
+    if (status) {
+      const old = d.status;
+      d.status = status;
+      if (d.id) markDirty(d.id, "status", status, old);
+    }
+    count++;
+  }
+
+  document.getElementById("bulk-period-id").value = "";
+  document.getElementById("bulk-center-id").value = "";
+  document.getElementById("bulk-environment").value = "";
+  document.getElementById("bulk-status").value = "";
+
+  gridApi.refreshCells({ force: true });
+  _updateEditModeBar();
+  showToast(`${count}행에 일괄 적용됨`);
+}
 
 /* ── CatalogCellEditor (AG Grid 셀 에디터) ── */
 class CatalogCellEditor {
@@ -397,6 +613,10 @@ function getGridCellClass(field, row = null) {
   const classes = [];
   classes.push(GRID_EDITABLE_FIELDS.has(field) ? "infra-cell-editable" : "infra-cell-readonly");
   if (isRawFallbackField(field, row)) classes.push("infra-cell-rawtext");
+  if (_editMode && row?.id) {
+    if (isDirty(row.id, field)) classes.push("infra-cell-dirty");
+    if (getCellError(row.id, field)) classes.push("infra-cell-error");
+  }
   return classes.join(" ");
 }
 
@@ -571,6 +791,28 @@ const ASSET_CHK_COL = {
   headerName: "", field: "_selected", width: 48, minWidth: 48, maxWidth: 48, pinned: "left",
   editable: false, sortable: false, resizable: false, suppressMovable: true,
   lockPosition: true, filter: false,
+  headerComponent: class {
+    init() {
+      this.el = document.createElement("input");
+      this.el.type = "checkbox";
+      this.el.style.cursor = "pointer";
+      this.el.addEventListener("change", () => {
+        const checked = this.el.checked;
+        gridApi.forEachNode((n) => {
+          if (n.data) {
+            n.data._selected = checked;
+            n.setSelected(checked);
+          }
+        });
+        gridApi.refreshCells({ columns: ["_selected"], force: true });
+        _updateDeleteButtonVisibility();
+        _updateBulkSelectionUI();
+      });
+    }
+    getGui() { return this.el; }
+    refresh() { return true; }
+    destroy() {}
+  },
   cellRenderer: (params) => {
     const cb = document.createElement("input");
     cb.type = "checkbox";
@@ -580,7 +822,9 @@ const ASSET_CHK_COL = {
     cb.addEventListener("change", (e) => {
       e.stopPropagation();
       params.data._selected = cb.checked;
+      params.node.setSelected(cb.checked);
       _updateDeleteButtonVisibility();
+      _updateBulkSelectionUI();
     });
     return cb;
   },
@@ -596,7 +840,7 @@ let columnDefs = buildColumnDefs();
 
 let gridApi;
 let _selectedAsset = null;
-let _editMode = false;
+let _detailEditMode = false;
 let _currentTab = "overview";
 let _partnerContactsCache = [];
 let _partnerAssetsCache = [];
@@ -855,7 +1099,7 @@ async function loadAssets() {
   if (q) url += "&q=" + encodeURIComponent(q);
   // 카탈로그 프리셋 + 한/영 설정 전달
   const layoutId = localStorage.getItem("catalog_layout_preset_id");
-  if (layoutId) url += "&layout_id=" + layoutId;
+  if (layoutId && Number.isFinite(Number(layoutId))) url += "&layout_id=" + layoutId;
   if (_catalogLabelLang) url += "&lang=" + _catalogLabelLang;
 
   try {
@@ -904,15 +1148,26 @@ async function initGrid() {
       filter: true,
       tooltipValueGetter: getGridTooltipValue,
     },
-    rowSelection: "single",
+    rowSelection: "multiple",
     animateRows: true,
     enableCellTextSelection: true,
     getRowClass: (params) => params.data?._isNew ? "infra-grid-row-new" : "",
     ...buildStandardGridBehavior({
       type: 'detail-panel',
-      onSelect: (data) => showAssetDetail(data),
+      onSelect: (data) => {
+        // 일반 모드: 싱글 선택처럼 동작 (이전 선택 해제)
+        if (!_editMode) {
+          gridApi.deselectAll();
+          gridApi.getRowNode(String(data.id))?.setSelected(true);
+        }
+        showAssetDetail(data);
+      },
       onCellValueChanged: handleGridCellValueChanged,
     }),
+    onSelectionChanged: () => {
+      console.log("[DEBUG] selChanged", "agSel:", gridApi.getSelectedNodes().length, "editMode:", _editMode);
+      _updateBulkSelectionUI();
+    },
     onColumnMoved: saveGridColumnState,
     onColumnVisible: saveGridColumnState,
     onDragStopped: saveGridColumnState,
@@ -921,6 +1176,153 @@ async function initGrid() {
       if (event.finished) saveGridColumnState();
     },
   });
+  // ── 복사/붙여넣기 핸들러 ──
+  // 커스텀 에디터 / FK ID 필드는 텍스트 붙여넣기 대상에서 제외
+  const PASTE_SKIP_FIELDS = new Set(["current_role_id", "center_id", "period_id"]);
+  const PASTE_FIELDS = [...GRID_EDITABLE_FIELDS].filter(f => !PASTE_SKIP_FIELDS.has(f));
+  const gridEl = document.getElementById("grid-assets");
+  addCopyPasteHandler(gridEl, gridApi, {
+    editableFields: PASTE_FIELDS,
+    autoCreateRows: true,
+    newRowDefaults: {
+      _isNew: true,
+      _selected: false,
+      id: null,
+      system_id: "\uffff",
+      environment: "prod",
+      status: "active",
+      partner_id: Number(getCtxPartnerId()) || 0,
+    },
+    typeMap: {
+      environment: { type: "enum", values: Object.keys(ENV_MAP) },
+      status: { type: "enum", values: Object.keys(ASSET_STATUS_MAP) },
+    },
+    onPaste: async (changes) => {
+      // 편집 모드가 아니면 붙여넣기 차단
+      if (!_editMode) {
+        // 붙여넣기로 변경된 값을 원복
+        for (const c of changes) {
+          const node = gridApi.getDisplayedRowAtIndex(c.rowIndex);
+          if (node?.data) node.data[c.field] = c.oldValue;
+        }
+        gridApi.refreshCells({ force: true });
+        showToast("편집 모드에서만 붙여넣기가 가능합니다.", "warning");
+        return;
+      }
+      // 새 행 플래그 설정
+      const newRowIndices = new Set();
+      for (const c of changes) {
+        const node = gridApi.getDisplayedRowAtIndex(c.rowIndex);
+        if (node?.data && !node.data.id) {
+          node.data._isNew = true;
+          node.data.partner_id = Number(getCtxPartnerId());
+          newRowIndices.add(c.rowIndex);
+        }
+      }
+      if (newRowIndices.size > 0) {
+        _hasNewRows = true;
+        _updateNewRowIndicators();
+      }
+
+      // asset_name 붙여넣기 시 역할명 미리보기 자동 세팅
+      const nameChanges = changes.filter(c => c.field === "asset_name" && c.newValue);
+      for (const nc of nameChanges) {
+        const node = gridApi.getDisplayedRowAtIndex(nc.rowIndex);
+        if (!node?.data) continue;
+        // 역할이 아직 할당되지 않은 행에만 자동 기입
+        if (!node.data.current_role_id && !node.data.current_role_names?.length) {
+          node.data.current_role_names = [nc.newValue];
+        }
+      }
+      if (nameChanges.length) gridApi.refreshCells({ force: true });
+
+      // model 필드 텍스트 → 카탈로그 자동 매칭
+      const modelChanges = changes.filter(c => c.field === "model" && c.newValue);
+      for (const mc of modelChanges) {
+        const node = gridApi.getDisplayedRowAtIndex(mc.rowIndex);
+        if (!node?.data) continue;
+        try {
+          const results = await apiFetch(`/api/v1/product-catalog?q=${encodeURIComponent(mc.newValue)}`);
+          if (results.length > 0) {
+            const cat = results[0];
+            node.data.model = cat.vendor + " " + cat.name;
+            node.data.model_id = cat.id;
+          } else {
+            node.data.model = mc.newValue + " (미매칭)";
+            node.data.model_id = null;
+          }
+        } catch {
+          node.data.model = mc.newValue + " (검색실패)";
+          node.data.model_id = null;
+        }
+      }
+      if (modelChanges.length) gridApi.refreshCells({ force: true });
+
+      if (_editMode) {
+        for (const c of changes) {
+          const node = gridApi.getDisplayedRowAtIndex(c.rowIndex);
+          if (node?.data?.id && c.field !== "model") {
+            markDirty(node.data.id, c.field, c.newValue, c.oldValue);
+          } else if (node?.data?.id && c.field === "model" && node.data.model_id) {
+            markDirty(node.data.id, "model_id", node.data.model_id, c.oldValue);
+          }
+        }
+        _updateEditModeBar();
+        gridApi.refreshCells({ force: true });
+      } else {
+        // Normal mode: 기존 행만 즉시 PATCH
+        const rowIds = [...new Set(changes.filter(c => c.field !== "model").map(c => c.rowIndex))];
+        for (const ri of rowIds) {
+          const node = gridApi.getDisplayedRowAtIndex(ri);
+          if (!node?.data?.id) continue;
+          const rowChanges = changes.filter(c => c.rowIndex === ri && c.field !== "model");
+          const payload = {};
+          rowChanges.forEach(c => { payload[c.field] = c.newValue; });
+          apiFetch(_assetPatchUrl(`/api/v1/assets/${node.data.id}`), {
+            method: "PATCH", body: payload,
+          }).then(updated => applyAssetRowUpdate(node.data, updated))
+            .catch(err => showToast(err.message, "error"));
+        }
+        // model 매칭된 것은 model_id로 PATCH
+        for (const mc of modelChanges) {
+          const node = gridApi.getDisplayedRowAtIndex(mc.rowIndex);
+          if (!node?.data?.id || !node.data.model_id) continue;
+          apiFetch(_assetPatchUrl(`/api/v1/assets/${node.data.id}`), {
+            method: "PATCH", body: { model_id: node.data.model_id },
+          }).then(updated => applyAssetRowUpdate(node.data, updated))
+            .catch(err => showToast(err.message, "error"));
+        }
+      }
+    },
+  });
+  // 행 선택 기반 복사 (Ctrl+C) — Range Selection 없는 Community 대체
+  gridEl.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey && e.key === "c") && !(e.metaKey && e.key === "c")) return;
+    if (gridApi.getEditingCells?.().length > 0) return;
+    const selectedNodes = gridApi.getSelectedNodes();
+    if (!selectedNodes.length) return;
+    const fields = [...PASTE_FIELDS];
+    const rows = selectedNodes.map((node) =>
+      fields.map((f) => {
+        const v = node.data[f];
+        if (v != null && typeof v === "object") return v.display || v._roleName || String(v);
+        return v != null ? String(v) : "";
+      })
+    );
+    const tsv = rows.map((r) => r.join("\t")).join("\n");
+    navigator.clipboard.writeText(tsv).catch(() => {});
+    e.preventDefault();
+    gridApi.flashCells({ rowNodes: selectedNodes, columns: fields, flashDuration: 300, fadeDuration: 200 });
+    showToast(`${selectedNodes.length}행 복사됨`, "info");
+  });
+  // Ctrl+S: 편집 모드 저장
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+      e.preventDefault();
+      if (_editMode) saveEditMode();
+    }
+  });
+
   _suppressColumnSave = true;
   await loadClassificationLevelAliases();
   const restored = restoreGridColumnState();
@@ -951,7 +1353,7 @@ function applyAssetRowUpdate(row, updated) {
 function _assetPatchUrl(path) {
   const params = new URLSearchParams();
   const layoutId = localStorage.getItem("catalog_layout_preset_id");
-  if (layoutId) params.set("layout_id", layoutId);
+  if (layoutId && Number.isFinite(Number(layoutId))) params.set("layout_id", layoutId);
   if (_catalogLabelLang) params.set("lang", _catalogLabelLang);
   const qs = params.toString();
   return qs ? `${path}?${qs}` : path;
@@ -968,6 +1370,12 @@ async function handleGridCellValueChanged(event) {
   if (!row.id && row._isNew) {
     _hasNewRows = true;
     _updateNewRowIndicators();
+    return;
+  }
+  // ── 편집 모드: dirty 축적만 하고 서버 전송 안 함 ──
+  if (_editMode && row.id) {
+    markDirty(row.id, field, event.newValue, event.oldValue);
+    gridApi.refreshCells({ force: true });
     return;
   }
   if (field !== "current_role_id" && event.newValue === event.oldValue) return;
@@ -1178,6 +1586,7 @@ const DETAIL_EDIT_FIELDS = {
 };
 
 function showAssetDetail(asset) {
+  if (!asset?.id) return;  // 새 행(_isNew)은 상세 패널 열지 않음
   _selectedAsset = asset;
   _detailEscArmedAt = 0;
   rememberSelectedAssetState(asset);
@@ -1356,7 +1765,7 @@ function toggleDetailPanel() {
 
 function renderDetailTab(tab) {
   _currentTab = tab;
-  if (_editMode) _editMode = false;
+  if (_detailEditMode) _detailEditMode = false;
 
   const container = document.getElementById("detail-content");
   while (container.firstChild) container.removeChild(container.firstChild);
@@ -2576,7 +2985,7 @@ async function buildDetailEditFields(tab) {
 }
 
 async function openDetailEditModal(tab) {
-  _editMode = true;
+  _detailEditMode = true;
   const title = document.getElementById("asset-detail-edit-title");
   const desc = document.getElementById("asset-detail-edit-desc");
   const tabBtn = document.querySelector(`.detail-tabs .tab-btn[data-dtab="${tab}"]`);
@@ -2587,7 +2996,7 @@ async function openDetailEditModal(tab) {
 }
 
 function closeDetailEditModal() {
-  _editMode = false;
+  _detailEditMode = false;
   document.getElementById("modal-asset-detail-edit").close();
 }
 
@@ -3548,7 +3957,7 @@ async function saveAssetRoleAction() {
 
 function _updateNewRowIndicators() {
   const saveBtn = document.getElementById("btn-save-new-assets");
-  if (saveBtn) saveBtn.style.display = _hasNewRows ? "" : "none";
+  if (saveBtn) saveBtn.classList.toggle("is-hidden", !_hasNewRows);
 }
 
 function _updateDeleteButtonVisibility() {
@@ -3556,7 +3965,7 @@ function _updateDeleteButtonVisibility() {
   if (!btn) return;
   let hasSelected = false;
   gridApi.forEachNode((n) => { if (n.data._selected) hasSelected = true; });
-  btn.style.display = hasSelected ? "" : "none";
+  btn.classList.toggle("is-hidden", !hasSelected);
 }
 
 function addAssetRow() {
@@ -3565,6 +3974,7 @@ function addAssetRow() {
     _isNew: true,
     _selected: false,
     id: null,
+    system_id: "\uffff",  // 정렬 시 맨 아래로 배치 (저장 후 서버값으로 교체)
     asset_name: "",
     hostname: "",
     serial_no: "",
@@ -3591,12 +4001,19 @@ async function saveNewAssets() {
   let successCount = 0;
   for (const node of newRows) {
     const d = node.data;
+    // model_id 필수 — 모델이 선택되지 않은 행은 스킵
+    const modelId = d.model_id || (d.model && typeof d.model === "object" ? d.model._catalogModelId : null);
+    if (!modelId) {
+      showToast((d.asset_name || "새 자산") + ": 카탈로그 제품을 선택하세요.", "warning");
+      continue;
+    }
     try {
       const created = await apiFetch("/api/v1/assets", {
         method: "POST",
         body: {
           partner_id: d.partner_id || Number(getCtxPartnerId()),
           asset_name: d.asset_name,
+          model_id: Number(modelId),
           hostname: d.hostname || null,
           serial_no: d.serial_no || null,
           environment: d.environment || "prod",
@@ -3609,6 +4026,30 @@ async function saveNewAssets() {
       d._isNew = false;
       d._selected = false;
       successCount++;
+      // 역할 자동 할당: 역할명이 지정되지 않았으면 자산명으로 역할 생성/할당
+      const roleName = d.asset_name;
+      try {
+        let role = _assetRoleOptions.find(
+          (r) => r.role_name.toLowerCase() === roleName.toLowerCase()
+        );
+        if (!role) {
+          role = await apiFetch("/api/v1/asset-roles", {
+            method: "POST",
+            body: {
+              partner_id: d.partner_id,
+              role_name: roleName,
+              status: "active",
+              contract_period_id: getCtxProjectId() || null,
+            },
+          });
+          _assetRoleOptions.push(role);
+        }
+        const roleUpdated = await apiFetch(_assetPatchUrl(`/api/v1/assets/${created.id}/current-role`), {
+          method: "PATCH",
+          body: { asset_role_id: role.id },
+        });
+        Object.assign(d, roleUpdated);
+      } catch { /* 역할 할당 실패는 무시 — 자산은 이미 생성됨 */ }
     } catch (e) {
       showToast((d.asset_name || "새 자산") + ": " + e.message, "error");
     }
@@ -3665,7 +4106,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAssetSplitter();
   initGrid();
 });
-document.getElementById("btn-add-asset-row").addEventListener("click", addAssetRow);
+document.getElementById("btn-toggle-edit").addEventListener("click", () => toggleEditMode());
+document.getElementById("btn-save-edit").addEventListener("click", saveEditMode);
+document.getElementById("btn-cancel-edit").addEventListener("click", cancelEditMode);
+document.getElementById("btn-bulk-apply").addEventListener("click", _applyBulkValues);
+document.getElementById("btn-add-asset-row-bottom").addEventListener("click", addAssetRow);
 document.getElementById("btn-save-new-assets").addEventListener("click", saveNewAssets);
 document.getElementById("btn-delete-selected").addEventListener("click", deleteSelectedAssets);
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
@@ -3682,7 +4127,7 @@ document.getElementById("btn-edit-asset").addEventListener("click", async () => 
     showToast("이 탭은 개별 항목을 추가/수정하세요.", "info");
     return;
   }
-  if (_editMode) { closeDetailEditModal(); return; }
+  if (_detailEditMode) { closeDetailEditModal(); return; }
   await openDetailEditModal(_currentTab);
 });
 document.getElementById("btn-asset-replacement").addEventListener("click", () => openAssetRoleActionModal("replacement"));

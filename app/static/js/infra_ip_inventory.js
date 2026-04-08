@@ -48,8 +48,8 @@ const ipColDefs = [
 function _setIpInventoryEmptyState(isEmpty) {
   const guide = document.getElementById("ctx-empty-ip-inventory");
   const content = document.getElementById("ip-inventory-content");
-  if (guide) guide.style.display = isEmpty ? "" : "none";
-  if (content) content.style.display = isEmpty ? "none" : "";
+  if (guide) guide.classList.toggle("is-hidden", !isEmpty);
+  if (content) content.classList.toggle("is-hidden", isEmpty);
 }
 
 async function loadSubnets() {

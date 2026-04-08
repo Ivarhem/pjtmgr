@@ -709,8 +709,8 @@ async function assignProjectClassificationLayout(periodId) {
   if (!classificationSourceEl.value) {
     throw new Error("레이아웃 프리셋을 선택하세요.");
   }
-  return apiFetch(`/api/v1/projects/${periodId}/classification-layout`, {
-    method: "PUT",
+  return apiFetch(`/api/v1/classification-layouts/projects/${periodId}`, {
+    method: "POST",
     body: { layout_id: Number(classificationSourceEl.value) },
   });
 }

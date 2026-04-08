@@ -147,3 +147,12 @@ class AssetRead(BaseModel):
     aliases: list[str] = []
     created_at: datetime
     updated_at: datetime
+
+
+class AssetBulkUpdateItem(BaseModel):
+    id: int
+    changes: dict
+
+
+class AssetBulkUpdateRequest(BaseModel):
+    items: list[AssetBulkUpdateItem]

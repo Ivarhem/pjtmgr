@@ -89,7 +89,7 @@ def delete_interface(db: Session, interface_id: int, current_user: User) -> None
     db.commit()
 
 
-def set_lag_members(
+def update_lag_members(
     db: Session, lag_id: int, member_ids: list[int], current_user: User
 ) -> None:
     _require_inventory_edit(current_user)

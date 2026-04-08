@@ -94,8 +94,8 @@ def get_project_classification_layout(
     )
 
 
-@router.put("/projects/{project_id}", response_model=ProjectClassificationLayoutRead)
-def put_project_classification_layout(
+@router.post("/projects/{project_id}", response_model=ProjectClassificationLayoutRead)
+def assign_project_classification_layout(
     project_id: int,
     payload: ProjectClassificationLayoutUpdate,
     db: Session = Depends(get_db),

@@ -205,14 +205,15 @@ ENABLED_MODULES=common,accounting         # 영업 전용
 | **업체 / 사용자 / 시스템** | 사용자, 업체, 설정, 역할 관리 동작 | common |
 | **자산** | 목록/등록/상세/부속 정보(Alias 포함) 중심 기능 동작 | infra |
 | **IP 인벤토리 / 포트맵 / 업체** | 화면과 API 뼈대는 있으나 일부만 검증됨 | infra |
-| **정책 / 배치도** | DB/API 일부 또는 스켈레톤만 존재, UI는 미구현 또는 비활성 | infra |
+| **정책** | DB/API 존재, UI 접근 경로 제거됨 (향후 재설계 예정) | infra |
+| **배치도** | 센터/전산실/랙 트리 + 상면도 격자 + 랙 드래그 배치 동작 | infra |
 | **제품 카탈로그** | CRUD, 최종분류/분류 메타 연결, 자산 연동 동작 | infra |
 
 인프라모듈의 세부 페이지 상태는 로드맵 문서 기준으로 다음과 같다.
 
 - `/periods`, `/assets`, `/audit-history`, `/product-catalog` 는 동작
 - `/ip-inventory`, `/port-maps`, `/contacts` 는 부분 동작
-- 배치도는 미구현
+- `/physical-layout` 배치도는 부분 동작 (트리+격자+랙배치)
 
 ---
 

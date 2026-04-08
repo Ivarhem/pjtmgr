@@ -352,7 +352,7 @@ docs/superpowers/plans/
 ```text
 app/static/
 ├── js/
-│   ├── utils.js                 # 공통 유틸 (fmt, fmtNumber, fmtPct 등)
+│   ├── utils.js                 # 공통 유틸 (fmt, fmtNumber, fmtPct 등) + 공유 상수 (ASSET_STATUS_MAP, ENV_MAP, CATALOG_KIND_LABELS)
 │   ├── contracts.js             # 사업 목록
 │   ├── contract_detail.js       # 사업 상세
 │   ├── my_contracts.js          # 내 사업

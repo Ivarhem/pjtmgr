@@ -367,6 +367,82 @@ body.dark-mode .infra-cell-editable {
   /* 편집 가능: 기본 배경 유지 */
 }
 
+/* ── Edit mode cell states ── */
+/* ── Edit mode cell states ── */
+.infra-cell-dirty {
+  background: color-mix(in srgb, var(--primary-color, #2563eb) 6%, transparent) !important;
+}
+.infra-cell-error {
+  background: color-mix(in srgb, var(--danger-color, #dc2626) 8%, transparent) !important;
+}
+body.dark-mode .infra-cell-dirty {
+  background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, transparent) !important;
+}
+body.dark-mode .infra-cell-error {
+  background: color-mix(in srgb, var(--danger-color, #dc2626) 12%, transparent) !important;
+}
+/* 편집 모드 그리드 — card 전체에 테두리 (추가 버튼 포함) */
+.edit-mode-active .asset-list-panel > .card {
+  border: 1px solid color-mix(in srgb, var(--warning-color, #d97706) 50%, var(--border-color));
+  border-radius: 6px;
+  overflow: hidden;
+}
+/* 편집 모드 상태바 */
+.edit-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--warning-color, #d97706) 8%, var(--surface-color));
+  border: 1px solid color-mix(in srgb, var(--warning-color, #d97706) 35%, var(--border-color));
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-color);
+}
+.edit-mode-bar .edit-mode-label {
+  color: var(--warning-color, #d97706);
+  font-weight: 600;
+}
+body.dark-mode .edit-mode-bar {
+  background: color-mix(in srgb, var(--warning-color, #d97706) 10%, var(--surface-muted, #1e293b));
+  border-color: color-mix(in srgb, var(--warning-color, #d97706) 30%, var(--border-color));
+}
+.edit-mode-bar .edit-mode-count { font-weight: 600; }
+.edit-mode-bar .edit-mode-separator { color: var(--border-color-light); margin: 0 4px; }
+.edit-mode-bar .edit-mode-selection {
+  display: flex; align-items: center; gap: 6px; font-size: 12px;
+}
+.edit-mode-bar .edit-mode-selection label {
+  display: flex; align-items: center; gap: 3px; margin: 0; flex-direction: row;
+  color: var(--text-color);
+}
+.edit-mode-bar .select-sm {
+  font-size: 12px; padding: 2px 6px;
+  border: 1px solid var(--border-color); border-radius: 4px;
+  background: var(--surface-color); color: var(--text-color);
+  max-width: 160px;
+}
+
+/* ── Grid add-row bar (테이블 하단 행 추가 버튼) ── */
+.grid-add-row-bar { display: flex; }
+.grid-add-row-btn {
+  flex: 1;
+  padding: 6px 0;
+  background: var(--surface-muted);
+  border: none;
+  border-top: 1px dashed var(--border-color);
+  border-radius: 0;
+  color: var(--text-color-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.grid-add-row-btn:hover {
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-color));
+  color: var(--primary-color);
+}
+
 .infra-cell-rawtext {
   color: var(--warning-color, #b45309);
   font-style: italic;
@@ -467,10 +543,14 @@ body.dark-mode .asset-detail-value-rawtext {
 
 .asset-list-panel .card {
   height: var(--asset-layout-height);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .asset-list-panel .infra-grid {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .asset-layout.is-detail-open .asset-list-panel {
@@ -3134,3 +3214,15 @@ body.dark-mode .catalog-management-result {
 .unplaced-rack-chip:active { cursor: grabbing; }
 .floor-plan-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .floor-plan-toolbar .select-sm { font-size: 12px; padding: 4px 8px; }
+
+/* ── Infra utility classes (replacing inline styles) ── */
+.form-grid-1-2 { grid-template-columns: 1fr 2fr; }
+.form-grid-1-1 { grid-template-columns: 1fr 1fr; }
+.flex-col-gap-sm { display: flex; flex-direction: column; gap: 6px; }
+.m-0 { margin: 0; }
+.form-divider { border-top: 1px solid var(--border-color-light); margin: 8px 0; }
+.mt-md { margin-top: 12px; }
+.gap-xs { gap: 4px; }
+.p-md { padding: 12px; }
+.mx-auto { margin: auto; }
+.placeholder-sub { display: block; margin-top: 0.5rem; font-size: 0.875rem; }

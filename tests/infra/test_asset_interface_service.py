@@ -18,7 +18,7 @@ from app.modules.infra.services.asset_interface_service import (
     generate_interfaces_from_catalog,
     get_interface,
     list_interfaces,
-    set_lag_members,
+    update_lag_members,
     update_interface,
 )
 
@@ -150,7 +150,7 @@ def test_delete_interface(db_session, admin_role_id) -> None:
         get_interface(db_session, iface.id)
 
 
-def test_set_lag_members(db_session, admin_role_id) -> None:
+def test_update_lag_members(db_session, admin_role_id) -> None:
     admin = _make_admin_user(db_session, admin_role_id)
     partner = _make_partner(db_session)
     asset = _make_asset(db_session, partner.id, "SRV-01", admin)
@@ -171,7 +171,7 @@ def test_set_lag_members(db_session, admin_role_id) -> None:
         admin,
     )
 
-    set_lag_members(db_session, bond0.id, [eth0.id, eth1.id], admin)
+    update_lag_members(db_session, bond0.id, [eth0.id, eth1.id], admin)
 
     db_session.refresh(eth0)
     db_session.refresh(eth1)
@@ -197,7 +197,7 @@ def test_lag_member_must_be_same_asset(db_session, admin_role_id) -> None:
     )
 
     with pytest.raises(BusinessRuleError, match="same asset"):
-        set_lag_members(db_session, bond0.id, [eth0.id], admin)
+        update_lag_members(db_session, bond0.id, [eth0.id], admin)
 
 
 def test_lag_member_must_be_physical_type(db_session, admin_role_id) -> None:
@@ -217,7 +217,7 @@ def test_lag_member_must_be_physical_type(db_session, admin_role_id) -> None:
     )
 
     with pytest.raises(BusinessRuleError, match="physical"):
-        set_lag_members(db_session, lag1.id, [lag2.id], admin)
+        update_lag_members(db_session, lag1.id, [lag2.id], admin)
 
 
 # -- Catalog auto-generation tests --

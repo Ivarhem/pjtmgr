@@ -20,7 +20,7 @@ from app.modules.infra.models.rack import Rack
 from app.modules.infra.models.room import Room
 from app.modules.infra.models.asset_role import AssetRole
 from app.modules.infra.models.asset_role_assignment import AssetRoleAssignment
-from app.modules.infra.schemas.asset import AssetCreate, AssetUpdate
+from app.modules.infra.schemas.asset import AssetCreate, AssetUpdate, AssetBulkUpdateItem
 from app.modules.infra.services.classification_identity_service import derive_asset_type_identity
 from app.modules.infra.services.asset_event_service import log_asset_event
 from app.modules.infra.services._helpers import ensure_partner_exists, get_period_asset_ids
@@ -639,18 +639,17 @@ def update_asset_current_role(
         if target_role.partner_id != asset.partner_id:
             raise BusinessRuleError("역할과 자산의 고객사가 일치하지 않습니다.", status_code=422)
 
-        role_current_assignments = list(
-            db.scalars(
-                select(AssetRoleAssignment).where(
-                    AssetRoleAssignment.asset_role_id == target_role.id,
-                    AssetRoleAssignment.is_current.is_(True),
-                )
+        # 같은 자산이 이미 이 역할에 할당되어 있으면 중복 생성하지 않음
+        already = db.scalar(
+            select(AssetRoleAssignment).where(
+                AssetRoleAssignment.asset_role_id == target_role.id,
+                AssetRoleAssignment.asset_id == asset.id,
+                AssetRoleAssignment.is_current.is_(True),
             )
         )
-        for assignment in role_current_assignments:
-            assignment.is_current = False
-            if assignment.valid_to is None:
-                assignment.valid_to = today
+        if already:
+            db.commit()
+            return asset
 
         db.add(
             AssetRoleAssignment(
@@ -1083,3 +1082,21 @@ def _get_effective_classification_layout(
             for level in sorted(layout.levels, key=lambda item: (item.level_no, item.id))
         ],
     }
+
+
+def bulk_update_assets(
+    db: Session,
+    items: list[AssetBulkUpdateItem],
+    current_user: User,
+) -> list[dict]:
+    """여러 자산을 일괄 업데이트한다."""
+    allowed_fields = set(AssetUpdate.model_fields.keys())
+    results = []
+    for item in items:
+        filtered = {k: v for k, v in item.changes.items() if k in allowed_fields}
+        if not filtered:
+            continue
+        payload = AssetUpdate(**filtered)
+        updated = update_asset(db, item.id, payload, current_user)
+        results.append(updated)
+    return results

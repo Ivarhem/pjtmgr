@@ -27,9 +27,11 @@
 - `docs/KNOWN_ISSUES.md`: 아직 해소되지 않은 임시 제약, 우회, 운영상 주의점
 - `docs/PROJECT_CONTEXT.md`: 도메인 배경, 사용자, 문제 정의
 - `docs/PROJECT_STRUCTURE.md`: 파일 단위 프로젝트 구조와 모듈별 역할
+- `docs/superpowers/plans/*.md`: active roadmap / 실행 체크리스트 / 리팩토링 로드맵. 특정 작업이 이 문서를 현재 실행 기준으로 선언하면 해당 문서도 source of truth로 본다.
 - 엔트리포인트/초기화 구조, API 엔드포인트, 데이터 모델의 1차 기준은 코드다 (`app/main.py`, `app/core/app_factory.py`, `app/core/startup/`, `app/modules/*/routers/`, `app/modules/*/models/`).
 - README나 guideline은 코드의 세부 inventory를 중복 소유하지 않는다. 코드 경로를 안내하거나, 변경 판단 기준만 제공한다.
 - `README.md`는 외부 사용자가 알아야 하는 안정 정보만 유지한다. 내부 리팩터링, 파일 이동, 세부 API/모델 변경만 있었고 실행/운영/현재 상태 의미가 바뀌지 않았다면 기본적으로 수정하지 않는다.
+- active roadmap 문서가 존재하면 상태/우선순위/완료 기준/체크리스트의 1차 기준은 해당 roadmap이다. 과거 plan/spec 문서는 reference 또는 archive 여부를 명시해, 현재 실행 기준처럼 읽히지 않게 유지한다.
 
 ---
 
@@ -43,7 +45,7 @@
 | 자산 역할 (AssetRole) | 인프라 운영 관점의 논리 역할 (예: 인터넷방화벽#1). 하나의 역할에 여러 자산을 시간축으로 할당 |
 | 자산 (Asset) | 물리/논리 IT 자산. 장비 단위 식별자 |
 | 환경 (environment) | 자산 배치 환경: prod(운영), dev(개발), staging(스테이징), dr(DR) |
-| 상태 (status) | 자산 라이프사이클: planned(도입예정), standby(대기), active(운영중), decommissioned(폐기) |
+| 상태 (status) | 자산 라이프사이클: planned(도입예정), standby(대기), active(가동), decommissioned(폐기) |
 
 > 모듈별 용어는 `docs/guidelines/accounting.md`, `docs/guidelines/infra.md` 참조.
 
@@ -105,12 +107,14 @@ app/
 | 멀티에이전트 역할/오케스트레이션 규칙 변경 | `docs/guidelines/agent_workflow.md`, 필요 시 `docs/agents/*.md` |
 | Excel Import/Export 변경 | `docs/guidelines/excel.md` |
 | startup/bootstrap/migration 변경 | `docs/DECISIONS.md`, 필요 시 `README.md` |
+| active roadmap / 실행 체크리스트 / 리팩터링 트랙 변경 | 해당 `docs/superpowers/plans/*.md`, 필요 시 `CLAUDE.md` |
 | 공개 엔드포인트/인증 흐름 변경 | `docs/guidelines/auth.md`, 필요 시 `README.md` |
 | 아키텍처 결정 | `docs/DECISIONS.md` (추가 전용) |
 | 임시 우회/제약 추가 | `docs/KNOWN_ISSUES.md` |
 | 임시 우회 해소 | `docs/KNOWN_ISSUES.md` (항목 삭제) |
 | 외부 사용자가 알아야 하는 실행/운영 변경 | `README.md` |
 | 파일/디렉토리 추가/삭제 | `docs/PROJECT_STRUCTURE.md` |
+| 브라우저 회귀 체크리스트 / 수동 검증 기준 변경 | 해당 active roadmap 또는 체크리스트 문서, 필요 시 `CLAUDE.md`의 `3. 테스트/확장성` |
 | 모델/API/파일 구조 세부 변경 | 문서 갱신 기본 불필요 (코드가 source of truth) |
 
 ---
@@ -123,6 +127,7 @@ app/
 - 기본 회귀 범위: metrics, contract, importer, dashboard, receipt_match, report, auth, database, startup, transaction safety, 모듈 격리, 모듈 등록, RBAC. 세부 파일 목록은 `tests/`가 1차 기준.
 - CRUD/설정 변경 회귀에는 삭제 경로, 다중 필드 업데이트, 원자성 시나리오를 포함한다.
 - 권한 회귀 테스트는 router 응답뿐 아니라 service 직접 호출 경로의 action 권한과 scope 차단도 포함한다.
+- UI/네비게이션/컨텍스트 변경은 테스트 외에도 해당 active roadmap 또는 화면 체크리스트 문서의 브라우저 회귀 항목을 함께 갱신한다.
 - DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리한다. startup 시 자동 `alembic upgrade head` 실행. 단일 migration 체인 유지.
 
 ---
@@ -149,7 +154,9 @@ app/
 - [ ] 기존 화면의 모달/패널/액션바/테이블을 수정했다면, touched 영역이 현재 공용 UI 패턴과 클래스 체계에 맞는가?
 - [ ] Excel Import/Export를 변경했는가? → `docs/guidelines/excel.md` 확인
 - [ ] startup/bootstrap/migration을 변경했는가? → `docs/DECISIONS.md`, 필요 시 `README.md` 확인
+- [ ] active roadmap / 실행 체크리스트 / 수동 브라우저 회귀 기준을 바꿨는가? → 해당 `docs/superpowers/plans/*.md`와 `3. 테스트/확장성` 확인
 - [ ] 문서에 적은 경로/엔드포인트/권한명이 실제 코드와 일치하는가?
+- [ ] API 엔드포인트를 변경했다면, JS의 fetch/apiFetch 호출 URL도 동기화했는가?
 
 ### 마이그레이션 기간 예외 (런타임 E2E 검증 완료 후 삭제)
 

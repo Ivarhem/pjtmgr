@@ -1,3 +1,28 @@
+// ── 공유 상수 (인프라 도메인) ──────────────────────────────────────
+
+const ASSET_STATUS_MAP = {
+  planned: "도입예정",
+  standby: "대기",
+  active: "가동",
+  decommissioned: "폐기",
+};
+
+const ENV_MAP = {
+  prod: "운영",
+  dev: "개발",
+  staging: "스테이징",
+  dr: "DR",
+};
+
+const CATALOG_KIND_LABELS = {
+  hardware: "하드웨어",
+  software: "소프트웨어",
+  model: "모델",
+  service: "서비스",
+  business_capability: "업무기능",
+  dataset: "데이터셋",
+};
+
 // ── 용어 라벨 (TermConfig) ────────────────────────────────────────
 
 let _termLabelsCache = null;
@@ -1392,6 +1417,7 @@ function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
   const {
     editableFields = [],
     autoCreateRows = false,
+    newRowDefaults = {},
     onPaste = null,
     onCopy = null,
     typeMap = {},
@@ -1459,13 +1485,13 @@ function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
     const totalRowsNeeded = startRowIdx + pasteRows.length;
     const currentRowCount = gridApi.getDisplayedRowCount();
 
-    // Auto-create rows if needed
+    // Auto-create rows if needed (append at bottom)
     if (autoCreateRows && totalRowsNeeded > currentRowCount) {
       const newRows = [];
       for (let i = 0; i < totalRowsNeeded - currentRowCount; i++) {
-        newRows.push({});
+        newRows.push({ ...newRowDefaults });
       }
-      gridApi.applyTransaction({ add: newRows });
+      gridApi.applyTransaction({ add: newRows, addIndex: currentRowCount });
     }
 
     for (let ri = 0; ri < pasteRows.length; ri++) {

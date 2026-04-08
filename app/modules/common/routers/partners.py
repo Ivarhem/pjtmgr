@@ -81,5 +81,5 @@ def update_contact(contact_id: int, data: PartnerContactUpdate, db: Session = De
 
 
 @router.delete("/contacts/{contact_id}", status_code=204)
-def delete_contact(contact_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)) -> None:
+def delete_contact(contact_id: int, db: Session = Depends(get_db), _admin: User = Depends(require_admin)) -> None:
     svc.delete_contact(db, contact_id)

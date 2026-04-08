@@ -18,7 +18,7 @@ from app.modules.infra.services.asset_interface_service import (
     generate_interfaces_from_catalog,
     get_interface,
     list_interfaces,
-    set_lag_members,
+    update_lag_members,
     update_interface,
 )
 
@@ -107,11 +107,11 @@ def delete_interface_endpoint(
     "/api/v1/asset-interfaces/{lag_id}/members",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def set_lag_members_endpoint(
+def update_lag_members_endpoint(
     lag_id: int,
     member_ids: list[int],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    set_lag_members(db, lag_id, member_ids, current_user)
+    update_lag_members(db, lag_id, member_ids, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

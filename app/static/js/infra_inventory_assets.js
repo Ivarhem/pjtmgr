@@ -1,17 +1,5 @@
 /* ── 자산 횡단 검색 (인벤토리) ── */
-
-const ASSET_STATUS_MAP = {
-  planned: "계획",
-  active: "운영중",
-  decommissioned: "폐기",
-};
-
-const ENV_MAP = {
-  prod: "운영",
-  dev: "개발",
-  staging: "스테이징",
-  dr: "DR",
-};
+/* ASSET_STATUS_MAP, ENV_MAP → utils.js에서 전역 정의 */
 
 const columnDefs = [
   {
