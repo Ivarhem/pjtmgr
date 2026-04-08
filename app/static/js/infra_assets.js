@@ -566,7 +566,7 @@ const CLASSIFICATION_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구�
 let _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
 
 const ASSET_CHK_COL = {
-  headerName: "", field: "_selected", width: 40, pinned: "left",
+  headerName: "", field: "_selected", width: 48, minWidth: 48, maxWidth: 48, pinned: "left",
   editable: false, sortable: false, resizable: false, suppressMovable: true,
   lockPosition: true, filter: false,
   cellRenderer: (params) => {
