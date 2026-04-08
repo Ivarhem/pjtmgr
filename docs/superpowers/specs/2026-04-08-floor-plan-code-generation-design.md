@@ -47,12 +47,19 @@
 - **랙 프로젝트코드:** `S07A-A12` (템플릿: `{center.prefix}{room.prefix}-{line.prefix}{rack.position}`)
 - **자산 프로젝트코드:** `S07A-A12-41` (템플릿: `{rack.project_code}-{unit}`)
 
-### 2.3 자산 모델과의 대응
+### 2.3 네이밍 규칙
 
-| 자산 (기존) | 센터/전산실/랙 (신규) |
-|------------|---------------------|
-| `asset_code` (시스템 식별) | `system_id` (계층 조합) |
-| `project_asset_number` (프로젝트 코드) | `project_code` (템플릿 기반) |
+모든 엔티티에서 동일한 필드명 규칙을 적용한다:
+
+| 필드명 | 역할 | 특성 |
+|--------|------|------|
+| `system_id` | 시스템 자동 부여 안정 식별자 | 읽기 전용, 계층 코드 조합, unique |
+| `project_code` | 프로젝트별 운영 코드 | 가변, 템플릿 또는 수동 입력 |
+| `*_code` (center_code 등) | 로컬 세그먼트 | system_id 구성요소, 사용자 입력 |
+
+**기존 필드 rename:**
+- `Asset.asset_code` → `Asset.system_id` (역할 동일, 이름 통일)
+- `Asset.project_asset_number` → 유지 (기존 용도 그대로, `project_code`와 별도)
 
 ## 3. 데이터 모델 변경
 
@@ -117,11 +124,14 @@ racks
 ```
 assets
 ├── ... (기존 필드)
-├── project_code (str 100, nullable) ─── 프로젝트코드 (가변)
+├── asset_code → system_id (rename, str 50, unique, nullable) ─── 필드명 통일
+├── project_code (str 100, nullable) ─── 프로젝트코드 (가변, 상면도 기반 자동생성)
 ```
 
-- 기존 `asset_code`가 시스템 ID 역할을 이미 수행
-- `project_asset_number`는 기존 필드로 유지, `project_code`는 상면도 기반 자동생성용
+- `asset_code` → `system_id`로 rename (DB 컬럼 + 코드 전체)
+- 자산의 `system_id`는 위치(랙) 계층과 무관한 **자산 고유 식별자** (기존 asset_code 생성 방식 유지)
+- 센터/전산실/랙의 system_id가 부모 코드 계층 조합인 것과 달리, 자산은 독립 엔티티로서 자체 규칙을 따름
+- `project_asset_number`는 기존 필드로 유지 (고객사 부여 번호, project_code와 별도 용도)
 
 ### 3.6 ContractPeriod (변경)
 
@@ -151,13 +161,15 @@ contract_periods
 
 ### 4.1 생성 규칙
 
-시스템 ID는 부모의 `_code` 필드를 `-`로 연결하여 자동 생성한다.
+시스템 ID는 물리 계층(센터/전산실/랙)에서는 부모의 `_code` 필드를 `-`로 연결하여 자동 생성한다.
+자산은 위치와 무관한 독립 엔티티이므로 자체 규칙을 따른다.
 
 | 엔티티 | system_id 구성 | 예시 |
 |--------|---------------|------|
 | Center | `{partner.partner_code}-{center_code}` | `P000-C01` |
 | Room | `{center.system_id}-{room_code}` | `P000-C01-R01` |
 | Rack | `{room.system_id}-{rack_code}` | `P000-C01-R01-A12` |
+| Asset | 자산 고유 (위치 계층 무관, 기존 asset_code 방식) | 기존 값 유지 |
 
 ### 4.2 생성 시점
 
@@ -320,13 +332,15 @@ contract_periods
 ## 9. 마이그레이션
 
 단일 Alembic migration으로 처리:
+
 - Center: `system_id`, `prefix`, `project_code` 추가
 - Room: `system_id`, `prefix`, `project_code`, `grid_cols`, `grid_rows` 추가
 - Rack: `system_id`, `project_code`, `rack_line_id`, `line_position` 추가
-- Asset: `project_code` 추가
+- Asset: `asset_code` → `system_id` rename, `project_code` 추가
 - ContractPeriod: `rack_project_code_template`, `asset_project_code_template` 추가
 - `rack_lines` 테이블 생성
-- 마이그레이션 시 기존 데이터의 system_id를 부모 코드 조합으로 일괄 생성
+- 마이그레이션 시 센터/전산실/랙의 system_id를 부모 코드 조합으로 일괄 생성
+- Asset의 system_id는 기존 asset_code 값을 그대로 이관
 
 ## 10. 스코프 외
 
