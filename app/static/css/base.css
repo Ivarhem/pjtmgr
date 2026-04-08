@@ -616,6 +616,9 @@ body.hide-desc .data-note { display: none; }
 .form-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-color-secondary); }
 .form-grid label > .label-text { display: inline; }
 .req { color: var(--danger-color, #dc3545); font-weight: 600; display: inline; margin-left: 1px; }
+.field-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; line-height: 1.4; }
+.field-tag-required { background: rgba(220, 53, 69, 0.12); color: var(--danger-color, #dc3545); }
+.field-tag-unique { background: rgba(37, 99, 235, 0.12); color: var(--primary-color, #2563eb); }
 .form-grid label.chk-inline,
 .info-edit-field.chk-inline,
 label.chk-inline { flex-direction: row; align-items: center; gap: 8px; cursor: pointer; justify-content: flex-start; }

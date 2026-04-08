@@ -2832,6 +2832,7 @@ async function openCreateModal() {
   document.getElementById("inline-catalog-form").classList.add("is-hidden");
   document.getElementById("asset-project-code").value = "";
   document.getElementById("asset-customer-code").value = "";
+  document.getElementById("asset-role-name").value = "";
   document.getElementById("asset-hostname").value = "";
   fillSelectOptions(document.getElementById("asset-center-id"), [], "id", (item) => item.id, "-- 선택 안함 --");
   fillSelectOptions(document.getElementById("asset-room-id"), [], "id", (item) => item.id, "-- 센터 선택 --", null, true);
@@ -3287,11 +3288,14 @@ async function saveAsset() {
   if (!catalogId) { showToast("카탈로그 제품을 선택하세요.", "warning"); return; }
   const name = document.getElementById("asset-name").value.trim();
   if (!name) { showToast("자산명을 입력하세요.", "warning"); return; }
+  const projectCode = document.getElementById("asset-project-code").value.trim() || null;
+  const customerCode = document.getElementById("asset-customer-code").value.trim() || projectCode;
+  const roleName = (document.getElementById("asset-role-name").value.trim()) || null;
   const payload = {
     partner_id: cid,
     model_id: Number(catalogId),
-    project_asset_number: document.getElementById("asset-project-code").value.trim() || null,
-    customer_asset_number: document.getElementById("asset-customer-code").value.trim() || null,
+    project_asset_number: projectCode,
+    customer_asset_number: customerCode,
     asset_name: name,
     hostname: document.getElementById("asset-hostname").value || null,
     period_id: document.getElementById("asset-period").value ? Number(document.getElementById("asset-period").value) : null,
@@ -3301,6 +3305,31 @@ async function saveAsset() {
   };
   try {
     const asset = await apiFetch("/api/v1/assets", { method: "POST", body: payload });
+
+    // 역할명 자동 할당 (비워두면 자산명 사용)
+    const finalRoleName = roleName || name;
+    if (finalRoleName) {
+      try {
+        let role = _assetRoleOptions.find(r => r.role_name.toLowerCase() === finalRoleName.toLowerCase());
+        if (!role) {
+          role = await apiFetch("/api/v1/asset-roles", {
+            method: "POST",
+            body: {
+              partner_id: cid,
+              role_name: finalRoleName,
+              status: "active",
+              contract_period_id: payload.period_id,
+            },
+          });
+          _assetRoleOptions.push(role);
+        }
+        await apiFetch(`/api/v1/assets/${asset.id}/current-role`, {
+          method: "PATCH",
+          body: { asset_role_id: role.id },
+        });
+      } catch { /* 역할 할당 실패는 무시 — 등록 자체는 완료 */ }
+    }
+
     modal.close();
     showToast("자산이 등록되었습니다.");
     await loadAssets();

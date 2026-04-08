@@ -128,11 +128,11 @@
     </fieldset>
 
     <div class="form-grid" style="grid-template-columns: 1fr 2fr;">
-      <label><span class="label-text">자산명<span class="req">*</span></span>
-        <input type="text" id="asset-name" required>
+      <label><span class="label-text">자산명<span class="field-tag field-tag-required">필수</span><span class="field-tag field-tag-unique">고유</span></span>
+        <input type="text" id="asset-name" required placeholder="장비 식별명">
       </label>
       <div style="display:flex;flex-direction:column;gap:6px;">
-        <label style="margin:0;"><span class="label-text">카탈로그 제품<span class="req">*</span></span>
+        <label style="margin:0;"><span class="label-text">카탈로그 제품<span class="field-tag field-tag-required">필수</span></span>
           <div class="modal-combobox">
             <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
             <input type="hidden" id="catalog-id">
@@ -150,7 +150,7 @@
 
       <label>
         프로젝트코드
-        <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
+        <input type="text" id="asset-project-code" placeholder="수행 기준 관리번호">
       </label>
       <label>
         귀속사업
@@ -158,10 +158,22 @@
           <option value="">-- 선택 안함 --</option>
         </select>
       </label>
+
+      <div class="full-width" style="border-top:1px solid var(--border-color-light);margin:4px 0;"></div>
+
+      <label>
+        <span class="label-text">역할명</span>
+        <input type="text" id="asset-role-name" placeholder="비워두면 자산명과 동일">
+      </label>
+      <div></div>
+      <label>
+        <span class="label-text">고객 자산번호</span>
+        <input type="text" id="asset-customer-code" placeholder="비워두면 프로젝트코드와 동일">
+      </label>
+      <div></div>
     </div>
     <!-- 추가정보(호스트명, 센터, 랙 등)는 등록 후 자산 상세에서 편집 -->
     <input type="hidden" id="asset-hostname" value="">
-    <input type="hidden" id="asset-customer-code" value="">
     <select id="asset-center-id" class="is-hidden"><option value=""></option></select>
     <select id="asset-room-id" class="is-hidden"><option value=""></option></select>
     <select id="asset-rack-id" class="is-hidden"><option value=""></option></select>
