@@ -260,6 +260,46 @@ def delete_rack(db: Session, rack_id: int, current_user) -> None:
     db.commit()
 
 
+def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
+    """해당 랙에 배치된 자산 목록 (rack_start_unit 순 정렬)."""
+    from app.modules.infra.models.asset import Asset
+
+    rack = db.get(Rack, rack_id)
+    if rack is None:
+        raise NotFoundError("Rack not found")
+
+    assets = list(db.scalars(
+        select(Asset)
+        .where(Asset.rack_id == rack_id)
+        .order_by(Asset.rack_start_unit.asc().nullslast(), Asset.id.asc())
+    ))
+    return [
+        {
+            "id": a.id,
+            "asset_name": a.asset_name,
+            "hostname": a.hostname,
+            "rack_start_unit": a.rack_start_unit,
+            "rack_end_unit": a.rack_end_unit,
+            "size_unit": a.size_unit,
+            "status": a.status,
+            "environment": a.environment,
+            "rack_unit": a.rack_unit,
+        }
+        for a in assets
+    ]
+
+
+def reorder_racks(db: Session, orders: list[dict], current_user) -> None:
+    """벌크 랙 sort_order 업데이트. orders: [{id: int, sort_order: int}, ...]"""
+    _require_inventory_edit(current_user)
+
+    for item in orders:
+        rack = db.get(Rack, item["id"])
+        if rack:
+            rack.sort_order = item["sort_order"]
+    db.commit()
+
+
 def _ensure_partner_exists(db: Session, partner_id: int) -> None:
     if db.get(Partner, partner_id) is None:
         raise NotFoundError("Partner not found")
