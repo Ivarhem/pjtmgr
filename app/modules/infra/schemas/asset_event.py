@@ -26,7 +26,7 @@ class AssetEventRead(BaseModel):
     related_asset_name: str | None = None
     related_asset_code: str | None = None
     created_by_user_name: str | None = None
-    asset_code_snapshot: str | None = None
+    system_id_snapshot: str | None = None
     asset_name_snapshot: str | None = None
     occurred_at: datetime
     created_at: datetime

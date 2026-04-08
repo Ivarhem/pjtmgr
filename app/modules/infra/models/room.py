@@ -21,3 +21,8 @@ class Room(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     racks_per_row: Mapped[int] = mapped_column(Integer, default=6)
+    system_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True, index=True)
+    prefix: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    project_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    grid_cols: Mapped[int] = mapped_column(Integer, default=10)
+    grid_rows: Mapped[int] = mapped_column(Integer, default=12)

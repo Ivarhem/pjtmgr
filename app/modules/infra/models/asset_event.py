@@ -25,7 +25,7 @@ class AssetEvent(TimestampMixin, Base):
     event_type: Mapped[str] = mapped_column(String(50), index=True, nullable=False)
     summary: Mapped[str] = mapped_column(String(500), nullable=False)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
-    asset_code_snapshot: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    system_id_snapshot: Mapped[str | None] = mapped_column(String(50), nullable=True)
     asset_name_snapshot: Mapped[str | None] = mapped_column(String(255), nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False, index=True

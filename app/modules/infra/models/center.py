@@ -20,3 +20,6 @@ class Center(TimestampMixin, Base):
     location: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    system_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True, index=True)
+    prefix: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    project_code: Mapped[str | None] = mapped_column(String(100), nullable=True)

@@ -22,3 +22,7 @@ class Rack(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    system_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True, index=True)
+    project_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    rack_line_id: Mapped[int | None] = mapped_column(ForeignKey("rack_lines.id", ondelete="SET NULL"), nullable=True)
+    line_position: Mapped[int | None] = mapped_column(Integer, nullable=True)

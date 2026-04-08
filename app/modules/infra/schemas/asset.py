@@ -21,7 +21,8 @@ class AssetCreate(BaseModel):
 class AssetUpdate(BaseModel):
     period_id: int | None = None
     partner_id: int | None = None
-    asset_code: str | None = None
+    system_id: str | None = None
+    project_code: str | None = None
     project_asset_number: str | None = None
     customer_asset_number: str | None = None
     asset_name: str | None = None
@@ -76,7 +77,8 @@ class AssetRead(BaseModel):
 
     id: int
     partner_id: int
-    asset_code: str | None = None
+    system_id: str | None = None
+    project_code: str | None = None
     project_asset_number: str | None = None
     customer_asset_number: str | None = None
     asset_name: str
