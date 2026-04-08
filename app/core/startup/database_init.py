@@ -40,9 +40,11 @@ def _apply_alembic() -> None:
 
 def prepare_database() -> None:
     """현재 환경에 맞게 스키마를 준비하고 레거시 마이그레이션을 적용한다."""
-    if ENV == "dev":
-        Base.metadata.create_all(bind=engine)
     # Docker 환경에서는 entrypoint의 `alembic upgrade head`가 이미 실행됨.
     # 중복 실행 시 advisory lock 충돌 방지를 위해 SKIP_LIFESPAN_ALEMBIC 환경변수로 제어.
     if not os.getenv("SKIP_LIFESPAN_ALEMBIC"):
         _apply_alembic()
+    # dev 환경에서는 Alembic에 없는 새 테이블을 create_all로 보완한다.
+    # Alembic 이후에 실행해야 중복 CREATE TABLE 충돌을 방지한다.
+    if ENV == "dev":
+        Base.metadata.create_all(bind=engine)

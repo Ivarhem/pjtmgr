@@ -44,7 +44,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("room_id", "col_index", name="uq_rack_lines_room_col"),
     )
-    op.create_index("ix_rack_lines_room_id", "rack_lines", ["room_id"])
+    # room_id index is created by index=True in create_table above
 
     # --- racks ---
     op.add_column("racks", sa.Column("system_id", sa.String(100), unique=True, nullable=True))
@@ -135,7 +135,6 @@ def downgrade() -> None:
     op.drop_column("racks", "system_id")
 
     # rack_lines
-    op.drop_index("ix_rack_lines_room_id", table_name="rack_lines")
     op.drop_table("rack_lines")
 
     # rooms
