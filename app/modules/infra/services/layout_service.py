@@ -12,6 +12,13 @@ from app.modules.infra.models.room import Room
 from app.modules.infra.schemas.center import CenterCreate, CenterUpdate
 from app.modules.infra.schemas.rack import RackCreate, RackUpdate
 from app.modules.infra.schemas.room import RoomCreate, RoomUpdate
+from app.modules.infra.services.code_generation_service import (
+    build_center_system_id,
+    build_rack_system_id,
+    build_room_system_id,
+    cascade_update_room_system_ids,
+    cascade_update_system_ids,
+)
 
 
 def list_centers(db: Session, partner_id: int) -> list[dict]:
@@ -39,6 +46,9 @@ def list_centers(db: Session, partner_id: int) -> list[dict]:
             "location": center.location,
             "is_active": center.is_active,
             "note": center.note,
+            "system_id": center.system_id,
+            "prefix": center.prefix,
+            "project_code": center.project_code,
             "room_count": room_count,
             "rack_count": rack_count,
             "created_at": center.created_at,
@@ -70,6 +80,9 @@ def list_rooms(db: Session, center_id: int) -> list[dict]:
             "floor": room.floor,
             "is_active": room.is_active,
             "note": room.note,
+            "system_id": room.system_id,
+            "prefix": room.prefix,
+            "project_code": room.project_code,
             "rack_count": rack_count,
             "created_at": room.created_at,
             "updated_at": room.updated_at,
@@ -98,6 +111,8 @@ def list_racks(db: Session, room_id: int) -> list[dict]:
             "location_detail": rack.location_detail,
             "is_active": rack.is_active,
             "note": rack.note,
+            "system_id": rack.system_id,
+            "project_code": rack.project_code,
             "created_at": rack.created_at,
             "updated_at": rack.updated_at,
         }
@@ -140,11 +155,14 @@ def create_center(db: Session, payload: CenterCreate, current_user) -> Center:
     center = Center(**payload.model_dump(exclude={"center_code"}), center_code=center_code)
     db.add(center)
     db.flush()
+    partner = db.get(Partner, payload.partner_id)
+    center.system_id = build_center_system_id(partner.partner_code, center_code)
     default_room = Room(
         center_id=center.id,
         room_code="MAIN",
         room_name="기본 전산실",
         is_active=True,
+        system_id=build_room_system_id(center.system_id, "MAIN"),
     )
     db.add(default_room)
     db.commit()
@@ -157,10 +175,15 @@ def update_center(db: Session, center_id: int, payload: CenterUpdate, current_us
     center = get_center(db, center_id)
     changes = payload.model_dump(exclude_unset=True)
     next_code = changes.get("center_code", center.center_code)
-    if next_code != center.center_code:
+    code_changed = next_code != center.center_code
+    if code_changed:
         _ensure_center_code_unique(db, center.partner_id, next_code, center.id)
     for field, value in changes.items():
         setattr(center, field, value)
+    if code_changed:
+        partner = db.get(Partner, center.partner_id)
+        center.system_id = build_center_system_id(partner.partner_code, center.center_code)
+        cascade_update_system_ids(db, center)
     db.commit()
     db.refresh(center)
     return center
@@ -188,6 +211,7 @@ def create_room(db: Session, payload: RoomCreate, current_user) -> Room:
     )
     _ensure_room_code_unique(db, center.id, room_code)
     room = Room(**payload.model_dump(exclude={"room_code"}), room_code=room_code)
+    room.system_id = build_room_system_id(center.system_id, room_code)
     db.add(room)
     db.commit()
     db.refresh(room)
@@ -199,10 +223,15 @@ def update_room(db: Session, room_id: int, payload: RoomUpdate, current_user) ->
     room = get_room(db, room_id)
     changes = payload.model_dump(exclude_unset=True)
     next_code = changes.get("room_code", room.room_code)
-    if next_code != room.room_code:
+    code_changed = next_code != room.room_code
+    if code_changed:
         _ensure_room_code_unique(db, room.center_id, next_code, room.id)
     for field, value in changes.items():
         setattr(room, field, value)
+    if code_changed:
+        center = get_center(db, room.center_id)
+        room.system_id = build_room_system_id(center.system_id, room.room_code)
+        cascade_update_room_system_ids(db, room)
     db.commit()
     db.refresh(room)
     return room
@@ -231,6 +260,7 @@ def create_rack(db: Session, payload: RackCreate, current_user) -> Rack:
     )
     _ensure_rack_code_unique(db, room.id, rack_code)
     rack = Rack(**payload.model_dump(exclude={"rack_code"}), rack_code=rack_code)
+    rack.system_id = build_rack_system_id(room.system_id, rack_code)
     db.add(rack)
     db.commit()
     db.refresh(rack)
@@ -244,10 +274,14 @@ def update_rack(db: Session, rack_id: int, payload: RackUpdate, current_user) ->
     next_code = changes.get("rack_code", rack.rack_code)
     next_units = changes.get("total_units", rack.total_units)
     _ensure_total_units(next_units)
-    if next_code != rack.rack_code:
+    code_changed = next_code != rack.rack_code
+    if code_changed:
         _ensure_rack_code_unique(db, rack.room_id, next_code, rack.id)
     for field, value in changes.items():
         setattr(rack, field, value)
+    if code_changed:
+        room = get_room(db, rack.room_id)
+        rack.system_id = build_rack_system_id(room.system_id, rack.rack_code)
     db.commit()
     db.refresh(rack)
     return rack
