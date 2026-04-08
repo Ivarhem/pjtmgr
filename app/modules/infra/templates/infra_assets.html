@@ -145,12 +145,9 @@
           <button type="button" class="classification-chip-clear is-hidden" id="btn-clear-catalog" title="선택 해제">×</button>
         </div>
       </div>
-
-      <div class="full-width" style="border-top:1px solid var(--border-color-light);margin:4px 0;"></div>
-
       <label>
-        프로젝트코드
-        <input type="text" id="asset-project-code" placeholder="수행 기준 관리번호">
+        역할명
+        <input type="text" id="asset-role-name" placeholder="비워두면 자산명과 동일">
       </label>
       <label>
         귀속사업
@@ -162,15 +159,13 @@
       <div class="full-width" style="border-top:1px solid var(--border-color-light);margin:4px 0;"></div>
 
       <label>
-        <span class="label-text">역할명</span>
-        <input type="text" id="asset-role-name" placeholder="비워두면 자산명과 동일">
+        프로젝트코드
+        <input type="text" id="asset-project-code" placeholder="수행 기준 관리번호">
       </label>
-      <div></div>
       <label>
-        <span class="label-text">고객 자산번호</span>
+        고객자산코드
         <input type="text" id="asset-customer-code" placeholder="비워두면 프로젝트코드와 동일">
       </label>
-      <div></div>
     </div>
     <!-- 추가정보(호스트명, 센터, 랙 등)는 등록 후 자산 상세에서 편집 -->
     <input type="hidden" id="asset-hostname" value="">

@@ -518,7 +518,7 @@ const ASSET_CODE_COLS = [
     valueFormatter: (p) => p.value || "—",
     cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
   },
-  { field: "customer_asset_number", headerName: "고객 자산번호", width: 150, valueFormatter: (p) => p.value || "—", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
+  { field: "customer_asset_number", headerName: "고객자산코드", width: 150, valueFormatter: (p) => p.value || "—", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
   {
     field: "period_id",
     headerName: "귀속프로젝트",
@@ -1065,7 +1065,7 @@ const DETAIL_TAB_FIELDS = {
       fields: [
         ["코드", "asset_code"],
         ["프로젝트코드", "project_asset_number"],
-        ["고객 자산번호", "customer_asset_number"],
+        ["고객자산코드", "customer_asset_number"],
         ["자산명", "asset_name"],
         ["역할명", "current_role_names", (v) => v && v.length ? v.join(", ") : "—"],
         ["귀속사업", "period_id", () => _selectedAsset?.period_label || "—"],
@@ -1140,7 +1140,7 @@ const DETAIL_TAB_FIELDS = {
 const DETAIL_EDIT_FIELDS = {
   overview: [
     ["프로젝트코드", "project_asset_number"],
-    ["고객 자산번호", "customer_asset_number"],
+    ["고객자산코드", "customer_asset_number"],
     ["자산명", "asset_name"],
     ["귀속사업", "period_id"],
     ["카탈로그 제품", "model_id"],
