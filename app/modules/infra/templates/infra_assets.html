@@ -79,7 +79,7 @@
 </div>
 
 <!-- 자산 등록 모달 -->
-<dialog id="modal-asset" class="modal modal-md">
+<dialog id="modal-asset" class="modal modal-lg">
   <h2>자산 등록</h2>
   <form id="form-asset">
     <input type="hidden" id="catalog-kind-filter-modal" value="hardware">
@@ -145,14 +145,14 @@
           <input type="text" id="asset-name" required>
         </label>
         <label>
-          프로젝트코드
-          <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
-        </label>
-        <label class="full-width">
           귀속사업
           <select id="asset-period">
             <option value="">-- 선택 안함 --</option>
           </select>
+        </label>
+        <label>
+          프로젝트코드
+          <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
         </label>
       </div>
     </fieldset>
