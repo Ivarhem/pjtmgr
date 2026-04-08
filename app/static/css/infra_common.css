@@ -2983,3 +2983,37 @@ body.dark-mode .catalog-management-result {
 .infra-grid-row-new {
   background-color: rgba(37, 99, 235, 0.06) !important;
 }
+
+/* ── Physical Layout: Room View ── */
+.layout-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.layout-view-header h3 { margin: 0; font-size: 16px; }
+.layout-view-info {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  margin-bottom: 12px;
+}
+.rack-grid {
+  display: grid;
+  gap: 12px;
+}
+.rack-card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--surface-color);
+}
+.rack-card:hover { border-color: var(--primary-color); }
+.rack-card.is-selected { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15); }
+.rack-card.is-dragging { opacity: 0.4; }
+.rack-card.drag-over { border-color: var(--primary-color); border-style: dashed; }
+.rack-card-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.rack-card-usage { font-size: 11px; color: var(--text-color-secondary); }
+.rack-usage-bar { height: 4px; background: var(--border-color); border-radius: 2px; margin-top: 6px; }
+.rack-usage-bar-fill { height: 100%; border-radius: 2px; background: var(--primary-color); transition: width 0.3s; }

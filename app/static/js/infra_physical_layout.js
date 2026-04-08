@@ -499,51 +499,161 @@ function renderFloorView(container, data) {
   }
 }
 
-function renderRoomView(container, room) {
-  const wrapper = createContentWrapper();
-  container.appendChild(wrapper);
+async function renderRoomView(container, room) {
+  // Header
+  const header = document.createElement("div");
+  header.className = "layout-view-header";
+  const h3 = document.createElement("h3");
+  h3.textContent = room.room_name + (room.floor ? " (" + room.floor + ")" : "");
+  header.appendChild(h3);
 
-  wrapper.appendChild(createContentHeader(
-    "\uD83D\uDEAA", room.room_name,
-    () => openRoomModal(room),
-    () => deleteRoom(room),
-  ));
+  const actions = document.createElement("div");
+  actions.className = "gap-sm";
+  const btnAddRack = document.createElement("button");
+  btnAddRack.className = "btn btn-sm btn-primary";
+  btnAddRack.textContent = "+ 랙 추가";
+  btnAddRack.addEventListener("click", () => openRackModal());
+  actions.appendChild(btnAddRack);
 
-  // Info card
+  const btnEditRoom = document.createElement("button");
+  btnEditRoom.className = "btn btn-sm btn-secondary";
+  btnEditRoom.textContent = "전산실 수정";
+  btnEditRoom.addEventListener("click", () => openRoomModal(room));
+  actions.appendChild(btnEditRoom);
+  header.appendChild(actions);
+  container.appendChild(header);
+
+  // Rack data
+  const racks = (_racks[room.id] || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  // Info row
   const info = document.createElement("div");
-  info.className = "card";
-  info.style.padding = "16px";
-  appendFieldRow(info, "\uC804\uC0B0\uC2E4\uCF54\uB4DC", room.room_code);
-  appendFieldRow(info, "\uCE35", room.floor || "\u2014");
-  appendFieldRow(info, "\uB799 \uC5F4 \uC218", String(room.racks_per_row ?? "\u2014"));
-  appendFieldRow(info, "\uC0C1\uD0DC", createStatusBadge(room.is_active));
-  appendFieldRow(info, "\uBE44\uACE0", room.note || "\u2014");
-  wrapper.appendChild(info);
+  info.className = "layout-view-info";
+  info.textContent = "랙 " + racks.length + "개 | 열 " + (room.racks_per_row || 4) + "개 배치";
+  container.appendChild(info);
 
-  // Placeholder for rack layout visualization
-  const p = document.createElement("p");
-  p.className = "text-muted";
-  p.style.marginTop = "16px";
-  p.textContent = "\uB799 \uBC30\uCE58\uB3C4\uAC00 \uC5EC\uAE30\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.";
-  wrapper.appendChild(p);
+  // Rack grid
+  const grid = document.createElement("div");
+  grid.className = "rack-grid";
+  grid.style.gridTemplateColumns = "repeat(" + (room.racks_per_row || 4) + ", 1fr)";
+  container.appendChild(grid);
 
-  // List racks as cards
-  const racks = _racks[room.id] || [];
-  if (racks.length) {
-    const h2 = document.createElement("h4");
-    h2.textContent = "\uB799 \uBAA9\uB85D (" + racks.length + ")";
-    h2.style.marginTop = "16px";
-    wrapper.appendChild(h2);
-
-    racks.forEach(rack => {
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.cssText = "padding:12px;margin-top:8px;cursor:pointer;";
-      card.textContent = "\uD83D\uDCBD " + (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
-      card.addEventListener("click", () => selectNode("rack", rack.id, rack));
-      wrapper.appendChild(card);
-    });
+  if (!racks.length) {
+    const empty = document.createElement("p");
+    empty.className = "text-muted";
+    empty.textContent = "등록된 랙이 없습니다. '+ 랙 추가' 버튼으로 랙을 등록하세요.";
+    grid.appendChild(empty);
+    return;
   }
+
+  for (const rack of racks) {
+    const card = _createRackCard(rack, room.id);
+    grid.appendChild(card);
+  }
+
+  _enableRackDrag(grid, racks, room.id);
+}
+
+function _createRackCard(rack, roomId) {
+  const card = document.createElement("div");
+  card.className = "rack-card";
+  card.draggable = true;
+  card.dataset.rackId = rack.id;
+
+  if (_selectedNode && _selectedNode.type === "rack" && _selectedNode.id === rack.id) {
+    card.classList.add("is-selected");
+  }
+
+  const name = document.createElement("div");
+  name.className = "rack-card-name";
+  name.textContent = rack.rack_name || rack.rack_code;
+  card.appendChild(name);
+
+  const usage = document.createElement("div");
+  usage.className = "rack-card-usage";
+  usage.textContent = rack.total_units + "U";
+  card.appendChild(usage);
+
+  const bar = document.createElement("div");
+  bar.className = "rack-usage-bar";
+  const fill = document.createElement("div");
+  fill.className = "rack-usage-bar-fill";
+  fill.style.width = "0%"; // Will be updated with actual usage later
+  bar.appendChild(fill);
+  card.appendChild(bar);
+
+  card.addEventListener("click", () => selectNode("rack", rack.id, rack));
+
+  return card;
+}
+
+function _enableRackDrag(grid, racks, roomId) {
+  let draggedId = null;
+
+  grid.querySelectorAll(".rack-card").forEach(card => {
+    card.addEventListener("dragstart", (e) => {
+      draggedId = Number(card.dataset.rackId);
+      card.classList.add("is-dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+
+    card.addEventListener("dragend", () => {
+      card.classList.remove("is-dragging");
+      draggedId = null;
+      grid.querySelectorAll(".rack-card").forEach(c => c.classList.remove("drag-over"));
+    });
+
+    card.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (Number(card.dataset.rackId) !== draggedId) {
+        card.classList.add("drag-over");
+      }
+    });
+
+    card.addEventListener("dragleave", () => {
+      card.classList.remove("drag-over");
+    });
+
+    card.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      card.classList.remove("drag-over");
+      const targetId = Number(card.dataset.rackId);
+      if (draggedId === targetId || !draggedId) return;
+
+      // Reorder: move dragged before target
+      const currentOrder = racks.map(r => r.id);
+      const fromIdx = currentOrder.indexOf(draggedId);
+      const toIdx = currentOrder.indexOf(targetId);
+      if (fromIdx < 0 || toIdx < 0) return;
+
+      currentOrder.splice(fromIdx, 1);
+      currentOrder.splice(toIdx, 0, draggedId);
+
+      const orders = currentOrder.map((id, i) => ({ id, sort_order: i }));
+
+      try {
+        await apiFetch("/api/v1/racks/reorder", {
+          method: "PATCH",
+          body: orders,
+        });
+        // Update local data
+        orders.forEach(o => {
+          const rack = racks.find(r => r.id === o.id);
+          if (rack) rack.sort_order = o.sort_order;
+        });
+        _racks[roomId] = racks.slice().sort((a, b) => a.sort_order - b.sort_order);
+        // Re-render
+        const content = document.getElementById("layout-content");
+        content.textContent = "";
+        const roomData = (_rooms[_selectedCenterId] || []).find(r => r.id === roomId) || { id: roomId, room_name: "전산실", racks_per_row: 4 };
+        renderRoomView(content, roomData);
+        showToast("랙 순서가 변경되었습니다.");
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    });
+  });
 }
 
 function renderRackView(container, rack) {
