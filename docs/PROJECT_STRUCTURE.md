@@ -191,7 +191,8 @@ app/modules/infra/
 │   ├── product_catalog_list_cache.py # ProductCatalogListCache (제품 목록 캐시)
 │   ├── center.py                # Center (데이터센터)
 │   ├── room.py                  # Room (전산실)
-│   └── rack.py                  # Rack (랙)
+│   ├── rack.py                  # Rack (랙)
+│   └── rack_line.py             # RackLine (전산실 격자 랙 배치 라인)
 ├── schemas/
 │   ├── period_phase.py          # 단계 스키마
 │   ├── period_deliverable.py    # 산출물 스키마
@@ -231,7 +232,8 @@ app/modules/infra/
 │   ├── project_classification_layout.py # 프로젝트 분류 레이아웃 스키마
 │   ├── center.py                # 센터 스키마
 │   ├── room.py                  # 전산실 스키마
-│   └── rack.py                  # 랙 스키마
+│   ├── rack.py                  # 랙 스키마
+│   └── rack_line.py             # RackLine 스키마
 ├── services/
 │   ├── phase_service.py         # 계약단위 단계 CRUD
 │   ├── asset_service.py         # 자산/자산IP/담당자 CRUD
@@ -250,6 +252,7 @@ app/modules/infra/
 │   ├── period_partner_contact_service.py # 계약단위-담당자 CRUD
 │   ├── infra_metrics.py         # 현황판 집계 서비스
 │   ├── layout_service.py        # 물리 배치(센터/전산실/랙) 관리
+│   ├── code_generation_service.py # system_id/project_code 생성 서비스
 │   ├── classification_layout_service.py # 분류 레이아웃 CRUD
 │   ├── classification_view_service.py # 분류 조회 서비스
 │   ├── classification_identity_service.py # 분류 식별 서비스
@@ -294,6 +297,8 @@ app/modules/infra/
 │   ├── centers.py               # /api/v1/centers
 │   ├── rooms.py                 # /api/v1/rooms
 │   ├── racks.py                 # /api/v1/racks
+│   ├── rack_lines.py            # /api/v1/rack-lines (RackLine CRUD)
+│   ├── code_generation.py       # /api/v1/code-generation (프로젝트코드 생성)
 │   └── pages.py                 # 인프라 HTML 페이지 렌더링
 └── templates/
     ├── infra_projects.html      # 계약단위 목록 (/periods, 상세 인라인 패널 포함)

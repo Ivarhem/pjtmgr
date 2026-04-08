@@ -137,6 +137,28 @@
 
 ---
 
+## 이원 코드 체계 (system_id / project_code)
+
+- `system_id`: 시스템 자동 부여 안정 식별자. 부모 `_code` 필드를 `-`로 연결 (예: `P000-C01-R01-A12`). 읽기 전용.
+- `project_code`: 프로젝트별 운영 코드. 템플릿 기반 자동 생성 또는 수동 입력. 편집 가능.
+- `Asset.system_id`는 위치 무관 안정 식별자다 (기존 `asset_code` rename).
+- 코드 생성 서비스(`code_generation_service`)가 `system_id` 채번과 `project_code` 템플릿 적용을 담당한다.
+
+## RackLine (전산실 랙 배치 라인)
+
+- `RackLine`은 전산실(Room) 격자 위에 열(column) 단위로 랙을 배치하는 논리 라인이다.
+- 주요 필드: `room_id` (FK), `col_index` (격자 열 위치), `slot_count` (슬롯 수), `disabled_slots` (비활성 슬롯 목록), `prefix` (랙 코드 prefix).
+- 랙은 `RackLine`의 슬롯에 배치되며, `Rack.sort_order`로 순서를 관리한다.
+
+## 상면도 (전산실 평면 배치도)
+
+- 전산실 선택 시 `grid_cols × grid_rows` 격자를 렌더링한다.
+- 라인 편집: 생성/수정/삭제/슬롯 토글 지원.
+- 랙 배치: 빈 슬롯으로 드래그하여 랙을 배치하고 순서를 재배치할 수 있다.
+- 배치 트리는 센터 > 전산실 > 라인 > 랙 구조로 탐색한다.
+
+---
+
 ## 자산명 / 역할명 규칙
 
 - `asset_name`은 물리 자산명이다.
