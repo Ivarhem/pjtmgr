@@ -39,6 +39,7 @@ from app.modules.infra.models.product_catalog_list_cache import ProductCatalogLi
 from app.modules.infra.models.product_similarity_dismissal import ProductSimilarityDismissal
 from app.modules.infra.models.asset_interface import AssetInterface
 from app.modules.infra.models.asset_license import AssetLicense
+from app.modules.infra.models.rack_line import RackLine
 
 __all__ = [
     "PeriodPhase",
@@ -73,6 +74,7 @@ __all__ = [
     "CatalogAttributeOption",
     "CatalogAttributeOptionAlias",
     "CatalogVendorAlias",
+    "CatalogVendorMeta",
     "ProductCatalogAttributeValue",
     "ClassificationLayout",
     "ClassificationLayoutLevel",
@@ -81,4 +83,5 @@ __all__ = [
     "ProductSimilarityDismissal",
     "AssetInterface",
     "AssetLicense",
+    "RackLine",
 ]
