@@ -9,6 +9,9 @@ let _selectedNode = null; // { type, id, data }
 let _selectedCenterId = null;
 let _selectedRoomId = null;
 let _treeCollapsed = new Set();
+let _editMode = false;
+let _codeDisplay = "rack_code"; // "rack_code" | "project_code" | "system_id"
+let _draggedRackId = null;
 
 /* ── Data Loading ── */
 
@@ -499,6 +502,10 @@ function renderFloorView(container, data) {
 }
 
 async function renderRoomView(container, room) {
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "padding:20px;overflow:auto;width:100%;";
+  container.appendChild(wrapper);
+
   // Header
   const header = document.createElement("div");
   header.className = "layout-view-header";
@@ -507,7 +514,7 @@ async function renderRoomView(container, room) {
   header.appendChild(h3);
 
   const actions = document.createElement("div");
-  actions.className = "gap-sm";
+  actions.className = "infra-inline-actions";
   const btnAddRack = document.createElement("button");
   btnAddRack.className = "btn btn-sm btn-primary";
   btnAddRack.textContent = "+ 랙 추가";
@@ -520,139 +527,396 @@ async function renderRoomView(container, room) {
   btnEditRoom.addEventListener("click", () => openRoomModal(room));
   actions.appendChild(btnEditRoom);
   header.appendChild(actions);
-  container.appendChild(header);
+  wrapper.appendChild(header);
 
-  // Rack data
-  const racks = (_racks[room.id] || []).slice().sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  // Toolbar: edit mode toggle + code display select
+  const toolbar = document.createElement("div");
+  toolbar.className = "floor-plan-toolbar";
+
+  const btnToggleEdit = document.createElement("button");
+  btnToggleEdit.className = "btn btn-sm " + (_editMode ? "btn-primary" : "btn-secondary");
+  btnToggleEdit.textContent = _editMode ? "\uD3B8\uC9D1 \uC644\uB8CC" : "\uD3B8\uC9D1 \uBAA8\uB4DC";
+  btnToggleEdit.addEventListener("click", () => {
+    _editMode = !_editMode;
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRoomView(content, room);
+  });
+  toolbar.appendChild(btnToggleEdit);
+
+  const codeSelect = document.createElement("select");
+  codeSelect.className = "select-sm";
+  codeSelect.title = "\uD45C\uC2DC \uCF54\uB4DC";
+  const codeOptions = [
+    { value: "rack_code", label: "\uB799\uCF54\uB4DC" },
+    { value: "project_code", label: "\uD504\uB85C\uC81D\uD2B8\uCF54\uB4DC" },
+    { value: "system_id", label: "\uC2DC\uC2A4\uD15CID" },
+  ];
+  codeOptions.forEach(opt => {
+    const o = document.createElement("option");
+    o.value = opt.value;
+    o.textContent = opt.label;
+    if (opt.value === _codeDisplay) o.selected = true;
+    codeSelect.appendChild(o);
+  });
+  codeSelect.addEventListener("change", () => {
+    _codeDisplay = codeSelect.value;
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRoomView(content, room);
+  });
+  toolbar.appendChild(codeSelect);
+  wrapper.appendChild(toolbar);
+
+  // Fetch rack-lines
+  let rackLines = [];
+  try {
+    rackLines = await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines");
+  } catch { /* empty */ }
+
+  const allRacks = _racks[room.id] || [];
+  const cols = room.grid_cols || 10;
+  const rows = room.grid_rows || 12;
+
+  // Build line-by-column lookup
+  const lineByCol = {};
+  rackLines.forEach(line => { lineByCol[line.col_index] = line; });
+
+  // Build rack position lookup: "lineId-pos" -> rack
+  const rackByPos = {};
+  rackLines.forEach(line => {
+    (line.racks || []).forEach(r => {
+      if (r.line_position != null) {
+        rackByPos[line.id + "-" + r.line_position] = r;
+      }
+    });
+  });
+
+  // Identify placed rack IDs
+  const placedRackIds = new Set();
+  rackLines.forEach(line => {
+    (line.racks || []).forEach(r => placedRackIds.add(r.id));
+  });
+  const unplacedRacks = allRacks.filter(r => !placedRackIds.has(r.id));
 
   // Info row
   const info = document.createElement("div");
   info.className = "layout-view-info";
-  info.textContent = "랙 " + racks.length + "개 | 열 " + (room.racks_per_row || 4) + "개 배치";
-  container.appendChild(info);
+  info.textContent = "\uB799 " + allRacks.length + "\uAC1C | \uBC30\uCE58 " + placedRackIds.size + " | \uBBF8\uBC30\uCE58 " + unplacedRacks.length + " | \uACA9\uC790 " + cols + "\u00D7" + rows;
+  wrapper.appendChild(info);
 
-  // Rack grid
+  // Floor plan grid
   const grid = document.createElement("div");
-  grid.className = "rack-grid";
-  grid.style.gridTemplateColumns = "repeat(" + (room.racks_per_row || 4) + ", 1fr)";
-  container.appendChild(grid);
+  grid.className = "floor-plan-grid";
+  grid.style.gridTemplateColumns = "28px repeat(" + cols + ", 64px)";
+  wrapper.appendChild(grid);
 
-  if (!racks.length) {
-    const empty = document.createElement("p");
-    empty.className = "text-muted";
-    empty.textContent = "등록된 랙이 없습니다. '+ 랙 추가' 버튼으로 랙을 등록하세요.";
-    grid.appendChild(empty);
-    return;
-  }
+  // Header row: corner + column labels
+  const corner = document.createElement("div");
+  corner.className = "floor-plan-row-label";
+  grid.appendChild(corner);
 
-  for (const rack of racks) {
-    const card = _createRackCard(rack, room.id);
-    grid.appendChild(card);
-  }
-
-  _enableRackDrag(grid, racks, room.id);
-}
-
-function _createRackCard(rack, roomId) {
-  const card = document.createElement("div");
-  card.className = "rack-card";
-  card.draggable = true;
-  card.dataset.rackId = rack.id;
-
-  if (_selectedNode && _selectedNode.type === "rack" && _selectedNode.id === rack.id) {
-    card.classList.add("is-selected");
-  }
-
-  const name = document.createElement("div");
-  name.className = "rack-card-name";
-  name.textContent = rack.rack_name || rack.rack_code;
-  card.appendChild(name);
-
-  const usage = document.createElement("div");
-  usage.className = "rack-card-usage";
-  usage.textContent = rack.total_units + "U";
-  card.appendChild(usage);
-
-  const bar = document.createElement("div");
-  bar.className = "rack-usage-bar";
-  const fill = document.createElement("div");
-  fill.className = "rack-usage-bar-fill";
-  fill.style.width = "0%"; // Will be updated with actual usage later
-  bar.appendChild(fill);
-  card.appendChild(bar);
-
-  card.addEventListener("click", () => selectNode("rack", rack.id, rack));
-
-  return card;
-}
-
-function _enableRackDrag(grid, racks, roomId) {
-  let draggedId = null;
-
-  grid.querySelectorAll(".rack-card").forEach(card => {
-    card.addEventListener("dragstart", (e) => {
-      draggedId = Number(card.dataset.rackId);
-      card.classList.add("is-dragging");
-      e.dataTransfer.effectAllowed = "move";
-    });
-
-    card.addEventListener("dragend", () => {
-      card.classList.remove("is-dragging");
-      draggedId = null;
-      grid.querySelectorAll(".rack-card").forEach(c => c.classList.remove("drag-over"));
-    });
-
-    card.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (Number(card.dataset.rackId) !== draggedId) {
-        card.classList.add("drag-over");
+  for (let c = 0; c < cols; c++) {
+    const colHeader = document.createElement("div");
+    colHeader.className = "floor-plan-header";
+    const line = lineByCol[c];
+    if (line) {
+      colHeader.textContent = line.line_name;
+      if (_editMode) {
+        colHeader.style.cursor = "pointer";
+        colHeader.addEventListener("click", () => _onLineHeaderClick(line, room));
       }
-    });
-
-    card.addEventListener("dragleave", () => {
-      card.classList.remove("drag-over");
-    });
-
-    card.addEventListener("drop", async (e) => {
-      e.preventDefault();
-      card.classList.remove("drag-over");
-      const targetId = Number(card.dataset.rackId);
-      if (draggedId === targetId || !draggedId) return;
-
-      // Reorder: move dragged before target
-      const currentOrder = racks.map(r => r.id);
-      const fromIdx = currentOrder.indexOf(draggedId);
-      const toIdx = currentOrder.indexOf(targetId);
-      if (fromIdx < 0 || toIdx < 0) return;
-
-      currentOrder.splice(fromIdx, 1);
-      currentOrder.splice(toIdx, 0, draggedId);
-
-      const orders = currentOrder.map((id, i) => ({ id, sort_order: i }));
-
-      try {
-        await apiFetch("/api/v1/racks/reorder", {
-          method: "PATCH",
-          body: orders,
-        });
-        // Update local data
-        orders.forEach(o => {
-          const rack = racks.find(r => r.id === o.id);
-          if (rack) rack.sort_order = o.sort_order;
-        });
-        _racks[roomId] = racks.slice().sort((a, b) => a.sort_order - b.sort_order);
-        // Re-render
-        const content = document.getElementById("layout-content");
-        content.textContent = "";
-        const roomData = (_rooms[_selectedCenterId] || []).find(r => r.id === roomId) || { id: roomId, room_name: "전산실", racks_per_row: 4 };
-        renderRoomView(content, roomData);
-        showToast("랙 순서가 변경되었습니다.");
-      } catch (err) {
-        showToast(err.message, "error");
+    } else {
+      colHeader.textContent = String.fromCharCode(65 + c);
+      if (_editMode) {
+        colHeader.style.cursor = "pointer";
+        colHeader.addEventListener("click", () => _onEmptyColumnClick(c, room));
       }
+    }
+    grid.appendChild(colHeader);
+  }
+
+  // Data rows
+  for (let r = 0; r < rows; r++) {
+    // Row label
+    const rowLabel = document.createElement("div");
+    rowLabel.className = "floor-plan-row-label";
+    rowLabel.textContent = String(r + 1);
+    grid.appendChild(rowLabel);
+
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement("div");
+      cell.className = "floor-plan-cell";
+      const line = lineByCol[c];
+
+      if (!line) {
+        cell.classList.add("empty");
+        grid.appendChild(cell);
+        continue;
+      }
+
+      cell.classList.add("line-slot");
+      cell.dataset.lineId = line.id;
+      cell.dataset.position = r;
+
+      // Check if slot is disabled
+      const disabledSlots = line.disabled_slots || [];
+      if (disabledSlots.includes(r)) {
+        cell.classList.add("disabled");
+        if (_editMode) {
+          cell.addEventListener("click", () => _toggleDisabledSlot(line, r, room));
+        }
+        grid.appendChild(cell);
+        continue;
+      }
+
+      // Check if rack occupies this slot
+      const rack = rackByPos[line.id + "-" + r];
+      if (rack) {
+        cell.classList.add("has-rack");
+        cell.draggable = true;
+        cell.dataset.rackId = rack.id;
+        cell.textContent = _getRackDisplayCode(rack);
+        cell.title = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
+
+        // Click to select in tree
+        cell.addEventListener("click", () => {
+          const fullRack = allRacks.find(ar => ar.id === rack.id) || rack;
+          selectNode("rack", rack.id, fullRack);
+        });
+
+        // Drag start for placed rack
+        cell.addEventListener("dragstart", (e) => {
+          _draggedRackId = rack.id;
+          e.dataTransfer.setData("application/x-rack-id", String(rack.id));
+          e.dataTransfer.effectAllowed = "move";
+          cell.style.opacity = "0.4";
+        });
+        cell.addEventListener("dragend", () => {
+          _draggedRackId = null;
+          cell.style.opacity = "";
+        });
+      } else {
+        // Empty line slot
+        if (_editMode) {
+          cell.addEventListener("click", () => _toggleDisabledSlot(line, r, room));
+        }
+      }
+
+      // Drop zone for all line-slot cells (empty or has-rack)
+      cell.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (_draggedRackId && !cell.classList.contains("disabled")) {
+          // Valid if empty or same rack
+          const occupantId = cell.dataset.rackId ? Number(cell.dataset.rackId) : null;
+          if (!occupantId || occupantId === _draggedRackId) {
+            cell.classList.add("drag-over");
+          } else {
+            cell.classList.add("drag-invalid");
+          }
+        }
+      });
+      cell.addEventListener("dragleave", () => {
+        cell.classList.remove("drag-over");
+        cell.classList.remove("drag-invalid");
+      });
+      cell.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        cell.classList.remove("drag-over");
+        cell.classList.remove("drag-invalid");
+        const rackId = Number(e.dataTransfer.getData("application/x-rack-id"));
+        if (!rackId) return;
+        const occupantId = cell.dataset.rackId ? Number(cell.dataset.rackId) : null;
+        if (occupantId && occupantId !== rackId) {
+          showToast("\uD574\uB2F9 \uC2AC\uB86F\uC740 \uC774\uBBF8 \uB2E4\uB978 \uB799\uC774 \uBC30\uCE58\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
+          return;
+        }
+        if (cell.classList.contains("disabled")) {
+          showToast("\uBE44\uD65C\uC131\uD654\uB41C \uC2AC\uB86F\uC5D0\uB294 \uBC30\uCE58\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+          return;
+        }
+        try {
+          await apiFetch("/api/v1/racks/" + rackId, {
+            method: "PATCH",
+            body: { rack_line_id: Number(cell.dataset.lineId), line_position: Number(cell.dataset.position) },
+          });
+          showToast("\uB799\uC744 \uBC30\uCE58\uD588\uC2B5\uB2C8\uB2E4.");
+          await loadTree();
+          const content = document.getElementById("layout-content");
+          content.textContent = "";
+          const roomData = _findRoomData(room.id) || room;
+          renderRoomView(content, roomData);
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+
+      grid.appendChild(cell);
+    }
+  }
+
+  // Unplaced racks area
+  const unplacedTitle = document.createElement("div");
+  unplacedTitle.style.cssText = "font-size:12px;font-weight:600;color:var(--text-color-secondary);margin-top:16px;margin-bottom:4px;";
+  unplacedTitle.textContent = "\uBBF8\uBC30\uCE58 \uB799 (" + unplacedRacks.length + ")";
+  wrapper.appendChild(unplacedTitle);
+
+  const unplacedArea = document.createElement("div");
+  unplacedArea.className = "unplaced-racks";
+  wrapper.appendChild(unplacedArea);
+
+  if (!unplacedRacks.length) {
+    const emptyMsg = document.createElement("span");
+    emptyMsg.className = "text-muted";
+    emptyMsg.style.fontSize = "12px";
+    emptyMsg.textContent = "\uBAA8\uB4E0 \uB799\uC774 \uBC30\uCE58\uB418\uC5C8\uC2B5\uB2C8\uB2E4.";
+    unplacedArea.appendChild(emptyMsg);
+  } else {
+    unplacedRacks.forEach(rack => {
+      const chip = document.createElement("div");
+      chip.className = "unplaced-rack-chip";
+      chip.draggable = true;
+      chip.dataset.rackId = rack.id;
+      chip.textContent = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
+
+      chip.addEventListener("dragstart", (e) => {
+        _draggedRackId = rack.id;
+        e.dataTransfer.setData("application/x-rack-id", String(rack.id));
+        e.dataTransfer.effectAllowed = "move";
+        chip.style.opacity = "0.4";
+      });
+      chip.addEventListener("dragend", () => {
+        _draggedRackId = null;
+        chip.style.opacity = "";
+      });
+
+      unplacedArea.appendChild(chip);
     });
+  }
+
+  // Drop zone for unplacing racks
+  unplacedArea.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    if (_draggedRackId) {
+      unplacedArea.style.borderColor = "var(--primary-color, #2563eb)";
+      unplacedArea.style.background = "rgba(37, 99, 235, 0.04)";
+    }
   });
+  unplacedArea.addEventListener("dragleave", () => {
+    unplacedArea.style.borderColor = "";
+    unplacedArea.style.background = "";
+  });
+  unplacedArea.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    unplacedArea.style.borderColor = "";
+    unplacedArea.style.background = "";
+    const rackId = Number(e.dataTransfer.getData("application/x-rack-id"));
+    if (!rackId) return;
+    try {
+      await apiFetch("/api/v1/racks/" + rackId, {
+        method: "PATCH",
+        body: { rack_line_id: null, line_position: null },
+      });
+      showToast("\uB799 \uBC30\uCE58\uB97C \uD574\uC81C\uD588\uC2B5\uB2C8\uB2E4.");
+      await loadTree();
+      const content = document.getElementById("layout-content");
+      content.textContent = "";
+      const roomData = _findRoomData(room.id) || room;
+      renderRoomView(content, roomData);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  });
+}
+
+function _getRackDisplayCode(rack) {
+  if (_codeDisplay === "project_code") return rack.project_code || rack.rack_code;
+  if (_codeDisplay === "system_id") return rack.system_id || rack.rack_code;
+  return rack.rack_code;
+}
+
+function _findRoomData(roomId) {
+  for (const rooms of Object.values(_rooms)) {
+    const r = rooms.find(r => r.id === roomId);
+    if (r) return r;
+  }
+  return null;
+}
+
+async function _onEmptyColumnClick(colIndex, room) {
+  const name = prompt("\uB77C\uC778\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694 (\uC608: A\uB77C\uC778):");
+  if (!name) return;
+  const prefix = prompt("\uB77C\uC778 \uC811\uB450\uC5B4 (project_code \uC0DD\uC131\uC6A9, \uC120\uD0DD):", "") || null;
+  try {
+    await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines", {
+      method: "POST",
+      body: {
+        line_name: name,
+        col_index: colIndex,
+        slot_count: room.grid_rows || 12,
+        prefix: prefix,
+      },
+    });
+    showToast("\uB77C\uC778\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4.");
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRoomView(content, room);
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function _onLineHeaderClick(line, room) {
+  const action = prompt("\uB77C\uC778 '" + line.line_name + "' \uC791\uC5C5\uC744 \uC120\uD0DD\uD558\uC138\uC694:\n1: \uC774\uB984 \uBCC0\uACBD\n2: \uC0AD\uC81C\n(\uBC88\uD638 \uC785\uB825)");
+  if (action === "1") {
+    const newName = prompt("\uC0C8 \uB77C\uC778\uBA85:", line.line_name);
+    if (!newName) return;
+    try {
+      await apiFetch("/api/v1/rack-lines/" + line.id, {
+        method: "PATCH",
+        body: { line_name: newName },
+      });
+      showToast("\uB77C\uC778\uBA85\uC744 \uBCC0\uACBD\uD588\uC2B5\uB2C8\uB2E4.");
+      const content = document.getElementById("layout-content");
+      content.textContent = "";
+      renderRoomView(content, room);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  } else if (action === "2") {
+    if (!confirm("\uB77C\uC778 '" + line.line_name + "'\uC744(\uB97C) \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C? \uBC30\uCE58\uB41C \uB799\uC740 \uBBF8\uBC30\uCE58 \uC0C1\uD0DC\uB85C \uC804\uD658\uB429\uB2C8\uB2E4.")) return;
+    try {
+      await apiFetch("/api/v1/rack-lines/" + line.id, { method: "DELETE" });
+      showToast("\uB77C\uC778\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.");
+      await loadTree();
+      const content = document.getElementById("layout-content");
+      content.textContent = "";
+      renderRoomView(content, room);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+}
+
+async function _toggleDisabledSlot(line, position, room) {
+  const disabledSlots = (line.disabled_slots || []).slice();
+  const idx = disabledSlots.indexOf(position);
+  if (idx >= 0) {
+    disabledSlots.splice(idx, 1);
+  } else {
+    disabledSlots.push(position);
+  }
+  try {
+    await apiFetch("/api/v1/rack-lines/" + line.id, {
+      method: "PATCH",
+      body: { disabled_slots: disabledSlots },
+    });
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRoomView(content, room);
+  } catch (err) {
+    showToast(err.message, "error");
+  }
 }
 
 async function renderRackView(container, rack) {
@@ -892,6 +1156,8 @@ function openRoomModal(room) {
   document.getElementById("room-name").value = room?.room_name ?? "";
   document.getElementById("room-floor").value = room?.floor ?? "";
   document.getElementById("room-racks-per-row").value = room?.racks_per_row ?? 4;
+  document.getElementById("room-grid-cols").value = room?.grid_cols ?? 10;
+  document.getElementById("room-grid-rows").value = room?.grid_rows ?? 12;
   document.getElementById("room-active").value = String(room?.is_active ?? true);
   document.getElementById("room-note").value = room?.note ?? "";
   document.getElementById("modal-room").showModal();
@@ -955,6 +1221,8 @@ async function saveRoom() {
     room_name: document.getElementById("room-name").value.trim(),
     floor: document.getElementById("room-floor").value.trim() || null,
     racks_per_row: Number(document.getElementById("room-racks-per-row").value) || null,
+    grid_cols: Number(document.getElementById("room-grid-cols").value) || 10,
+    grid_rows: Number(document.getElementById("room-grid-rows").value) || 12,
     is_active: document.getElementById("room-active").value === "true",
     note: document.getElementById("room-note").value.trim() || null,
   };

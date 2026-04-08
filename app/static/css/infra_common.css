@@ -3099,3 +3099,38 @@ body.dark-mode .catalog-management-result {
   font-size: 12px;
 }
 .unplaced-item.is-dragging { opacity: 0.4; }
+
+/* === Floor Plan Grid === */
+.floor-plan-grid {
+  display: grid;
+  gap: 2px;
+  background: var(--color-gray-100, #f3f4f6);
+  border: 1px solid var(--color-gray-300, #d1d5db);
+  border-radius: 6px;
+  padding: 8px;
+  overflow-x: auto;
+}
+.floor-plan-cell {
+  width: 64px;
+  height: 40px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.floor-plan-cell.empty { background: var(--color-gray-100, #f3f4f6); }
+.floor-plan-cell.line-slot { background: var(--color-blue-50, #eff6ff); border: 1px solid var(--color-blue-200, #bfdbfe); }
+.floor-plan-cell.line-slot.disabled { background: var(--color-gray-100, #f3f4f6); border: 1px solid transparent; }
+.floor-plan-cell.line-slot.has-rack { background: var(--color-blue-100, #dbeafe); border: 1px solid var(--color-blue-400, #60a5fa); font-weight: 600; }
+.floor-plan-cell.line-slot.drag-over { background: var(--color-green-100, #dcfce7); border: 1px solid var(--color-green-400, #4ade80); }
+.floor-plan-cell.line-slot.drag-invalid { background: var(--color-red-50, #fef2f2); border: 1px solid var(--color-red-300, #fca5a5); }
+.floor-plan-header { font-size: 11px; font-weight: 600; color: var(--color-gray-500, #6b7280); text-align: center; padding: 2px 0; }
+.floor-plan-row-label { font-size: 10px; color: var(--color-gray-400, #9ca3af); display: flex; align-items: center; justify-content: center; width: 28px; }
+.unplaced-racks { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; min-height: 48px; background: var(--color-gray-50, #f9fafb); border: 1px dashed var(--color-gray-300, #d1d5db); border-radius: 6px; margin-top: 12px; }
+.unplaced-rack-chip { padding: 4px 10px; background: var(--color-gray-200, #e5e7eb); border-radius: 4px; font-size: 12px; cursor: grab; }
+.unplaced-rack-chip:active { cursor: grabbing; }
+.floor-plan-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.floor-plan-toolbar .select-sm { font-size: 12px; padding: 4px 8px; }
