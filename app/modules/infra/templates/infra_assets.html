@@ -129,7 +129,7 @@
 
     <fieldset class="modal-group">
       <legend class="modal-group-title">기본정보</legend>
-      <div class="form-grid">
+      <div class="form-grid" style="grid-template-columns: 1fr 2fr;">
         <label><span class="label-text">자산명<span class="req">*</span></span>
           <input type="text" id="asset-name" required>
         </label>
@@ -145,14 +145,14 @@
           <button type="button" class="btn btn-xs btn-secondary is-hidden" id="btn-clear-catalog" style="margin-left:8px;">선택 해제</button>
         </div>
         <label>
+          프로젝트코드
+          <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
+        </label>
+        <label>
           귀속사업
           <select id="asset-period">
             <option value="">-- 선택 안함 --</option>
           </select>
-        </label>
-        <label>
-          프로젝트코드
-          <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
         </label>
       </div>
     </fieldset>
