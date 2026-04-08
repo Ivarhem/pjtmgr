@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 class PeriodPartnerAssignedAssetRead(BaseModel):
     id: int
     asset_name: str
-    asset_code: str | None = None
+    system_id: str | None = None
     project_asset_number: str | None = None
     hostname: str | None = None
     relation_type: str

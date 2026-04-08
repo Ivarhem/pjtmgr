@@ -64,7 +64,7 @@ def list_assets(
             | Asset.customer_asset_number.ilike(like)
             | Asset.hostname.ilike(like)
             | Asset.equipment_id.ilike(like)
-            | Asset.asset_code.ilike(like)
+            | Asset.system_id.ilike(like)
             | alias_exists
         )
     stmt = stmt.order_by(Asset.asset_name.asc())
@@ -428,7 +428,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
 
     # 코드 자동 생성 (동시성 충돌 시 최대 3회 재시도)
     for attempt in range(3):
-        data["asset_code"] = _generate_asset_code(
+        data["system_id"] = _generate_system_id(
             db, payload.partner_id, catalog_type_meta["asset_type_code"]
         )
         asset = Asset(**data)
@@ -478,7 +478,7 @@ def update_asset(
     period_id = changes.pop("period_id", None) if "period_id" in changes else None
     has_period_change = "period_id" in payload.model_fields_set
 
-    changes.pop("asset_code", None)  # 코드 수동 변경 차단
+    changes.pop("system_id", None)  # 코드 수동 변경 차단
 
     target_partner_id = changes.get("partner_id", asset.partner_id)
     target_asset_name = changes.get("asset_name", asset.asset_name)
@@ -959,8 +959,8 @@ def _to_base36(num: int, width: int = 4) -> str:
     return result.zfill(width)
 
 
-def _generate_asset_code(db: Session, partner_id: int, type_code: str) -> str:
-    """Generate asset code: {partner_code}-{type_code}-{base36 4자리}."""
+def _generate_system_id(db: Session, partner_id: int, type_code: str) -> str:
+    """Generate system ID: {partner_code}-{type_code}-{base36 4자리}."""
     from app.modules.common.models.partner import Partner
 
     partner = db.get(Partner, partner_id)
@@ -968,9 +968,9 @@ def _generate_asset_code(db: Session, partner_id: int, type_code: str) -> str:
     prefix = f"{partner_code}-{type_code}-"
 
     max_code = db.scalar(
-        select(func.max(Asset.asset_code))
+        select(func.max(Asset.system_id))
         .where(Asset.partner_id == partner_id)
-        .where(Asset.asset_code.like(f"{prefix}%"))
+        .where(Asset.system_id.like(f"{prefix}%"))
     )
 
     if max_code:

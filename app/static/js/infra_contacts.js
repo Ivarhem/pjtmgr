@@ -100,7 +100,7 @@ function renderProjectPartners(container, partners, contacts) {
         chip.className = "pc-asset-chip";
         const parts = [];
         if (asset.project_asset_number) parts.push(asset.project_asset_number);
-        if (asset.asset_code) parts.push(asset.asset_code);
+        if (asset.system_id) parts.push(asset.system_id);
         if (asset.hostname) parts.push(asset.hostname);
         const roleLabel = RELATED_PARTNER_ROLE_LABELS[asset.relation_type] || asset.relation_type || "기타";
         chip.addEventListener("click", () => {

@@ -128,8 +128,8 @@ function buildAssetEventMeta(row) {
   if (row.created_by_user_name) {
     meta.push(`기록자: ${row.created_by_user_name}`);
   }
-  if (row.asset_name_snapshot || row.asset_code_snapshot) {
-    meta.push(`대상 스냅샷: ${[row.asset_name_snapshot, row.asset_code_snapshot].filter(Boolean).join(" / ")}`);
+  if (row.asset_name_snapshot || row.system_id_snapshot) {
+    meta.push(`대상 스냅샷: ${[row.asset_name_snapshot, row.system_id_snapshot].filter(Boolean).join(" / ")}`);
   }
   return meta;
 }
@@ -511,7 +511,7 @@ const ASSET_INFO_COLS = [
 
 /* ── 자산 코드/관리 컬럼 (분류체계 뒤) ── */
 const ASSET_CODE_COLS = [
-  { field: "asset_code", headerName: "코드", width: 120, sort: "asc", editable: false, cellClass: () => getGridCellClass("asset_code") },
+  { field: "system_id", headerName: "시스템ID", width: 120, sort: "asc", editable: false, cellClass: () => getGridCellClass("system_id") },
   {
     field: "project_asset_number",
     headerName: "프로젝트코드",
@@ -1065,7 +1065,7 @@ const DETAIL_TAB_FIELDS = {
       title: "식별 및 기준 정보",
       description: "자산을 식별하고 역할과 기준 모델을 확인하는 핵심 정보입니다.",
       fields: [
-        ["코드", "asset_code"],
+        ["시스템ID", "system_id"],
         ["프로젝트코드", "project_asset_number"],
         ["고객자산코드", "customer_asset_number"],
         ["자산명", "asset_name"],
@@ -3035,11 +3035,11 @@ function buildEventDetail(type, asset) {
   switch (type) {
     case "replacement":
       return relatedAsset
-        ? `${asset.asset_name}를 ${relatedAsset.asset_name}(${relatedAsset.asset_code || "코드없음"}) 기준으로 교체했습니다.`
+        ? `${asset.asset_name}를 ${relatedAsset.asset_name}(${relatedAsset.system_id || "코드없음"}) 기준으로 교체했습니다.`
         : `${asset.asset_name}의 교체 작업을 기록합니다.\n교체 후 자산과 반영 일시를 남겨주세요.`;
     case "failover":
       return relatedAsset
-        ? `${asset.asset_name} 장애로 ${relatedAsset.asset_name}(${relatedAsset.asset_code || "코드없음"})를 대체 투입했습니다.`
+        ? `${asset.asset_name} 장애로 ${relatedAsset.asset_name}(${relatedAsset.system_id || "코드없음"})를 대체 투입했습니다.`
         : `${asset.asset_name} 장애로 대체 자산이 투입되었습니다.\n장애 원인과 대체 자산을 기록하세요.`;
     case "repurpose":
       if (fromUse || toUse) {
@@ -3155,7 +3155,7 @@ async function populateRelationAssetSelect() {
     opt.value = asset.id;
     const parts = [asset.asset_name];
     if (asset.hostname) parts.push(asset.hostname);
-    if (asset.asset_code) parts.push(asset.asset_code);
+    if (asset.system_id) parts.push(asset.system_id);
     opt.textContent = parts.join(" / ");
     sel.appendChild(opt);
   });
@@ -3374,7 +3374,7 @@ async function populateEventRelatedAssetSelect() {
   assets.forEach((asset) => {
     const opt = document.createElement("option");
     opt.value = asset.id;
-    opt.textContent = [asset.asset_name, asset.asset_code, asset.hostname].filter(Boolean).join(" / ");
+    opt.textContent = [asset.asset_name, asset.system_id, asset.hostname].filter(Boolean).join(" / ");
     sel.appendChild(opt);
   });
 }
@@ -3433,7 +3433,7 @@ async function populateAssetRoleActionAssetSelect() {
   assets.forEach((asset) => {
     const opt = document.createElement("option");
     opt.value = asset.id;
-    opt.textContent = [asset.asset_name, asset.asset_code, asset.hostname].filter(Boolean).join(" / ");
+    opt.textContent = [asset.asset_name, asset.system_id, asset.hostname].filter(Boolean).join(" / ");
     sel.appendChild(opt);
   });
 }

@@ -420,7 +420,7 @@ function showRoleDetail(role) {
   document.getElementById("role-info-period").textContent = role.contract_period_label || "—";
   document.getElementById("role-info-current-asset").textContent =
     role.current_asset_name
-      ? `${role.current_asset_name} (${role.current_asset_code || "—"})`
+      ? `${role.current_asset_name} (${role.current_asset_system_id || "—"})`
       : "미할당";
   document.getElementById("role-info-note").textContent = role.note || "—";
 
@@ -485,7 +485,7 @@ let assignmentGridApi;
 
 const assignmentColDefs = [
   { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 160, valueFormatter: (p) => p.value || "—" },
-  { field: "asset_code", headerName: "자산코드", width: 140, valueFormatter: (p) => p.value || "—" },
+  { field: "system_id", headerName: "시스템ID", width: 140, valueFormatter: (p) => p.value || "—" },
   { field: "assignment_type", headerName: "할당유형", width: 100, valueFormatter: (p) => ASSIGNMENT_TYPE_LABELS[p.value] || p.value || "—" },
   { field: "valid_from", headerName: "시작일", width: 110, valueFormatter: (p) => p.value || "—" },
   { field: "valid_to", headerName: "종료일", width: 110, valueFormatter: (p) => p.value || "현재" },
@@ -570,7 +570,7 @@ async function openRoleHistoryModal() {
 
         const title = document.createElement("div");
         title.className = "asset-timeline-title";
-        title.textContent = [row.asset_name, row.asset_code].filter(Boolean).join(" / ") || "미지정 자산";
+        title.textContent = [row.asset_name, row.system_id].filter(Boolean).join(" / ") || "미지정 자산";
         main.append(meta, title);
         if (row.note) {
           const body = document.createElement("div");
@@ -710,7 +710,7 @@ async function openRoleAssignmentModal(assignment) {
   _rolePartnerAssetsCache.forEach((a) => {
     const opt = document.createElement("option");
     opt.value = a.id;
-    opt.textContent = `${a.asset_name} (${a.asset_code || "—"})`;
+    opt.textContent = `${a.asset_name} (${a.system_id || "—"})`;
     select.appendChild(opt);
   });
 
@@ -815,7 +815,7 @@ async function openRoleActionModal(actionType) {
     _rolePartnerAssetsCache.forEach((a) => {
       const opt = document.createElement("option");
       opt.value = a.id;
-      opt.textContent = `${a.asset_name} (${a.asset_code || "—"})`;
+      opt.textContent = `${a.asset_name} (${a.system_id || "—"})`;
       select.appendChild(opt);
     });
   }

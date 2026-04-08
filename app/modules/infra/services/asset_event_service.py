@@ -19,7 +19,7 @@ def list_asset_events(db: Session, asset_id: int) -> list[AssetEventRead]:
     _ensure_asset_exists(db, asset_id)
     related_asset = aliased(Asset)
     stmt = (
-        select(AssetEvent, related_asset.asset_name, related_asset.asset_code, User.name)
+        select(AssetEvent, related_asset.asset_name, related_asset.system_id, User.name)
         .outerjoin(related_asset, related_asset.id == AssetEvent.related_asset_id)
         .outerjoin(User, User.id == AssetEvent.created_by_user_id)
         .where(AssetEvent.asset_id == asset_id)
@@ -46,7 +46,7 @@ def create_asset_event(
         event_type=payload.event_type,
         summary=payload.summary,
         detail=payload.detail,
-        asset_code_snapshot=asset.asset_code,
+        system_id_snapshot=asset.system_id,
         asset_name_snapshot=asset.asset_name,
         occurred_at=payload.occurred_at or datetime.now(),
     )
@@ -58,7 +58,7 @@ def create_asset_event(
     return _serialize_asset_event(
         event,
         related_asset.asset_name if related_asset is not None else None,
-        related_asset.asset_code if related_asset is not None else None,
+        related_asset.system_id if related_asset is not None else None,
         user_name,
     )
 
@@ -81,7 +81,7 @@ def log_asset_event(
         event_type=event_type,
         summary=summary,
         detail=detail,
-        asset_code_snapshot=asset.asset_code if asset is not None else None,
+        system_id_snapshot=asset.system_id if asset is not None else None,
         asset_name_snapshot=asset.asset_name if asset is not None else None,
         occurred_at=occurred_at or datetime.now(),
     )
@@ -105,7 +105,7 @@ def _require_inventory_edit(current_user) -> None:
 def _serialize_asset_event(
     event: AssetEvent,
     related_asset_name: str | None = None,
-    related_asset_code: str | None = None,
+    related_asset_system_id: str | None = None,
     created_by_user_name: str | None = None,
 ) -> AssetEventRead:
     return AssetEventRead.model_validate(
@@ -118,9 +118,9 @@ def _serialize_asset_event(
             "summary": event.summary,
             "detail": event.detail,
             "related_asset_name": related_asset_name,
-            "related_asset_code": related_asset_code,
+            "related_asset_code": related_asset_system_id,
             "created_by_user_name": created_by_user_name,
-            "asset_code_snapshot": event.asset_code_snapshot,
+            "system_id_snapshot": event.system_id_snapshot,
             "asset_name_snapshot": event.asset_name_snapshot,
             "occurred_at": event.occurred_at,
             "created_at": event.created_at,

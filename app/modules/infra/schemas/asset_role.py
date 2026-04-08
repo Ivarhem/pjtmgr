@@ -31,7 +31,7 @@ class AssetRoleRead(BaseModel):
     note: str | None = None
     current_asset_id: int | None = None
     current_asset_name: str | None = None
-    current_asset_code: str | None = None
+    current_asset_system_id: str | None = None
     current_asset_status: str | None = None
     current_assignment_id: int | None = None
     current_asset_domain: str | None = None
@@ -66,7 +66,7 @@ class AssetRoleAssignmentRead(BaseModel):
     asset_role_id: int
     asset_id: int
     asset_name: str | None = None
-    asset_code: str | None = None
+    system_id: str | None = None
     asset_status: str | None = None
     assignment_type: str
     valid_from: date | None = None

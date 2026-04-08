@@ -85,7 +85,7 @@ def list_asset_role_assignments(db: Session, asset_role_id: int) -> list[dict]:
             select(
                 AssetRoleAssignment,
                 Asset.asset_name,
-                Asset.asset_code,
+                Asset.system_id,
                 Asset.status,
             )
             .join(Asset, Asset.id == AssetRoleAssignment.asset_id)
@@ -94,14 +94,14 @@ def list_asset_role_assignments(db: Session, asset_role_id: int) -> list[dict]:
         )
     )
     result = []
-    for assignment, asset_name, asset_code, asset_status in rows:
+    for assignment, asset_name, asset_system_id, asset_status in rows:
         result.append(
             {
                 "id": assignment.id,
                 "asset_role_id": assignment.asset_role_id,
                 "asset_id": assignment.asset_id,
                 "asset_name": asset_name,
-                "asset_code": asset_code,
+                "system_id": asset_system_id,
                 "asset_status": asset_status,
                 "assignment_type": assignment.assignment_type,
                 "valid_from": assignment.valid_from,
@@ -208,8 +208,8 @@ def replace_asset_role_assignment(
     detail = "\n".join(
         [
             f"역할: {role.role_name}",
-            f"이전 자산: {current_asset.asset_name} ({current_asset.asset_code or '코드없음'})",
-            f"신규 자산: {replacement_asset.asset_name} ({replacement_asset.asset_code or '코드없음'})",
+            f"이전 자산: {current_asset.asset_name} ({current_asset.system_id or '코드없음'})",
+            f"신규 자산: {replacement_asset.asset_name} ({replacement_asset.system_id or '코드없음'})",
             f"메모: {note}" if note else "",
         ]
     ).strip()
@@ -297,7 +297,7 @@ def repurpose_asset_role_assignment(
         [
             f"기존 역할: {source_role.role_name}",
             f"신규 역할: {target_role.role_name}",
-            f"자산: {asset.asset_name} ({asset.asset_code or '코드없음'})",
+            f"자산: {asset.asset_name} ({asset.system_id or '코드없음'})",
             f"메모: {note}" if note else "",
         ]
     ).strip()
@@ -331,7 +331,7 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
         db.execute(
             select(
                 AssetRoleAssignment,
-                Asset.asset_name, Asset.asset_code, Asset.status,
+                Asset.asset_name, Asset.system_id, Asset.status,
                 Asset.model_id, Asset.center_id,
             )
             .join(Asset, Asset.id == AssetRoleAssignment.asset_id)
@@ -374,14 +374,14 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
             catalog_attr_map[mid] = attr_dict
 
     current_map: dict[int, dict] = {}
-    for assignment, asset_name, asset_code, asset_status, model_id, center_id in current_assignments:
+    for assignment, asset_name, asset_system_id, asset_status, model_id, center_id in current_assignments:
         current_map.setdefault(
             assignment.asset_role_id,
             {
                 "current_assignment_id": assignment.id,
                 "current_asset_id": assignment.asset_id,
                 "current_asset_name": asset_name,
-                "current_asset_code": asset_code,
+                "current_asset_system_id": asset_system_id,
                 "current_asset_status": asset_status,
                 "current_asset_domain": catalog_attr_map.get(model_id, {}).get("domain") if model_id else None,
                 "current_asset_center_label": center_map.get(center_id) if center_id else None,
@@ -394,7 +394,7 @@ def _enrich_roles_with_current_assignment(db: Session, roles: list[AssetRole]) -
         "current_assignment_id": None,
         "current_asset_id": None,
         "current_asset_name": None,
-        "current_asset_code": None,
+        "current_asset_system_id": None,
         "current_asset_status": None,
         "current_asset_domain": None,
         "current_asset_center_label": None,

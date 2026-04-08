@@ -149,7 +149,7 @@ def _load_period_partner_assets(
                 AssetRelatedPartner.note,
                 Asset.id,
                 Asset.asset_name,
-                Asset.asset_code,
+                Asset.system_id,
                 Asset.project_asset_number,
                 Asset.hostname,
             )
@@ -168,7 +168,7 @@ def _load_period_partner_assets(
     )
 
     asset_rows_by_id: dict[int, list[dict]] = {}
-    for partner_id, relation_type, is_primary, note, asset_id, asset_name, asset_code, project_asset_number, hostname in rows:
+    for partner_id, relation_type, is_primary, note, asset_id, asset_name, asset_system_id, project_asset_number, hostname in rows:
         asset_rows_by_id.setdefault(asset_id, []).append(
             {
                 "partner_id": partner_id,
@@ -177,7 +177,7 @@ def _load_period_partner_assets(
                 "note": note,
                 "id": asset_id,
                 "asset_name": asset_name,
-                "asset_code": asset_code,
+                "system_id": asset_system_id,
                 "project_asset_number": project_asset_number,
                 "hostname": hostname,
             }
@@ -194,7 +194,7 @@ def _load_period_partner_assets(
                     {
                         "id": item["id"],
                         "asset_name": item["asset_name"],
-                        "asset_code": item["asset_code"],
+                        "system_id": item["system_id"],
                         "project_asset_number": item["project_asset_number"],
                         "hostname": item["hostname"],
                         "relation_type": item["relation_type"],
