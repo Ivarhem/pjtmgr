@@ -10,7 +10,7 @@
   <h1><i data-lucide="layout-grid" class="icon-sm"></i> 배치</h1>
   <div class="infra-inline-actions">
     <select id="rack-label-base" class="select-sm" title="U 라벨 기준">
-      <option value="start">U 기준: Start (하→상)</option>
+      <option value="start">U 기준: Start (하→상, EIA-310)</option>
       <option value="end">U 기준: End (상→하)</option>
     </select>
     <button class="btn btn-secondary btn-sm" id="btn-add-center">센터 등록</button>
@@ -19,6 +19,9 @@
   </div>
 </div>
 
+<p class="text-secondary text-sm mb-md data-note">
+  U 위치는 EIA-310 표준에 따라 랙 하단부터 1U로 번호를 부여합니다. 프로젝트별 라벨링 기준(Start/End)은 표시 방향만 변경하며, 저장되는 U 번호는 항상 EIA-310 기준입니다.
+</p>
 <div class="catalog-layout" id="layout-shell">
   <!-- Left: Tree -->
   <section class="catalog-category-panel" id="layout-tree-panel">
