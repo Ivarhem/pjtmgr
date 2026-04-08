@@ -85,6 +85,9 @@ def list_rooms(db: Session, center_id: int) -> list[dict]:
             "system_id": room.system_id,
             "prefix": room.prefix,
             "project_code": room.project_code,
+            "racks_per_row": room.racks_per_row,
+            "grid_cols": room.grid_cols,
+            "grid_rows": room.grid_rows,
             "rack_count": rack_count,
             "created_at": room.created_at,
             "updated_at": room.updated_at,
@@ -279,11 +282,21 @@ def update_rack(db: Session, rack_id: int, payload: RackUpdate, current_user) ->
     code_changed = next_code != rack.rack_code
     if code_changed:
         _ensure_rack_code_unique(db, rack.room_id, next_code, rack.id)
+
+    # Detect rack_line_id change for auto-fill
+    old_line_id = rack.rack_line_id
+    new_line_id = changes.get("rack_line_id", old_line_id)
+
     for field, value in changes.items():
         setattr(rack, field, value)
     if code_changed:
         room = get_room(db, rack.room_id)
         rack.system_id = build_rack_system_id(room.system_id, rack.rack_code)
+
+    # Auto-fill project_code when rack is placed on a line
+    if "rack_line_id" in changes and new_line_id is not None and new_line_id != old_line_id:
+        _auto_fill_project_code(db, rack, new_line_id, changes.get("line_position"))
+
     db.commit()
     db.refresh(rack)
     return rack
@@ -428,6 +441,45 @@ def reorder_racks(db: Session, orders: list[dict], current_user) -> None:
         if rack:
             rack.sort_order = item["sort_order"]
     db.commit()
+
+
+def _auto_fill_project_code(db: Session, rack: Rack, line_id: int, position: int | None) -> None:
+    """Auto-fill rack project_code from template when rack is placed on a line."""
+    if line_id is None:
+        return
+    line = db.get(RackLine, line_id)
+    if not line:
+        return
+    room = db.get(Room, line.room_id)
+    if not room:
+        return
+    center = db.get(Center, room.center_id)
+    if not center:
+        return
+
+    from app.modules.common.models.contract_period import ContractPeriod
+
+    period = db.scalar(
+        select(ContractPeriod).where(
+            ContractPeriod.partner_id == center.partner_id,
+            ContractPeriod.rack_project_code_template.isnot(None),
+        ).order_by(ContractPeriod.id.desc())
+    )
+    if not period or not period.rack_project_code_template:
+        return
+
+    from app.modules.infra.services.code_generation_service import render_template
+
+    context = {
+        "center.prefix": center.prefix or "",
+        "room.prefix": room.prefix or "",
+        "line.prefix": line.prefix or "",
+        "rack.position": str((position or 0) + 1),
+    }
+    try:
+        rack.project_code = render_template(period.rack_project_code_template, context)
+    except ValueError:
+        pass
 
 
 def _ensure_partner_exists(db: Session, partner_id: int) -> None:

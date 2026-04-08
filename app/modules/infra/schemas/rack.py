@@ -24,6 +24,8 @@ class RackUpdate(BaseModel):
     note: str | None = None
     sort_order: int | None = None
     project_code: str | None = None
+    rack_line_id: int | None = None
+    line_position: int | None = None
 
 
 class RackRead(BaseModel):
