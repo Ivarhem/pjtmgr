@@ -565,10 +565,29 @@ let _classificationDepth = 3;
 const CLASSIFICATION_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 let _classificationLevelAliases = [...CLASSIFICATION_LEVEL_ALIAS_DEFAULTS];
 
+const ASSET_CHK_COL = {
+  headerName: "", field: "_selected", width: 40, pinned: "left",
+  editable: false, sortable: false, resizable: false, suppressMovable: true,
+  lockPosition: true, filter: false,
+  cellRenderer: (params) => {
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!params.data._selected;
+    cb.style.cursor = "pointer";
+    cb.addEventListener("click", (e) => { e.stopPropagation(); });
+    cb.addEventListener("change", (e) => {
+      e.stopPropagation();
+      params.data._selected = cb.checked;
+      _updateDeleteButtonVisibility();
+    });
+    return cb;
+  },
+};
+
 /** 자산정보 + 분류체계(동적) + 자산코드 순서로 columnDefs를 조립한다. */
 function buildColumnDefs() {
   const depth = _classificationDepth || 3;
-  return [...ASSET_INFO_COLS, ...buildClassificationCols(depth), ...ASSET_CODE_COLS];
+  return [ASSET_CHK_COL, ...ASSET_INFO_COLS, ...buildClassificationCols(depth), ...ASSET_CODE_COLS];
 }
 
 let columnDefs = buildColumnDefs();
@@ -592,6 +611,8 @@ let _periodsCache = [];
 const _layoutRoomsCache = new Map();
 const _layoutRacksCache = new Map();
 let _requestedAssetId = null;
+
+let _hasNewRows = false;
 
 const NUMERIC_FIELDS = ["size_unit", "lc_count", "ha_count", "utp_count", "power_count", "year_acquired"];
 const ASSET_LAYOUT_WIDTH_KEY = "infra_assets_list_width_percent";
@@ -877,6 +898,7 @@ async function initGrid() {
     rowSelection: "single",
     animateRows: true,
     enableCellTextSelection: true,
+    getRowClass: (params) => params.data?._isNew ? "infra-grid-row-new" : "",
     ...buildStandardGridBehavior({
       type: 'detail-panel',
       onSelect: (data) => showAssetDetail(data),
@@ -933,6 +955,12 @@ async function handleGridCellValueChanged(event) {
   const row = event?.data;
   if (!row) return;
   const field = event.colDef.field;
+  if (field === "_selected") return;
+  if (!row.id && row._isNew) {
+    _hasNewRows = true;
+    _updateNewRowIndicators();
+    return;
+  }
   if (field !== "current_role_id" && event.newValue === event.oldValue) return;
   _cellChangeInProgress = true;
   try {
@@ -3504,11 +3532,130 @@ async function saveAssetRoleAction() {
   }
 }
 
+/* ── Ledger pattern: row-add / batch save / checkbox delete ── */
+
+function _updateNewRowIndicators() {
+  const saveBtn = document.getElementById("btn-save-new-assets");
+  if (saveBtn) saveBtn.style.display = _hasNewRows ? "" : "none";
+}
+
+function _updateDeleteButtonVisibility() {
+  const btn = document.getElementById("btn-delete-selected");
+  if (!btn) return;
+  let hasSelected = false;
+  gridApi.forEachNode((n) => { if (n.data._selected) hasSelected = true; });
+  btn.style.display = hasSelected ? "" : "none";
+}
+
+function addAssetRow() {
+  if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
+  const newRow = {
+    _isNew: true,
+    _selected: false,
+    id: null,
+    asset_name: "",
+    hostname: "",
+    serial_no: "",
+    environment: "prod",
+    status: "active",
+    partner_id: Number(getCtxPartnerId()),
+  };
+  const res = gridApi.applyTransaction({ add: [newRow] });
+  _hasNewRows = true;
+  _updateNewRowIndicators();
+  if (res.add && res.add.length) {
+    gridApi.ensureNodeVisible(res.add[0], "bottom");
+    setTimeout(() => gridApi.setFocusedCell(res.add[0].rowIndex, "asset_name"), 50);
+  }
+}
+
+async function saveNewAssets() {
+  const newRows = [];
+  gridApi.forEachNode((n) => {
+    if (n.data._isNew && n.data.asset_name) newRows.push(n);
+  });
+  if (!newRows.length) { showToast("저장할 새 자산이 없습니다.", "info"); return; }
+
+  let successCount = 0;
+  for (const node of newRows) {
+    const d = node.data;
+    try {
+      const created = await apiFetch("/api/v1/assets", {
+        method: "POST",
+        body: {
+          partner_id: d.partner_id || Number(getCtxPartnerId()),
+          asset_name: d.asset_name,
+          hostname: d.hostname || null,
+          serial_no: d.serial_no || null,
+          environment: d.environment || "prod",
+          status: d.status || "active",
+          period_id: d.period_id ? Number(d.period_id) : null,
+          center_id: d.center_id ? Number(d.center_id) : null,
+        },
+      });
+      Object.assign(d, created);
+      d._isNew = false;
+      d._selected = false;
+      successCount++;
+    } catch (e) {
+      showToast((d.asset_name || "새 자산") + ": " + e.message, "error");
+    }
+  }
+  gridApi.refreshCells({ force: true });
+  // Check if any new rows remain
+  _hasNewRows = false;
+  gridApi.forEachNode((n) => { if (n.data._isNew) _hasNewRows = true; });
+  _updateNewRowIndicators();
+  _updateDeleteButtonVisibility();
+  if (successCount) showToast(successCount + "건 자산이 등록되었습니다.");
+}
+
+async function deleteSelectedAssets() {
+  const selected = [];
+  gridApi.forEachNode((n) => { if (n.data._selected) selected.push(n); });
+  if (!selected.length) return;
+
+  const newOnly = selected.filter((n) => n.data._isNew);
+  const existing = selected.filter((n) => !n.data._isNew && n.data.id);
+
+  // Remove unsaved rows immediately
+  if (newOnly.length) {
+    gridApi.applyTransaction({ remove: newOnly.map((n) => n.data) });
+  }
+
+  // Delete existing rows via API
+  if (existing.length) {
+    const names = existing.map((n) => n.data.asset_name || n.data.id).join(", ");
+    confirmDelete(existing.length + "건의 자산을 삭제하시겠습니까?\n" + names, async () => {
+      let count = 0;
+      for (const node of existing) {
+        try {
+          await apiFetch("/api/v1/assets/" + node.data.id, { method: "DELETE" });
+          count++;
+        } catch (e) { showToast(e.message, "error"); }
+      }
+      if (count) {
+        showToast(count + "건 삭제되었습니다.");
+        loadAssets();
+      }
+    });
+  }
+
+  // Refresh indicators
+  _hasNewRows = false;
+  gridApi.forEachNode((n) => { if (n.data._isNew) _hasNewRows = true; });
+  _updateNewRowIndicators();
+  _updateDeleteButtonVisibility();
+}
+
 /* ── Events ── */
 document.addEventListener("DOMContentLoaded", async () => {
   initAssetSplitter();
   initGrid();
 });
+document.getElementById("btn-add-asset-row").addEventListener("click", addAssetRow);
+document.getElementById("btn-save-new-assets").addEventListener("click", saveNewAssets);
+document.getElementById("btn-delete-selected").addEventListener("click", deleteSelectedAssets);
 document.getElementById("btn-add-asset").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-asset").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-asset").addEventListener("click", saveAsset);
