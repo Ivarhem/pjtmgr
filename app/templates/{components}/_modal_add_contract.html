@@ -3,7 +3,7 @@
   <form id="form-add" method="dialog">
     <h2 id="modal-add-title">사업 등록</h2>
     <div class="form-grid">
-      <label>사업유형
+      <label>사업유형<span class="req">*</span>
         <select name="contract_type" id="add-contract-type" required><!-- JS로 생성 --></select>
       </label>
       <label class="full-width"><span data-term-key="customer">고객</span>
@@ -13,7 +13,7 @@
           <div class="cust-picker-dropdown is-hidden" id="add-end-partner-dropdown"></div>
         </div>
       </label>
-      <label class="full-width">사업명 <input type="text" name="contract_name" id="add-contract-name" required></label>
+      <label class="full-width">사업명<span class="req">*</span> <input type="text" name="contract_name" id="add-contract-name" required></label>
     </div>
     <input type="hidden" id="add-contract-id" value="">
     <div class="modal-actions">

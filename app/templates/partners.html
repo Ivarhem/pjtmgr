@@ -120,7 +120,7 @@
 <dialog id="modal-add" class="modal modal-sm">
   <h2>거래처 등록</h2>
   <div class="form-grid">
-    <label class="full-width">거래처명 <input type="text" id="new-partner-name" placeholder="거래처명 입력" required></label>
+    <label class="full-width">거래처명<span class="req">*</span> <input type="text" id="new-partner-name" placeholder="거래처명 입력" required></label>
   </div>
   <div class="modal-actions">
     <button type="button" id="btn-cancel" class="btn btn-secondary">취소</button>
@@ -132,7 +132,7 @@
 <dialog id="modal-add-master-contact" class="modal modal-sm">
   <h2>기본 담당자 등록</h2>
   <div class="form-grid">
-    <label>이름 <input type="text" id="new-mc-name" required></label>
+    <label>이름<span class="req">*</span> <input type="text" id="new-mc-name" required></label>
     <label>연락처 <input type="text" id="new-mc-phone"></label>
     <label class="full-width">이메일 <input type="email" id="new-mc-email"></label>
     <label class="full-width">역할
@@ -157,7 +157,7 @@
   <h2>기본 담당자 수정</h2>
   <input type="hidden" id="edit-mc-id">
   <div class="form-grid">
-    <label>이름 <input type="text" id="edit-mc-name" required></label>
+    <label>이름<span class="req">*</span> <input type="text" id="edit-mc-name" required></label>
     <label>연락처 <input type="text" id="edit-mc-phone"></label>
     <label class="full-width">이메일 <input type="email" id="edit-mc-email"></label>
     <label class="full-width">역할

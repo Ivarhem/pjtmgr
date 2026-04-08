@@ -97,8 +97,7 @@
             <option value="dataset">데이터셋</option>
           </select>
         </label>
-        <label class="full-width">
-          카탈로그 제품 <span class="text-danger">*</span>
+        <label class="full-width">카탈로그 제품<span class="req">*</span>
           <div class="modal-combobox">
             <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
             <input type="hidden" id="catalog-id">
@@ -115,9 +114,9 @@
     <fieldset id="inline-catalog-form" class="modal-group is-hidden">
       <legend class="modal-group-title">새 제품 등록</legend>
       <div class="form-grid">
-        <label>제조사 <span class="text-danger">*</span> <input type="text" id="inline-vendor" required></label>
-        <label>모델명 <span class="text-danger">*</span> <input type="text" id="inline-model" required></label>
-        <label>상위분류 <span class="text-danger">*</span>
+        <label>제조사<span class="req">*</span> <input type="text" id="inline-vendor" required></label>
+        <label>모델명<span class="req">*</span> <input type="text" id="inline-model" required></label>
+        <label>상위분류<span class="req">*</span>
           <select id="inline-kind" required>
             <option value="hardware">하드웨어</option>
             <option value="software">소프트웨어</option>
@@ -127,17 +126,17 @@
             <option value="dataset">데이터셋</option>
           </select>
         </label>
-        <label>도메인 <span class="text-danger">*</span>
+        <label>도메인<span class="req">*</span>
           <select id="inline-attr-domain" required>
             <option value="">-- 도메인 선택 --</option>
           </select>
         </label>
-        <label>구현형태 <span class="text-danger">*</span>
+        <label>구현형태<span class="req">*</span>
           <select id="inline-attr-imp-type" required>
             <option value="">-- 구현형태 선택 --</option>
           </select>
         </label>
-        <label>제품군 <span class="text-danger">*</span>
+        <label>제품군<span class="req">*</span>
           <select id="inline-attr-product-family" required>
             <option value="">-- 제품군 선택 --</option>
           </select>
@@ -165,8 +164,7 @@
           고객 자산번호
           <input type="text" id="asset-customer-code" placeholder="예: CUST-FW-0001">
         </label>
-        <label>
-          자산명 <span class="text-danger">*</span>
+        <label>자산명<span class="req">*</span>
           <input type="text" id="asset-name" required>
         </label>
         <label>
@@ -226,7 +224,7 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">기본 정보</legend>
       <div class="form-grid">
-        <label>소프트웨어명 <input type="text" id="sw-name" required></label>
+        <label>소프트웨어명<span class="req">*</span> <input type="text" id="sw-name" required></label>
         <label>버전 <input type="text" id="sw-version"></label>
         <label>관계 유형
           <select id="sw-relation-type">
@@ -288,7 +286,7 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">담당자 정보</legend>
       <div class="form-grid">
-        <label class="full-width">담당자
+        <label class="full-width">담당자<span class="req">*</span>
           <select id="ct-contact-id" required></select>
         </label>
         <label>역할
@@ -327,7 +325,7 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">업체 정보</legend>
       <div class="form-grid">
-        <label class="full-width">업체
+        <label class="full-width">업체<span class="req">*</span>
           <select id="rp-partner-id" required></select>
         </label>
         <label>관계 유형
@@ -365,7 +363,7 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">연결 대상</legend>
       <div class="form-grid">
-        <label class="full-width">대상 자산
+        <label class="full-width">대상 자산<span class="req">*</span>
           <select id="rel-dst-asset-id" required></select>
         </label>
         <label>관계 유형
@@ -400,7 +398,7 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">별칭 정보</legend>
       <div class="form-grid">
-        <label>별칭 이름 <input type="text" id="alias-name" required></label>
+        <label>별칭 이름<span class="req">*</span> <input type="text" id="alias-name" required></label>
         <label>유형
           <select id="alias-type">
             <option value="INTERNAL">내부</option>
@@ -546,7 +544,7 @@
         <label id="event-new-id-wrap" class="is-hidden">신규 식별정보
           <input type="text" id="event-new-id" placeholder="예: 교체 후 serial">
         </label>
-        <label class="full-width">요약 <input type="text" id="event-summary" required></label>
+        <label class="full-width">요약<span class="req">*</span> <input type="text" id="event-summary" required></label>
         <label class="full-width">상세 <textarea id="event-detail" rows="4"></textarea></label>
       </div>
     </fieldset>
