@@ -130,7 +130,10 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">기본정보</legend>
       <div class="form-grid">
-        <label class="full-width"><span class="label-text">카탈로그 제품<span class="req">*</span></span>
+        <label><span class="label-text">자산명<span class="req">*</span></span>
+          <input type="text" id="asset-name" required>
+        </label>
+        <label><span class="label-text">카탈로그 제품<span class="req">*</span></span>
           <div class="modal-combobox">
             <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
             <input type="hidden" id="catalog-id">
@@ -141,9 +144,6 @@
           분류: <span id="asset-classification-preview">—</span>
           <button type="button" class="btn btn-xs btn-secondary is-hidden" id="btn-clear-catalog" style="margin-left:8px;">선택 해제</button>
         </div>
-        <label><span class="label-text">자산명<span class="req">*</span></span>
-          <input type="text" id="asset-name" required>
-        </label>
         <label>
           귀속사업
           <select id="asset-period">
@@ -156,38 +156,12 @@
         </label>
       </div>
     </fieldset>
-
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">추가정보</legend>
-      <div class="form-grid">
-        <label>
-          호스트명
-          <input type="text" id="asset-hostname">
-        </label>
-        <label>
-          고객 자산번호
-          <input type="text" id="asset-customer-code" placeholder="예: CUST-FW-0001">
-        </label>
-        <label>
-          센터
-          <select id="asset-center-id">
-            <option value="">-- 선택 안함 --</option>
-          </select>
-        </label>
-        <label>
-          전산실
-          <select id="asset-room-id" disabled>
-            <option value="">-- 센터 선택 --</option>
-          </select>
-        </label>
-        <label>
-          랙
-          <select id="asset-rack-id" disabled>
-            <option value="">-- 전산실 선택 --</option>
-          </select>
-        </label>
-      </div>
-    </fieldset>
+    <!-- 추가정보(호스트명, 센터, 랙 등)는 등록 후 자산 상세에서 편집 -->
+    <input type="hidden" id="asset-hostname" value="">
+    <input type="hidden" id="asset-customer-code" value="">
+    <select id="asset-center-id" class="is-hidden"><option value=""></option></select>
+    <select id="asset-room-id" class="is-hidden"><option value=""></option></select>
+    <select id="asset-rack-id" class="is-hidden"><option value=""></option></select>
 
     <div class="modal-actions">
       <button type="button" class="btn btn-secondary" id="btn-cancel-asset">취소</button>
