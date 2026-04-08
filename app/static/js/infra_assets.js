@@ -687,8 +687,15 @@ function buildCatalogClassificationPath(item) {
 
 function updateAssetClassificationPreview(text) {
   const preview = document.getElementById("asset-classification-preview");
+  const chip = document.getElementById("asset-classification-chip");
   if (!preview) return;
-  preview.textContent = text || "—";
+  if (text && text !== "—") {
+    preview.textContent = text;
+    if (chip) chip.classList.add("is-active");
+  } else {
+    preview.textContent = "제품을 선택하면 분류가 표시됩니다";
+    if (chip) chip.classList.remove("is-active");
+  }
 }
 
 async function loadLayoutCenters(partnerId) {

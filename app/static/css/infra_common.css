@@ -2478,6 +2478,33 @@ body.dark-mode .catalog-management-result {
 .catalog-search-wrap .text-danger,
 .modal .text-danger { color: var(--danger-color, #dc3545); }
 
+/* Classification chip (asset modal) */
+.classification-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color-light);
+  color: var(--text-color-secondary);
+  transition: background 0.15s, border-color 0.15s;
+}
+.classification-chip.is-active {
+  background: var(--primary-bg, rgba(37, 99, 235, 0.08));
+  border-color: var(--primary-color, #2563eb);
+  color: var(--text-color);
+}
+.classification-chip-icon { font-size: 13px; flex-shrink: 0; }
+.classification-chip-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+.classification-chip-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-color-secondary); font-size: 14px; line-height: 1;
+  padding: 0 2px; margin-left: 2px;
+}
+.classification-chip-clear:hover { color: var(--danger-color, #dc3545); }
+
 .infra-layout-help {
   margin-bottom: 12px;
   padding: 14px 16px;

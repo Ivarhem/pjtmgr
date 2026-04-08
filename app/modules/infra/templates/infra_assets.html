@@ -127,35 +127,38 @@
       </div>
     </fieldset>
 
-    <fieldset class="modal-group">
-      <legend class="modal-group-title">기본정보</legend>
-      <div class="form-grid" style="grid-template-columns: 1fr 2fr;">
-        <label><span class="label-text">자산명<span class="req">*</span></span>
-          <input type="text" id="asset-name" required>
-        </label>
-        <label><span class="label-text">카탈로그 제품<span class="req">*</span></span>
+    <div class="form-grid" style="grid-template-columns: 1fr 2fr;">
+      <label><span class="label-text">자산명<span class="req">*</span></span>
+        <input type="text" id="asset-name" required>
+      </label>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="margin:0;"><span class="label-text">카탈로그 제품<span class="req">*</span></span>
           <div class="modal-combobox">
             <input type="text" id="catalog-search" placeholder="제조사 또는 모델명 검색" autocomplete="off">
             <input type="hidden" id="catalog-id">
             <div id="catalog-dropdown" class="modal-combobox-dropdown is-hidden"></div>
           </div>
         </label>
-        <div class="full-width" style="font-size:12px;color:var(--text-color-secondary);margin-top:-12px;">
-          분류: <span id="asset-classification-preview">—</span>
-          <button type="button" class="btn btn-xs btn-secondary is-hidden" id="btn-clear-catalog" style="margin-left:8px;">선택 해제</button>
+        <div class="classification-chip" id="asset-classification-chip">
+          <span class="classification-chip-icon">📂</span>
+          <span class="classification-chip-text" id="asset-classification-preview">제품을 선택하면 분류가 표시됩니다</span>
+          <button type="button" class="classification-chip-clear is-hidden" id="btn-clear-catalog" title="선택 해제">×</button>
         </div>
-        <label>
-          프로젝트코드
-          <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
-        </label>
-        <label>
-          귀속사업
-          <select id="asset-period">
-            <option value="">-- 선택 안함 --</option>
-          </select>
-        </label>
       </div>
-    </fieldset>
+
+      <div class="full-width" style="border-top:1px solid var(--border-color-light);margin:4px 0;"></div>
+
+      <label>
+        프로젝트코드
+        <input type="text" id="asset-project-code" placeholder="예: FW-INT-01">
+      </label>
+      <label>
+        귀속사업
+        <select id="asset-period">
+          <option value="">-- 선택 안함 --</option>
+        </select>
+      </label>
+    </div>
     <!-- 추가정보(호스트명, 센터, 랙 등)는 등록 후 자산 상세에서 편집 -->
     <input type="hidden" id="asset-hostname" value="">
     <input type="hidden" id="asset-customer-code" value="">
