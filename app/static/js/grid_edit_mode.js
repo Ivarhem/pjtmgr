@@ -91,6 +91,89 @@ class GridEditMode {
     }
   }
 
+  markDirty(rowId, field, newValue, oldValue) {
+    if (!rowId) return;
+    if (!this._dirtyRows.has(rowId)) this._dirtyRows.set(rowId, {});
+    if (!this._originalValues.has(rowId)) this._originalValues.set(rowId, {});
+    const dirty = this._dirtyRows.get(rowId);
+    const originals = this._originalValues.get(rowId);
+    if (!(field in originals)) originals[field] = oldValue;
+    if (newValue === originals[field]) {
+      delete dirty[field];
+      if (Object.keys(dirty).length === 0) {
+        this._dirtyRows.delete(rowId);
+        this._originalValues.delete(rowId);
+      }
+    } else {
+      dirty[field] = newValue;
+    }
+    this.validateCell(rowId, field, newValue);
+    this._updateStatusBar();
+  }
+
+  isDirty(rowId, field) {
+    const d = this._dirtyRows.get(rowId);
+    return d ? field in d : false;
+  }
+
+  hasErrors() {
+    return this._errorCells.size > 0;
+  }
+
+  validateCell(rowId, field, value) {
+    const key = `${rowId}:${field}`;
+    if (this.requiredFields.has(field) && (!value || !String(value).trim())) {
+      this._errorCells.set(key, "필수값입니다");
+      return false;
+    }
+    const validator = this.validators[field];
+    if (validator) {
+      let rowData = null;
+      this.gridApi.forEachNode((n) => { if (n.data?.id === rowId) rowData = n.data; });
+      const error = validator(value, rowData);
+      if (error) {
+        this._errorCells.set(key, error);
+        return false;
+      }
+    }
+    this._errorCells.delete(key);
+    return true;
+  }
+
+  getCellError(rowId, field) {
+    return this._errorCells.get(`${rowId}:${field}`) || null;
+  }
+
+  getCellClass(params) {
+    const { data, colDef } = params;
+    const field = colDef?.field;
+    if (!field || !this._active) return [];
+
+    const rowId = data?.id;
+    if (!this.editableFields.has(field)) return ["infra-cell-readonly"];
+    if (!rowId) return [];
+
+    const classes = [];
+    if (this.isDirty(rowId, field)) classes.push("infra-cell-dirty");
+    if (this.getCellError(rowId, field)) classes.push("infra-cell-error");
+    return classes;
+  }
+
+  getDirtyCount() {
+    return this._dirtyRows.size;
+  }
+
+  getErrorCount() {
+    return this._errorCells.size;
+  }
+
+  reset() {
+    this._dirtyRows.clear();
+    this._originalValues.clear();
+    this._errorCells.clear();
+    this._updateStatusBar();
+  }
+
   // ── Stubs (implemented in later tasks) ────────────────────────────────────
 
   /** Task 3: 상태바 텍스트 갱신 */
