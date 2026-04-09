@@ -204,6 +204,68 @@ class GridEditMode {
     return true;
   }
 
+  async save() {
+    if (this.hasErrors()) {
+      showToast("검증 오류가 있어 저장할 수 없습니다.", "warning");
+      return { success: false, count: 0 };
+    }
+
+    if (this._dirtyRows.size === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const items = [];
+    for (const [rowId, changes] of this._dirtyRows) {
+      items.push({ id: rowId, changes });
+    }
+
+    const payload = this.onBeforeSave ? this.onBeforeSave(items) : items;
+
+    const endpoint = typeof this.bulkEndpoint === "function"
+      ? this.bulkEndpoint()
+      : this.bulkEndpoint;
+
+    try {
+      const results = await apiFetch(endpoint, {
+        method: "PATCH",
+        body: { items: payload },
+      });
+
+      for (const updated of results) {
+        this._dirtyRows.delete(updated.id);
+        this._originalValues.delete(updated.id);
+        for (const key of [...this._errorCells.keys()]) {
+          if (key.startsWith(`${updated.id}:`)) this._errorCells.delete(key);
+        }
+      }
+
+      if (this.onAfterSave) this.onAfterSave(results);
+      this._updateStatusBar();
+      this.gridApi.refreshCells({ force: true });
+
+      return { success: true, count: results.length };
+    } catch (err) {
+      showToast("저장 실패: " + err.message, "error");
+      return { success: false, count: 0 };
+    }
+  }
+
+  cancel() {
+    for (const [rowId, originals] of this._originalValues) {
+      let node = null;
+      this.gridApi.forEachNode((n) => { if (n.data?.id === rowId) node = n; });
+      if (node) {
+        for (const [field, value] of Object.entries(originals)) {
+          node.data[field] = value;
+        }
+      }
+    }
+    this._dirtyRows.clear();
+    this._originalValues.clear();
+    this._errorCells.clear();
+    this.gridApi.refreshCells({ force: true });
+  }
+
   // ── Stubs (implemented in later tasks) ────────────────────────────────────
 
   _updateStatusBar() {
