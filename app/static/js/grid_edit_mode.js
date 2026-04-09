@@ -226,10 +226,11 @@ class GridEditMode {
       : this.bulkEndpoint;
 
     try {
-      const results = await apiFetch(endpoint, {
+      const raw = await apiFetch(endpoint, {
         method: "PATCH",
         body: { items: payload },
       });
+      const results = Array.isArray(raw) ? raw : [];
 
       for (const updated of results) {
         this._dirtyRows.delete(updated.id);
@@ -263,10 +264,11 @@ class GridEditMode {
     this._dirtyRows.clear();
     this._originalValues.clear();
     this._errorCells.clear();
+    this._updateStatusBar();
     this.gridApi.refreshCells({ force: true });
   }
 
-  // ── Stubs (implemented in later tasks) ────────────────────────────────────
+  // ── Status bar / Bulk apply UI (implemented in later tasks) ────────────────────────────────────
 
   _updateStatusBar() {
     const countEl = this.selectors.changeCount
