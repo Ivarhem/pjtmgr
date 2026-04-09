@@ -1829,6 +1829,7 @@ function createSubGrid(container, opts) {
     init(params) {
       this.el = document.createElement("div");
       this.el.className = "btn-grid-add-inline";
+      this.el.style.cssText = "display:flex; align-items:center; justify-content:center; width:100%; height:100%;";
       this.el.textContent = addLabel;
     }
     getGui() { return this.el; }

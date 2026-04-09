@@ -1499,12 +1499,15 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   height: 30px !important;
 }
 
-.sub-grid-add-row .ag-cell {
+.sub-grid-add-row .ag-cell,
+.sub-grid-add-row .ag-full-width-row,
+.sub-grid-add-row .ag-cell-wrapper {
   background: transparent !important;
   border-bottom: none !important;
-  text-align: center;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  line-height: 30px;
+  height: 100%;
 }
 
 .btn-grid-add-inline {
