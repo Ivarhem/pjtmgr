@@ -1,6 +1,6 @@
 # GridEditMode Phase 0 — 공통 클래스 추출 상세 설계
 
-> 2026-04-09 | 상위 설계: `docs/superpowers/specs/2026-04-09-grid-edit-mode-expansion-design.md`
+> 2026-04-09 | 상태: **Phase 0 완료** | 상위 설계: `docs/superpowers/specs/2026-04-09-grid-edit-mode-expansion-design.md`
 > v2 — 코덱스 리뷰 2차 반영: 범위 축소 + paste/신규행/cancel 경계 명확화
 
 ---
