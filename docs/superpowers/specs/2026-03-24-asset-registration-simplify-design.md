@@ -13,6 +13,8 @@
 
 ## 현재 데이터 모델 참조
 
+> Note (2026-04-09): 현재 구현의 자산 `system_id` 규칙은 분류/유형 코드 기반이 아니라 `{partner_code_lc}-asset-{base36}` 형식으로 단순화되었다. 아래 내용 중 유형 코드 기반 자산코드 설명은 이력 참고용이다.
+
 - `asset_type_codes`: PK = `type_key` (예: "server", "security"), `code` (예: "SVR", "SEC")는 자산코드 생성용
 - `Asset.asset_type`: `type_key` 값을 저장 (예: "security")
 - `Asset.asset_code`: `{고객사코드}-{type_code}-{base36}` (예: P000-SEC-0001)

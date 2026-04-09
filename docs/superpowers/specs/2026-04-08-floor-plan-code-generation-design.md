@@ -53,7 +53,7 @@
 
 | 필드명 | 역할 | 특성 |
 |--------|------|------|
-| `system_id` | 시스템 자동 부여 안정 식별자 | 읽기 전용, 계층 코드 조합, unique |
+| `system_id` | 시스템 자동 부여 안정 식별자 | 읽기 전용, unique |
 | `project_code` | 프로젝트별 운영 코드 | 가변, 템플릿 또는 수동 입력 |
 | `*_code` (center_code 등) | 로컬 세그먼트 | system_id 구성요소, 사용자 입력 |
 
@@ -129,7 +129,8 @@ assets
 ```
 
 - `asset_code` → `system_id`로 rename (DB 컬럼 + 코드 전체)
-- 자산의 `system_id`는 위치(랙) 계층과 무관한 **자산 고유 식별자** (기존 asset_code 생성 방식 유지)
+- 자산의 `system_id`는 위치(랙) 계층과 무관한 **자산 고유 식별자**
+- 자산 규칙은 분류/도메인과 분리된 `{partner_code_lc}-asset-{base36 4자리}` 예: `p001-asset-0001`
 - 센터/전산실/랙의 system_id가 부모 코드 계층 조합인 것과 달리, 자산은 독립 엔티티로서 자체 규칙을 따름
 - `project_asset_number`는 기존 필드로 유지 (고객사 부여 번호, project_code와 별도 용도)
 
@@ -169,7 +170,7 @@ contract_periods
 | Center | `{partner.partner_code}-{center_code}` | `P000-C01` |
 | Room | `{center.system_id}-{room_code}` | `P000-C01-R01` |
 | Rack | `{room.system_id}-{rack_code}` | `P000-C01-R01-A12` |
-| Asset | 자산 고유 (위치 계층 무관, 기존 asset_code 방식) | 기존 값 유지 |
+| Asset | `{partner_code_lc}-asset-{seq}` | `p001-asset-0001` |
 
 ### 4.2 생성 시점
 

@@ -29,6 +29,7 @@ from app.modules.infra.schemas.asset_contact import (
     AssetContactUpdate,
 )
 from app.modules.common.models.partner_contact import PartnerContact
+from app.modules.common.models.user import User
 
 
 # ── Asset ──
@@ -373,7 +374,7 @@ def get_asset(db: Session, asset_id: int) -> Asset:
     return asset
 
 
-def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
+def create_asset(db: Session, payload: AssetCreate, current_user: User) -> Asset:
     from sqlalchemy.exc import IntegrityError
     from app.modules.infra.models.product_catalog import ProductCatalog
     from app.modules.infra.models.period_asset import PeriodAsset
@@ -395,11 +396,6 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
     catalog = db.get(ProductCatalog, payload.model_id)
     if catalog is None:
         raise NotFoundError("Product catalog entry not found")
-    catalog_type_meta = _get_catalog_asset_type_meta(db, catalog, period_id=payload.period_id)
-    if catalog_type_meta["asset_type_code"] is None:
-        raise BusinessRuleError(
-            "카탈로그 분류 기준이 올바르지 않습니다.", status_code=422
-        )
     # placeholder면 vendor/model 없음, 아니면 카탈로그 값 사용
     if catalog.is_placeholder:
         vendor = None
@@ -434,9 +430,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
 
     # 코드 자동 생성 (동시성 충돌 시 최대 3회 재시도)
     for attempt in range(3):
-        data["system_id"] = _generate_system_id(
-            db, payload.partner_id, catalog_type_meta["asset_type_code"]
-        )
+        data["system_id"] = _generate_system_id(db, payload.partner_id)
         asset = Asset(**data)
         db.add(asset)
         try:
@@ -473,7 +467,7 @@ def create_asset(db: Session, payload: AssetCreate, current_user) -> Asset:
 
 
 def update_asset(
-    db: Session, asset_id: int, payload: AssetUpdate, current_user
+    db: Session, asset_id: int, payload: AssetUpdate, current_user: User
 ) -> Asset:
     from app.modules.infra.models.product_catalog import ProductCatalog
     from app.modules.infra.models.period_asset import PeriodAsset
@@ -506,11 +500,6 @@ def update_asset(
             if has_period_change
             else _current_asset_period_id(db, asset.id)
         )
-        new_catalog_type_meta = _get_catalog_asset_type_meta(
-            db,
-            new_catalog,
-            period_id=period_id_for_layout,
-        )
         if new_catalog.is_placeholder:
             changes["vendor"] = None
             changes["model"] = None
@@ -522,6 +511,7 @@ def update_asset(
             new_catalog,
             period_id=period_id_for_layout,
         )
+        changes["system_id"] = _generate_system_id(db, target_partner_id)
         changes["category"] = _get_deepest_classification_label(
             classification_info["levels"]
         )
@@ -580,7 +570,7 @@ def update_asset(
     return asset
 
 
-def delete_asset(db: Session, asset_id: int, current_user) -> None:
+def delete_asset(db: Session, asset_id: int, current_user: User) -> None:
     from app.modules.infra.models.period_asset import PeriodAsset
     from app.modules.infra.services.asset_related_partner_service import (
         delete_asset_related_partners_for_asset,
@@ -614,7 +604,7 @@ def update_asset_current_role(
     db: Session,
     asset_id: int,
     asset_role_id: int | None,
-    current_user,
+    current_user: User,
 ) -> Asset:
     _require_inventory_edit(current_user)
     asset = get_asset(db, asset_id)
@@ -733,7 +723,7 @@ def get_asset_contact(db: Session, asset_contact_id: int) -> AssetContact:
 
 
 def create_asset_contact(
-    db: Session, payload: AssetContactCreate, current_user
+    db: Session, payload: AssetContactCreate, current_user: User
 ) -> AssetContact:
     _require_inventory_edit(current_user)
     _ensure_asset_exists(db, payload.asset_id)
@@ -748,7 +738,7 @@ def create_asset_contact(
 
 
 def update_asset_contact(
-    db: Session, asset_contact_id: int, payload: AssetContactUpdate, current_user
+    db: Session, asset_contact_id: int, payload: AssetContactUpdate, current_user: User
 ) -> AssetContact:
     _require_inventory_edit(current_user)
     ac = get_asset_contact(db, asset_contact_id)
@@ -767,7 +757,7 @@ def update_asset_contact(
     return ac
 
 
-def delete_asset_contact(db: Session, asset_contact_id: int, current_user) -> None:
+def delete_asset_contact(db: Session, asset_contact_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     ac = get_asset_contact(db, asset_contact_id)
     db.delete(ac)
@@ -964,13 +954,13 @@ def _to_base36(num: int, width: int = 4) -> str:
     return result.zfill(width)
 
 
-def _generate_system_id(db: Session, partner_id: int, type_code: str) -> str:
-    """Generate system ID: {partner_code}-{type_code}-{base36 4자리}."""
+def _generate_system_id(db: Session, partner_id: int) -> str:
+    """Generate system ID: {partner_code_lc}-asset-{base36 4자리}."""
     from app.modules.common.models.partner import Partner
 
     partner = db.get(Partner, partner_id)
-    partner_code = partner.partner_code if partner else "X000"
-    prefix = f"{partner_code}-{type_code}-"
+    partner_code = (partner.partner_code if partner else "X000").lower()
+    prefix = f"{partner_code}-asset-"
 
     max_code = db.scalar(
         select(func.max(Asset.system_id))
@@ -987,7 +977,7 @@ def _generate_system_id(db: Session, partner_id: int, type_code: str) -> str:
     return prefix + _to_base36(next_seq)
 
 
-def _require_inventory_edit(current_user) -> None:
+def _require_inventory_edit(current_user: User) -> None:
     if not can_edit_inventory(current_user):
         raise PermissionDeniedError("Inventory edit permission required")
 

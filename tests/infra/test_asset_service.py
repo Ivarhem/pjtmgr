@@ -496,3 +496,37 @@ def test_update_model_id_syncs_vendor_model_category(db_session, admin_role_id) 
     assert updated.model_id == catalog2.id
     assert updated.vendor == "HP"
     assert updated.model == "ProLiant DL380"
+
+
+def test_update_model_id_generates_system_id_when_missing(db_session, admin_role_id) -> None:
+    admin = _make_admin_user(db_session, admin_role_id)
+    partner = _make_partner(db_session)
+    catalog1 = _make_catalog(db_session, type_key="server")
+
+    asset = create_asset(
+        db_session,
+        AssetCreate(partner_id=partner.id, model_id=catalog1.id, asset_name="SRV-NO-CODE"),
+        admin,
+    )
+    asset.system_id = None
+    db_session.commit()
+
+    catalog2 = ProductCatalog(
+        vendor="HP", name="ProLiant DL380", product_type="hardware",
+        category="서버", asset_type_key="server",
+    )
+    db_session.add(catalog2)
+    db_session.flush()
+
+    updated = update_asset(
+        db_session,
+        asset.id,
+        AssetUpdate(model_id=catalog2.id),
+        admin,
+    )
+
+    assert updated.model_id == catalog2.id
+    assert updated.vendor == "HP"
+    assert updated.model == "ProLiant DL380"
+    assert updated.system_id is not None
+    assert updated.system_id.startswith(f"{partner.partner_code.lower()}-asset-")

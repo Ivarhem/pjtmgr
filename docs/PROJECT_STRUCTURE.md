@@ -559,7 +559,8 @@ docs/
     ├── implementer.md          # 구현 역할 카드
     ├── reviewer.md             # 리뷰 역할 카드
     ├── tester.md               # 검증 역할 카드
-    └── docs-updater.md         # 문서 갱신 판정 역할 카드
+    ├── qa.md                   # QA 통합 역할 카드 (tester+reviewer, 독립 검증)
+    └── docs-updater.md         # 문서 갱신 판정 + 갱신 매핑 테이블
 ```
 
 ## 스크립트

@@ -390,7 +390,7 @@ function initYearDropdown() {
     for (let y = curYear - 1; y <= curYear + 2; y++) {
       const label = document.createElement('label');
       const checked = y === curYear ? ' checked' : '';
-      label.innerHTML = `<input type="checkbox" value="${y}"${checked}> ${y}`;
+      label.innerHTML = `<input type="checkbox" value="${escapeHtml(y)}"${checked}> ${escapeHtml(y)}`;
       calMenu.appendChild(label);
     }
     updateDropLabel(document.getElementById('drop-calendar-year'));
@@ -403,7 +403,7 @@ function initYearDropdown() {
     periodMenu.innerHTML = '';
     for (let y = curYear - 1; y <= curYear + 2; y++) {
       const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" value="${y}"> Y${String(y).slice(2)}`;
+      label.innerHTML = `<input type="checkbox" value="${escapeHtml(y)}"> Y${escapeHtml(String(y).slice(2))}`;
       periodMenu.appendChild(label);
     }
     updateDropLabel(document.getElementById('drop-period'));
@@ -440,7 +440,7 @@ async function populateContractTypeCheckboxes(menuSelector) {
   menu.innerHTML = '';
   types.forEach(dt => {
     const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" value="${dt.code}"> ${dt.label}`;
+    label.innerHTML = `<input type="checkbox" value="${escapeHtml(dt.code)}"> ${escapeHtml(dt.label)}`;
     menu.appendChild(label);
   });
   const drop = menu.closest('.chk-drop');
@@ -1483,9 +1483,10 @@ function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
 
     const changes = [];
     const totalRowsNeeded = startRowIdx + pasteRows.length;
-    const currentRowCount = gridApi.getDisplayedRowCount();
+    let currentRowCount = 0;
+    gridApi.forEachNode(() => { currentRowCount += 1; });
 
-    // Auto-create rows if needed (append at bottom)
+    // Auto-create rows if needed (append after the full dataset, not the filtered view)
     if (autoCreateRows && totalRowsNeeded > currentRowCount) {
       const newRows = [];
       for (let i = 0; i < totalRowsNeeded - currentRowCount; i++) {

@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import pytest
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
+from app.modules.common.models.asset_type_code import AssetTypeCode
 from app.modules.common.models.partner import Partner
 from app.modules.common.models.user import User
 from app.modules.infra.models.asset import Asset
@@ -27,8 +29,27 @@ def _make_partner(db: Session) -> Partner:
     return partner
 
 
-def _make_catalog(db: Session, name: str = "TestModel") -> ProductCatalog:
-    catalog = ProductCatalog(vendor="TestVendor", name=name, product_type="hardware")
+def _make_catalog(db: Session, name: str = "TestModel", type_key: str = "server", code: str = "SVR") -> ProductCatalog:
+    existing_type = db.scalar(select(AssetTypeCode).where(AssetTypeCode.type_key == type_key))
+    if existing_type is None:
+        db.add(
+            AssetTypeCode(
+                type_key=type_key,
+                code=code,
+                label=name,
+                kind="hardware",
+                sort_order=1,
+                is_active=True,
+            )
+        )
+        db.flush()
+    catalog = ProductCatalog(
+        vendor="TestVendor",
+        name=name,
+        product_type="hardware",
+        category="서버",
+        asset_type_key=type_key,
+    )
     db.add(catalog)
     db.flush()
     return catalog
@@ -85,3 +106,24 @@ def test_bulk_update_filters_unknown_fields(setup):
     results = bulk_update_assets(db, items, admin)
     assert len(results) == 1
     assert results[0].hostname == "ok"
+
+
+def test_bulk_update_model_id_syncs_vendor_and_generates_missing_system_id(setup):
+    db, admin, a1 = setup["db"], setup["admin"], setup["a1"]
+    a1.system_id = None
+    db.commit()
+
+    catalog = _make_catalog(db, name="SyncModel", type_key="server", code="SVR")
+    catalog.vendor = "SyncVendor"
+    db.commit()
+    db.refresh(catalog)
+
+    items = [AssetBulkUpdateItem(id=a1.id, changes={"model_id": catalog.id})]
+    results = bulk_update_assets(db, items, admin)
+
+    assert len(results) == 1
+    assert results[0].model_id == catalog.id
+    assert results[0].vendor == "SyncVendor"
+    assert results[0].model == "SyncModel"
+    assert results[0].system_id is not None
+    assert results[0].system_id.startswith("bt01-asset-")

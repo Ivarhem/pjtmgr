@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BusinessRuleError, NotFoundError
+from app.modules.common.models.user import User
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.ip_subnet import IpSubnet
 from app.modules.infra.models.port_map import PortMap
@@ -288,7 +289,7 @@ def import_inventory(
     db: Session,
     partner_id: int,
     parsed_rows: list[dict],
-    current_user,
+    current_user: User,
     on_duplicate: str = "skip",
 ) -> dict:
     """
@@ -423,7 +424,7 @@ def parse_subnet_sheet(file_bytes: bytes, partner_id: int) -> dict:
     return {"rows": parsed_rows, "preview_rows": preview_rows, "errors": errors, "error_details": error_details, "warnings": warnings, "total": len(parsed_rows), "valid_count": max(valid_count, 0)}
 
 
-def import_subnets(db: Session, partner_id: int, parsed_rows: list[dict], current_user, on_duplicate: str = "skip") -> dict:
+def import_subnets(db: Session, partner_id: int, parsed_rows: list[dict], current_user: User, on_duplicate: str = "skip") -> dict:
     """파싱된 IP 대역 데이터를 DB에 저장."""
     errors: list[str] = []
     error_details: list[dict] = []
@@ -542,7 +543,7 @@ def parse_portmap_sheet(file_bytes: bytes, partner_id: int) -> dict:
     return {"rows": parsed_rows, "preview_rows": preview_rows, "errors": errors, "error_details": error_details, "warnings": warnings, "total": len(parsed_rows), "valid_count": max(valid_count, 0)}
 
 
-def import_portmaps(db: Session, partner_id: int, parsed_rows: list[dict], current_user) -> dict:
+def import_portmaps(db: Session, partner_id: int, parsed_rows: list[dict], current_user: User) -> dict:
     """파싱된 포트맵 데이터를 DB에 저장. 포트맵은 중복 개념이 약하므로 모두 신규 생성."""
     errors: list[str] = []
     error_details: list[dict] = []

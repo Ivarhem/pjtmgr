@@ -176,14 +176,6 @@ function _setImportStatus(elId, html) {
   document.getElementById(elId).innerHTML = html;
 }
 
-function _escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
 
 function _formatImportErrors(err) {
   const details = Array.isArray(err?.error_details) ? err.error_details : [];
@@ -209,7 +201,7 @@ function _renderImportMessages(statusEl, msgs, kind = 'err') {
   const icon = kind === 'ok' ? '✔' : '✗';
   _setImportStatus(
     statusEl,
-    `<span class="${cls}">${icon} ${kind === 'ok' ? '완료' : `오류 ${msgs.length}건`}</span><ul class="import-err-list">${msgs.map(m => `<li>${_escapeHtml(m)}</li>`).join('')}</ul>`,
+    `<span class="${cls}">${icon} ${kind === 'ok' ? '완료' : `오류 ${msgs.length}건`}</span><ul class="import-err-list">${msgs.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul>`,
   );
 }
 
@@ -268,7 +260,7 @@ async function doImportContracts() {
     if (res.ok) {
       const data = await res.json();
       _setImportStatus('import-status-contracts',
-        `<span class="import-ok">✔ 완료: 신규 ${data.created}건${data.skipped ? ` / 건너뜀 ${data.skipped}건` : ''}${data.new_users?.length ? ` / 신규 담당자: ${_escapeHtml(data.new_users.join(', '))}` : ''}</span>`);
+        `<span class="import-ok">✔ 완료: 신규 ${data.created}건${data.skipped ? ` / 건너뜀 ${data.skipped}건` : ''}${data.new_users?.length ? ` / 신규 담당자: ${escapeHtml(data.new_users.join(', '))}` : ''}</span>`);
       await loadData();
     } else {
       const err = await res.json();

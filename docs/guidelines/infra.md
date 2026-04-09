@@ -95,7 +95,8 @@
 
 - `classification_nodes` 통합 메타:
   - 분류 노드가 `asset_type_key`, `asset_type_code`, `asset_type_label`, `asset_kind`, `is_catalog_assignable`를 직접 가진다.
-  - 자산 코드 생성, 카탈로그 저장, 자산 등록 기본값은 이 메타를 source of truth로 사용한다.
+  - 카탈로그 저장, 분류 표시, 자산 등록 기본값은 이 메타를 source of truth로 사용한다.
+  - 자산 `system_id` 채번은 더 이상 분류 메타에 의존하지 않는다.
   - 별도 `asset_type_codes`, `asset_type_classification_mappings` 테이블은 migration 0045에서 제거되었다.
 - `ProductCatalog.product_type`:
   - 현재는 제품 상위 분류를 나타내는 문자열로 유지한다.
@@ -139,9 +140,12 @@
 
 ## 이원 코드 체계 (system_id / project_code)
 
-- `system_id`: 시스템 자동 부여 안정 식별자. 부모 `_code` 필드를 `-`로 연결 (예: `P000-C01-R01-A12`). 읽기 전용.
+- `system_id`: 시스템 자동 부여 안정 식별자. 읽기 전용.
 - `project_code`: 프로젝트별 운영 코드. 템플릿 기반 자동 생성 또는 수동 입력. 편집 가능.
 - `Asset.system_id`는 위치 무관 안정 식별자다 (기존 `asset_code` rename).
+- 자산 규칙: `{partner_code_lc}-asset-{base36 4자리}` 예: `p001-asset-0001`
+- 센터/전산실/랙 규칙: 부모 `_code` 기반 계층형 `system_id` 유지 예: `P000-C01-R01-A12`
+- IP는 별도 `system_id`를 두지 않고 주소 자체를 식별자로 본다.
 - 코드 생성 서비스(`code_generation_service`)가 `system_id` 채번과 `project_code` 템플릿 적용을 담당한다.
 
 ## RackLine (전산실 랙 배치 라인)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.modules.common.models.user import User
 from app.modules.infra.models.product_catalog import ProductCatalog
 from app.modules.infra.services.catalog_alias_service import (
     delete_vendor_and_aliases,
@@ -82,5 +83,5 @@ def list_similar_catalog_products(
     return rows[:limit]
 
 
-def delete_catalog_vendor_integrity(db: Session, vendor_canonical: str, current_user) -> None:
+def delete_catalog_vendor_integrity(db: Session, vendor_canonical: str, current_user: User) -> None:
     delete_vendor_and_aliases(db, vendor_canonical, current_user)

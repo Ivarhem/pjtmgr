@@ -26,6 +26,27 @@ app/modules/{module}/
 - 스키마는 `app/modules/{module}/schemas/`에 정의한다. 라우터 파일에 스키마 클래스를 직접 정의하지 않는다.
 - 공통 유틸(`_normalize.py` 등)은 `app/core/`에 배치한다.
 
+## 모듈 구조
+
+```text
+app/
+├── main.py                          # ENABLED_MODULES 기반 동적 모듈 등록
+├── core/                            # 모듈-독립 인프라 (누구든 import 가능)
+│   ├── app_factory.py, config.py, database.py, exceptions.py
+│   ├── auth/                        # 인증 미들웨어, 세션, 패스워드, RBAC
+│   └── startup/                     # lifespan, DB init, bootstrap
+├── modules/
+│   ├── common/                      # 항상 활성 (accounting, infra가 import 가능)
+│   ├── accounting/                  # common만 참조 가능
+│   └── infra/                       # common만 참조 가능
+```
+
+### 모듈 활성화
+
+`ENABLED_MODULES` 환경변수로 활성 모듈을 제어한다.
+
+- 모든 모델은 항상 import (Alembic 정합성). 라우터는 활성 모듈만 등록. 템플릿 로더에 활성 모듈 경로만 추가.
+
 ## 모듈 간 import 규칙
 
 ```text
@@ -66,8 +87,14 @@ accounting <-> infra   절대 금지
 
 | 개념 | 표준 용어 (DB/API) | 비고 |
 | ---- | ----------------- | ---- |
-| 업체 | `partner` | `counterparty`, `company`, `customer` 사용 금지 |
+| 업체 | `partner` | 고객사, 수행사, 유지보수사, 통신사, 벤더 등. `counterparty`, `company`, `customer` 사용 금지 |
+| 업체 담당자 | `partner_contact` | 업체 소속 담당자 |
 | END 고객사 | `end_partner` | Contract에 직접 연결된 최종 고객 |
+| 역할 (RBAC) | `role` | permissions JSON으로 모듈별 접근 수준 관리 |
+| 자산 역할 | `asset_role` | 인프라 운영 관점의 논리 역할 (예: 인터넷방화벽#1) |
+| 자산 | `asset` | 물리/논리 IT 자산. 장비 단위 식별자 |
+| 환경 | `environment` | prod, dev, staging, dr |
+| 상태 | `status` | planned, standby, active, decommissioned |
 | 금액 필드 접미사 | `_amount` | `_total` 사용 금지. `expected_revenue_total`, `expected_gp_total`은 레거시 |
 | 월 | `_month` (YYYY-MM-01) | `forecast_month`, `revenue_month` |
 | 구분 (매출/매입) | `line_type` (revenue/cost) | DB 영문, UI 한글 |
@@ -122,3 +149,10 @@ accounting <-> infra   절대 금지
 - 비밀번호 정책은 `settings` + `app/core/config.py` 기본값으로 관리한다. 동적 정책 검증은 서비스 레이어에서 현재 설정값을 조회해 수행하고, 라우터/템플릿은 그 값을 표시만 한다.
 - SQL 작성 시 f-string으로 테이블명/컬럼명을 삽입하지 않는다. SQLAlchemy ORM 또는 Core 표현식을 사용한다.
 - 모듈 간 순환 import는 허용하지 않는다. 공통 모듈 추출 또는 `TYPE_CHECKING` 분기로 해결.
+
+## 테스트
+
+- 프레임워크: `pytest`. DB fixture: PostgreSQL 테스트 컨테이너.
+- 테스트 디렉토리는 모듈별 구성: `tests/{common,accounting,infra}/`
+- DB 스키마 변경은 Alembic(`alembic/versions/`)으로 관리. startup 시 자동 `alembic upgrade head`.
+- 검증 상세 규칙은 `docs/agents/qa.md` 참조.

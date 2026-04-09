@@ -3190,8 +3190,8 @@ function openReceiptMatchModal() {
   const paySelect = document.getElementById('match-receipt-select');
   paySelect.innerHTML = '<option value="">-- 입금을 선택하세요 --</option>';
   (fullReceipts || []).forEach(p => {
-    const label = `${p.receipt_date} / ${p.partner_name || '미지정'} / ${fmt(p.amount)}원`;
-    paySelect.innerHTML += `<option value="${p.id}">${label}</option>`;
+    const label = `${escapeHtml(p.receipt_date)} / ${escapeHtml(p.partner_name || '미지정')} / ${fmt(p.amount)}원`;
+    paySelect.innerHTML += `<option value="${escapeHtml(p.id)}">${label}</option>`;
   });
 
   // 매출 라인 select 채우기 (확정 매출만)
@@ -3199,8 +3199,8 @@ function openReceiptMatchModal() {
   txnLineSelect.innerHTML = '<option value="">-- 매출 라인을 선택하세요 --</option>';
   (fullLedger || []).filter(r => r.line_type === 'revenue' && r.status === '확정').forEach(r => {
     const month = (r.revenue_month || '').slice(0, 7);
-    const label = `${month} / ${r.partner_name || '미지정'} / ${fmt(r.supply_amount)}원`;
-    txnLineSelect.innerHTML += `<option value="${r.transaction_line_id || r.id}">${label}</option>`;
+    const label = `${escapeHtml(month)} / ${escapeHtml(r.partner_name || '미지정')} / ${fmt(r.supply_amount)}원`;
+    txnLineSelect.innerHTML += `<option value="${escapeHtml(r.transaction_line_id || r.id)}">${label}</option>`;
   });
 
   document.getElementById('match-alloc-amount').value = '';

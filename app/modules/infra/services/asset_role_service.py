@@ -12,9 +12,16 @@ from app.core.exceptions import (
 )
 from app.modules.common.models.contract_period import ContractPeriod
 from app.modules.common.models.partner import Partner
+from app.modules.common.models.user import User
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_role import AssetRole
 from app.modules.infra.models.asset_role_assignment import AssetRoleAssignment
+from app.modules.infra.schemas.asset_role import (
+    AssetRoleCreate,
+    AssetRoleUpdate,
+    AssetRoleAssignmentCreate,
+    AssetRoleAssignmentUpdate,
+)
 from app.modules.infra.services.asset_event_service import log_asset_event
 
 
@@ -42,7 +49,7 @@ def get_asset_role(db: Session, asset_role_id: int) -> AssetRole:
     return role
 
 
-def create_asset_role(db: Session, payload, current_user) -> AssetRole:
+def create_asset_role(db: Session, payload: AssetRoleCreate, current_user: User) -> AssetRole:
     _require_inventory_edit(current_user)
     _ensure_partner_exists(db, payload.partner_id)
     if payload.contract_period_id is not None:
@@ -55,7 +62,7 @@ def create_asset_role(db: Session, payload, current_user) -> AssetRole:
     return role
 
 
-def update_asset_role(db: Session, asset_role_id: int, payload, current_user) -> AssetRole:
+def update_asset_role(db: Session, asset_role_id: int, payload: AssetRoleUpdate, current_user: User) -> AssetRole:
     _require_inventory_edit(current_user)
     role = get_asset_role(db, asset_role_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -71,7 +78,7 @@ def update_asset_role(db: Session, asset_role_id: int, payload, current_user) ->
     return role
 
 
-def delete_asset_role(db: Session, asset_role_id: int, current_user) -> None:
+def delete_asset_role(db: Session, asset_role_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     role = get_asset_role(db, asset_role_id)
     db.delete(role)
@@ -122,7 +129,7 @@ def get_asset_role_assignment(db: Session, assignment_id: int) -> AssetRoleAssig
     return assignment
 
 
-def create_asset_role_assignment(db: Session, asset_role_id: int, payload, current_user) -> AssetRoleAssignment:
+def create_asset_role_assignment(db: Session, asset_role_id: int, payload: AssetRoleAssignmentCreate, current_user: User) -> AssetRoleAssignment:
     _require_inventory_edit(current_user)
     role = get_asset_role(db, asset_role_id)
     asset = _ensure_asset_exists(db, payload.asset_id)
@@ -138,7 +145,7 @@ def create_asset_role_assignment(db: Session, asset_role_id: int, payload, curre
     return assignment
 
 
-def update_asset_role_assignment(db: Session, assignment_id: int, payload, current_user) -> AssetRoleAssignment:
+def update_asset_role_assignment(db: Session, assignment_id: int, payload: AssetRoleAssignmentUpdate, current_user: User) -> AssetRoleAssignment:
     _require_inventory_edit(current_user)
     assignment = get_asset_role_assignment(db, assignment_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -156,7 +163,7 @@ def update_asset_role_assignment(db: Session, assignment_id: int, payload, curre
     return assignment
 
 
-def delete_asset_role_assignment(db: Session, assignment_id: int, current_user) -> None:
+def delete_asset_role_assignment(db: Session, assignment_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     assignment = get_asset_role_assignment(db, assignment_id)
     db.delete(assignment)
@@ -170,7 +177,7 @@ def replace_asset_role_assignment(
     replacement_asset_id: int,
     occurred_at,
     note: str | None,
-    current_user,
+    current_user: User,
     event_type: str = "replacement",
 ) -> dict:
     _require_inventory_edit(current_user)
@@ -251,7 +258,7 @@ def repurpose_asset_role_assignment(
     new_contract_period_id: int | None,
     occurred_at,
     note: str | None,
-    current_user,
+    current_user: User,
 ) -> dict:
     _require_inventory_edit(current_user)
     source_role = get_asset_role(db, asset_role_id)
@@ -486,6 +493,6 @@ def _ensure_assignment_range(valid_from, valid_to) -> None:
         raise BusinessRuleError("할당 시작일은 종료일보다 늦을 수 없습니다.", status_code=422)
 
 
-def _require_inventory_edit(current_user) -> None:
+def _require_inventory_edit(current_user: User) -> None:
     if not can_edit_inventory(current_user):
         raise PermissionDeniedError("Inventory edit permission required")

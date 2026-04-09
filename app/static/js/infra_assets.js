@@ -224,7 +224,23 @@ function _updateEditModeBar() {
 
 async function saveEditMode() {
   if (hasErrors()) { showToast("검증 오류가 있어 저장할 수 없습니다.", "warning"); return; }
-  if (_dirtyRows.size === 0) { showToast("변경사항이 없습니다.", "info"); toggleEditMode(false); return; }
+  const hadNewRows = _hasNewRows;
+  if (_hasNewRows) {
+    await saveNewAssets();
+  }
+  if (_dirtyRows.size === 0) {
+    if (hadNewRows && !_hasNewRows) {
+      toggleEditMode(false);
+      return;
+    }
+    if (hadNewRows && _hasNewRows) {
+      showToast("저장되지 않은 신규 자산이 남아 있습니다. 필수값과 모델 선택을 확인하세요.", "warning");
+      return;
+    }
+    showToast("변경사항이 없습니다.", "info");
+    toggleEditMode(false);
+    return;
+  }
   const items = [];
   for (const [rowId, changes] of _dirtyRows) items.push({ id: rowId, changes });
   try {
@@ -377,13 +393,14 @@ class CatalogCellEditor {
   init(params) {
     this.params = params;
     this.selectedModelId = null;
+    this.lastResults = [];
 
     this.container = document.createElement("div");
     this.container.className = "ag-cell-catalog-editor";
 
     this.input = document.createElement("input");
     this.input.type = "text";
-    this.input.value = params.value || "";
+    this.input.value = params.value && typeof params.value === "object" ? (params.value.display || "") : (params.value || "");
     this.input.className = "ag-cell-input-editor";
     this.input.placeholder = "제조사 또는 모델명 검색";
     this.container.appendChild(this.input);
@@ -410,7 +427,13 @@ class CatalogCellEditor {
 
   _search() {
     const q = this.input.value.trim();
-    if (!q) { setElementHidden(this.dropdown, true); return; }
+    if (!q) {
+      this.lastResults = [];
+      this.selectedModelId = null;
+      setElementHidden(this.dropdown, true);
+      return;
+    }
+    this.selectedModelId = null;
     clearTimeout(this._searchTimer);
     this._searchTimer = setTimeout(async () => {
       try {
@@ -421,6 +444,7 @@ class CatalogCellEditor {
   }
 
   _renderDropdown(items) {
+    this.lastResults = items.filter((item) => !!buildCatalogClassificationPath(item));
     this.dropdown.textContent = "";
     items.forEach((item) => {
       const div = document.createElement("div");
@@ -480,7 +504,24 @@ class CatalogCellEditor {
   afterGuiAttached() { this.input.focus(); this.input.select(); }
   getValue() {
     if (this.selectedModelId) {
-      return { _catalogModelId: this.selectedModelId, display: this.input.value };
+      const selected = this.lastResults.find((item) => item.id === this.selectedModelId);
+      return {
+        _catalogModelId: this.selectedModelId,
+        display: this.input.value,
+        _catalogVendor: selected?.vendor || null,
+        _catalogName: selected?.name || this.input.value,
+      };
+    }
+    const typed = this.input.value.trim();
+    if (!typed) return this.params.value;
+    const first = this.lastResults[0];
+    if (first) {
+      return {
+        _catalogModelId: first.id,
+        display: ((first.vendor || "") + " " + (first.name || "")).trim(),
+        _catalogVendor: first.vendor || null,
+        _catalogName: first.name || typed,
+      };
     }
     return this.params.value;
   }
@@ -1190,6 +1231,7 @@ async function initGrid() {
     animateRows: true,
     enableCellTextSelection: true,
     getRowClass: (params) => params.data?._isNew ? "infra-grid-row-new" : "",
+    postSortRows: _keepNewRowsAtBottom,
     ...buildStandardGridBehavior({
       type: 'detail-panel',
       onSelect: (data) => {
@@ -1203,7 +1245,6 @@ async function initGrid() {
       onCellValueChanged: handleGridCellValueChanged,
     }),
     onSelectionChanged: () => {
-      console.log("[DEBUG] selChanged", "agSel:", gridApi.getSelectedNodes().length, "editMode:", _editMode);
       _updateBulkSelectionUI();
     },
     onColumnMoved: saveGridColumnState,
@@ -1276,14 +1317,23 @@ async function initGrid() {
 
       // model 필드 텍스트 → 카탈로그 자동 매칭
       const modelChanges = changes.filter(c => c.field === "model" && c.newValue);
+      const modelOriginals = new Map();
       for (const mc of modelChanges) {
         const node = gridApi.getDisplayedRowAtIndex(mc.rowIndex);
         if (!node?.data) continue;
+        if (node.data.id && !modelOriginals.has(node.data.id)) {
+          modelOriginals.set(node.data.id, {
+            model: mc.oldValue,
+            vendor: node.data.vendor,
+            model_id: node.data.model_id,
+          });
+        }
         try {
           const results = await apiFetch(`/api/v1/product-catalog?q=${encodeURIComponent(mc.newValue)}`);
           if (results.length > 0) {
             const cat = results[0];
-            node.data.model = cat.vendor + " " + cat.name;
+            node.data.vendor = cat.vendor || "";
+            node.data.model = cat.name || mc.newValue;
             node.data.model_id = cat.id;
           } else {
             node.data.model = mc.newValue + " (미매칭)";
@@ -1302,7 +1352,15 @@ async function initGrid() {
           if (node?.data?.id && c.field !== "model") {
             markDirty(node.data.id, c.field, c.newValue, c.oldValue);
           } else if (node?.data?.id && c.field === "model" && node.data.model_id) {
-            markDirty(node.data.id, "model_id", node.data.model_id, c.oldValue);
+            const original = modelOriginals.get(node.data.id) || {
+              model: c.oldValue,
+              vendor: node.data.vendor,
+              model_id: null,
+            };
+            _rememberOriginalField(node.data.id, "model", original.model);
+            _rememberOriginalField(node.data.id, "vendor", original.vendor);
+            _rememberOriginalField(node.data.id, "model_id", original.model_id);
+            markDirty(node.data.id, "model_id", node.data.model_id, original.model_id);
           }
         }
         _updateEditModeBar();
@@ -1388,6 +1446,12 @@ function applyAssetRowUpdate(row, updated) {
   gridApi?.refreshCells({ force: true });
 }
 
+function _rememberOriginalField(rowId, field, value) {
+  if (!_originalValues.has(rowId)) _originalValues.set(rowId, {});
+  const originals = _originalValues.get(rowId);
+  if (!(field in originals)) originals[field] = value;
+}
+
 function _assetPatchUrl(path) {
   const params = new URLSearchParams();
   const layoutId = localStorage.getItem("catalog_layout_preset_id");
@@ -1406,12 +1470,41 @@ async function handleGridCellValueChanged(event) {
   const field = event.colDef.field;
   if (field === "_selected") return;
   if (!row.id && row._isNew) {
+    if (field === "model") {
+      const val = event.newValue;
+      if (val && val._catalogModelId) {
+        row.model_id = val._catalogModelId;
+        row.vendor = val._catalogVendor || row.vendor || "";
+        row.model = val._catalogName || val.display || row.model;
+        gridApi.refreshCells({ rowNodes: [event.node], force: true });
+      } else if (event.oldValue) {
+        row.model = event.oldValue;
+        gridApi.refreshCells({ rowNodes: [event.node], force: true });
+      }
+    }
     _hasNewRows = true;
     _updateNewRowIndicators();
     return;
   }
   // ── 편집 모드: dirty 축적만 하고 서버 전송 안 함 ──
   if (_editMode && row.id) {
+    if (field === "model") {
+      const val = event.newValue;
+      if (!val || !val._catalogModelId) {
+        row.model = event.oldValue;
+        gridApi.refreshCells({ rowNodes: [event.node], force: true });
+        return;
+      }
+      _rememberOriginalField(row.id, "model", event.oldValue);
+      _rememberOriginalField(row.id, "vendor", row.vendor);
+      _rememberOriginalField(row.id, "model_id", row.model_id);
+      row.model_id = val._catalogModelId;
+      row.vendor = val._catalogVendor || row.vendor || "";
+      row.model = val._catalogName || val.display || row.model;
+      markDirty(row.id, "model_id", row.model_id, _originalValues.get(row.id).model_id);
+      gridApi.refreshCells({ rowNodes: [event.node], force: true });
+      return;
+    }
     markDirty(row.id, field, event.newValue, event.oldValue);
     gridApi.refreshCells({ force: true });
     return;
@@ -4086,6 +4179,24 @@ function _updateDeleteButtonVisibility() {
   btn.classList.toggle("is-hidden", !hasSelected);
 }
 
+function _getGridTotalRowCount() {
+  let count = 0;
+  gridApi?.forEachNode(() => { count += 1; });
+  return count;
+}
+
+function _keepNewRowsAtBottom(params) {
+  const newRows = [];
+  for (let i = params.nodes.length - 1; i >= 0; i--) {
+    const node = params.nodes[i];
+    if (node?.data?._isNew) {
+      newRows.unshift(node);
+      params.nodes.splice(i, 1);
+    }
+  }
+  if (newRows.length) params.nodes.push(...newRows);
+}
+
 function addAssetRow() {
   if (!getCtxPartnerId()) { showToast("고객사를 먼저 선택하세요.", "warning"); return; }
   const newRow = {
@@ -4100,7 +4211,7 @@ function addAssetRow() {
     status: "active",
     partner_id: Number(getCtxPartnerId()),
   };
-  const res = gridApi.applyTransaction({ add: [newRow] });
+  const res = gridApi.applyTransaction({ add: [newRow], addIndex: _getGridTotalRowCount() });
   _hasNewRows = true;
   _updateNewRowIndicators();
   if (res.add && res.add.length) {

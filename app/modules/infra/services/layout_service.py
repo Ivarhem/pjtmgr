@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.auth.authorization import can_edit_inventory
 from app.core.exceptions import BusinessRuleError, DuplicateError, NotFoundError, PermissionDeniedError
 from app.modules.common.models.partner import Partner
+from app.modules.common.models.user import User
 from app.modules.infra.models.center import Center
 from app.modules.infra.models.rack import Rack
 from app.modules.infra.models.rack_line import RackLine
@@ -146,7 +147,7 @@ def get_rack(db: Session, rack_id: int) -> Rack:
     return rack
 
 
-def create_center(db: Session, payload: CenterCreate, current_user) -> Center:
+def create_center(db: Session, payload: CenterCreate, current_user: User) -> Center:
     _require_inventory_edit(current_user)
     _ensure_partner_exists(db, payload.partner_id)
     center_code = (payload.center_code or "").strip() or _generate_next_code(
@@ -175,7 +176,7 @@ def create_center(db: Session, payload: CenterCreate, current_user) -> Center:
     return center
 
 
-def update_center(db: Session, center_id: int, payload: CenterUpdate, current_user) -> Center:
+def update_center(db: Session, center_id: int, payload: CenterUpdate, current_user: User) -> Center:
     _require_inventory_edit(current_user)
     center = get_center(db, center_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -194,7 +195,7 @@ def update_center(db: Session, center_id: int, payload: CenterUpdate, current_us
     return center
 
 
-def delete_center(db: Session, center_id: int, current_user) -> None:
+def delete_center(db: Session, center_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     center = get_center(db, center_id)
     room_exists = db.scalar(select(func.count(Room.id)).where(Room.center_id == center.id)) or 0
@@ -204,7 +205,7 @@ def delete_center(db: Session, center_id: int, current_user) -> None:
     db.commit()
 
 
-def create_room(db: Session, payload: RoomCreate, current_user) -> Room:
+def create_room(db: Session, payload: RoomCreate, current_user: User) -> Room:
     _require_inventory_edit(current_user)
     center = get_center(db, payload.center_id)
     room_code = (payload.room_code or "").strip() or _generate_next_code(
@@ -223,7 +224,7 @@ def create_room(db: Session, payload: RoomCreate, current_user) -> Room:
     return room
 
 
-def update_room(db: Session, room_id: int, payload: RoomUpdate, current_user) -> Room:
+def update_room(db: Session, room_id: int, payload: RoomUpdate, current_user: User) -> Room:
     _require_inventory_edit(current_user)
     room = get_room(db, room_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -242,7 +243,7 @@ def update_room(db: Session, room_id: int, payload: RoomUpdate, current_user) ->
     return room
 
 
-def delete_room(db: Session, room_id: int, current_user) -> None:
+def delete_room(db: Session, room_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     room = get_room(db, room_id)
     rack_exists = db.scalar(select(func.count(Rack.id)).where(Rack.room_id == room.id)) or 0
@@ -252,7 +253,7 @@ def delete_room(db: Session, room_id: int, current_user) -> None:
     db.commit()
 
 
-def create_rack(db: Session, payload: RackCreate, current_user) -> Rack:
+def create_rack(db: Session, payload: RackCreate, current_user: User) -> Rack:
     _require_inventory_edit(current_user)
     room = get_room(db, payload.room_id)
     _ensure_total_units(payload.total_units)
@@ -272,7 +273,7 @@ def create_rack(db: Session, payload: RackCreate, current_user) -> Rack:
     return rack
 
 
-def update_rack(db: Session, rack_id: int, payload: RackUpdate, current_user) -> Rack:
+def update_rack(db: Session, rack_id: int, payload: RackUpdate, current_user: User) -> Rack:
     _require_inventory_edit(current_user)
     rack = get_rack(db, rack_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -302,7 +303,7 @@ def update_rack(db: Session, rack_id: int, payload: RackUpdate, current_user) ->
     return rack
 
 
-def delete_rack(db: Session, rack_id: int, current_user) -> None:
+def delete_rack(db: Session, rack_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     rack = get_rack(db, rack_id)
     db.delete(rack)
@@ -357,7 +358,7 @@ def get_rack_line(db: Session, line_id: int) -> RackLine:
     return line
 
 
-def create_rack_line(db: Session, room_id: int, payload: RackLineCreate, current_user) -> RackLine:
+def create_rack_line(db: Session, room_id: int, payload: RackLineCreate, current_user: User) -> RackLine:
     _require_inventory_edit(current_user)
     room = get_room(db, room_id)
     if payload.col_index < 0 or payload.col_index >= room.grid_cols:
@@ -372,7 +373,7 @@ def create_rack_line(db: Session, room_id: int, payload: RackLineCreate, current
     return line
 
 
-def update_rack_line(db: Session, line_id: int, payload: RackLineUpdate, current_user) -> RackLine:
+def update_rack_line(db: Session, line_id: int, payload: RackLineUpdate, current_user: User) -> RackLine:
     _require_inventory_edit(current_user)
     line = get_rack_line(db, line_id)
     changes = payload.model_dump(exclude_unset=True)
@@ -391,7 +392,7 @@ def update_rack_line(db: Session, line_id: int, payload: RackLineUpdate, current
     return line
 
 
-def delete_rack_line(db: Session, line_id: int, current_user) -> None:
+def delete_rack_line(db: Session, line_id: int, current_user: User) -> None:
     _require_inventory_edit(current_user)
     line = get_rack_line(db, line_id)
     # Nullify FK on racks belonging to this line
@@ -432,7 +433,7 @@ def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
     ]
 
 
-def reorder_racks(db: Session, orders: list[dict], current_user) -> None:
+def reorder_racks(db: Session, orders: list[dict], current_user: User) -> None:
     """벌크 랙 sort_order 업데이트. orders: [{id: int, sort_order: int}, ...]"""
     _require_inventory_edit(current_user)
 
@@ -542,6 +543,6 @@ def _generate_next_code(db: Session, model, field, prefix: str, scope_filters: t
         index += 1
 
 
-def _require_inventory_edit(current_user) -> None:
+def _require_inventory_edit(current_user: User) -> None:
     if not can_edit_inventory(current_user):
         raise PermissionDeniedError("Inventory edit permission required")

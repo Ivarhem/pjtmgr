@@ -12,6 +12,7 @@ from app.core.exceptions import (
 )
 from app.modules.infra.models.asset import Asset
 from app.modules.infra.models.asset_relation import AssetRelation
+from app.modules.common.models.user import User
 from app.modules.infra.schemas.asset_relation import AssetRelationCreate, AssetRelationUpdate
 
 VALID_RELATION_TYPES = {"HOSTS", "USES", "INSTALLED_ON", "PROTECTS", "CONNECTS_TO", "DEPENDS_ON"}
@@ -52,7 +53,7 @@ def list_by_partner(db: Session, partner_id: int) -> list[dict]:
     return _enrich(db, rels)
 
 
-def create_asset_relation(db: Session, payload: AssetRelationCreate, current_user) -> AssetRelation:
+def create_asset_relation(db: Session, payload: AssetRelationCreate, current_user: User) -> AssetRelation:
     _require_edit(current_user)
 
     if payload.src_asset_id == payload.dst_asset_id:
@@ -68,7 +69,7 @@ def create_asset_relation(db: Session, payload: AssetRelationCreate, current_use
     return rel
 
 
-def update_asset_relation(db: Session, rel_id: int, payload: AssetRelationUpdate, current_user) -> AssetRelation:
+def update_asset_relation(db: Session, rel_id: int, payload: AssetRelationUpdate, current_user: User) -> AssetRelation:
     _require_edit(current_user)
     rel = _get(db, rel_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -78,7 +79,7 @@ def update_asset_relation(db: Session, rel_id: int, payload: AssetRelationUpdate
     return rel
 
 
-def delete_asset_relation(db: Session, rel_id: int, current_user) -> None:
+def delete_asset_relation(db: Session, rel_id: int, current_user: User) -> None:
     _require_edit(current_user)
     rel = _get(db, rel_id)
     db.delete(rel)
@@ -100,7 +101,7 @@ def _ensure_asset(db: Session, asset_id: int) -> None:
         raise NotFoundError("Asset not found")
 
 
-def _require_edit(current_user) -> None:
+def _require_edit(current_user: User) -> None:
     if not can_edit_inventory(current_user):
         raise PermissionDeniedError("Inventory edit permission required")
 
