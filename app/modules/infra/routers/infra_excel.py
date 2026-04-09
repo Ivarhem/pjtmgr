@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import Response
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
 from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.core.exceptions import ValidationError
-from app.modules.infra.models.product_catalog import ProductCatalog
+from app.modules.infra.services.infra_excel_preview_service import (
+    enrich_catalog_preview_rows,
+)
 from app.modules.infra.services.infra_exporter import export_partner
 from app.core.file_validation import validate_xlsx
 from app.modules.infra.services.infra_importer import (
@@ -49,84 +50,6 @@ _DOMAIN_MAP = {
     "software": {"parse": parse_software_sheet, "import": import_software, "has_dup": True, "needs_partner": False},
     "model": {"parse": parse_model_sheet, "import": import_model, "has_dup": True, "needs_partner": False},
 }
-
-
-def _build_catalog_lookup(db: Session) -> dict[tuple[str, str], ProductCatalog]:
-    return {
-        (product.vendor, product.name): product
-        for product in db.scalars(select(ProductCatalog))
-    }
-
-
-def _is_same_value(left, right) -> bool:
-    if left is None and right in ("", None):
-        return True
-    if right is None and left in ("", None):
-        return True
-    return left == right
-
-
-def _enrich_catalog_preview_rows(
-    db: Session,
-    domain: str,
-    preview_rows: list[dict],
-    parsed_rows: list[dict],
-    on_duplicate: str,
-) -> list[dict]:
-    if domain not in {"spec", "eosl", "software", "model"}:
-        return preview_rows
-
-    existing = _build_catalog_lookup(db)
-    enriched_rows: list[dict] = []
-
-    for index, row in enumerate(preview_rows):
-        parsed = parsed_rows[index] if index < len(parsed_rows) else {}
-        vendor = parsed.get("vendor") or row.get("vendor")
-        name = parsed.get("name") or row.get("name")
-        matched = existing.get((vendor, name)) if vendor and name else None
-
-        status = "invalid"
-        status_label = "검증오류"
-
-        if row.get("errors"):
-            status = "invalid"
-            status_label = "검증오류"
-        elif domain in {"spec", "software", "model"}:
-            if matched is None:
-                status = "new"
-                status_label = "신규"
-            elif on_duplicate == "overwrite":
-                status = "update"
-                status_label = "갱신예정"
-            else:
-                status = "skip_existing"
-                status_label = "기존존재"
-        elif domain == "eosl":
-            if matched is None:
-                status = "unmatched"
-                status_label = "미매칭"
-            else:
-                changed = any(
-                    not _is_same_value(getattr(matched, field), parsed.get(field))
-                    for field in ("eos_date", "eosl_date", "eosl_note")
-                    if parsed.get(field) is not None
-                )
-                if changed:
-                    status = "update"
-                    status_label = "갱신예정"
-                else:
-                    status = "unchanged"
-                    status_label = "변경없음"
-
-        enriched = dict(row)
-        enriched["status"] = status
-        enriched["status_label"] = status_label
-        enriched["matched_product_id"] = matched.id if matched is not None else None
-        enriched_rows.append(enriched)
-
-    return enriched_rows
-
-
 @router.post("/import/preview")
 async def import_preview(
     file: UploadFile = File(...),
@@ -148,7 +71,7 @@ async def import_preview(
         result = cfg["parse"](content, partner_id)
     else:
         result = cfg["parse"](content)
-    preview_rows = _enrich_catalog_preview_rows(
+    preview_rows = enrich_catalog_preview_rows(
         db,
         domain,
         result["preview_rows"],
@@ -192,7 +115,7 @@ async def import_confirm(
         parsed = cfg["parse"](content)
     if parsed["errors"]:
         raise ValidationError(parsed["errors"], details=parsed["error_details"])
-    preview_rows = _enrich_catalog_preview_rows(
+    preview_rows = enrich_catalog_preview_rows(
         db,
         domain,
         parsed["preview_rows"],

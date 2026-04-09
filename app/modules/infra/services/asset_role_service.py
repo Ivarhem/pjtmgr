@@ -49,6 +49,11 @@ def get_asset_role(db: Session, asset_role_id: int) -> AssetRole:
     return role
 
 
+def get_asset_role_read(db: Session, asset_role_id: int) -> dict:
+    role = get_asset_role(db, asset_role_id)
+    return _enrich_roles_with_current_assignment(db, [role])[0]
+
+
 def create_asset_role(db: Session, payload: AssetRoleCreate, current_user: User) -> AssetRole:
     _require_inventory_edit(current_user)
     _ensure_partner_exists(db, payload.partner_id)
@@ -87,6 +92,10 @@ def delete_asset_role(db: Session, asset_role_id: int, current_user: User) -> No
 
 def list_asset_role_assignments(db: Session, asset_role_id: int) -> list[dict]:
     get_asset_role(db, asset_role_id)
+    return _build_assignment_reads(db, asset_role_id)
+
+
+def _build_assignment_reads(db: Session, asset_role_id: int) -> list[dict]:
     rows = list(
         db.execute(
             select(
@@ -127,6 +136,15 @@ def get_asset_role_assignment(db: Session, assignment_id: int) -> AssetRoleAssig
     if assignment is None:
         raise NotFoundError("Asset role assignment not found")
     return assignment
+
+
+def get_asset_role_assignment_read(db: Session, assignment_id: int) -> dict:
+    assignment = get_asset_role_assignment(db, assignment_id)
+    rows = _build_assignment_reads(db, assignment.asset_role_id)
+    for row in rows:
+        if row["id"] == assignment_id:
+            return row
+    raise NotFoundError("Asset role assignment not found")
 
 
 def create_asset_role_assignment(db: Session, asset_role_id: int, payload: AssetRoleAssignmentCreate, current_user: User) -> AssetRoleAssignment:
