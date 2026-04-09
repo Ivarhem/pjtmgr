@@ -1,6 +1,6 @@
 # Phase 1a: 포트맵 그리드 편집 모드 상세 설계
 
-> 2026-04-09 | 상위 설계: `docs/superpowers/specs/2026-04-09-grid-edit-mode-expansion-design.md`
+> 2026-04-09 | 상태: **Phase 1a 완료** | 상위 설계: `docs/superpowers/specs/2026-04-09-grid-edit-mode-expansion-design.md`
 
 ---
 
