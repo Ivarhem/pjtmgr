@@ -152,11 +152,13 @@ function assetNormalizeChange(event) {
     },
     dirtyChanges: [
       { field: "model_id", value: val._catalogModelId, oldValue: event.data.model_id },
+      { field: "model", value: val._catalogName || val.display || "", oldValue: event.data.model },
     ],
   };
 }
 
 async function assetSaveEditMode() {
+  if (!editMode) return;
   if (editMode.hasErrors()) {
     showToast("검증 오류가 있어 저장할 수 없습니다.", "warning");
     return;
