@@ -303,6 +303,50 @@
 - `opts`: `{ onPaste(rows), onUndo() }` 콜백 (선택)
 - 새 편집 가능 그리드를 만들 때 `gridReady` 이벤트 후 호출한다.
 
+### GridEditMode (공통 배치 편집 클래스)
+
+`GridEditMode` (`grid_edit_mode.js`)는 기존 행의 dirty 편집을 관리하는 공통 클래스다. 신규 행 생명주기, paste 후처리, 도메인 고유 저장은 범위 밖이다.
+
+**인스턴스 생성 패턴:**
+
+```javascript
+const editMode = new GridEditMode({
+  gridApi,
+  editableFields: new Set(["field1", "field2"]),   // 편집 가능 필드
+  bulkEndpoint: () => `/api/v1/{domain}/bulk`,      // PATCH 엔드포인트 (함수 권장)
+  requiredFields: new Set(["field1"]),               // 필수 필드 (선택)
+  normalizeChange: (event) => null,                  // FK/표시값 변환 훅 (선택)
+  prefix: "domain",                                  // 동적 요소 ID prefix
+  bulkApplyFields: [                                 // bulk apply 드롭다운 (선택)
+    { field: "status", label: "상태", type: "select",
+      options: () => [{ value: "active", label: "활성" }] },
+  ],
+  onAfterSave: (results) => { /* 행 데이터 갱신 */ },
+  selectors: {
+    toggleBtn: "#btn-toggle-edit",
+    saveBtn: "#btn-save-edit",
+    cancelBtn: "#btn-cancel-edit",
+    statusBar: "#edit-mode-bar",
+    changeCount: "#edit-mode-count",
+    errorCount: "#edit-mode-errors",
+    bulkContainer: "#edit-mode-selection",
+  },
+});
+```
+
+**래퍼 함수 패턴:** `save()`와 `cancel()`은 toggle하지 않는다. 도메인 래퍼가 신규 행 처리 + 모드 이탈을 결정한다.
+
+```javascript
+// 저장 버튼 → 래퍼
+document.getElementById("btn-save-edit").addEventListener("click", domainSaveEditMode);
+// 취소 버튼 → 래퍼
+document.getElementById("btn-cancel-edit").addEventListener("click", domainCancelEditMode);
+```
+
+**HTML 필수 요소:** 편집/저장/취소 버튼 + edit-mode-bar + bulk container(빈 span). `grid_edit_mode.js`를 도메인 JS 앞에 로드한다.
+
+**상세 설계:** `docs/superpowers/specs/2026-04-09-grid-edit-mode-phase0-design.md`
+
 ### 자산 그리드 컬럼 구성
 
 자산 그리드의 columnDefs는 3개 파트로 조립된다:
