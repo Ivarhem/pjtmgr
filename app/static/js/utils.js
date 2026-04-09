@@ -1,3 +1,28 @@
+// ── 공유 상수 (인프라 도메인) ──────────────────────────────────────
+
+const ASSET_STATUS_MAP = {
+  planned: "도입예정",
+  standby: "대기",
+  active: "가동",
+  decommissioned: "폐기",
+};
+
+const ENV_MAP = {
+  prod: "운영",
+  dev: "개발",
+  staging: "스테이징",
+  dr: "DR",
+};
+
+const CATALOG_KIND_LABELS = {
+  hardware: "하드웨어",
+  software: "소프트웨어",
+  model: "모델",
+  service: "서비스",
+  business_capability: "업무기능",
+  dataset: "데이터셋",
+};
+
 // ── 용어 라벨 (TermConfig) ────────────────────────────────────────
 
 let _termLabelsCache = null;
@@ -52,25 +77,180 @@ function applyTermLabels() {
 
 // ── 공통 유틸리티 ────────────────────────────────────────────────
 
+/** API 호출 래퍼 — JSON 요청/응답 처리 및 에러 핸들링
+ * @param {string} url - API 엔드포인트 경로
+ * @param {Object} [opts] - fetch 옵션
+ * @param {string} [opts.method] - HTTP 메서드 (기본 GET)
+ * @param {Object} [opts.body] - 요청 바디 (자동 JSON.stringify)
+ * @returns {Promise<any>} 응답 JSON
+ */
+async function apiFetch(url, opts = {}) {
+  const fetchOpts = { method: opts.method || 'GET', headers: {} };
+  if (opts.body) {
+    fetchOpts.headers['Content-Type'] = 'application/json';
+    fetchOpts.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(url, fetchOpts);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const detail = body.detail;
+    const msg = Array.isArray(detail) ? detail.map(e => e.msg || JSON.stringify(e)).join('; ')
+              : (typeof detail === 'string' ? detail : `요청 실패 (${res.status})`);
+    throw new Error(msg);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+/** 날짜 문자열 포맷 (YYYY-MM-DD)
+ * @param {string|null} v - ISO 날짜 문자열
+ * @returns {string} 포맷된 날짜 또는 빈 문자열
+ */
+function fmtDate(v) {
+  if (!v) return '';
+  return v.slice(0, 10);
+}
+
+/** 삭제 확인 대화상자
+ * @param {string} message - 확인 메시지
+ * @param {Function} onConfirm - 확인 시 실행할 콜백
+ */
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+let _confirmDialogState = null;
+
+function ensureConfirmDialog() {
+  if (_confirmDialogState) return _confirmDialogState;
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "modal modal-sm confirm-dialog";
+  dialog.innerHTML = `
+    <h2 id="confirm-dialog-title">확인</h2>
+    <p id="confirm-dialog-message" class="modal-desc confirm-dialog-message"></p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" id="confirm-dialog-cancel">취소</button>
+      <button type="button" class="btn btn-danger" id="confirm-dialog-confirm">확인</button>
+    </div>
+  `;
+  document.body.appendChild(dialog);
+
+  const state = {
+    dialog,
+    titleEl: dialog.querySelector("#confirm-dialog-title"),
+    messageEl: dialog.querySelector("#confirm-dialog-message"),
+    cancelBtn: dialog.querySelector("#confirm-dialog-cancel"),
+    confirmBtn: dialog.querySelector("#confirm-dialog-confirm"),
+    resolver: null,
+  };
+
+  const resolveDialog = (confirmed) => {
+    if (!state.resolver) return;
+    const resolver = state.resolver;
+    state.resolver = null;
+    resolver(confirmed);
+  };
+
+  state.cancelBtn.addEventListener("click", () => {
+    dialog.close("cancel");
+    resolveDialog(false);
+  });
+  state.confirmBtn.addEventListener("click", () => {
+    dialog.close("confirm");
+    resolveDialog(true);
+  });
+  dialog.addEventListener("cancel", () => {
+    resolveDialog(false);
+  });
+  dialog.addEventListener("close", () => {
+    if (dialog.returnValue !== "confirm" && dialog.returnValue !== "cancel") {
+      resolveDialog(false);
+    }
+  });
+
+  _confirmDialogState = state;
+  return state;
+}
+
+function showConfirmDialog(message, options = {}) {
+  const state = ensureConfirmDialog();
+  const {
+    title = "확인",
+    confirmText = "확인",
+    cancelText = "취소",
+  } = options;
+
+  if (state.resolver) {
+    state.dialog.close("cancel");
+    state.resolver(false);
+    state.resolver = null;
+  }
+
+  state.titleEl.textContent = title;
+  state.messageEl.textContent = message;
+  state.confirmBtn.textContent = confirmText;
+  state.cancelBtn.textContent = cancelText;
+
+  return new Promise((resolve) => {
+    state.resolver = resolve;
+    state.dialog.showModal();
+    state.cancelBtn.focus();
+  });
+}
+
+async function confirmAction(message, onConfirm, options = {}) {
+  const confirmed = await showConfirmDialog(message, options);
+  if (!confirmed) return;
+  return onConfirm();
+}
+
+function confirmDelete(message, onConfirm, options = {}) {
+  return confirmAction(message, onConfirm, {
+    title: options.title || "삭제 확인",
+    confirmText: options.confirmText || "삭제",
+    cancelText: options.cancelText || "취소",
+  });
+}
+
 /** 토스트 알림 표시
  * @param {string} message - 표시할 메시지
- * @param {'success'|'error'|'info'} type - 토스트 유형
+ * @param {'success'|'error'|'info'|'warning'} type - 토스트 유형
  * @param {number} duration - 표시 시간(ms), 기본 3000
  */
 function showToast(message, type = 'success', duration = 3000) {
-  let container = document.querySelector('.toast-container');
+  const openModal = document.querySelector('dialog[open]');
+  const containerHost = openModal || document.body;
+  let container = containerHost.querySelector('.toast-container');
   if (!container) {
     container = document.createElement('div');
     container.className = 'toast-container';
-    document.body.appendChild(container);
+    if (openModal) {
+      container.classList.add('toast-container-modal');
+    }
+    containerHost.appendChild(container);
   }
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
-  container.appendChild(toast);
+  if (type === 'error' || type === 'warning') {
+    container.prepend(toast);
+  } else {
+    container.appendChild(toast);
+  }
   setTimeout(() => {
     toast.classList.add('toast-out');
-    toast.addEventListener('animationend', () => toast.remove());
+    toast.addEventListener('animationend', () => {
+      toast.remove();
+      if (container && !container.children.length) {
+        container.remove();
+      }
+    });
   }, duration);
 }
 
@@ -126,6 +306,14 @@ function fmtKoreanCurrency(n) {
 /** 퍼센트 포맷 (0.7 → '70.0%') */
 const fmtPct = (n) => n != null && !isNaN(n) ? (n * 100).toFixed(1) + '%' : '-';
 
+/** AssetIP.ip_type 정규 값 → 한국어 레이블 (백엔드 스키마 기준) */
+const IP_TYPE_LABELS = {
+  service: "서비스",
+  mgmt: "관리",
+  vip: "VIP",
+  secondary: "보조",
+};
+
 function isElementHidden(el) {
   return !el || el.classList.contains('is-hidden');
 }
@@ -140,6 +328,21 @@ function setElementDisabledState(el, disabled) {
   el.classList.toggle('is-disabled', disabled);
   const btn = el.querySelector?.('.chk-drop-btn');
   if (btn) btn.disabled = disabled;
+}
+
+function formatDateTimeLocalValue(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return [
+    date.getFullYear(),
+    "-",
+    pad(date.getMonth() + 1),
+    "-",
+    pad(date.getDate()),
+    "T",
+    pad(date.getHours()),
+    ":",
+    pad(date.getMinutes()),
+  ].join("");
 }
 
 // ── 체크박스 드랍다운 ────────────────────────────────────────────
@@ -187,7 +390,7 @@ function initYearDropdown() {
     for (let y = curYear - 1; y <= curYear + 2; y++) {
       const label = document.createElement('label');
       const checked = y === curYear ? ' checked' : '';
-      label.innerHTML = `<input type="checkbox" value="${y}"${checked}> ${y}`;
+      label.innerHTML = `<input type="checkbox" value="${escapeHtml(y)}"${checked}> ${escapeHtml(y)}`;
       calMenu.appendChild(label);
     }
     updateDropLabel(document.getElementById('drop-calendar-year'));
@@ -200,7 +403,7 @@ function initYearDropdown() {
     periodMenu.innerHTML = '';
     for (let y = curYear - 1; y <= curYear + 2; y++) {
       const label = document.createElement('label');
-      label.innerHTML = `<input type="checkbox" value="${y}"> Y${String(y).slice(2)}`;
+      label.innerHTML = `<input type="checkbox" value="${escapeHtml(y)}"> Y${escapeHtml(String(y).slice(2))}`;
       periodMenu.appendChild(label);
     }
     updateDropLabel(document.getElementById('drop-period'));
@@ -237,7 +440,7 @@ async function populateContractTypeCheckboxes(menuSelector) {
   menu.innerHTML = '';
   types.forEach(dt => {
     const label = document.createElement('label');
-    label.innerHTML = `<input type="checkbox" value="${dt.code}"> ${dt.label}`;
+    label.innerHTML = `<input type="checkbox" value="${escapeHtml(dt.code)}"> ${escapeHtml(dt.label)}`;
     menu.appendChild(label);
   });
   const drop = menu.closest('.chk-drop');
@@ -310,22 +513,293 @@ function initTextFilter(inputId, onEnterFn) {
   });
 }
 
+// ── 고객사/프로젝트 컨텍스트 셀렉터 ──────────────────────────────────
+
+let _ctxPartnerId = null;
+let _ctxProjectId = null;
+
+/** 현재 선택된 고객사 ID */
+function getCtxPartnerId() { return _ctxPartnerId; }
+/** 현재 선택된 프로젝트 ID (null = 전체) */
+function getCtxProjectId() { return _ctxProjectId; }
+
+/** topbar 고객사/프로젝트 셀렉터 초기화 (자동완성 방식) */
+async function initContextSelectors() {
+  const custInput = document.getElementById('ctx-partner');
+  const custDrop = document.getElementById('ctx-partner-dropdown');
+  const projDisplay = document.getElementById('ctx-project-display');
+  const projText = document.getElementById('ctx-project-text');
+  const projClear = document.getElementById('ctx-project-clear');
+  const projLink = document.getElementById('ctx-project-link');
+  if (!custInput) return;
+
+  // ── 캐시된 라벨 즉시 표시 (API 응답 전 깜빡임 방지) ──
+  const _cachedPartnerLabel = localStorage.getItem('infra.ctx_partner_label');
+  const _cachedProjectLabel = localStorage.getItem('infra.ctx_project_label');
+  const _cachedProjectId = localStorage.getItem('infra.last_period_id');
+  if (_cachedPartnerLabel) custInput.value = _cachedPartnerLabel;
+  if (_cachedProjectLabel && projText) {
+    projText.textContent = _cachedProjectLabel;
+    if (projDisplay) projDisplay.classList.add('has-project');
+    if (projClear) projClear.classList.remove('is-hidden');
+  }
+  // 사이드바 프로젝트 링크 즉시 설정 (항상 /periods — 상세는 인라인 패널)
+  const _navLink = document.getElementById('nav-project-link');
+  if (_navLink) {
+    _navLink.href = '/periods';
+    if (_cachedProjectId) {
+      _navLink.dataset.hasProject = '1';
+    } else {
+      _navLink.dataset.hasProject = '';
+    }
+    _navLink.addEventListener('click', (e) => {
+      if (!_navLink.dataset.hasProject) {
+        e.preventDefault();
+        showToast('선택한 프로젝트가 없습니다.', 'warning');
+      }
+    });
+  }
+
+  let allPartners = [];
+  let allProjects = [];
+
+  // ── 드롭다운 헬퍼 (DOM API only, no innerHTML) ──
+  function renderDropdown(dropdown, items, onSelect, onNew) {
+    dropdown.textContent = '';
+    items.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'ctx-option';
+      div.dataset.id = item.id || '';
+      if (item.code) {
+        const codeSpan = document.createElement('span');
+        codeSpan.className = 'ctx-option-code';
+        codeSpan.textContent = item.code;
+        div.appendChild(codeSpan);
+        div.appendChild(document.createTextNode(item.label));
+      } else {
+        div.textContent = item.label;
+      }
+      div.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        onSelect(item);
+        setElementHidden(dropdown, true);
+      });
+      dropdown.appendChild(div);
+    });
+    if (onNew) {
+      const newDiv = document.createElement('div');
+      newDiv.className = 'ctx-option-new';
+      newDiv.textContent = '+ 신규 등록';
+      newDiv.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        setElementHidden(dropdown, true);
+        onNew();
+      });
+      dropdown.appendChild(newDiv);
+    }
+    setElementHidden(dropdown, false);
+  }
+
+  function filterAndShow(input, dropdown, allItems, onSelect, onNew) {
+    const kw = input.value.trim().toLowerCase();
+    const filtered = kw
+      ? allItems.filter(i => i.label.toLowerCase().includes(kw) || (i.code && i.code.toLowerCase().includes(kw)))
+      : allItems;
+    renderDropdown(dropdown, filtered.slice(0, 30), onSelect, onNew);
+  }
+
+  // ── 고객사 ──
+  allPartners = (await apiFetch('/api/v1/partners')).map(c => ({
+    id: c.id, code: c.partner_code, label: c.name,
+  }));
+
+  function selectPartner(item) {
+    _ctxPartnerId = item ? item.id : null;
+    custInput.value = item ? item.label : '';
+    custInput.title = item ? (item.code + ' ' + item.label) : '';
+    _ctxProjectId = null;
+    if (projText) projText.textContent = '선택 안 됨';
+    if (projDisplay) projDisplay.classList.remove('has-project');
+    if (projClear) projClear.classList.add('is-hidden');
+    // 라벨 캐시
+    localStorage.setItem('infra.ctx_partner_label', item ? item.label : '');
+    localStorage.setItem('infra.ctx_project_label', '');
+    // Pin 저장
+    apiFetch('/api/v1/preferences/infra.pinned_partner_id', {
+      method: 'PATCH', body: { value: item ? String(item.id) : '' },
+    }).catch(() => {});
+    localStorage.removeItem('infra.last_period_id');
+    loadPeriods(item ? item.id : null);
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: null } }));
+  }
+
+  // ── 고객사 신규등록 모달 ──
+  const custModal = document.getElementById('ctx-modal-partner');
+  function openNewPartnerModal() {
+    const nameInput = document.getElementById('ctx-new-partner-name');
+    nameInput.value = custInput.value.trim();
+    custModal.showModal();
+    nameInput.focus();
+  }
+  if (custModal) {
+    document.getElementById('ctx-btn-cust-cancel').addEventListener('click', () => custModal.close());
+    document.getElementById('ctx-btn-cust-submit').addEventListener('click', async () => {
+      const name = document.getElementById('ctx-new-partner-name').value.trim();
+      if (!name) { showToast('고객사명을 입력하세요.', 'warning'); return; }
+      try {
+        const created = await apiFetch('/api/v1/partners', { method: 'POST', body: { name } });
+        custModal.close();
+        const newItem = { id: created.id, code: created.partner_code, label: created.name };
+        allPartners.push(newItem);
+        selectPartner(newItem);
+        showToast('"' + name + '" 고객사가 등록되었습니다.');
+      } catch (err) { showToast(err.message || '등록에 실패했습니다.', 'error'); }
+    });
+  }
+
+  custInput.addEventListener('focus', () => filterAndShow(custInput, custDrop, allPartners, selectPartner, openNewPartnerModal));
+  custInput.addEventListener('input', () => filterAndShow(custInput, custDrop, allPartners, selectPartner, openNewPartnerModal));
+  custInput.addEventListener('blur', () => setTimeout(() => setElementHidden(custDrop, true), 150));
+  custInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setElementHidden(custDrop, true);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const first = custDrop.querySelector('.ctx-option');
+      if (first) first.focus();
+    }
+  });
+
+  // ── 프로젝트 (Period) 드롭다운 ──
+  async function loadPeriods(partnerId) {
+    allProjects = [];
+    if (!partnerId) return;
+    try {
+      const periods = await apiFetch('/api/v1/contract-periods?partner_id=' + partnerId);
+      allProjects = periods.map(p => ({
+        id: p.id, code: p.period_code || '', label: p.contract_name + ' (' + p.period_label + ')',
+      }));
+      // 저장된 Period 복원
+      const savedPeriodId = localStorage.getItem('infra.last_period_id');
+      if (savedPeriodId) {
+        const saved = allProjects.find(p => String(p.id) === savedPeriodId);
+        if (saved) selectProject(saved);
+      }
+    } catch { /* ignore */ }
+  }
+
+  function selectProject(item) {
+    _ctxProjectId = item ? item.id : null;
+    // topbar 프로젝트 표시 업데이트
+    if (projText) {
+      projText.textContent = item ? item.label : '선택 안 됨';
+    }
+    if (projDisplay) {
+      projDisplay.classList.toggle('has-project', !!item);
+    }
+    if (projClear) {
+      projClear.classList.toggle('is-hidden', !item);
+    }
+    localStorage.setItem('infra.ctx_project_label', item ? item.label : '');
+    // 사이드바 프로젝트 메뉴 링크 (항상 /periods — 상세는 인라인 패널)
+    const navLink = document.getElementById('nav-project-link');
+    if (navLink) {
+      navLink.href = '/periods';
+      navLink.dataset.hasProject = item ? '1' : '';
+    }
+    if (item && item.id) {
+      localStorage.setItem('infra.last_period_id', String(item.id));
+    } else {
+      localStorage.removeItem('infra.last_period_id');
+    }
+    window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: _ctxProjectId } }));
+  }
+
+  /** 프로젝트 선택 해제 */
+  window.resetCtxProject = function() { selectProject(null); };
+  /** 외부에서 프로젝트 선택 */
+  window.setCtxProject = function(id, code, label) {
+    selectProject(id ? { id, code: code || '', label: label || '' } : null);
+  };
+
+  // × 버튼: 프로젝트 선택 해제
+  if (projClear) {
+    projClear.addEventListener('click', () => selectProject(null));
+  }
+
+  // ── 초기 복원 ──
+  try {
+    const prefRes = await fetch('/api/v1/preferences/infra.pinned_partner_id');
+    if (prefRes.ok) {
+      const pref = await prefRes.json();
+      if (pref.value) {
+        const saved = allPartners.find(c => String(c.id) === String(pref.value));
+        if (saved) {
+          _ctxPartnerId = saved.id;
+          custInput.value = saved.label;
+          custInput.title = saved.code + ' ' + saved.label;
+          await loadPeriods(saved.id);
+          // 복원 완료 후 페이지 데이터 로딩 트리거
+          window.dispatchEvent(new CustomEvent('ctx-changed', { detail: { partnerId: _ctxPartnerId, projectId: _ctxProjectId } }));
+        }
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+// Legacy compat — 기존 코드에서 참조할 수 있는 함수
+async function getPinnedProjectId() { return _ctxProjectId ? String(_ctxProjectId) : null; }
+async function getPinnedPartnerId() { return _ctxPartnerId ? String(_ctxPartnerId) : null; }
+
+// ── 글로벌 범위 필터 (topbar 드롭다운, 자산 탭 공유) ──────────────────
+const _SCOPE_FILTER_KEY = "infra_scope_filter";
+
+/** 범위 필터 드롭다운 초기화 (localStorage 연동) */
+function initScopeFilter(onChangeCallback) {
+  const select = document.getElementById("ctx-scope-filter");
+  if (!select) return;
+  select.value = localStorage.getItem(_SCOPE_FILTER_KEY) || "all";
+  select.addEventListener("change", () => {
+    localStorage.setItem(_SCOPE_FILTER_KEY, select.value);
+    if (onChangeCallback) onChangeCallback();
+  });
+}
+
+/** 현재 범위 필터 값 반환: "all" | "partner" | "project" */
+function getScopeFilter() {
+  return localStorage.getItem(_SCOPE_FILTER_KEY) || "all";
+}
+
+/** 프로젝트 필터가 활성 상태인지 반환 (하위호환) */
+function isProjectFilterActive() {
+  return getScopeFilter() === "project";
+}
+
+/** 고객사 필터가 활성 상태인지 반환 */
+function isPartnerFilterActive() {
+  return getScopeFilter() === "partner";
+}
+
+/** @deprecated 하위호환용. initScopeFilter 사용 권장 */
+function initProjectFilterCheckbox(onChangeCallback) {
+  initScopeFilter(onChangeCallback);
+}
+
 // ── END 고객 피커 (필터링 + 신규 등록) ──────────────────────────────
 
-let _pickerCustomers = [];
+let _pickerPartners = [];
 
 /** 거래처 목록을 가져와 캐시 */
-async function _loadPickerCustomers() {
-  const res = await fetch('/api/v1/customers');
-  _pickerCustomers = res.ok ? await res.json() : [];
-  return _pickerCustomers;
+async function _loadPickerPartners() {
+  const res = await fetch('/api/v1/partners');
+  _pickerPartners = res.ok ? await res.json() : [];
+  return _pickerPartners;
 }
 
 /** 유사 거래처 검색 */
-function _findSimilarCustomers(keyword) {
+function _findSimilarPartners(keyword) {
   if (!keyword || keyword.length < 2) return [];
   const kw = keyword.toLowerCase().replace(/\s/g, '');
-  return _pickerCustomers.filter(c => {
+  return _pickerPartners.filter(c => {
     const cn = c.name.toLowerCase().replace(/\s/g, '');
     if (cn === kw) return false;
     if (cn.includes(kw) || kw.includes(cn)) return true;
@@ -338,14 +812,14 @@ function _findSimilarCustomers(keyword) {
 function _renderPickerDropdown(input, dropdown, hiddenInput) {
   const keyword = input.value.trim().toLowerCase();
   const filtered = keyword
-    ? _pickerCustomers.filter(c => c.name.toLowerCase().includes(keyword))
-    : _pickerCustomers;
+    ? _pickerPartners.filter(c => c.name.toLowerCase().includes(keyword))
+    : _pickerPartners;
   const limited = filtered.slice(0, 50);
 
   let html = `<div class="cp-new">+ 신규 거래처 등록</div>`;
 
-  if (keyword && !_pickerCustomers.find(c => c.name.toLowerCase() === keyword)) {
-    const similar = _findSimilarCustomers(input.value.trim());
+  if (keyword && !_pickerPartners.find(c => c.name.toLowerCase() === keyword)) {
+    const similar = _findSimilarPartners(input.value.trim());
     if (similar.length) {
       html += `<div class="cp-similar">⚠ 유사 거래처: ${similar.map(c => `<b>${c.name}</b>`).join(', ')}</div>`;
     }
@@ -375,33 +849,33 @@ function _renderPickerDropdown(input, dropdown, hiddenInput) {
   if (newBtn) {
     newBtn.addEventListener('click', () => {
       setElementHidden(dropdown, true);
-      _openNewCustomerFromAdd(input.value.trim());
+      _openNewPartnerFromAdd(input.value.trim());
     });
   }
 }
 
 /** 거래처 선택 시 사업명 자동 기입 (비어있을 때만) */
-function _prefillContractName(customerName) {
+function _prefillContractName(partnerName) {
   const nameInput = document.getElementById('add-contract-name');
   if (nameInput && !nameInput.value.trim()) {
-    nameInput.value = customerName;
+    nameInput.value = partnerName;
   }
 }
 
 /** 신규 거래처 등록 모달 열기 */
-function _openNewCustomerFromAdd(prefill) {
+function _openNewPartnerFromAdd(prefill) {
   document.getElementById('new-cust-name-from-add').value = prefill || '';
-  document.getElementById('modal-new-customer-from-add').showModal();
+  document.getElementById('modal-new-partner-from-add').showModal();
 }
 
 /** 사업 등록 모달용 거래처 피커 초기화 */
-function initEndCustomerPicker() {
-  const input = document.getElementById('add-end-customer');
-  const dropdown = document.getElementById('add-end-customer-dropdown');
-  const hiddenInput = document.getElementById('add-end-customer-id');
+function initEndPartnerPicker() {
+  const input = document.getElementById('add-end-partner');
+  const dropdown = document.getElementById('add-end-partner-dropdown');
+  const hiddenInput = document.getElementById('add-end-partner-id');
   if (!input || !dropdown || !hiddenInput) return;
 
-  _loadPickerCustomers();
+  _loadPickerPartners();
 
   input.addEventListener('input', () => {
     hiddenInput.value = '';
@@ -419,7 +893,7 @@ function initEndCustomerPicker() {
     if (e.key === 'Escape') setElementHidden(dropdown, true);
     if (e.key === 'Enter') {
       e.preventDefault();
-      const match = _pickerCustomers.find(c => c.name === input.value.trim());
+      const match = _pickerPartners.find(c => c.name === input.value.trim());
       if (match) {
         hiddenInput.value = match.id;
         setElementHidden(dropdown, true);
@@ -436,20 +910,20 @@ function initEndCustomerPicker() {
 
   // 신규 거래처 등록 모달 이벤트
   document.getElementById('btn-new-cust-cancel-add')?.addEventListener('click', () => {
-    document.getElementById('modal-new-customer-from-add').close();
+    document.getElementById('modal-new-partner-from-add').close();
   });
   document.getElementById('btn-new-cust-submit-add')?.addEventListener('click', async () => {
     const name = document.getElementById('new-cust-name-from-add').value.trim();
     if (!name) { alert('거래처명을 입력하세요.'); return; }
-    const res = await fetch('/api/v1/customers', {
+    const res = await fetch('/api/v1/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     if (res.ok) {
       const created = await res.json();
-      document.getElementById('modal-new-customer-from-add').close();
-      await _loadPickerCustomers();
+      document.getElementById('modal-new-partner-from-add').close();
+      await _loadPickerPartners();
       input.value = created.name;
       hiddenInput.value = created.id;
       _prefillContractName(created.name);
@@ -474,16 +948,16 @@ function openContractModal(contract = null) {
   const contractIdInput = document.getElementById('add-contract-id');
 
   form.reset();
-  document.getElementById('add-end-customer-id').value = '';
-  document.getElementById('add-end-customer').value = '';
+  document.getElementById('add-end-partner-id').value = '';
+  document.getElementById('add-end-partner').value = '';
   if (contract) {
     title.textContent = '사업정보 수정';
     submitBtn.textContent = '저장';
     contractIdInput.value = contract.id;
     document.getElementById('add-contract-name').value = contract.contract_name || '';
     document.getElementById('add-contract-type').value = contract.contract_type || 'MA';
-    document.getElementById('add-end-customer').value = contract.end_customer_name || '';
-    document.getElementById('add-end-customer-id').value = contract.end_customer_id || '';
+    document.getElementById('add-end-partner').value = contract.end_partner_name || '';
+    document.getElementById('add-end-partner-id').value = contract.end_partner_id || '';
   } else {
     title.textContent = '사업 등록';
     submitBtn.textContent = '등록';
@@ -493,13 +967,13 @@ function openContractModal(contract = null) {
 }
 
 /** END 고객 이름 → ID 변환 (없으면 자동 생성) */
-async function _resolveEndCustomerId(name) {
+async function _resolveEndPartnerId(name) {
   if (!name) return null;
-  const custRes = await fetch('/api/v1/customers');
+  const custRes = await fetch('/api/v1/partners');
   const custs = custRes.ok ? await custRes.json() : [];
   let cust = custs.find(c => c.name === name);
   if (!cust) {
-    const createRes = await fetch('/api/v1/customers', {
+    const createRes = await fetch('/api/v1/partners', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
@@ -519,20 +993,22 @@ async function submitContractModal(loadDataFn, onUpdated) {
   const contractId = document.getElementById('add-contract-id').value;
   const contractName = (fd.get('contract_name') || '').trim();
   const contractType = fd.get('contract_type');
-  const endCustomerName = document.getElementById('add-end-customer').value.trim();
-  const endCustomerIdRaw = document.getElementById('add-end-customer-id').value;
+  const endPartnerName = document.getElementById('add-end-partner').value.trim();
+  const endPartnerIdRaw = document.getElementById('add-end-partner-id').value;
 
   if (!contractName) { showToast('사업명을 입력하세요.', 'error'); return; }
 
-  // hidden ID가 있으면 사용, 없으면 이름으로 resolve (기존 fallback)
-  let endCustomerId = endCustomerIdRaw ? parseInt(endCustomerIdRaw, 10) : null;
-  if (!endCustomerId && endCustomerName) {
-    endCustomerId = await _resolveEndCustomerId(endCustomerName);
+  // 거래처는 반드시 목록에서 선택해야 함
+  let endPartnerId = endPartnerIdRaw ? parseInt(endPartnerIdRaw, 10) : null;
+  if (endPartnerName && !endPartnerId) {
+    showToast('고객사를 목록에서 선택하세요.', 'error');
+    document.getElementById('add-end-partner').focus();
+    return;
   }
 
   if (contractId) {
     // 수정 모드
-    const body = { contract_name: contractName, contract_type: contractType, end_customer_id: endCustomerId };
+    const body = { contract_name: contractName, contract_type: contractType, end_partner_id: endPartnerId };
     const res = await fetch(`/api/v1/contracts/${contractId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -549,7 +1025,7 @@ async function submitContractModal(loadDataFn, onUpdated) {
     }
   } else {
     // 신규 등록
-    const body = { contract_name: contractName, contract_type: contractType, end_customer_id: endCustomerId };
+    const body = { contract_name: contractName, contract_type: contractType, end_partner_id: endPartnerId };
     const res = await fetch('/api/v1/contracts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -589,7 +1065,10 @@ async function deleteSelectedContracts(gridApi, loadDataFn) {
 
   const contractNames = rows.map(r => r.contract_name).filter((v, i, a) => a.indexOf(v) === i);
   const preview = contractNames.length <= 3 ? contractNames.join(', ') : `${contractNames.slice(0, 3).join(', ')} 외 ${contractNames.length - 3}건`;
-  if (!confirm(`선택한 ${rows.length}행 (${preview})을 삭제하시겠습니까?`)) return;
+  if (!await showConfirmDialog(`선택한 ${rows.length}행 (${preview})을 삭제하시겠습니까?`, {
+    title: '사업 삭제',
+    confirmText: '삭제',
+  })) return;
 
   const requests = contractIds.map(contractId => {
     const selected = selectedByContract.get(contractId) || 0;
@@ -627,7 +1106,7 @@ function buildContractPeriodColumns(opts = {}) {
     { headerName: '', width: 40, checkboxSelection: true, headerCheckboxSelection: true,
       pinned: 'left', sortable: false, resizable: false },
     { field: 'period_year', headerName: getTermLabel('period_year', '귀속연도'), width: 82, pinned: 'left' },
-    { field: 'end_customer_name', headerName: getTermLabel('customer', '고객'), width: 140 },
+    { field: 'end_partner_name', headerName: getTermLabel('customer', '고객'), width: 140 },
     { field: 'contract_code', headerName: '사업코드', width: 120 },
     { field: 'contract_type', headerName: '사업유형', width: 80 },
     { field: 'contract_name', headerName: '사업명', flex: 1, minWidth: 200,
@@ -674,12 +1153,12 @@ function restoreColState(gridApi, colStateKey) {
  * @param {Object} opts
  * @param {Array} opts.columnDefs
  * @param {string} opts.backPath - 뒤로가기 경로 ('/contracts' 또는 '/my-contracts')
- * @param {string} opts.customerInputId - 고객 텍스트 입력 ID
+ * @param {string} opts.partnerInputId - 고객 텍스트 입력 ID
  * @param {string} opts.nameInputId - 사업명 텍스트 입력 ID
  * @param {Function} opts.onColChange - 컬럼 변경 콜백
  */
 function buildContractGridOptions(opts) {
-  const getCustomerFilter = () => (document.getElementById(opts.customerInputId)?.value || '').trim().toLowerCase();
+  const getPartnerFilter = () => (document.getElementById(opts.partnerInputId)?.value || '').trim().toLowerCase();
   const getNameFilter = () => (document.getElementById(opts.nameInputId)?.value || '').trim().toLowerCase();
   return {
     columnDefs: opts.columnDefs,
@@ -690,17 +1169,18 @@ function buildContractGridOptions(opts) {
     animateRows: false,
     onColumnMoved: opts.onColChange,
     onColumnResized: (e) => { if (e.finished) opts.onColChange(); },
-    onCellClicked: (e) => {
-      if (e.column.getColId() !== '0' && e.data?.id) {
+    ...buildStandardGridBehavior({
+      type: 'navigate',
+      onEdit: (d) => {
         sessionStorage.setItem('contract-back', opts.backPath);
-        window.location.href = `/contracts/${e.data.id}`;
-      }
-    },
-    isExternalFilterPresent: () => getCustomerFilter() !== '' || getNameFilter() !== '',
+        window.location.href = `/contracts/${d.id}`;
+      },
+    }),
+    isExternalFilterPresent: () => getPartnerFilter() !== '' || getNameFilter() !== '',
     doesExternalFilterPass: (node) => {
       const d = node.data;
-      const cf = getCustomerFilter();
-      if (cf && !(d.end_customer_name || '').toLowerCase().includes(cf)) return false;
+      const cf = getPartnerFilter();
+      if (cf && !(d.end_partner_name || '').toLowerCase().includes(cf)) return false;
       const nf = getNameFilter();
       if (nf && !(d.contract_name || '').toLowerCase().includes(nf)) return false;
       return true;
@@ -709,10 +1189,10 @@ function buildContractGridOptions(opts) {
 }
 
 /** 거래처 datalist 로드 */
-function loadCustomerDatalist() {
-  fetch('/api/v1/customers').then(r => r.json()).then(custs => {
-    const dl = document.getElementById('customer-list');
-    if (dl) dl.innerHTML = custs.map(c => `<option value="${c.name}">`).join('');
+function loadPartnerDatalist() {
+  fetch('/api/v1/partners').then(r => r.json()).then(custs => {
+    const dl = document.getElementById('partner-list');
+    if (dl) dl.innerHTML = custs.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
   });
 }
 
@@ -738,8 +1218,8 @@ function saveFilterState(storageKey) {
   const chkMy = document.getElementById('chk-my-contracts');
   if (chkMy) state.myOnly = chkMy.checked;
   // 텍스트 필터
-  const custInput = document.getElementById('filter-customer-text');
-  if (custInput) state.texts.customer = custInput.value;
+  const custInput = document.getElementById('filter-partner-text');
+  if (custInput) state.texts.partner = custInput.value;
   const nameInput = document.getElementById('filter-name-text');
   if (nameInput) state.texts.name = nameInput.value;
   localStorage.setItem(storageKey, JSON.stringify(state));
@@ -778,9 +1258,9 @@ function restoreFilterState(storageKey) {
       chkMy.checked = state.myOnly;
     }
     // 텍스트 필터 복원
-    if (state.texts?.customer) {
-      const custInput = document.getElementById('filter-customer-text');
-      if (custInput) custInput.value = state.texts.customer;
+    if (state.texts?.partner) {
+      const custInput = document.getElementById('filter-partner-text');
+      if (custInput) custInput.value = state.texts.partner;
     }
     if (state.texts?.name) {
       const nameInput = document.getElementById('filter-name-text');
@@ -801,7 +1281,7 @@ function resetContractFilters(loadDataFn, storageKey) {
   }
   document.querySelectorAll('.chk-drop').forEach(drop => updateDropLabel(drop));
   // 텍스트 필터 초기화
-  const custInput = document.getElementById('filter-customer-text');
+  const custInput = document.getElementById('filter-partner-text');
   if (custInput) custInput.value = '';
   const nameInput = document.getElementById('filter-name-text');
   if (nameInput) nameInput.value = '';
@@ -847,4 +1327,551 @@ function initColChooser(gridApi, columnDefs, colStateKey, saveColStateFn) {
 
   document.addEventListener('click', () => { setElementHidden(menu, true); });
   menu.addEventListener('click', e => e.stopPropagation());
+}
+
+// ── ag-Grid 표준 상호작용 ────────────────────────────────────────
+
+/**
+ * ag-Grid 표준 상호작용 옵션을 생성한다.
+ * 싱글클릭: 행 선택 / 상세 패널, 더블클릭: 편집 / 이동.
+ *
+ * @param {Object} opts
+ * @param {'detail-panel'|'navigate'|'inline-edit'|'readonly'|'modal-edit'} opts.type
+ * @param {Function} [opts.onSelect] - 싱글클릭 콜백 (data, event)
+ * @param {Function} [opts.onEdit] - 더블클릭 콜백 (data, event)
+ * @param {Function} [opts.onCellValueChanged] - 셀 값 변경 콜백
+ * @returns {Object} agGrid 옵션에 스프레드할 객체
+ */
+function buildStandardGridBehavior(opts = {}) {
+  const { type = 'readonly', onSelect, onEdit, onCellValueChanged } = opts;
+  const result = {};
+
+  result.singleClickEdit = false;
+  result.stopEditingWhenCellsLoseFocus = true;
+
+  switch (type) {
+    case 'detail-panel':
+      result.onRowClicked = (e) => { if (e.data && onSelect) onSelect(e.data, e); };
+      if (onEdit) {
+        result.onRowDoubleClicked = (e) => { if (e.data) onEdit(e.data, e); };
+      }
+      if (onCellValueChanged) {
+        result.onCellValueChanged = onCellValueChanged;
+      }
+      break;
+
+    case 'navigate':
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      result.onRowDoubleClicked = (e) => { if (e.data && onEdit) onEdit(e.data, e); };
+      break;
+
+    case 'inline-edit':
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      if (onCellValueChanged) {
+        result.onCellValueChanged = onCellValueChanged;
+      }
+      break;
+
+    case 'modal-edit':
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      if (onEdit) {
+        result.onRowDoubleClicked = (e) => { if (e.data) onEdit(e.data, e); };
+      }
+      if (onCellValueChanged) {
+        result.onCellValueChanged = onCellValueChanged;
+      }
+      break;
+
+    case 'readonly':
+    default:
+      if (onSelect) {
+        result.onRowClicked = (e) => { if (e.data) onSelect(e.data, e); };
+      }
+      break;
+  }
+
+  return result;
+}
+
+// ── AG-Grid 공통 복사/붙여넣기 핸들러 ─────────────────────────────────
+
+/**
+ * AG-Grid 공통 복사/붙여넣기 핸들러.
+ *
+ * @param {HTMLElement} gridEl  - 그리드 래퍼 DOM 엘리먼트
+ * @param {object} gridApi      - AG-Grid API 인스턴스
+ * @param {object} opts
+ * @param {string[]} opts.editableFields  - 붙여넣기 대상 필드명 배열
+ * @param {boolean}  [opts.autoCreateRows=false] - 행 자동 추가 여부
+ * @param {function} [opts.onPaste]  - 붙여넣기 후 콜백 (changes: Array<{rowIndex, field, oldValue, newValue}>)
+ * @param {function} [opts.onCopy]   - 복사 후 콜백 (data: string[][])
+ * @param {object}   [opts.typeMap]  - 컬럼별 타입 힌트 {field: 'number' | {type:'enum', values:[...]}}
+ */
+function addCopyPasteHandler(gridEl, gridApi, opts = {}) {
+  const {
+    editableFields = [],
+    autoCreateRows = false,
+    newRowDefaults = {},
+    onPaste = null,
+    onCopy = null,
+    typeMap = {},
+  } = opts;
+
+  let _undoStack = [];
+
+  // ── Copy (Ctrl+C) ──
+  gridEl.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey && e.key === 'c') && !(e.metaKey && e.key === 'c')) return;
+    // Don't intercept if user is editing a cell
+    if (gridApi.getEditingCells && gridApi.getEditingCells().length > 0) return;
+
+    const ranges = gridApi.getCellRanges?.();
+    if (!ranges || ranges.length === 0) return;
+
+    const range = ranges[0];
+    const cols = range.columns.map(c => c.getColId());
+    const startRow = Math.min(range.startRow.rowIndex, range.endRow.rowIndex);
+    const endRow = Math.max(range.startRow.rowIndex, range.endRow.rowIndex);
+
+    const rows = [];
+    for (let ri = startRow; ri <= endRow; ri++) {
+      const node = gridApi.getDisplayedRowAtIndex(ri);
+      if (!node || !node.data) continue;
+      rows.push(cols.map(col => {
+        const val = node.data[col];
+        return val != null ? String(val) : '';
+      }));
+    }
+
+    const tsv = rows.map(r => r.join('\t')).join('\n');
+    navigator.clipboard.writeText(tsv).catch(() => {});
+    e.preventDefault();
+
+    if (onCopy) onCopy(rows);
+  });
+
+  // ── Paste (Ctrl+V) ──
+  gridEl.addEventListener('paste', (e) => {
+    const focused = gridApi.getFocusedCell();
+    if (!focused) return;
+    // Don't intercept if user is editing a cell
+    if (gridApi.getEditingCells && gridApi.getEditingCells().length > 0) return;
+
+    const text = (e.clipboardData || window.clipboardData)?.getData('text/plain');
+    if (!text) return;
+    e.preventDefault();
+    e.stopPropagation();
+    gridApi.stopEditing();
+
+    const pasteRows = text.trim().split('\n').map(r => r.split('\t'));
+    const startRowIdx = focused.rowIndex;
+
+    // Build ordered list of editable columns
+    const allCols = gridApi.getColumnDefs()
+      .map(c => c.field)
+      .filter(f => f && editableFields.includes(f));
+
+    const focusedField = focused.column.getColId();
+    const colStart = allCols.indexOf(focusedField);
+    if (colStart < 0) return;
+
+    const changes = [];
+    const totalRowsNeeded = startRowIdx + pasteRows.length;
+    let currentRowCount = 0;
+    gridApi.forEachNode(() => { currentRowCount += 1; });
+
+    // Auto-create rows if needed (append after the full dataset, not the filtered view)
+    if (autoCreateRows && totalRowsNeeded > currentRowCount) {
+      const newRows = [];
+      for (let i = 0; i < totalRowsNeeded - currentRowCount; i++) {
+        newRows.push({ ...newRowDefaults });
+      }
+      gridApi.applyTransaction({ add: newRows, addIndex: currentRowCount });
+    }
+
+    for (let ri = 0; ri < pasteRows.length; ri++) {
+      const rowIdx = startRowIdx + ri;
+      const node = gridApi.getDisplayedRowAtIndex(rowIdx);
+      if (!node || !node.data) continue;
+
+      for (let ci = 0; ci < pasteRows[ri].length; ci++) {
+        const field = allCols[colStart + ci];
+        if (!field) continue;
+
+        let value = pasteRows[ri][ci].trim();
+        const oldValue = node.data[field];
+
+        // Type conversion
+        const hint = typeMap[field];
+        if (hint === 'number') {
+          const parsed = Number(value.replace(/[^0-9.\-]/g, ''));
+          value = isNaN(parsed) ? 0 : parsed;
+        } else if (hint && hint.type === 'enum') {
+          if (!hint.values.includes(value)) value = oldValue;
+        }
+
+        changes.push({ rowIndex: rowIdx, field, oldValue, newValue: value });
+        node.data[field] = value;
+      }
+    }
+
+    // Refresh UI
+    const affectedNodes = [];
+    for (let ri = 0; ri < pasteRows.length; ri++) {
+      const node = gridApi.getDisplayedRowAtIndex(startRowIdx + ri);
+      if (node) affectedNodes.push(node);
+    }
+    gridApi.refreshCells({ rowNodes: affectedNodes, force: true });
+
+    // Flash pasted cells
+    const flashCols = [...new Set(changes.map(c => c.field))];
+    gridApi.flashCells({
+      rowNodes: affectedNodes,
+      columns: flashCols,
+      flashDuration: 300,
+      fadeDuration: 200,
+    });
+
+    // Save for undo
+    _undoStack.push(changes);
+
+    if (onPaste) onPaste(changes);
+  });
+
+  // ── Undo (Ctrl+Z) ──
+  gridEl.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey && e.key === 'z') && !(e.metaKey && e.key === 'z')) return;
+    if (_undoStack.length === 0) return;
+    // Don't intercept if user is editing a cell
+    if (gridApi.getEditingCells && gridApi.getEditingCells().length > 0) return;
+
+    const lastChanges = _undoStack.pop();
+    const affectedNodes = new Set();
+
+    for (const { rowIndex, field, oldValue } of lastChanges) {
+      const node = gridApi.getDisplayedRowAtIndex(rowIndex);
+      if (!node || !node.data) continue;
+      node.data[field] = oldValue;
+      affectedNodes.add(node);
+    }
+
+    gridApi.refreshCells({ rowNodes: [...affectedNodes], force: true });
+    e.preventDefault();
+  });
+}
+
+// ── TaggedHeaderComponent ─────────────────────────────────────────
+/**
+ * AG Grid 커스텀 헤더 컴포넌트.
+ * headerName 옆에 필드 태그(필수/고유 등)를 표시하며,
+ * body.hide-desc 클래스가 있을 때 태그를 자동으로 숨긴다.
+ *
+ * 사용법 (컬럼 정의):
+ *   headerComponent: TaggedHeaderComponent,
+ *   headerComponentParams: { tags: ["필수", "고유"] },
+ */
+class TaggedHeaderComponent {
+  init(params) {
+    this.params = params;
+    this.el = document.createElement("div");
+    this.el.className = "tagged-header";
+    this.el.style.display = "inline-flex";
+    this.el.style.alignItems = "center";
+    this.el.style.gap = "4px";
+    this.el.style.width = "100%";
+
+    const label = document.createElement("span");
+    label.textContent = params.displayName;
+    label.style.cursor = params.enableSorting ? "pointer" : "default";
+    if (params.enableSorting) {
+      label.addEventListener("click", (e) => {
+        params.progressSort(e.shiftKey);
+      });
+    }
+    this.el.appendChild(label);
+
+    const tags = params.tags || [];
+    tags.forEach(tag => {
+      const span = document.createElement("span");
+      span.className = "field-tag " + (tag === "필수" ? "field-tag-required" : tag === "고유" ? "field-tag-unique" : "");
+      span.textContent = tag;
+      this.el.appendChild(span);
+    });
+
+    // 필터 버튼 (컬럼에 filter가 활성화된 경우)
+    if (params.enableMenu || params.enableFilterButton || params.column?.isFilterAllowed()) {
+      const filterBtn = document.createElement("span");
+      filterBtn.className = "tagged-header-filter ag-icon ag-icon-filter";
+      filterBtn.style.cssText = "cursor:pointer; margin-left:auto; opacity:0.4; font-size:12px;";
+      filterBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        params.showColumnMenu(filterBtn);
+      });
+      this.el.appendChild(filterBtn);
+
+      // 필터 활성 시 아이콘 강조
+      this.filterChangedListener = () => {
+        const isActive = params.column.isFilterActive();
+        filterBtn.style.opacity = isActive ? "1" : "0.4";
+        filterBtn.classList.toggle("ag-filter-active", isActive);
+      };
+      params.column.addEventListener("filterChanged", this.filterChangedListener);
+    }
+  }
+
+  getGui() { return this.el; }
+  refresh() { return false; }
+  destroy() {
+    if (this.filterChangedListener && this.params?.column) {
+      this.params.column.removeEventListener("filterChanged", this.filterChangedListener);
+    }
+  }
+}
+
+// ── ComboBox Cell Editor Factory ─────────────────────────────────
+
+/**
+ * AG Grid 콤보박스 셀 에디터 팩토리.
+ * sync/async getItems 모두 지원. textContent 사용 (XSS 방지).
+ *
+ * @param {Object} opts
+ * @param {function(params): Array|Promise<Array>} opts.getItems
+ *   에디터가 열릴 때 표시할 항목을 반환. 각 항목은 { id, label, sub? }.
+ *   sync 또는 async 모두 가능.
+ * @param {function(item): string} opts.getDisplayValue
+ *   셀 확정 후 셀에 표시할 문자열.
+ * @param {function(item, params): void} [opts.onSelect]
+ *   항목 선택 시 호출되는 콜백. row data 갱신 등에 사용.
+ * @param {number} [opts.maxItems=50]
+ *   드롭다운에 표시할 최대 항목 수.
+ * @param {string} [opts.placeholder="검색..."]
+ *   입력 필드 placeholder.
+ * @returns {class} AG Grid ICellEditor 구현 클래스
+ */
+function createComboBoxCellEditor(opts) {
+  const {
+    getItems,
+    getDisplayValue,
+    onSelect,
+    maxItems = 50,
+    placeholder = "검색...",
+  } = opts;
+
+  return class ComboBoxCellEditor {
+    init(params) {
+      this._params = params;
+      this._value = params.value || "";
+      this._selectedItem = null;
+
+      // Container
+      this._container = document.createElement("div");
+      this._container.className = "ag-cell-partner-editor";
+
+      // Input
+      this._input = document.createElement("input");
+      this._input.type = "text";
+      this._input.value = this._value;
+      this._input.className = "ag-cell-input-editor";
+      this._input.placeholder = placeholder;
+      this._container.appendChild(this._input);
+
+      // Dropdown — appended to body so it escapes cell overflow clipping
+      this._dropdown = document.createElement("div");
+      this._dropdown.className = "ag-cell-partner-dropdown is-hidden";
+      document.body.appendChild(this._dropdown);
+
+      // Items cache (populated async on first open)
+      this._items = null;
+
+      this._input.addEventListener("input", () => this._renderList());
+      this._input.addEventListener("focus", () => this._loadAndRender());
+      this._input.addEventListener("keydown", (e) => this._onInputKeydown(e));
+    }
+
+    async _loadAndRender() {
+      if (this._items === null) {
+        const result = getItems(this._params);
+        this._items = (result instanceof Promise) ? await result : result;
+      }
+      this._renderList();
+    }
+
+    _renderList() {
+      const items = this._items || [];
+      const keyword = this._input.value.trim().toLowerCase();
+      const filtered = keyword
+        ? items.filter(item =>
+            (item.label || "").toLowerCase().includes(keyword) ||
+            (item.sub || "").toLowerCase().includes(keyword))
+        : items;
+      const limited = filtered.slice(0, maxItems);
+
+      this._dropdown.textContent = "";
+
+      if (limited.length === 0) {
+        const msg = document.createElement("div");
+        msg.className = "cust-similar-warn";
+        msg.textContent = items.length === 0 ? "항목 없음" : "검색 결과 없음";
+        this._dropdown.appendChild(msg);
+      } else {
+        limited.forEach(item => {
+          const opt = document.createElement("div");
+          opt.className = "cust-option";
+          opt.tabIndex = -1;
+          opt.dataset.id = item.id;
+          opt.textContent = item.label + (item.sub ? " (" + item.sub + ")" : "");
+
+          opt.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            this._selectItem(item);
+          });
+          opt.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") { this._selectItem(item); return; }
+            if (e.key === "ArrowDown" && opt.nextElementSibling) {
+              e.preventDefault(); opt.nextElementSibling.focus();
+            }
+            if (e.key === "ArrowUp" && opt.previousElementSibling) {
+              e.preventDefault(); opt.previousElementSibling.focus();
+            }
+            if (e.key === "Escape") {
+              setElementHidden(this._dropdown, true);
+              this._input.focus();
+            }
+          });
+          this._dropdown.appendChild(opt);
+        });
+      }
+
+      // Position below the input
+      const rect = this._input.getBoundingClientRect();
+      this._dropdown.style.left = rect.left + "px";
+      this._dropdown.style.top = rect.bottom + "px";
+      this._dropdown.style.width = Math.max(rect.width, 220) + "px";
+      setElementHidden(this._dropdown, false);
+    }
+
+    _selectItem(item) {
+      this._selectedItem = item;
+      this._value = getDisplayValue(item);
+      this._input.value = this._value;
+      setElementHidden(this._dropdown, true);
+      if (onSelect) onSelect(item, this._params);
+      this._params.stopEditing();
+    }
+
+    _onInputKeydown(e) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const first = this._dropdown.querySelector(".cust-option");
+        if (first) first.focus();
+        return;
+      }
+      if (e.key === "Escape") {
+        setElementHidden(this._dropdown, true);
+        return;
+      }
+      if (e.key === "Enter") {
+        const items = this._items || [];
+        const match = items.find(
+          item => (item.label || "").toLowerCase() === this._input.value.trim().toLowerCase()
+        );
+        if (match) this._selectItem(match);
+      }
+    }
+
+    /** 선택된 항목 반환 (커스텀 메서드) */
+    getSelectedItem() { return this._selectedItem; }
+
+    // AG Grid ICellEditor interface
+    getGui() { return this._container; }
+    afterGuiAttached() { this._input.focus(); this._input.select(); }
+    getValue() { return this._value; }
+    isPopup() { return true; }
+    destroy() { this._dropdown.remove(); }
+  };
+}
+
+
+// ── Sub-Grid (상세 패널 내 인라인 그리드) 공통 헬퍼 ──────────────
+/**
+ * 상세 패널 내 서브 그리드를 생성한다.
+ * 그리드 마지막 행에 "+ 추가" 행이 pinned 표시되며, 클릭 시 onAdd 콜백을 호출한다.
+ *
+ * @param {HTMLElement} container - 그리드를 삽입할 부모 요소
+ * @param {Object} opts
+ * @param {Array} opts.columnDefs - ag-Grid 컬럼 정의
+ * @param {Array} opts.rowData - 초기 데이터
+ * @param {string} opts.addLabel - 추가 행 텍스트 (예: "+ 라이선스 추가")
+ * @param {Function} opts.onAdd - 추가 행 클릭 시 콜백 (gridApi) => void
+ * @param {Function} [opts.onCellValueChanged] - 셀 변경 ��들러
+ * @param {string} [opts.hint] - 그리드 하단 힌트 텍스트
+ * @returns {Object} { gridApi, gridEl }
+ */
+function createSubGrid(container, opts) {
+  const {
+    columnDefs, rowData, addLabel = "+ 추가",
+    onAdd, onCellValueChanged, hint,
+  } = opts;
+
+  const gridEl = document.createElement("div");
+  gridEl.className = "ag-theme-quartz infra-grid";
+  gridEl.style.width = "100%";
+  container.appendChild(gridEl);
+
+  const addRowData = [{ _isAddRow: true }];
+
+  class AddRowRenderer {
+    init(params) {
+      this.el = document.createElement("div");
+      this.el.className = "btn-grid-add-inline";
+      this.el.style.cssText = "display:flex; align-items:center; justify-content:center; width:100%; height:100%;";
+      this.el.textContent = addLabel;
+    }
+    getGui() { return this.el; }
+  }
+
+  const gridApi = agGrid.createGrid(gridEl, {
+    columnDefs,
+    rowData,
+    pinnedBottomRowData: addRowData,
+    defaultColDef: { resizable: true, sortable: false, filter: false },
+    domLayout: "autoHeight",
+    singleClickEdit: true,
+    stopEditingWhenCellsLoseFocus: true,
+    popupParent: document.body,
+    noRowsOverlayComponent: class { init() { this.el = document.createElement("div"); } getGui() { return this.el; } },
+    isFullWidthRow: (params) => !!params.rowNode.data?._isAddRow,
+    fullWidthCellRenderer: AddRowRenderer,
+    getRowClass: (params) => params.data?._isAddRow ? "sub-grid-add-row" : "",
+    onCellValueChanged: (event) => {
+      if (event.data?._isAddRow) return;
+      if (onCellValueChanged) onCellValueChanged(event);
+    },
+    onRowClicked: (event) => {
+      if (event.data?._isAddRow && onAdd) onAdd(gridApi);
+    },
+  });
+
+  // 데이터 0건일 때 body 영역 min-height 인라인 스타일 강제 제거
+  setTimeout(() => {
+    gridEl.querySelectorAll(".ag-body-viewport, .ag-center-cols-viewport, .ag-body, .ag-body-clipper").forEach((el) => {
+      el.style.minHeight = "0";
+    });
+  }, 0);
+
+  if (hint) {
+    const hintEl = document.createElement("p");
+    hintEl.className = "text-muted";
+    hintEl.style.cssText = "font-size:11px; margin:4px 0 0; line-height:1.5;";
+    hintEl.textContent = hint;
+    container.appendChild(hintEl);
+  }
+
+  return { gridApi, gridEl };
 }

@@ -2,15 +2,22 @@
 from __future__ import annotations
 
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
+
+# 프로젝트 루트를 sys.path에 추가 (alembic CLI가 프로젝트 루트에서 실행되지 않을 때 대비)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.database import Base
+from app.core.database import Base
 
 # 모든 모델을 import하여 Base.metadata에 등록
-import app.models  # noqa: F401
+import app.modules.common.models  # noqa: F401
+import app.modules.accounting.models  # noqa: F401
+import app.modules.infra.models  # noqa: F401
 
 config = context.config
 
@@ -20,8 +27,11 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # DATABASE_URL 환경변수가 있으면 alembic.ini 값을 override
+# psycopg (v3) 드라이버 사용을 위해 postgresql:// → postgresql+psycopg:// 변환
 database_url = os.getenv("DATABASE_URL")
 if database_url:
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     config.set_main_option("sqlalchemy.url", database_url)
 
 

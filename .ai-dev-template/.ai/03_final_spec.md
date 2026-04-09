@@ -19,7 +19,9 @@
 1. 질문 답변이 반영된 Scope 확정
 2. 확정된 Domain Model
 3. 구체화된 Functional Requirements
-4. **Implementation Plan** — 작은 단계로 나눈 구현 순서
+4. **Acceptance Criteria** — Must 범위 기능별 완료 조건과 사용자 관점의 검증 기준
+5. **Contracts & Invariants** — 상태 전이, 중복 금지, canonical format, 원자성/롤백, 권한 경계 등 구현 전 합의해야 할 불변 조건
+6. **Implementation Plan** — 작은 단계로 나눈 구현 순서
 
 ### PROJECT_CONTEXT.md 생성
 
@@ -70,5 +72,7 @@
 
 - 구현 계획은 각 단계가 독립적으로 동작·검증 가능해야 한다
 - 단계 간 의존성이 있으면 명시한다
+- Acceptance Criteria는 "구현했다"가 아니라 "어떻게 완료를 판정할지"를 기준으로 적는다
+- Contracts & Invariants에는 이후 구현/리뷰에서 깨지면 안 되는 규칙만 넣고, 단순 희망사항은 넣지 않는다
 - PROJECT_CONTEXT는 간결하게 유지한다 (1페이지 이내)
 - DECISIONS는 "왜"에 집중한다 ("무엇"은 SPEC에 있다)

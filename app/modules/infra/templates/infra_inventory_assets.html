@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}자산 검색 - 인벤토리{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>자산 검색</h1>
+  <div class="infra-inline-actions">
+    <a href="/api/v1/infra-excel/template/inventory" class="btn btn-secondary">양식 다운로드</a>
+    <button class="btn btn-secondary" id="btn-asset-import-toggle">Excel Import</button>
+  </div>
+</div>
+<div id="asset-import-panel" class="card is-hidden infra-import-compact-panel">
+  <div class="infra-import-compact-row">
+    <label class="infra-compact-label">프로젝트
+      <select id="asset-import-project" class="infra-compact-select">
+        <option value="">-- 선택 --</option>
+      </select>
+    </label>
+    <label class="infra-compact-label">Excel (.xlsx)
+      <input type="file" id="asset-import-file" accept=".xlsx" class="infra-compact-input">
+    </label>
+    <label class="infra-compact-label">중복 처리
+      <select id="asset-import-dup" class="infra-compact-select">
+        <option value="skip">건너뛰기</option>
+        <option value="overwrite">덮어쓰기</option>
+      </select>
+    </label>
+    <button class="btn btn-primary btn-sm" id="btn-asset-import-run">Import</button>
+    <button class="btn btn-sm" id="btn-asset-import-close">닫기</button>
+  </div>
+  <p class="text-muted infra-compact-help">※ template.xlsx의 <strong>01. Inventory</strong> 시트 양식 기준. Row 1-2 그룹헤더, Row 3 컬럼헤더, Row 4부터 데이터.</p>
+  <div id="asset-import-result" class="infra-import-result-text"></div>
+</div>
+
+<div class="filter-bar">
+  <label>
+    프로젝트
+    <select id="filter-project">
+      <option value="">전체</option>
+    </select>
+  </label>
+  <label>
+    상태
+    <select id="filter-status">
+      <option value="">전체</option>
+    </select>
+  </label>
+  <label>
+    검색
+    <input type="text" id="filter-search" placeholder="자산명, 호스트명, IP, 장비ID">
+  </label>
+  <button class="btn btn-primary" id="btn-search">검색</button>
+</div>
+
+<div class="card">
+  <div id="grid-inventory-assets" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_inventory_assets.js"></script>
+{% endblock %}

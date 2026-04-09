@@ -1,0 +1,81 @@
+<h2>역할기준보기 전체 레이아웃</h2>
+<p class="subtitle">카탈로그 3패널 구조를 역할에 적용할 때, 각 패널의 역할 배분입니다.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>트리 | 역할 그리드 | 역할 상세+할당자산</h3>
+      <p>카탈로그와 동일 구조. 트리에서 필터 → ���할 목록 �� 선택 시 상세.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-body" style="display:flex;gap:2px;font-size:12px;min-height:200px">
+          <div style="flex:0 0 22%;background:#f8fafc;padding:8px;border-radius:4px">
+            <div style="background:#e2e8f0;padding:4px 8px;border-radius:3px;margin-bottom:6px;font-size:11px">기준: 센터→도메인 ▼</div>
+            <div style="font-weight:600;margin-bottom:2px">▼ IDC-A</div>
+            <div style="padding-left:12px;color:#666">▼ 보안 (5)</div>
+            <div style="padding-left:12px;color:#666">▼ 네트워크 (3)</div>
+            <div style="font-weight:600;margin-top:4px">▼ IDC-B</div>
+            <div style="padding-left:12px;color:#666">▼ 서버 (8)</div>
+          </div>
+          <div style="flex:1;background:#fff;border:1px solid #e2e8f0;padding:8px;border-radius:4px">
+            <div style="font-weight:600;margin-bottom:6px">역할 목록 (보안 5건)</div>
+            <table style="width:100%;font-size:11px;border-collapse:collapse">
+              <tr style="background:#f1f5f9"><th style="padding:3px;text-align:left">역할명</th><th style="padding:3px">현재자산</th></tr>
+              <tr style="background:#eff6ff"><td style="padding:3px">인터넷방화벽#1</td><td style="padding:3px">FW-001</td></tr>
+              <tr><td style="padding:3px">내부방화벽#1</td><td style="padding:3px">FW-002</td></tr>
+              <tr><td style="padding:3px">IPS#1</td><td style="padding:3px">IPS-001</td></tr>
+            </table>
+          </div>
+          <div style="flex:0 0 30%;background:#f8fafc;padding:8px;border-radius:4px">
+            <div style="font-weight:600;margin-bottom:4px">인터넷방화벽#1</div>
+            <div style="font-size:11px;color:#666;margin-bottom:8px">상태: 활성 · 귀속: Y25A</div>
+            <div style="font-weight:600;font-size:11px;margin-bottom:4px">할당 자산</div>
+            <table style="width:100%;font-size:10px;border-collapse:collapse">
+              <tr style="background:#f1f5f9"><th style="padding:2px">자산명</th><th style="padding:2px">유형</th></tr>
+              <tr><td style="padding:2px">FW-001(new)</td><td style="padding:2px">주 담당</td></tr>
+              <tr><td style="padding:2px;color:#999">FW-001(old)</td><td style="padding:2px;color:#999">이전</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>트리 | 역할 정보+할당자산 (2패널)</h3>
+      <p>현재 MDM 레이아웃 유지하되 트리만 추가. 역할 그리드 없이 트리에서 직접 역할 선택.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-body" style="display:flex;gap:2px;font-size:12px;min-height:200px">
+          <div style="flex:0 0 28%;background:#f8fafc;padding:8px;border-radius:4px">
+            <div style="background:#e2e8f0;padding:4px 8px;border-radius:3px;margin-bottom:6px;font-size:11px">기준: 센터→도메인 ▼</div>
+            <div style="font-weight:600;margin-bottom:2px">▼ IDC-A</div>
+            <div style="padding-left:12px;color:#666">▼ 보안</div>
+            <div style="padding-left:24px;background:#eff6ff;padding:2px 4px;border-radius:2px"><b>인터넷방화벽#1</b></div>
+            <div style="padding-left:24px;color:#666">내부방화벽#1</div>
+            <div style="padding-left:24px;color:#666">IPS#1</div>
+            <div style="padding-left:12px;color:#666">▼ 네트워크</div>
+            <div style="padding-left:24px;color:#666">L3스위치#1</div>
+          </div>
+          <div style="flex:1;background:#fff;border:1px solid #e2e8f0;padding:8px;border-radius:4px">
+            <div style="font-weight:600;margin-bottom:4px">인터넷방화벽#1</div>
+            <div style="font-size:11px;color:#666;margin-bottom:4px">상태: 활성 · 귀속: Y25A · 비고: 주력 인터넷 구간 방화벽</div>
+            <div style="display:flex;gap:4px;margin-bottom:10px">
+              <span style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:3px;font-size:10px">교체</span>
+              <span style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:3px;font-size:10px">장애대체</span>
+              <span style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:3px;font-size:10px">수정</span>
+            </div>
+            <div style="border-top:1px solid #e2e8f0;padding-top:8px">
+              <div style="font-weight:600;font-size:12px;margin-bottom:6px">할당 자산  <span style="color:#888;font-size:11px">[이력보기] [할당추가]</span></div>
+              <table style="width:100%;font-size:11px;border-collapse:collapse">
+                <tr style="background:#f1f5f9"><th style="padding:3px;text-align:left">자산명</th><th>자산코드</th><th>할당유형</th><th>시���일</th></tr>
+                <tr><td style="padding:3px">인터넷방화벽#1(new)</td><td>P000-HW-SEC-0001</td><td>주 담당</td><td>2026-01</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

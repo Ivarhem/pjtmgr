@@ -1,0 +1,1409 @@
+<!-- inframgr Templates Reference -->
+<!-- Generated for migration reference - 2026-03-18 -->
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/assets.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}자산 인벤토리 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>자산 인벤토리</h1>
+  <button class="btn btn-primary" id="btn-add-asset">자산 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-assets" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+</div>
+
+<!-- 자산 등록/수정 모달 -->
+<dialog id="modal-asset" class="modal modal-xl">
+  <h2 id="modal-asset-title">자산 등록</h2>
+  <form id="form-asset">
+    <input type="hidden" id="asset-id">
+
+    <!-- 장비 명세 -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">장비 명세</legend>
+      <div class="form-grid">
+        <label>
+          프로젝트
+          <select id="asset-project-id" required></select>
+        </label>
+        <label>
+          자산명
+          <input type="text" id="asset-name" required>
+        </label>
+        <label>
+          자산 유형
+          <select id="asset-type" required>
+            <option value="server">서버</option>
+            <option value="network">네트워크</option>
+            <option value="security">보안장비</option>
+            <option value="storage">스토리지</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+        <label>
+          제조사
+          <input type="text" id="asset-vendor">
+        </label>
+        <label>
+          모델
+          <input type="text" id="asset-model">
+        </label>
+        <label>
+          시리얼 번호
+          <input type="text" id="asset-serial-no">
+        </label>
+        <label>
+          장비 ID
+          <input type="text" id="asset-equipment-id">
+        </label>
+        <label>
+          랙 번호
+          <input type="text" id="asset-rack-no">
+        </label>
+        <label>
+          랙 유닛
+          <input type="text" id="asset-rack-unit">
+        </label>
+        <label>
+          센터
+          <input type="text" id="asset-center">
+        </label>
+        <label>
+          운영 유형
+          <input type="text" id="asset-operation-type">
+        </label>
+        <label>
+          분류
+          <input type="text" id="asset-category">
+        </label>
+        <label>
+          세부 분류
+          <input type="text" id="asset-subcategory">
+        </label>
+        <label>
+          단계
+          <input type="text" id="asset-phase">
+        </label>
+        <label>
+          입고일
+          <input type="date" id="asset-received-date">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- 논리 구성 -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">논리 구성</legend>
+      <div class="form-grid">
+        <label>
+          호스트명
+          <input type="text" id="asset-hostname">
+        </label>
+        <label>
+          클러스터
+          <input type="text" id="asset-cluster">
+        </label>
+        <label>
+          서비스명
+          <input type="text" id="asset-service-name">
+        </label>
+        <label>
+          존
+          <input type="text" id="asset-zone">
+        </label>
+        <label>
+          서비스 IP
+          <input type="text" id="asset-service-ip">
+        </label>
+        <label>
+          관리 IP
+          <input type="text" id="asset-mgmt-ip">
+        </label>
+        <label>
+          상태
+          <select id="asset-status">
+            <option value="planned">계획</option>
+            <option value="active">운영중</option>
+            <option value="decommissioned">폐기</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Hardware 구성 -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">Hardware 구성</legend>
+      <div class="form-grid">
+        <label>
+          크기(U)
+          <input type="number" id="asset-size-unit" min="0">
+        </label>
+        <label>
+          LC 수량
+          <input type="number" id="asset-lc-count" min="0">
+        </label>
+        <label>
+          HA 수량
+          <input type="number" id="asset-ha-count" min="0">
+        </label>
+        <label>
+          UTP 수량
+          <input type="number" id="asset-utp-count" min="0">
+        </label>
+        <label>
+          전원 수량
+          <input type="number" id="asset-power-count" min="0">
+        </label>
+        <label>
+          전원 유형
+          <input type="text" id="asset-power-type">
+        </label>
+        <label>
+          펌웨어 버전
+          <input type="text" id="asset-firmware-version">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- 자산 정보 -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">자산 정보</legend>
+      <div class="form-grid">
+        <label>
+          자산 등급
+          <input type="text" id="asset-asset-class">
+        </label>
+        <label>
+          자산 번호
+          <input type="text" id="asset-asset-number">
+        </label>
+        <label>
+          도입 연도
+          <input type="number" id="asset-year-acquired" min="2000" max="2100">
+        </label>
+        <label>
+          부서
+          <input type="text" id="asset-dept">
+        </label>
+        <label>
+          주 담당자
+          <input type="text" id="asset-primary-contact-name">
+        </label>
+        <label>
+          부 담당자
+          <input type="text" id="asset-secondary-contact-name">
+        </label>
+        <label>
+          유지보수 업체
+          <input type="text" id="asset-maintenance-vendor">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- 비고 (full-width, outside groups) -->
+    <label class="full-width">
+      비고
+      <textarea id="asset-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-asset">취소</button>
+    <button class="btn btn-primary" id="btn-save-asset">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/assets.js"></script>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/base.html -->
+<!-- ============================================ -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SI Project Inventory{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  {% block styles %}{% endblock %}
+  <script src="/static/js/utils.js" defer></script>
+  {% block head_scripts %}{% endblock %}
+</head>
+<body>
+  {% block nav %}
+  <div class="topbar">
+    <a href="/projects" class="topbar-brand">SI Inventory</a>
+    <div class="topbar-right">
+      {% if current_user and current_user.role == 'admin' %}
+      <button class="btn btn-xs btn-secondary" id="btn-sync" title="Sales 시스템 동기화">동기화</button>
+      {% endif %}
+      <span class="topbar-user">{{ current_user.name }}</span>
+      <button class="btn-logout" id="btn-logout">로그아웃</button>
+    </div>
+  </div>
+  <nav class="subnav">
+    <ul class="subnav-links">
+      <li><a href="/projects" {% if active_page == 'projects' %}class="active"{% endif %}>프로젝트</a></li>
+      <li><a href="/assets" {% if active_page == 'assets' %}class="active"{% endif %}>자산</a></li>
+      <li><a href="/ip-inventory" {% if active_page == 'ip-inventory' %}class="active"{% endif %}>IP 인벤토리</a></li>
+      <li><a href="/port-maps" {% if active_page == 'port-maps' %}class="active"{% endif %}>포트맵</a></li>
+      <li><a href="/policies" {% if active_page == 'policies' %}class="active"{% endif %}>정책</a></li>
+      <li><a href="/partners" {% if active_page == 'partners' %}class="active"{% endif %}>업체/담당자</a></li>
+    </ul>
+  </nav>
+  {% endblock %}
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- 공통 삭제 확인 모달 -->
+  <dialog id="modal-confirm-delete" class="modal modal-sm">
+    <h2>삭제 확인</h2>
+    <p id="confirm-delete-message" class="modal-desc">이 항목을 삭제하시겠습니까?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-cancel-delete">취소</button>
+      <button class="btn btn-danger" id="btn-confirm-delete">삭제</button>
+    </div>
+  </dialog>
+
+  {% block scripts %}{% endblock %}
+  <script>
+    document.getElementById("btn-logout")?.addEventListener("click", async () => {
+      await apiFetch("/api/v1/auth/logout", { method: "POST" });
+      window.location.href = "/login";
+    });
+
+    document.getElementById("btn-sync")?.addEventListener("click", async () => {
+      const btn = document.getElementById("btn-sync");
+      btn.disabled = true;
+      btn.textContent = "동기화 중...";
+      try {
+        const result = await apiFetch("/api/v1/sync", { method: "POST" });
+        const msg = `동기화 완료 - 업체: +${result.partners.created}/~${result.partners.updated}, ` +
+          `담당자: +${result.contacts.created}/~${result.contacts.updated}, ` +
+          `사용자: +${result.users.created}/~${result.users.updated}`;
+        showToast(msg);
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "동기화";
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/ip_inventory.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}IP 인벤토리 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>IP 대역 관리</h1>
+  <button class="btn btn-primary" id="btn-add-subnet">대역 등록</button>
+</div>
+
+<div class="card mb-md">
+  <div id="grid-subnets" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<div class="page-header mt-md">
+  <h1>IP 할당 현황</h1>
+  <button class="btn btn-primary" id="btn-add-ip">IP 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-ips" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<!-- 대역 등록/수정 모달 -->
+<dialog id="modal-subnet" class="modal modal-lg">
+  <h2 id="modal-subnet-title">대역 등록</h2>
+  <form id="form-subnet" class="form-grid">
+    <input type="hidden" id="subnet-id">
+    <label>
+      프로젝트
+      <select id="subnet-project-id" required></select>
+    </label>
+    <label>
+      대역명
+      <input type="text" id="subnet-name" required placeholder="서비스망-A">
+    </label>
+    <label>
+      서브넷
+      <input type="text" id="subnet-cidr" required placeholder="10.10.1.0/24">
+    </label>
+    <label>
+      역할
+      <select id="subnet-role">
+        <option value="service">서비스</option>
+        <option value="management">관리</option>
+        <option value="backup">백업</option>
+        <option value="dmz">DMZ</option>
+        <option value="other">기타</option>
+      </select>
+    </label>
+    <label>
+      VLAN ID
+      <input type="text" id="subnet-vlan-id">
+    </label>
+    <label>
+      게이트웨이
+      <input type="text" id="subnet-gateway">
+    </label>
+    <label>
+      지역
+      <input type="text" id="subnet-region" placeholder="서울">
+    </label>
+    <label>
+      층/위치
+      <input type="text" id="subnet-floor" placeholder="3F">
+    </label>
+    <label>
+      상대국/기관/지점
+      <input type="text" id="subnet-counterpart">
+    </label>
+    <label>
+      할당유형
+      <select id="subnet-allocation-type">
+        <option value="">선택</option>
+        <option value="통신팀">통신팀</option>
+        <option value="사설">사설</option>
+        <option value="기타">기타</option>
+      </select>
+    </label>
+    <label>
+      분류
+      <input type="text" id="subnet-category">
+    </label>
+    <label>
+      존
+      <input type="text" id="subnet-zone">
+    </label>
+    <label>
+      넷마스크
+      <input type="text" id="subnet-netmask" placeholder="255.255.255.0">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="subnet-description" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="subnet-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-subnet">취소</button>
+    <button class="btn btn-primary" id="btn-save-subnet">등록</button>
+  </div>
+</dialog>
+
+<!-- IP 등록/수정 모달 -->
+<dialog id="modal-ip" class="modal modal-lg">
+  <h2 id="modal-ip-title">IP 등록</h2>
+  <form id="form-ip" class="form-grid">
+    <input type="hidden" id="ip-id">
+    <label>
+      자산
+      <select id="ip-asset-id" required></select>
+    </label>
+    <label>
+      IP 대역
+      <select id="ip-subnet-id">
+        <option value="">선택 안 함</option>
+      </select>
+    </label>
+    <label>
+      IP 주소
+      <input type="text" id="ip-address" required placeholder="10.10.1.10">
+    </label>
+    <label>
+      용도
+      <select id="ip-type">
+        <option value="service">서비스</option>
+        <option value="management">관리</option>
+        <option value="backup">백업</option>
+        <option value="vip">VIP</option>
+        <option value="other">기타</option>
+      </select>
+    </label>
+    <label>
+      인터페이스명
+      <input type="text" id="ip-interface" placeholder="eth0">
+    </label>
+    <label>
+      존
+      <input type="text" id="ip-zone">
+    </label>
+    <label>
+      서비스명
+      <input type="text" id="ip-service-name">
+    </label>
+    <label>
+      호스트명
+      <input type="text" id="ip-hostname">
+    </label>
+    <label>
+      VLAN ID
+      <input type="text" id="ip-vlan-id">
+    </label>
+    <label>
+      네트워크
+      <input type="text" id="ip-network" placeholder="10.10.1.0">
+    </label>
+    <label>
+      넷마스크
+      <input type="text" id="ip-netmask" placeholder="255.255.255.0">
+    </label>
+    <label>
+      게이트웨이
+      <input type="text" id="ip-gateway">
+    </label>
+    <label>
+      기본 DNS
+      <input type="text" id="ip-dns-primary">
+    </label>
+    <label>
+      보조 DNS
+      <input type="text" id="ip-dns-secondary">
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="ip-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-ip">취소</button>
+    <button class="btn btn-primary" id="btn-save-ip">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/ip_inventory.js"></script>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/login.html -->
+<!-- ============================================ -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - SI Project Inventory</title>
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <h2 class="login-title">SI Inventory</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-id">아이디</label>
+          <input type="text" id="login-id" name="login_id" autocomplete="username" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="login-pw">비밀번호</label>
+          <input type="password" id="login-pw" name="password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn-login">로그인</button>
+        <p class="error-msg is-hidden" id="login-error"></p>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById("login-error");
+      errorEl.classList.add("is-hidden");
+
+      const body = {
+        login_id: document.getElementById("login-id").value,
+        password: document.getElementById("login-pw").value,
+      };
+
+      try {
+        const res = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.detail || "로그인 실패");
+        }
+        window.location.href = "/projects";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove("is-hidden");
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/partners.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}업체 / 담당자 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>업체 관리</h1>
+  <button class="btn btn-primary" id="btn-add-partner">업체 등록</button>
+</div>
+
+<div class="card mb-md">
+  <div id="grid-partners" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<div class="page-header mt-md">
+  <h1>담당자 관리</h1>
+  <button class="btn btn-primary" id="btn-add-contact">담당자 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-contacts" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<!-- 업체 등록/수정 모달 -->
+<dialog id="modal-partner" class="modal">
+  <h2 id="modal-partner-title">업체 등록</h2>
+  <form id="form-partner" class="form-grid">
+    <input type="hidden" id="partner-id">
+    <label>
+      프로젝트 (선택)
+      <select id="partner-project-id">
+        <option value="">프로젝트 무관</option>
+      </select>
+    </label>
+    <label>
+      업체명
+      <input type="text" id="partner-name" required>
+    </label>
+    <label>
+      업체 유형
+      <select id="partner-type" required>
+        <option value="client">고객사</option>
+        <option value="vendor">공급사</option>
+        <option value="maintenance">유지보수사</option>
+        <option value="telecom">통신사</option>
+        <option value="other">기타</option>
+      </select>
+    </label>
+    <label>
+      대표 연락처
+      <input type="text" id="partner-phone">
+    </label>
+    <label>
+      주소
+      <input type="text" id="partner-address">
+    </label>
+    <label>
+      사업자번호
+      <input type="text" id="partner-business-no">
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="partner-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-partner">취소</button>
+    <button class="btn btn-primary" id="btn-save-partner">등록</button>
+  </div>
+</dialog>
+
+<!-- 담당자 등록/수정 모달 -->
+<dialog id="modal-contact" class="modal">
+  <h2 id="modal-contact-title">담당자 등록</h2>
+  <form id="form-contact" class="form-grid">
+    <input type="hidden" id="contact-id">
+    <label>
+      소속 업체
+      <select id="contact-partner-id" required></select>
+    </label>
+    <label>
+      이름
+      <input type="text" id="contact-name" required>
+    </label>
+    <label>
+      부서
+      <input type="text" id="contact-department">
+    </label>
+    <label>
+      직함
+      <input type="text" id="contact-title">
+    </label>
+    <label>
+      역할
+      <input type="text" id="contact-role" placeholder="PM, 엔지니어 등">
+    </label>
+    <label>
+      이메일
+      <input type="email" id="contact-email">
+    </label>
+    <label>
+      전화번호
+      <input type="text" id="contact-phone">
+    </label>
+    <label>
+      비상연락처
+      <input type="text" id="contact-emergency-phone">
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="contact-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-contact">취소</button>
+    <button class="btn btn-primary" id="btn-save-contact">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/partners.js"></script>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/placeholder.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}{{ page_title }} - SI Project Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{{ page_title }}</h1>
+</div>
+<div class="card">
+  <div class="card-body">
+    <p class="text-secondary">이 화면은 준비 중입니다.</p>
+  </div>
+</div>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/policies.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}정책 관리 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>정책 정의</h1>
+  <button class="btn btn-primary" id="btn-add-policy">정책 등록</button>
+</div>
+
+<div class="card mb-md">
+  <div id="grid-policies" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<div class="page-header mt-md">
+  <h1>정책 적용 현황</h1>
+  <button class="btn btn-primary" id="btn-add-assignment">적용 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-assignments" class="ag-theme-quartz" style="height: 350px; width: 100%;"></div>
+</div>
+
+<!-- 정책 정의 모달 -->
+<dialog id="modal-policy" class="modal modal-lg">
+  <h2 id="modal-policy-title">정책 등록</h2>
+  <form id="form-policy" class="form-grid">
+    <input type="hidden" id="policy-id">
+    <label>
+      정책 코드
+      <input type="text" id="policy-code" required placeholder="SEC-001">
+    </label>
+    <label>
+      정책명
+      <input type="text" id="policy-name" required>
+    </label>
+    <label>
+      카테고리
+      <input type="text" id="policy-category" required placeholder="보안, 네트워크 등">
+    </label>
+    <label>
+      활성 여부
+      <select id="policy-is-active">
+        <option value="true">활성</option>
+        <option value="false">비활성</option>
+      </select>
+    </label>
+    <label>
+      시행일
+      <input type="date" id="policy-effective-from">
+    </label>
+    <label>
+      만료일
+      <input type="date" id="policy-effective-to">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="policy-description" rows="3"></textarea>
+    </label>
+  </form>
+  <fieldset class="modal-group">
+    <legend class="modal-group-title">보안 프레임워크</legend>
+    <div class="form-grid">
+      <label>
+        보안 도메인
+        <input type="text" id="policy-security-domain">
+      </label>
+      <label>
+        아키텍처 요소
+        <input type="text" id="policy-architecture-element">
+      </label>
+      <label>
+        통제 포인트
+        <input type="text" id="policy-control-point">
+      </label>
+      <label>
+        ISO 27001 참조
+        <input type="text" id="policy-iso27001-ref">
+      </label>
+      <label>
+        NIST 참조
+        <input type="text" id="policy-nist-ref">
+      </label>
+      <label>
+        ISMS-P 참조
+        <input type="text" id="policy-isms-p-ref">
+      </label>
+      <label class="full-width">
+        요구사항
+        <textarea id="policy-requirement" rows="2"></textarea>
+      </label>
+      <label class="full-width">
+        구현 예시
+        <textarea id="policy-implementation-example" rows="2"></textarea>
+      </label>
+      <label class="full-width">
+        증적
+        <textarea id="policy-evidence" rows="2"></textarea>
+      </label>
+    </div>
+  </fieldset>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-policy">취소</button>
+    <button class="btn btn-primary" id="btn-save-policy">등록</button>
+  </div>
+</dialog>
+
+<!-- 정책 적용 모달 -->
+<dialog id="modal-assignment" class="modal">
+  <h2 id="modal-assignment-title">정책 적용 등록</h2>
+  <form id="form-assignment" class="form-grid">
+    <input type="hidden" id="assignment-id">
+    <label>
+      프로젝트
+      <select id="assignment-project-id" required></select>
+    </label>
+    <label>
+      정책
+      <select id="assignment-policy-id" required></select>
+    </label>
+    <label>
+      자산 (선택)
+      <select id="assignment-asset-id">
+        <option value="">전체 프로젝트</option>
+      </select>
+    </label>
+    <label>
+      상태
+      <select id="assignment-status">
+        <option value="not_checked">미확인</option>
+        <option value="compliant">준수</option>
+        <option value="non_compliant">미준수</option>
+        <option value="exception">예외</option>
+        <option value="not_applicable">해당없음</option>
+      </select>
+    </label>
+    <label>
+      확인자
+      <input type="text" id="assignment-checked-by">
+    </label>
+    <label>
+      확인일
+      <input type="date" id="assignment-checked-date">
+    </label>
+    <label class="full-width">
+      예외 사유
+      <textarea id="assignment-exception-reason" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      증적 메모
+      <textarea id="assignment-evidence-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-assignment">취소</button>
+    <button class="btn btn-primary" id="btn-save-assignment">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/policies.js"></script>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/port_maps.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}케이블 배선도 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>케이블 배선도</h1>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <select id="filter-project" style="min-width:220px; padding:6px 10px; border:1px solid var(--border-color); border-radius:var(--control-radius); font-size:var(--font-size-sm);">
+      <option value="">프로젝트 선택</option>
+    </select>
+    <button class="btn btn-primary" id="btn-add-portmap">배선 등록</button>
+  </div>
+</div>
+
+<div class="card">
+  <div id="grid-portmaps" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+</div>
+
+<!-- 배선 등록/수정 모달 -->
+<dialog id="modal-portmap" class="modal modal-xl">
+  <h2 id="modal-portmap-title">배선 등록</h2>
+  <form id="form-portmap" style="max-height:70vh; overflow-y:auto;">
+    <input type="hidden" id="portmap-id">
+
+    <!-- 공통 정보 -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">공통 정보</legend>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <label>
+          프로젝트
+          <select id="portmap-project-id" required></select>
+        </label>
+        <label>
+          순번
+          <input type="number" id="portmap-seq" placeholder="1">
+        </label>
+        <label>
+          케이블 번호
+          <input type="text" id="portmap-cable-no" placeholder="C-001">
+        </label>
+        <label>
+          케이블 신청
+          <input type="text" id="portmap-cable-request" placeholder="신청번호">
+        </label>
+        <label>
+          연결 유형
+          <select id="portmap-connection-type">
+            <option value="">선택</option>
+            <option value="server-to-switch">서버-스위치</option>
+            <option value="switch-to-switch">스위치-스위치</option>
+            <option value="switch-to-firewall">스위치-방화벽</option>
+            <option value="server-to-storage">서버-스토리지</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+        <label>
+          용도
+          <input type="text" id="portmap-purpose" placeholder="업무망 연결">
+        </label>
+        <label class="full-width">
+          요약
+          <input type="text" id="portmap-summary" placeholder="A서버에서 B스위치 업링크">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- Start (출발지) -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">Start (출발지)</legend>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <label>
+          MID
+          <input type="text" id="portmap-src-mid" placeholder="MID">
+        </label>
+        <label>
+          랙 번호
+          <input type="text" id="portmap-src-rack-no" placeholder="R01">
+        </label>
+        <label>
+          랙 유닛
+          <input type="text" id="portmap-src-rack-unit" placeholder="U20">
+        </label>
+        <label>
+          제조사
+          <input type="text" id="portmap-src-vendor" placeholder="Dell">
+        </label>
+        <label>
+          모델
+          <input type="text" id="portmap-src-model" placeholder="PowerEdge R740">
+        </label>
+        <label>
+          호스트명
+          <input type="text" id="portmap-src-hostname" placeholder="WEB-SVR-01">
+        </label>
+        <label>
+          클러스터
+          <input type="text" id="portmap-src-cluster" placeholder="Cluster-A">
+        </label>
+        <label>
+          슬롯
+          <input type="text" id="portmap-src-slot" placeholder="Slot1">
+        </label>
+        <label>
+          포트명
+          <input type="text" id="portmap-src-port-name" placeholder="Gi0/1">
+        </label>
+        <label>
+          서비스명
+          <input type="text" id="portmap-src-service-name" placeholder="웹서비스">
+        </label>
+        <label>
+          존
+          <input type="text" id="portmap-src-zone" placeholder="DMZ">
+        </label>
+        <label>
+          VLAN
+          <input type="text" id="portmap-src-vlan" placeholder="100">
+        </label>
+        <label>
+          IP
+          <input type="text" id="portmap-src-ip" placeholder="10.10.1.10">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- End (목적지) -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">End (목적지)</legend>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <label>
+          MID
+          <input type="text" id="portmap-dst-mid" placeholder="MID">
+        </label>
+        <label>
+          랙 번호
+          <input type="text" id="portmap-dst-rack-no" placeholder="R02">
+        </label>
+        <label>
+          랙 유닛
+          <input type="text" id="portmap-dst-rack-unit" placeholder="U10">
+        </label>
+        <label>
+          제조사
+          <input type="text" id="portmap-dst-vendor" placeholder="Cisco">
+        </label>
+        <label>
+          모델
+          <input type="text" id="portmap-dst-model" placeholder="Nexus 9300">
+        </label>
+        <label>
+          호스트명
+          <input type="text" id="portmap-dst-hostname" placeholder="CORE-SW-01">
+        </label>
+        <label>
+          클러스터
+          <input type="text" id="portmap-dst-cluster" placeholder="Cluster-B">
+        </label>
+        <label>
+          슬롯
+          <input type="text" id="portmap-dst-slot" placeholder="Slot2">
+        </label>
+        <label>
+          포트명
+          <input type="text" id="portmap-dst-port-name" placeholder="Eth1/1">
+        </label>
+        <label>
+          서비스명
+          <input type="text" id="portmap-dst-service-name" placeholder="코어망">
+        </label>
+        <label>
+          존
+          <input type="text" id="portmap-dst-zone" placeholder="Server">
+        </label>
+        <label>
+          VLAN
+          <input type="text" id="portmap-dst-vlan" placeholder="200">
+        </label>
+        <label>
+          IP
+          <input type="text" id="portmap-dst-ip" placeholder="10.10.2.20">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- 케이블 정보 -->
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">케이블 정보</legend>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+        <label>
+          케이블 종류
+          <select id="portmap-cable-type">
+            <option value="">선택</option>
+            <option value="UTP">UTP</option>
+            <option value="STP">STP</option>
+            <option value="fiber-sm">광(SM)</option>
+            <option value="fiber-mm">광(MM)</option>
+            <option value="DAC">DAC</option>
+            <option value="console">콘솔</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+        <label>
+          속도
+          <select id="portmap-cable-speed">
+            <option value="">선택</option>
+            <option value="100M">100M</option>
+            <option value="1G">1G</option>
+            <option value="10G">10G</option>
+            <option value="25G">25G</option>
+            <option value="40G">40G</option>
+            <option value="100G">100G</option>
+          </select>
+        </label>
+        <label>
+          Duplex
+          <select id="portmap-duplex">
+            <option value="">선택</option>
+            <option value="full">Full</option>
+            <option value="half">Half</option>
+            <option value="auto">Auto</option>
+          </select>
+        </label>
+        <label>
+          케이블 카테고리
+          <select id="portmap-cable-category">
+            <option value="">선택</option>
+            <option value="Cat5e">Cat5e</option>
+            <option value="Cat6">Cat6</option>
+            <option value="Cat6a">Cat6a</option>
+            <option value="Cat7">Cat7</option>
+            <option value="OM3">OM3</option>
+            <option value="OM4">OM4</option>
+            <option value="OS2">OS2</option>
+            <option value="other">기타</option>
+          </select>
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- 상태 / 비고 -->
+    <div class="form-grid">
+      <label>
+        상태
+        <select id="portmap-status">
+          <option value="required">필요</option>
+          <option value="open">오픈</option>
+          <option value="closed">차단</option>
+          <option value="pending">대기</option>
+        </select>
+      </label>
+      <label><!-- spacer --></label>
+      <label class="full-width">
+        비고
+        <textarea id="portmap-note" rows="2"></textarea>
+      </label>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-portmap">취소</button>
+    <button class="btn btn-primary" id="btn-save-portmap">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/port_maps.js"></script>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/project_detail.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}프로젝트 상세 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="/projects" class="text-secondary text-sm">&larr; 프로젝트 목록</a>
+    <h1 id="project-title">프로젝트 상세</h1>
+  </div>
+</div>
+
+<!-- 프로젝트 기본 정보 -->
+<div class="card mb-md">
+  <div class="card-body" id="project-info">
+    <p class="text-secondary">로딩 중...</p>
+  </div>
+</div>
+
+<!-- 단계 관리 -->
+<div class="page-header mt-md">
+  <h1>프로젝트 단계</h1>
+  <button class="btn btn-primary" id="btn-add-phase">단계 등록</button>
+</div>
+
+<div class="card mb-md">
+  <div id="grid-phases" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+</div>
+
+<!-- 산출물 관리 -->
+<div class="page-header mt-md">
+  <h1>산출물</h1>
+  <button class="btn btn-primary" id="btn-add-deliverable">산출물 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-deliverables" class="ag-theme-quartz" style="height: 280px; width: 100%;"></div>
+</div>
+
+<!-- 단계 등록/수정 모달 -->
+<dialog id="modal-phase" class="modal">
+  <h2 id="modal-phase-title">단계 등록</h2>
+  <form id="form-phase" class="form-grid">
+    <input type="hidden" id="phase-id">
+    <label>
+      단계 유형
+      <select id="phase-type" required>
+        <option value="analysis">분석</option>
+        <option value="design">설계</option>
+        <option value="build">구축</option>
+        <option value="test">시험</option>
+        <option value="stabilize">안정화</option>
+      </select>
+    </label>
+    <label>
+      상태
+      <select id="phase-status">
+        <option value="not_started">미시작</option>
+        <option value="in_progress">진행중</option>
+        <option value="completed">완료</option>
+      </select>
+    </label>
+    <label class="full-width">
+      업무 범위
+      <textarea id="phase-task-scope" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      산출물 메모
+      <textarea id="phase-deliverables-note" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      주의사항
+      <textarea id="phase-cautions" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-phase">취소</button>
+    <button class="btn btn-primary" id="btn-save-phase">등록</button>
+  </div>
+</dialog>
+
+<!-- 산출물 등록/수정 모달 -->
+<dialog id="modal-deliverable" class="modal">
+  <h2 id="modal-deliverable-title">산출물 등록</h2>
+  <form id="form-deliverable" class="form-grid">
+    <input type="hidden" id="deliverable-id">
+    <label>
+      소속 단계
+      <select id="deliverable-phase-id" required></select>
+    </label>
+    <label>
+      산출물명
+      <input type="text" id="deliverable-name" required>
+    </label>
+    <label>
+      제출 여부
+      <select id="deliverable-is-submitted">
+        <option value="false">미제출</option>
+        <option value="true">제출</option>
+      </select>
+    </label>
+    <label>
+      제출일
+      <input type="date" id="deliverable-submitted-at">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="deliverable-description" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      비고
+      <textarea id="deliverable-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-deliverable">취소</button>
+    <button class="btn btn-primary" id="btn-save-deliverable">등록</button>
+  </div>
+</dialog>
+
+<script>
+  window.__PROJECT_ID__ = {{ project_id }};
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/project_detail.js"></script>
+{% endblock %}
+
+
+<!-- ============================================ -->
+<!-- FILE: app/templates/projects.html -->
+<!-- ============================================ -->
+{% extends "base.html" %}
+{% block title %}프로젝트 목록 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>프로젝트 목록</h1>
+  <button class="btn btn-primary" id="btn-add-project">프로젝트 등록</button>
+</div>
+
+<div class="card">
+  <div id="grid-projects" class="ag-theme-quartz" style="height: 600px; width: 100%;"></div>
+</div>
+
+<!-- 프로젝트 등록/수정 모달 -->
+<dialog id="modal-project" class="modal">
+  <h2 id="modal-project-title">프로젝트 등록</h2>
+  <form id="form-project" class="form-grid">
+    <input type="hidden" id="project-id">
+    <label>
+      프로젝트 코드
+      <input type="text" id="project-code" required>
+    </label>
+    <label>
+      프로젝트명
+      <input type="text" id="project-name" required>
+    </label>
+    <label>
+      고객사
+      <input type="text" id="client-name" required>
+    </label>
+    <label>
+      상태
+      <select id="project-status">
+        <option value="planned">계획</option>
+        <option value="active">진행중</option>
+        <option value="on_hold">보류</option>
+        <option value="completed">완료</option>
+      </select>
+    </label>
+    <label>
+      시작일
+      <input type="date" id="start-date">
+    </label>
+    <label>
+      종료일
+      <input type="date" id="end-date">
+    </label>
+    <label class="full-width">
+      설명
+      <textarea id="project-desc" rows="3"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-project">취소</button>
+    <button class="btn btn-primary" id="btn-save-project">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/projects.js"></script>
+{% endblock %}
+
+

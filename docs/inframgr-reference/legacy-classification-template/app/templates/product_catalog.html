@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}제품 카탈로그{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/static/css/infra_common.css">{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>제품 카탈로그</h1>
+  <div class="header-actions">
+    <button class="btn btn-secondary" id="btn-open-import">SPEC/EOSL Import</button>
+    <button class="btn btn-primary" id="btn-add-product">+ 제품 등록</button>
+  </div>
+</div>
+
+<p class="data-note">하드웨어, 소프트웨어, 서비스, 모델 등 제품 기준정보와 수명주기 정보를 관리합니다. 카탈로그 메인 화면에서 기준 트리와 제품을 함께 관리하며, 자산 메타도 선택한 분류에서 함께 가져옵니다.</p>
+
+<div class="catalog-layout">
+  <section class="catalog-category-panel">
+    <div class="catalog-category-header">
+      <h2 id="catalog-classification-title">최종 분류</h2>
+      <div class="infra-inline-actions">
+        <button class="btn btn-secondary btn-sm" id="btn-catalog-classification-edit-toggle">편집</button>
+        <button class="btn btn-secondary btn-sm" id="btn-clear-classification-filter">전체 보기</button>
+      </div>
+    </div>
+    <p class="catalog-category-help">카탈로그는 글로벌 기본 분류체계의 최종 분류를 기준으로 탐색합니다.</p>
+    <div class="classification-summary" id="catalog-classification-summary"></div>
+    <div class="classification-toolbar hidden" id="catalog-classification-edit-toolbar">
+      <div class="classification-actions">
+        <button class="btn btn-primary btn-sm" id="btn-catalog-classification-add-root">최상위 추가</button>
+        <button class="btn btn-secondary btn-sm" id="btn-catalog-classification-add-child">하위 추가</button>
+        <span class="classification-actions-spacer"></span>
+        <button class="btn btn-secondary btn-sm" id="btn-catalog-classification-edit-scheme">체계 수정</button>
+      </div>
+    </div>
+    <div id="catalog-classification-tree" class="classification-tree"></div>
+  </section>
+
+  <div class="catalog-category-splitter" id="catalog-category-splitter"></div>
+
+  <div class="catalog-main-panel">
+    <div class="catalog-list-panel">
+      <div class="catalog-toolbar">
+        <input type="text" id="catalog-search" class="input-search" placeholder="제조사/모델 검색">
+        <select id="catalog-kind-filter" class="input-select">
+          <option value="">전체 분류축</option>
+        </select>
+      </div>
+      <div class="catalog-list-meta">
+        <strong id="catalog-list-title">전체 제품</strong>
+        <span id="catalog-list-count">0건</span>
+      </div>
+      <div id="grid-catalog" class="ag-theme-quartz catalog-grid"></div>
+    </div>
+
+    <div id="catalog-splitter" class="catalog-splitter hidden" aria-hidden="true"></div>
+
+    <div class="catalog-detail-handle-wrap">
+      <button class="catalog-detail-minimize" id="btn-minimize-catalog-detail" title="상세 패널 열기/닫기">❯</button>
+    </div>
+
+    <div class="catalog-detail-panel hidden" id="detail-panel">
+      <div class="catalog-detail-empty" id="detail-empty">
+        <p>가운데 목록에서 제품을 선택하세요.</p>
+      </div>
+      <div class="catalog-detail-content is-hidden" id="detail-content">
+        <div class="catalog-detail-header">
+          <h2 id="detail-title"></h2>
+          <div class="header-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-edit-product">수정</button>
+            <button class="btn btn-danger btn-sm" id="btn-delete-product">삭제</button>
+          </div>
+        </div>
+
+        <!-- 탭 -->
+        <div class="catalog-tabs" id="catalog-tabs">
+          <button class="catalog-tab active" data-tab="info">기본정보</button>
+          <button class="catalog-tab" data-tab="spec">유형별 세부</button>
+          <button class="catalog-tab" data-tab="interfaces" data-kind-scope="hardware">인터페이스</button>
+          <button class="catalog-tab" data-tab="eosl">EOS/EOSL</button>
+        </div>
+
+        <!-- 기본정보 탭 -->
+        <div class="catalog-tab-panel active" id="tab-info">
+          <div class="info-grid" id="info-grid"></div>
+        </div>
+
+        <!-- 유형별 세부 탭 -->
+        <div class="catalog-tab-panel" id="tab-spec">
+          <div class="catalog-section-header catalog-kind-panel" id="catalog-hardware-actions" data-kind-scope="hardware">
+            <button class="btn btn-primary btn-sm" id="btn-save-spec">스펙 저장</button>
+          </div>
+          <div class="catalog-kind-panel" id="catalog-panel-hardware" data-kind-scope="hardware">
+            <p class="catalog-kind-lead">하드웨어 제품은 물리 스펙과 인터페이스 수용량을 함께 관리합니다.</p>
+            <div class="spec-form" id="spec-form">
+              <div class="form-grid">
+                <label>Size (U) <input type="number" id="spec-size-unit"></label>
+                <label>폭 (mm) <input type="number" id="spec-width-mm"></label>
+                <label>높이 (mm) <input type="number" id="spec-height-mm"></label>
+                <label>깊이 (mm) <input type="number" id="spec-depth-mm"></label>
+                <label>무게 (kg) <input type="number" step="0.1" id="spec-weight-kg"></label>
+                <label>전원 수량 <input type="number" id="spec-power-count"></label>
+                <label>전원 유형 <input type="text" id="spec-power-type" placeholder="AC / DC"></label>
+                <label>전원 (W) <input type="number" id="spec-power-watt"></label>
+                <label class="full-width">CPU 요약 <input type="text" id="spec-cpu-summary"></label>
+                <label class="full-width">메모리 요약 <input type="text" id="spec-memory-summary"></label>
+                <label class="full-width">처리량 요약 <input type="text" id="spec-throughput-summary"></label>
+                <label class="full-width">OS/Firmware <input type="text" id="spec-os-firmware"></label>
+                <label class="full-width">스펙 URL <input type="url" id="spec-spec-url"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="catalog-kind-panel is-hidden" id="catalog-panel-software" data-kind-scope="software">
+            <div class="catalog-section-header">
+              <button class="btn btn-primary btn-sm" id="btn-save-software-spec">저장</button>
+            </div>
+            <div class="catalog-kind-card">
+              <h3>소프트웨어/미들웨어 기준</h3>
+              <p class="catalog-kind-lead">라이선스, 배포형태, 실행환경 같은 운영 기준 속성을 관리합니다.</p>
+              <div class="form-grid">
+                <label>에디션 <input type="text" id="software-edition"></label>
+                <label>라이선스 유형 <input type="text" id="software-license-type" placeholder="subscription, perpetual"></label>
+                <label>라이선스 단위 <input type="text" id="software-license-unit" placeholder="core, user, instance"></label>
+                <label>배포 형태 <input type="text" id="software-deployment-type" placeholder="on-prem, saas, container"></label>
+                <label>실행 환경 <input type="text" id="software-runtime-env" placeholder="Linux, Kubernetes, JVM"></label>
+                <label>지원 벤더 <input type="text" id="software-support-vendor"></label>
+                <label class="full-width">아키텍처 비고 <textarea id="software-architecture-note" rows="4"></textarea></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="catalog-kind-panel is-hidden" id="catalog-panel-model" data-kind-scope="model">
+            <div class="catalog-section-header">
+              <button class="btn btn-primary btn-sm" id="btn-save-model-spec">저장</button>
+            </div>
+            <div class="catalog-kind-card">
+              <h3>모델/LLM 기준</h3>
+              <p class="catalog-kind-lead">제공자, 모델 계열, 모달리티, 컨텍스트 윈도우 등 후속 자산 참조에 필요한 기준 속성을 관리합니다.</p>
+              <div class="form-grid">
+                <label>제공자 <input type="text" id="model-provider"></label>
+                <label>모델 계열 <input type="text" id="model-family"></label>
+                <label>모달리티 <input type="text" id="model-modality" placeholder="text, image, multimodal"></label>
+                <label>배포 범위 <input type="text" id="model-deployment-scope" placeholder="api, self-hosted, internal"></label>
+                <label>컨텍스트 윈도우 <input type="number" id="model-context-window" min="0"></label>
+                <label>엔드포인트 형식 <input type="text" id="model-endpoint-format" placeholder="chat, responses, batch"></label>
+                <label class="full-width">기능 비고 <textarea id="model-capability-note" rows="4"></textarea></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="catalog-kind-panel is-hidden" id="catalog-panel-generic" data-kind-scope="service business_capability dataset">
+            <div class="catalog-section-header">
+              <button class="btn btn-primary btn-sm" id="btn-save-generic-profile">저장</button>
+            </div>
+            <div class="catalog-kind-card">
+              <h3>서비스/업무기능/데이터셋 기준</h3>
+              <p class="catalog-kind-lead">운영 주체, 중요도, 노출 범위, 데이터 분류 같은 공통 운영 메타를 우선 관리합니다.</p>
+              <div class="form-grid">
+                <label>소유 범위 <input type="text" id="generic-owner-scope" placeholder="전사, 본부, 특정팀"></label>
+                <label>서비스 수준 <input type="text" id="generic-service-level" placeholder="mission-critical, internal, standard"></label>
+                <label>중요도 <input type="text" id="generic-criticality" placeholder="high, medium, low"></label>
+                <label>노출 범위 <input type="text" id="generic-exposure-scope" placeholder="internal, external, restricted"></label>
+                <label>데이터 분류 <input type="text" id="generic-data-classification" placeholder="public, internal, confidential"></label>
+                <label>기본 실행환경 <input type="text" id="generic-default-runtime" placeholder="SaaS, Batch, API, Data Lake"></label>
+                <label class="full-width">요약 비고 <textarea id="generic-summary-note" rows="4"></textarea></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- 인터페이스 탭 -->
+          <div class="catalog-tab-panel" id="tab-interfaces">
+            <div class="catalog-section-header">
+              <button class="btn btn-primary btn-sm" id="btn-add-interface">+ 인터페이스 추가</button>
+            </div>
+            <div id="grid-interfaces" class="ag-theme-quartz catalog-sub-grid"></div>
+          </div>
+
+          <!-- EOS/EOSL 탭 -->
+          <div class="catalog-tab-panel" id="tab-eosl">
+            <div class="catalog-section-header">
+              <button class="btn btn-primary btn-sm" id="btn-save-eosl">EOSL 저장</button>
+            </div>
+            <div class="form-grid">
+              <label>EOS 일자 <input type="date" id="eosl-eos-date"></label>
+              <label>EOSL 일자 <input type="date" id="eosl-eosl-date"></label>
+              <label class="full-width">EOSL 비고 <textarea id="eosl-eosl-note" rows="3"></textarea></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 제품 등록/수정 모달 -->
+<dialog id="modal-product" class="modal modal-sm">
+  <h2 id="modal-product-title">제품 등록</h2>
+  <form id="form-product" class="form-grid">
+    <input type="hidden" id="product-id">
+    <label>제조사 <input type="text" id="product-vendor" required></label>
+    <label>모델명 <input type="text" id="product-name" required></label>
+    <label>버전 <input type="text" id="product-version" placeholder="선택 사항"></label>
+    <label>상위 분류
+      <select id="product-type">
+        <option value="hardware">Hardware</option>
+        <option value="software">Software</option>
+        <option value="service">Service</option>
+        <option value="model">Model</option>
+        <option value="business_capability">Business Capability</option>
+        <option value="dataset">Dataset</option>
+      </select>
+    </label>
+    <label><span id="product-classification-label">최종 분류</span>
+      <select id="product-classification-node-code" required>
+        <option value="">-- 분류 불러오는 중 --</option>
+      </select>
+    </label>
+    <p class="modal-hint full-width" id="product-classification-hint">카탈로그는 글로벌 기본 분류체계의 최종 분류에 연결합니다.</p>
+    <label class="full-width">참조 URL <input type="url" id="product-reference-url" placeholder="https://..."></label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-product">취소</button>
+    <button class="btn btn-primary" id="btn-save-product">등록</button>
+  </div>
+</dialog>
+
+<!-- 인터페이스 등록/수정 모달 -->
+<dialog id="modal-interface" class="modal modal-sm">
+  <h2 id="modal-iface-title">인터페이스 추가</h2>
+  <form id="form-interface" class="form-grid">
+    <input type="hidden" id="iface-id">
+    <label>인터페이스 유형 <input type="text" id="iface-type" required placeholder="GE, 10GE, 40GE, 100GE ..."></label>
+    <label>속도 <input type="text" id="iface-speed" placeholder="1Gbps"></label>
+    <label>수량 <input type="number" id="iface-count" required min="1" value="1"></label>
+    <label>커넥터 유형 <input type="text" id="iface-connector" placeholder="SFP+, RJ45 ..."></label>
+    <label>구분
+      <select id="iface-capacity-type">
+        <option value="fixed">고정 (fixed)</option>
+        <option value="base">기본 (base)</option>
+        <option value="max">최대 (max)</option>
+      </select>
+    </label>
+    <label class="full-width">비고 <input type="text" id="iface-note"></label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-iface">취소</button>
+    <button class="btn btn-primary" id="btn-save-iface">추가</button>
+  </div>
+</dialog>
+
+<dialog id="modal-catalog-import" class="modal modal-lg">
+  <h2>카탈로그 Import</h2>
+  <p class="modal-desc">`input/spec.xlsx` 기준으로 SPEC 또는 EOSL 시트를 미리보기 후 반영합니다.</p>
+  <form id="form-catalog-import">
+    <div class="form-grid">
+      <label>도메인
+        <select id="catalog-import-domain">
+          <option value="spec">SPEC</option>
+          <option value="eosl">EOSL</option>
+          <option value="software">SOFTWARE</option>
+          <option value="model">MODEL</option>
+        </select>
+      </label>
+      <label>중복 처리
+        <select id="catalog-import-dup">
+          <option value="skip">기존 항목 유지</option>
+          <option value="overwrite">기존 항목 덮어쓰기</option>
+        </select>
+      </label>
+      <label class="full-width">엑셀 파일
+        <input type="file" id="catalog-import-file" accept=".xlsx" required>
+      </label>
+    </div>
+  </form>
+  <div class="catalog-import-actions">
+    <button class="btn btn-secondary" id="btn-preview-import">미리보기</button>
+    <button class="btn btn-primary" id="btn-confirm-import" disabled>반영</button>
+  </div>
+  <div id="catalog-import-summary" class="catalog-import-summary is-hidden"></div>
+  <div id="catalog-import-errors" class="catalog-import-errors is-hidden"></div>
+  <div id="catalog-import-preview-wrap" class="catalog-import-preview-wrap is-hidden">
+    <table class="catalog-import-preview-table">
+      <thead id="catalog-import-preview-head"></thead>
+      <tbody id="catalog-import-preview-body"></tbody>
+    </table>
+  </div>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-close-import">닫기</button>
+  </div>
+</dialog>
+
+<dialog id="modal-catalog-classification-scheme" class="modal modal-lg">
+  <h2>글로벌 기본 분류체계 수정</h2>
+  <form class="form-grid-single">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">체계 정보</legend>
+      <div class="form-grid">
+        <label>분류체계명 <input type="text" id="catalog-classification-scheme-name" required></label>
+        <label>상태
+          <select id="catalog-classification-scheme-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">설명
+          <textarea id="catalog-classification-scheme-description" rows="3"></textarea>
+        </label>
+        <label>1레벨 별칭 <input type="text" id="catalog-classification-scheme-level-1-alias"></label>
+        <label>2레벨 별칭 <input type="text" id="catalog-classification-scheme-level-2-alias"></label>
+        <label>3레벨 별칭 <input type="text" id="catalog-classification-scheme-level-3-alias"></label>
+        <label>4레벨 별칭 <input type="text" id="catalog-classification-scheme-level-4-alias"></label>
+        <label>5레벨 별칭 <input type="text" id="catalog-classification-scheme-level-5-alias"></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button type="button" id="btn-catalog-classification-scheme-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-catalog-classification-scheme-submit" class="btn btn-primary">저장</button>
+  </div>
+</dialog>
+
+<dialog id="modal-catalog-classification-node" class="modal modal-lg">
+  <h2 id="modal-catalog-classification-node-title">분류 등록</h2>
+  <form class="form-grid-single">
+    <input type="hidden" id="catalog-classification-node-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">분류 정보</legend>
+      <div class="form-grid">
+        <label>코드 <input type="text" id="catalog-classification-node-code" required></label>
+        <label>분류명 <input type="text" id="catalog-classification-node-name" required></label>
+        <label>상위분류 <select id="catalog-classification-node-parent"></select></label>
+        <label>정렬순서 <input type="number" id="catalog-classification-node-sort-order" value="100"></label>
+        <label>자산유형 키 <input type="text" id="catalog-classification-node-asset-type-key" placeholder="예: server"></label>
+        <label>자산코드 <input type="text" id="catalog-classification-node-asset-type-code" maxlength="3" placeholder="예: SVR"></label>
+        <label>자산유형명 <input type="text" id="catalog-classification-node-asset-type-label" placeholder="예: 서버"></label>
+        <label>상위 kind
+          <select id="catalog-classification-node-asset-kind">
+            <option value="">미지정</option>
+            <option value="hardware">hardware</option>
+            <option value="software">software</option>
+            <option value="service">service</option>
+            <option value="model">model</option>
+            <option value="business_capability">business_capability</option>
+            <option value="dataset">dataset</option>
+          </select>
+        </label>
+        <label>카탈로그 연결
+          <select id="catalog-classification-node-catalog-assignable">
+            <option value="false">불가</option>
+            <option value="true">가능</option>
+          </select>
+        </label>
+        <label>상태
+          <select id="catalog-classification-node-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">비고 <textarea id="catalog-classification-node-note" rows="3"></textarea></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button type="button" id="btn-catalog-classification-node-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-catalog-classification-node-submit" class="btn btn-primary">저장</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_product_catalog.js"></script>
+{% endblock %}

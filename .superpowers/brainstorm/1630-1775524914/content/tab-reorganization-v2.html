@@ -1,0 +1,139 @@
+<h2>자산 상세 탭 재구성 v2</h2>
+<p class="subtitle">C안 기반으로 피드백 반영. 별칭→개요, 자산관계→운영, SW 라이선스 분리.</p>
+
+<div class="mockup">
+  <div class="mockup-header">TO-BE: 5탭 최종안</div>
+  <div class="mockup-body" style="font-size:12px;line-height:1.6;">
+    <div style="display:flex;gap:0;border-bottom:2px solid #2563eb;margin-bottom:12px;">
+      <span style="padding:6px 14px;background:#e3f0ff;font-weight:500;">개요</span>
+      <span style="padding:6px 14px;background:#e3f0ff;font-weight:500;">운영</span>
+      <span style="padding:6px 14px;background:#2563eb;color:white;font-weight:600;">네트워크</span>
+      <span style="padding:6px 14px;background:#e3f0ff;font-weight:500;">담당</span>
+      <span style="padding:6px 14px;background:#e3f0ff;font-weight:500;">이력</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;">
+
+      <!-- 개요 -->
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#333;">개요</div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>식별 / 기준 정보</strong><br>
+          <span style="color:#666;">코드, 자산명, 역할, 귀속사업, 분류</span>
+        </div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>사양 / 식별자</strong><br>
+          <span style="color:#666;">제조사, 모델, 시리얼, 장비ID</span>
+        </div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>HW 요약</strong><br>
+          <span style="color:#666;">크기, LC, HA, 전원, 펌웨어</span>
+        </div>
+        <div style="padding:4px 6px;background:#dff0d8;margin-bottom:3px;font-size:11px;border-radius:3px;border-left:3px solid #5cb85c;">
+          <strong>별칭</strong> ← 연결에서 이동<br>
+          <span style="color:#666;">고객사명, 레거시명, 내부명</span>
+        </div>
+        <div style="padding:4px 6px;background:#dff0d8;font-size:11px;border-radius:3px;border-left:3px solid #5cb85c;">
+          <strong>자산 라이선스</strong> ← NEW<br>
+          <span style="color:#666;">HW 자체 라이선스 정보</span>
+        </div>
+      </div>
+
+      <!-- 운영 -->
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#333;">운영</div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>설치 위치</strong><br>
+          <span style="color:#666;">센터, 전산실, 랙, 유닛, 입고일</span>
+        </div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>운영 속성</strong><br>
+          <span style="color:#666;">환경, 상태, 부서, 유지보수업체</span>
+        </div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>호스트 / 서비스</strong><br>
+          <span style="color:#666;">호스트명, 클러스터, 서비스명, 존</span>
+        </div>
+        <div style="padding:4px 6px;background:#dff0d8;margin-bottom:3px;font-size:11px;border-radius:3px;border-left:3px solid #5cb85c;">
+          <strong>설치 SW</strong> ← 연결에서 이동<br>
+          <span style="color:#666;">SW명, 버전, 관계유형</span><br>
+          <span style="color:#999;font-size:10px;">라이선스 필드 제거 — SW를 자산으로 별도 등록 시 거기서 관리</span>
+        </div>
+        <div style="padding:4px 6px;background:#dff0d8;font-size:11px;border-radius:3px;border-left:3px solid #5cb85c;">
+          <strong>자산 관계</strong> ← 연결에서 이동<br>
+          <span style="color:#666;">호스팅, 보호, 의존, HA-pair</span>
+        </div>
+      </div>
+
+      <!-- 네트워크 -->
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#2563eb;">네트워크 ★</div>
+        <div style="padding:4px 6px;background:#e3f0ff;margin-bottom:3px;font-size:11px;border-radius:3px;border-left:3px solid #2563eb;">
+          <strong>인터페이스</strong> NEW<br>
+          <span style="color:#555;">physical, lag, virtual 계층 목록</span><br>
+          <span style="color:#555;">CRUD + 카탈로그 자동생성</span>
+        </div>
+        <div style="padding:4px 6px;background:#e3f0ff;font-size:11px;border-radius:3px;border-left:3px solid #2563eb;">
+          <strong>IP 할당</strong> 인터페이스 기반<br>
+          <span style="color:#555;">인터페이스 선택 → IP 할당</span><br>
+          <span style="color:#555;">계층 표시 (IF → IPs)</span>
+        </div>
+      </div>
+
+      <!-- 담당 -->
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#333;">담당</div>
+        <div style="padding:4px 6px;background:#f5f5f5;margin-bottom:3px;font-size:11px;border-radius:3px;">
+          <strong>담당자</strong><br>
+          <span style="color:#666;">운영/보안/시스템 담당자 매핑</span>
+        </div>
+        <div style="padding:4px 6px;background:#f5f5f5;font-size:11px;border-radius:3px;">
+          <strong>관련 업체</strong><br>
+          <span style="color:#666;">유지보수사, 공급사, 운영사</span>
+        </div>
+      </div>
+
+      <!-- 이력 -->
+      <div>
+        <div style="font-weight:700;font-size:12px;margin-bottom:6px;color:#333;">이력</div>
+        <div style="padding:4px 6px;background:#f5f5f5;font-size:11px;border-radius:3px;">
+          <strong>변경 이력</strong><br>
+          <span style="color:#666;">타임라인 + 이벤트 등록</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>주요 변경 요약</h3>
+  <table style="width:100%;font-size:12px;border-collapse:collapse;">
+    <thead>
+      <tr style="background:#f0f0f0;">
+        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #ddd;">항목</th>
+        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #ddd;">AS-IS</th>
+        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #ddd;">TO-BE</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">별칭</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">연결 탭</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#5cb85c;font-weight:600;">개요 탭</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">자산 관계</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">연결 탭</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#5cb85c;font-weight:600;">운영 탭</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">설치 SW</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">연결 탭 (라이선스 포함)</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#5cb85c;font-weight:600;">운영 탭 (라이선스 제거)</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">자산 라이선스</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">없음 (SW에 혼합)</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#5cb85c;font-weight:600;">개요 탭 (HW 자체 라이선스)</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">인터페이스</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">없음</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#2563eb;font-weight:600;">네트워크 탭 (NEW)</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">IP 할당</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">연결 탭 (자산 직접)</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#2563eb;font-weight:600;">네트워크 탭 (인터페이스 기반)</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">service_ip / mgmt_ip</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">운영 탭</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#c44;font-weight:600;">제거 (인터페이스 IP로 대체)</td></tr>
+      <tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">담당자 메모</td><td style="padding:4px 8px;border-bottom:1px solid #eee;">운영 탭 (텍스트)</td><td style="padding:4px 8px;border-bottom:1px solid #eee;color:#c44;font-weight:600;">제거 (담당 탭으로 통합)</td></tr>
+      <tr><td style="padding:4px 8px;">connections 탭</td><td style="padding:4px 8px;">6개 섹션</td><td style="padding:4px 8px;color:#5cb85c;font-weight:600;">"담당" 탭으로 리네임 (2개 섹션)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <h3>검토 포인트</h3>
+  <ul style="font-size:13px;line-height:1.8;">
+    <li><strong>담당자 메모(운영탭 텍스트 필드)</strong> — 담당 탭의 담당자 매핑으로 완전 대체? 아니면 주/부담당 텍스트 필드를 개요나 운영에 유지?</li>
+    <li><strong>"자산 라이선스" 섹션</strong> — 지금은 별도 모델/API 없음. 이번 스코프에 포함할지, 단순 텍스트 필드로 개요에 추가할지?</li>
+    <li><strong>"담당" 탭 네이밍</strong> — 업체+담당자만 남으니 "업체·담당" 또는 "조직" 등 대안?</li>
+  </ul>
+</div>

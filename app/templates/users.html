@@ -6,24 +6,30 @@
   <div class="header-actions">
     <button id="btn-import-csv" class="btn btn-secondary">↑ 연락처 가져오기</button>
     <button id="btn-add" class="btn btn-primary">+ 신규 등록</button>
+    <button id="btn-bulk-permissions" class="btn btn-secondary">권한 일괄변경</button>
     <button id="btn-save" class="btn btn-success">저장</button>
     <button id="btn-reset-pw" class="btn btn-secondary">비밀번호 초기화</button>
     <button id="btn-delete" class="btn btn-danger">삭제</button>
   </div>
 </div>
 
-<p class="data-note">※ 시스템 사용자 계정을 등록·관리합니다. '관리자' 역할은 전체 사업과 설정에 접근 가능하고, '일반' 역할은 본인 담당 사업만 관리합니다. 셀을 직접 클릭하면 이름·부서·역할 등을 수정할 수 있습니다. [연락처 가져오기]로 아웃룩 CSV에서 사용자를 일괄 등록할 수 있습니다. 초기 비밀번호는 로그인 ID와 동일합니다.</p>
+<p class="data-note">※ 시스템 사용자 계정을 등록·관리합니다. 권한은 <code>공통 관리 / 영업 사용 / 영업 관리 / 프로젝트 사용 / 프로젝트 관리 / 카탈로그 제품 관리 / 카탈로그 기준 관리</code> 조합으로 부여합니다. 목록 왼쪽 체크박스로 여러 사용자를 선택한 뒤 [권한 일괄변경]으로 한 번에 적용할 수 있습니다. [연락처 가져오기]로 아웃룩 CSV에서 사용자를 일괄 등록할 수 있습니다. 초기 비밀번호는 로그인 ID와 동일합니다.</p>
 <div id="grid-users" class="ag-theme-quartz grid-container"></div>
 
 <!-- 연락처 CSV 가져오기 모달 -->
-<dialog id="modal-import-csv" class="modal modal-sm">
+<dialog id="modal-import-csv" class="modal modal-md">
   <h2>연락처 가져오기</h2>
-  <p class="modal-desc">아웃룩 연락처 내보내기(.csv) 파일을 업로드하세요.<br>이름·부서·이메일(로그인 ID)을 가져옵니다. 이메일이 동일한 사용자는 건너뜁니다.</p>
-  <div class="form-grid">
-    <label class="full-width">파일 선택 (.csv)
-      <input type="file" id="import-csv-file" accept=".csv">
-    </label>
-  </div>
+  <p class="modal-desc">아웃룩 연락처 내보내기(.csv) 파일을 업로드하세요. 이름·부서·이메일(로그인 ID)을 가져옵니다. 이메일이 동일한 사용자는 건너뜁니다.</p>
+  <form id="form-import-csv">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">파일 업로드</legend>
+      <div class="form-grid">
+        <label class="full-width">파일 선택 (.csv)
+          <input type="file" id="import-csv-file" accept=".csv">
+        </label>
+      </div>
+    </fieldset>
+  </form>
   <div class="modal-actions">
     <button type="button" id="btn-import-csv-cancel" class="btn btn-secondary">취소</button>
     <button type="button" id="btn-import-csv-confirm" class="btn btn-primary">가져오기</button>
@@ -31,24 +37,61 @@
 </dialog>
 
 <!-- 신규 등록 모달 -->
-<dialog id="modal-add" class="modal modal-sm">
+<dialog id="modal-add" class="modal modal-md">
   <h2>사용자 등록</h2>
-  <div class="form-grid">
-    <label class="full-width">이름 <input type="text" id="new-name" required></label>
-    <label>부서 <input type="text" id="new-department"></label>
-    <label>직급 <input type="text" id="new-position"></label>
-    <label>역할
-      <select id="new-role">
-        <option value="user">일반</option>
-        <option value="admin">관리자</option>
-      </select>
-    </label>
-    <label class="full-width">로그인 ID (이메일) <input type="text" id="new-login-id" placeholder="example@company.com"></label>
-    <p class="modal-hint">초기 비밀번호는 로그인 ID와 동일하게 설정됩니다.</p>
-  </div>
+  <p class="modal-desc">시스템 사용자를 등록합니다. 초기 비밀번호는 로그인 ID와 동일하게 설정됩니다.</p>
+  <form id="form-add-user">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">기본 정보</legend>
+      <div class="form-grid">
+        <label><span class="label-text">이름<span class="req">*</span></span> <input type="text" id="new-name" required></label>
+        <label>로그인 ID (이메일) <input type="text" id="new-login-id" placeholder="example@company.com"></label>
+        <label>부서 <input type="text" id="new-department"></label>
+        <label>직급 <input type="text" id="new-position"></label>
+      </div>
+    </fieldset>
+    <div class="modal-group">
+      <span class="modal-group-title">권한</span>
+      <div class="role-checkbox-group">
+        <label class="role-check"><input type="checkbox" id="new-perm-admin"> 관리자</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-common-manage"> 공통 관리</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-accounting-use"> 영업 사용</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-accounting-manage"> 영업 관리</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-infra-use"> 프로젝트 사용</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-infra-manage"> 프로젝트 관리</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-catalog-products-manage"> 카탈로그 제품 관리</label>
+        <label class="role-check"><input type="checkbox" id="new-perm-catalog-taxonomy-manage"> 카탈로그 기준 관리</label>
+      </div>
+    </div>
+  </form>
   <div class="modal-actions">
     <button type="button" id="btn-cancel" class="btn btn-secondary">취소</button>
     <button type="button" id="btn-submit" class="btn btn-primary">등록</button>
+  </div>
+</dialog>
+
+<!-- 권한 일괄변경 모달 -->
+<dialog id="modal-bulk-permissions" class="modal modal-md">
+  <h2>권한 일괄변경</h2>
+  <p class="modal-desc">선택한 사용자에게 동일한 권한 조합을 적용합니다.</p>
+  <form id="form-bulk-permissions">
+    <div class="modal-group">
+      <span class="modal-group-title">권한</span>
+      <div class="role-checkbox-group">
+        <label class="role-check"><input type="checkbox" id="bulk-perm-admin"> 관리자</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-common-manage"> 공통 관리</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-accounting-use"> 영업 사용</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-accounting-manage"> 영업 관리</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-infra-use"> 프로젝트 사용</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-infra-manage"> 프로젝트 관리</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-catalog-products-manage"> 카탈로그 제품 관리</label>
+        <label class="role-check"><input type="checkbox" id="bulk-perm-catalog-taxonomy-manage"> 카탈로그 기준 관리</label>
+      </div>
+    </div>
+  </form>
+  <div class="modal-actions">
+    <button type="button" id="btn-bulk-permissions-cancel" class="btn btn-secondary">취소</button>
+    <button type="button" id="btn-bulk-permissions-apply" class="btn btn-primary">적용</button>
   </div>
 </dialog>
 {% endblock %}

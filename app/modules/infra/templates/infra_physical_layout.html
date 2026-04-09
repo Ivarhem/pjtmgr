@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}배치 - 프로젝트관리{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i data-lucide="layout-grid" class="icon-sm"></i> 배치</h1>
+  <div class="infra-inline-actions">
+    <select id="rack-label-base" class="select-sm" title="U 라벨 기준">
+      <option value="start">U 기준: Start (하→상, EIA-310)</option>
+      <option value="end">U 기준: End (상→하)</option>
+    </select>
+    <button class="btn btn-secondary btn-sm" id="btn-add-center">센터 등록</button>
+    <button class="btn btn-secondary btn-sm" id="btn-add-room" disabled>전산실 등록</button>
+    <button class="btn btn-primary btn-sm" id="btn-add-rack" disabled>랙 등록</button>
+  </div>
+</div>
+
+<p class="text-secondary text-sm mb-md data-note">
+  U 위치는 EIA-310 표준에 따라 랙 하단부터 1U로 번호를 부여합니다. 프로젝트별 라벨링 기준(Start/End)은 표시 방향만 변경하며, 저장되는 U 번호는 항상 EIA-310 기준입니다.
+</p>
+<div class="catalog-layout" id="layout-shell">
+  <!-- Left: Tree -->
+  <section class="catalog-category-panel" id="layout-tree-panel">
+    <div class="catalog-category-header">
+      <h2>배치 구조</h2>
+    </div>
+    <div id="layout-tree" class="classification-tree">
+      <p class="text-muted p-md">고객사를 선택하면 배치 구조를 표시합니다.</p>
+    </div>
+  </section>
+
+  <div class="catalog-category-splitter" id="layout-category-splitter"></div>
+
+  <!-- Right: Content -->
+  <div class="catalog-main-panel" id="layout-content">
+    <div class="placeholder-message mx-auto">
+      <p>왼쪽 트리에서 센터, 전산실 또는 랙을 선택하세요.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Center -->
+<dialog id="modal-center" class="modal modal-md">
+  <h2 id="modal-center-title">센터 등록</h2>
+  <p class="modal-desc">센터 저장 후 기본 전산실 `MAIN`이 함께 생성됩니다.</p>
+  <form id="form-center">
+    <input type="hidden" id="center-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">센터 정보</legend>
+      <div class="form-grid">
+        <label>센터코드 <input type="text" id="center-code" readonly placeholder="저장 시 자동생성"></label>
+        <label><span class="label-text">센터명<span class="req">*</span></span> <input type="text" id="center-name" required></label>
+        <label>위치 <input type="text" id="center-location"></label>
+        <label>상태
+          <select id="center-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">비고 <textarea id="center-note" rows="3"></textarea></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-center">취소</button>
+    <button class="btn btn-primary" id="btn-save-center">저장</button>
+  </div>
+</dialog>
+
+<!-- Modal: Room -->
+<dialog id="modal-room" class="modal modal-md">
+  <h2 id="modal-room-title">전산실 등록</h2>
+  <p class="modal-desc">선택한 센터 아래에 전산실 정보를 등록합니다.</p>
+  <form id="form-room">
+    <input type="hidden" id="room-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">전산실 정보</legend>
+      <div class="form-grid">
+        <label>전산실코드 <input type="text" id="room-code" readonly placeholder="저장 시 자동생성"></label>
+        <label><span class="label-text">전산실명<span class="req">*</span></span> <input type="text" id="room-name" required></label>
+        <label>층 <input type="text" id="room-floor" placeholder="예: B2 / 3F"></label>
+        <label>랙 열 수 <input type="number" id="room-racks-per-row" min="1" value="4" placeholder="기본 4"></label>
+        <label>격자 열 수 <input type="number" id="room-grid-cols" min="1" value="10" placeholder="기본 10"></label>
+        <label>격자 행 수 <input type="number" id="room-grid-rows" min="1" value="12" placeholder="기본 12"></label>
+        <label>상태
+          <select id="room-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">비고 <textarea id="room-note" rows="3"></textarea></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-room">취소</button>
+    <button class="btn btn-primary" id="btn-save-room">저장</button>
+  </div>
+</dialog>
+
+<!-- Modal: Rack -->
+<dialog id="modal-rack" class="modal modal-md">
+  <h2 id="modal-rack-title">랙 등록</h2>
+  <p class="modal-desc">선택한 전산실 아래에 랙 정보를 등록합니다.</p>
+  <form id="form-rack">
+    <input type="hidden" id="rack-id">
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">랙 정보</legend>
+      <div class="form-grid">
+        <label>랙코드 <input type="text" id="rack-code" readonly placeholder="저장 시 자동생성"></label>
+        <label>랙명 <input type="text" id="rack-name"></label>
+        <label><span class="label-text">총 U<span class="req">*</span></span> <input type="number" id="rack-total-units" min="1" value="42" required></label>
+        <label>상태
+          <select id="rack-active">
+            <option value="true">활성</option>
+            <option value="false">비활성</option>
+          </select>
+        </label>
+        <label class="full-width">위치상세 <input type="text" id="rack-location-detail"></label>
+        <label class="full-width">비고 <textarea id="rack-note" rows="3"></textarea></label>
+      </div>
+    </fieldset>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-rack">취소</button>
+    <button class="btn btn-primary" id="btn-save-rack">저장</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_physical_layout.js"></script>
+{% endblock %}

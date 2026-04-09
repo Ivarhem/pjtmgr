@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}기준정보 관리{% endblock %}
+{% block styles %}<link rel="stylesheet" href="/static/css/infra_common.css">{% endblock %}
+{% block content %}
+<div class="tab-nav">
+  <a href="/product-catalog" class="tab-btn">제품 카탈로그</a>
+  <a href="/catalog-management/integrity" class="tab-btn active">기준정보 관리</a>
+</div>
+<p class="data-note">제품 카탈로그에 등록되는 제조사를 관리하고, 유사·중복 제품을 비교하여 병합하거나 무시 처리할 수 있습니다. 제조사별 별칭(alias)을 등록하면 제품 등록 시 검색 정확도가 높아집니다.</p>
+
+<div class="mdm-layout">
+  <!-- 좌: 제조사 목록 -->
+  <section class="mdm-list-panel" id="mdm-list-panel">
+    <div class="mdm-panel-toolbar">
+      <input type="text" class="input-search" id="catalog-integrity-vendor-search" placeholder="제조사 검색">
+      <button type="button" class="btn btn-primary btn-sm vendor-write-only" id="btn-integrity-vendor-add">+ 신규</button>
+      <button type="button" class="btn btn-icon btn-sm" id="btn-mdm-auto-collapse" title="선택 시 목록 자동 접기">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M10 2v12M2 8h5M7 5l-3 3 3 3"/></svg>
+      </button>
+    </div>
+    <div id="grid-catalog-integrity-vendors" class="ag-theme-quartz mdm-list-grid"></div>
+  </section>
+
+  <!-- 스플리터 -->
+  <div class="mdm-splitter" id="mdm-splitter"></div>
+
+  <!-- 우: 상세 -->
+  <section class="mdm-detail-panel">
+    <div id="integrity-vendor-empty" class="mdm-detail-empty">
+      <p>좌측에서 제조사를 선택하거나<br>새 제조사를 추가하세요.</p>
+    </div>
+    <div id="integrity-vendor-detail" class="is-hidden">
+      <!-- 상단: 제조사 정보 & 편집 -->
+      <div class="mdm-detail-section mdm-vendor-info">
+        <div class="mdm-vendor-header">
+          <h3 id="integrity-vendor-title">새 제조사</h3>
+          <div class="mdm-vendor-header-actions">
+            <button type="button" class="btn btn-primary btn-sm vendor-write-only" id="btn-integrity-vendor-save">저장</button>
+            <button type="button" class="btn btn-danger btn-sm vendor-write-only is-hidden" id="btn-integrity-vendor-delete">삭제</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-integrity-vendor-cancel">취소</button>
+          </div>
+        </div>
+        <div class="mdm-vendor-body">
+          <!-- 좌: 폼 필드 -->
+          <div class="mdm-vendor-fields">
+            <div class="mdm-field-row">
+              <span class="mdm-field-label">제조사명 (영문) <span class="required">*</span></span>
+              <input type="text" class="input-text" id="integrity-vendor-canonical" placeholder="영문 제조사명">
+            </div>
+            <div class="mdm-field-row">
+              <span class="mdm-field-label">제조사명 (한글)</span>
+              <input type="text" class="input-text" id="integrity-vendor-korean" placeholder="비어있으면 영문명 사용">
+            </div>
+            <label class="catalog-integrity-checkbox vendor-apply-row is-hidden" id="integrity-vendor-apply-row">
+              <input type="checkbox" id="integrity-vendor-apply-products" checked>
+              기존 제품의 제조사명도 일괄 변경
+            </label>
+            <div class="mdm-field-row mdm-field-row-top">
+              <span class="mdm-field-label">별칭</span>
+              <div class="tag-input-wrap">
+                <span class="tag-list" id="integrity-vendor-alias-list"></span>
+                <input type="text" class="tag-input-field vendor-write-only" id="integrity-vendor-alias-input" placeholder="alias 입력 후 Enter">
+              </div>
+            </div>
+          </div>
+          <!-- 우: 메모 -->
+          <div class="mdm-vendor-memo">
+            <textarea id="integrity-vendor-memo" rows="5" placeholder="메모"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단: 제품 리스트 & 유사제품 검색 -->
+      <div class="mdm-detail-section mdm-product-section">
+        <div class="mdm-panel-toolbar">
+          <h3 id="integrity-product-title">제품 목록</h3>
+          <input type="text" class="input-search" id="integrity-product-search" placeholder="제품 검색">
+        </div>
+        <div id="grid-integrity-products" class="ag-theme-quartz mdm-product-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 유사 제품 스플리터 + 패널 -->
+  <div class="mdm-similar-splitter is-hidden" id="mdm-similar-splitter"></div>
+  <div class="mdm-similar-handle-wrap is-hidden" id="mdm-similar-handle-wrap">
+    <button class="catalog-detail-minimize" id="btn-mdm-similar-toggle" title="유사 제품 패널 접기/펴기">❮</button>
+  </div>
+  <section class="mdm-similar-panel is-hidden" id="mdm-similar-panel">
+    <div class="mdm-similar-header">
+      <h3 id="mdm-similar-title">유사 제품</h3>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-mdm-dismissed-toggle" data-showing="false" title="무시 목록 보기">무시 목록</button>
+    </div>
+    <div class="mdm-similar-selected" id="mdm-similar-selected">
+      <div class="mdm-similar-selected-name" id="mdm-similar-selected-name"></div>
+      <div class="mdm-similar-selected-meta" id="mdm-similar-selected-meta"></div>
+    </div>
+    <div class="mdm-similar-list" id="mdm-similar-list">
+    </div>
+    <div class="mdm-similar-empty is-hidden" id="mdm-similar-empty">
+      <p>유사 제품이 없습니다.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/infra_catalog_integrity.js"></script>
+{% endblock %}

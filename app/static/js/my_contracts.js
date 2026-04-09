@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const gridOptions = buildContractGridOptions({
     columnDefs,
     backPath: '/my-contracts',
-    customerInputId: 'filter-customer-text',
+    partnerInputId: 'filter-partner-text',
     nameInputId: 'filter-name-text',
     onColChange: () => saveColState(gridApi, COL_STATE_KEY),
   });
@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const me = await fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null);
   currentUserId = me?.id ?? null;
 
-  loadCustomerDatalist();
-  initEndCustomerPicker();
+  loadPartnerDatalist();
+  initEndPartnerPicker();
   initYearDropdown();
   await populateContractTypeCheckboxes('#drop-type .chk-drop-menu');
   await populateContractTypeSelect('add-contract-type');
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initColChooser(gridApi, columnDefs, COL_STATE_KEY, () => saveColState(gridApi, COL_STATE_KEY));
 
   // 텍스트 필터: Enter 시 즉시 필터 적용
-  initTextFilter('filter-customer-text', () => { loadData(); loadSummary(); });
+  initTextFilter('filter-partner-text', () => { loadData(); loadSummary(); });
   initTextFilter('filter-name-text', () => { loadData(); loadSummary(); });
   document.getElementById('btn-filter').addEventListener('click', () => { loadData(); loadSummary(); });
   document.getElementById('btn-filter-reset').addEventListener('click', () => {
@@ -78,7 +78,7 @@ async function loadData() {
   if (currentUserId) params.set('owner_id', currentUserId);
 
   saveFilterState(FILTER_STATE_KEY);
-  const res = await fetch(`/api/v1/contract-periods?${params}`);
+  const res = await fetch(`/api/v1/ledger/periods?${params}`);
   const data = await res.json();
   gridApi.setGridOption('rowData', data);
   gridApi.onFilterChanged();

@@ -1,0 +1,206 @@
+<h2>자산 상세 탭 재구성</h2>
+<p class="subtitle">현재 4탭(overview, operations, connections, history)을 도메인별로 재배치합니다.<br>
+인터페이스/IP 추가와 service_ip/mgmt_ip 제거를 반영합니다.</p>
+
+<div class="section">
+  <h3>현재 구조 (문제점 표시)</h3>
+  <div class="mockup">
+    <div class="mockup-header">AS-IS: 4탭</div>
+    <div class="mockup-body" style="font-size:12px;line-height:1.6;">
+      <div style="display:flex;gap:0;border-bottom:2px solid #666;margin-bottom:8px;">
+        <span style="padding:4px 10px;background:#666;color:white;">개요</span>
+        <span style="padding:4px 10px;background:#666;color:white;">운영</span>
+        <span style="padding:4px 10px;background:#c44;color:white;">연결 (6개 과밀)</span>
+        <span style="padding:4px 10px;background:#666;color:white;">이력</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;">개요</div>
+          <div style="padding:3px 6px;background:#f5f5f5;margin-bottom:2px;">식별/기준정보</div>
+          <div style="padding:3px 6px;background:#f5f5f5;margin-bottom:2px;">사양/식별자</div>
+          <div style="padding:3px 6px;background:#f5f5f5;">HW 요약</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;">운영</div>
+          <div style="padding:3px 6px;background:#f5f5f5;margin-bottom:2px;">설치위치</div>
+          <div style="padding:3px 6px;background:#f5f5f5;margin-bottom:2px;">운영속성</div>
+          <div style="padding:3px 6px;background:#fdd;margin-bottom:2px;border:1px dashed #c44;">⚠ 네트워크/서비스<br><small>service_ip, mgmt_ip 제거됨</small></div>
+          <div style="padding:3px 6px;background:#ffd;border:1px dashed #a80;">⚠ 담당자 메모<br><small>connections와 중복</small></div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;color:#c44;">연결 (과밀)</div>
+          <div style="padding:3px 6px;background:#fdd;margin-bottom:2px;">소프트웨어</div>
+          <div style="padding:3px 6px;background:#fdd;margin-bottom:2px;">IP 할당</div>
+          <div style="padding:3px 6px;background:#fdd;margin-bottom:2px;">담당자</div>
+          <div style="padding:3px 6px;background:#fdd;margin-bottom:2px;">관련업체</div>
+          <div style="padding:3px 6px;background:#fdd;margin-bottom:2px;">자산 관계</div>
+          <div style="padding:3px 6px;background:#fdd;">별칭</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;">이력</div>
+          <div style="padding:3px 6px;background:#f5f5f5;">변경이력</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:24px;">재구성 안 선택</h3>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>5탭: 개요 / 운영 / 네트워크 / 관계 / 이력</h3>
+      <p>인터페이스·IP를 "네트워크" 탭으로 독립. 업체·담당자·자산관계를 "관계" 탭으로 통합.</p>
+      <div class="mockup" style="margin-top:8px;">
+        <div class="mockup-header">TO-BE: 5탭</div>
+        <div class="mockup-body" style="font-size:12px;line-height:1.6;">
+          <div style="display:flex;gap:0;border-bottom:2px solid #2563eb;margin-bottom:8px;">
+            <span style="padding:4px 10px;background:#e3f0ff;">개요</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">운영</span>
+            <span style="padding:4px 10px;background:#2563eb;color:white;font-weight:600;">네트워크</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">관계</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">이력</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px;">
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">개요</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">식별/기준</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">사양/식별자</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">HW 요약</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">운영</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">설치위치</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">운영속성</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">SW & 라이선스</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;color:#2563eb;">네트워크 (NEW)</div>
+              <div style="padding:2px 4px;background:#e3f0ff;margin-bottom:2px;font-size:11px;">🔌 인터페이스</div>
+              <div style="padding:2px 4px;background:#e3f0ff;margin-bottom:2px;font-size:11px;">🌐 IP 할당</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">호스트명/클러스터</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">관계</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">담당자</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">관련업체</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">자산 관계</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">별칭</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">이력</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">변경이력</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>4탭 유지: 개요 / 운영 / 네트워크·관계 / 이력</h3>
+      <p>connections → "네트워크·관계"로 리네임. 인터페이스·IP를 상단에 추가, 나머지(업체·담당자·SW·별칭) 하단 유지.</p>
+      <div class="mockup" style="margin-top:8px;">
+        <div class="mockup-header">TO-BE: 4탭 (리네임)</div>
+        <div class="mockup-body" style="font-size:12px;line-height:1.6;">
+          <div style="display:flex;gap:0;border-bottom:2px solid #2563eb;margin-bottom:8px;">
+            <span style="padding:4px 10px;background:#e3f0ff;">개요</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">운영</span>
+            <span style="padding:4px 10px;background:#2563eb;color:white;font-weight:600;">네트워크·관계</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">이력</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;">
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">개요</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">식별/기준</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">사양/식별자</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">HW 요약</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">운영</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">설치위치</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">운영속성</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;color:#2563eb;">네트워크·관계</div>
+              <div style="padding:2px 4px;background:#e3f0ff;margin-bottom:2px;font-size:11px;">🔌 인터페이스+IP (NEW)</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">소프트웨어</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">담당자</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">관련업체</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">자산 관계</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">별칭</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">이력</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">변경이력</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>5탭: 개요 / 운영 / 네트워크 / 연결 / 이력</h3>
+      <p>네트워크(인터페이스·IP) 독립 + 연결(담당자·업체·자산관계·별칭) 분리. SW는 운영 탭으로 이동.</p>
+      <div class="mockup" style="margin-top:8px;">
+        <div class="mockup-header">TO-BE: 5탭 (네트워크/연결 분리)</div>
+        <div class="mockup-body" style="font-size:12px;line-height:1.6;">
+          <div style="display:flex;gap:0;border-bottom:2px solid #2563eb;margin-bottom:8px;">
+            <span style="padding:4px 10px;background:#e3f0ff;">개요</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">운영</span>
+            <span style="padding:4px 10px;background:#2563eb;color:white;font-weight:600;">네트워크</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">연결</span>
+            <span style="padding:4px 10px;background:#e3f0ff;">이력</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:6px;">
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">개요</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">식별/기준</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">사양/식별자</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">HW 요약</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">운영</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">설치위치</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">운영속성</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">호스트명/서비스</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">SW & 라이선스</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;color:#2563eb;">네트워크 (NEW)</div>
+              <div style="padding:2px 4px;background:#e3f0ff;margin-bottom:2px;font-size:11px;">🔌 인터페이스 (계층)</div>
+              <div style="padding:2px 4px;background:#e3f0ff;font-size:11px;">🌐 IP 할당</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">연결</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">담당자</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">관련업체</div>
+              <div style="padding:2px 4px;background:#f5f5f5;margin-bottom:2px;font-size:11px;">자산 관계</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">별칭</div>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:11px;margin-bottom:4px;">이력</div>
+              <div style="padding:2px 4px;background:#f5f5f5;font-size:11px;">변경이력</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;">
+  <h3>공통 변경 사항 (모든 안 적용)</h3>
+  <ul style="font-size:13px;line-height:1.8;">
+    <li>operations "네트워크 및 서비스" 섹션에서 <code>service_ip</code>, <code>mgmt_ip</code> 제거 (백엔드에서 이미 삭제됨)</li>
+    <li>operations "담당자 메모" 섹션 → 연결/관계 탭의 담당자와 통합 검토</li>
+    <li>인터페이스 → IP 계층 구조 (앞선 C안) 적용</li>
+  </ul>
+</div>

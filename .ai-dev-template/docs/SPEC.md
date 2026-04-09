@@ -32,6 +32,14 @@
 
 <!-- 기능 단위로 정리. 각 기능의 입력, 처리, 출력 -->
 
+## Acceptance Criteria
+
+<!-- Must 범위 기능별 완료 조건과 사용자 관점의 검증 기준 -->
+
+## Contracts & Invariants
+
+<!-- 깨지면 안 되는 규칙: 상태 전이, 중복 금지, canonical format, 롤백/원자성, 권한/가시성 경계 -->
+
 ## Non-functional Constraints
 
 <!-- 기술 스택, 성능, 보안, 접근성, 운영 환경 -->

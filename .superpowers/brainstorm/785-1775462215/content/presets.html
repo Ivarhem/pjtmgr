@@ -1,0 +1,57 @@
+<h2>트리 프리셋: 어떤 기준 조합을 제공할까?</h2>
+<p class="subtitle">전환 가능한 트리 프리셋 목록입니다. 필요한 것만 선택하세요. (복수 선택 가능)</p>
+
+<div class="options" data-multiselect>
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>센터 → 도메인</h3>
+      <p>IDC-A > 보안 > 인터넷방화벽#1<br>
+      <span style="color:#888">인프라 운영자가 센터별 장비 현황을 볼 때</span></p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>사업 → 도메인</h3>
+      <p>Y25A 유지보수 > 보안 > 인터넷방화벽#1<br>
+      <span style="color:#888">PM이 사업별 역할 현황을 볼 때</span></p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>도메인 → 제품군</h3>
+      <p>보안 > 방화벽 > 인터넷방화벽#1<br>
+      <span style="color:#888">카탈로그 분류체계 기반으로 역할을 볼 때</span></p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>센터 → 사업</h3>
+      <p>IDC-A > Y25A 유지보수 > 인터넷방화벽#1<br>
+      <span style="color:#888">센터 내 프로젝트별 역할 분포를 볼 때</span></p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="e" onclick="toggleSelect(this)">
+    <div class="letter">E</div>
+    <div class="content">
+      <h3>플랫 (그룹 없음)</h3>
+      <p>전체 역할을 트리 없이 그리드만으로 표시<br>
+      <span style="color:#888">단순하게 전체 목록만 보고 싶을 때</span></p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px;padding:12px;background:#f8fafc;border-radius:6px">
+  <p style="margin:0;font-size:13px;color:#666">
+    <b>참고:</b> 트리의 2번째 레벨(도메인, 제품군 등)은 카탈로그 분류체계에서 가져옵니다.
+    역할에 할당된 현재 자산의 카탈로그 속성을 기준으로 분류됩니다.
+    할당 자산이 없는 역할은 "미분류" 그룹에 표시됩니다.
+  </p>
+</div>

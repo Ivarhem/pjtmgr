@@ -37,11 +37,11 @@ async function initFilters() {
   const users = await fetch('/api/v1/users').then(r => r.json());
   const depts = [...new Set(users.map(u => u.department).filter(Boolean))].sort();
   const deptMenu = document.querySelector('#rpt-drop-dept .chk-drop-menu');
-  deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${d}"> ${d}</label>`).join('');
+  deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${escapeHtml(d)}"> ${escapeHtml(d)}</label>`).join('');
 
   const ownerMenu = document.querySelector('#rpt-drop-owner .chk-drop-menu');
   ownerMenu.innerHTML = users.filter(u => u.is_active).sort((a, b) => a.name.localeCompare(b.name))
-    .map(u => `<label><input type="checkbox" value="${u.id}"> ${u.name}</label>`).join('');
+    .map(u => `<label><input type="checkbox" value="${u.id}"> ${escapeHtml(u.name)}</label>`).join('');
 
   initDropdownToggles();
 
@@ -236,7 +236,7 @@ function initFaGrid() {
       { field: 'contract_type', headerName: '사업유형', width: 75 },
       { field: 'owner_name', headerName: '담당', width: 75 },
       { field: 'department', headerName: '부서', width: 85 },
-      { field: 'end_customer_name', headerName: getTermLabel('customer', '고객'), width: 130 },
+      { field: 'end_partner_name', headerName: getTermLabel('customer', '고객'), width: 130 },
       { field: 'stage', headerName: '단계', width: 90 },
       { field: 'forecast_revenue', headerName: 'Forecast', width: 120, valueFormatter: fmtNumber,
         cellClass: 'cell-number', type: 'numericColumn' },
@@ -294,7 +294,7 @@ function initArGrid() {
       { field: 'contract_type', headerName: '사업유형', width: 75 },
       { field: 'owner_name', headerName: '담당', width: 75 },
       { field: 'department', headerName: '부서', width: 85 },
-      { field: 'end_customer_name', headerName: getTermLabel('customer', '고객'), width: 130 },
+      { field: 'end_partner_name', headerName: getTermLabel('customer', '고객'), width: 130 },
       { field: 'actual_revenue', headerName: '매출 확정', width: 120, valueFormatter: fmtNumber,
         cellClass: 'cell-number', type: 'numericColumn' },
       { field: 'receipt', headerName: '입금', width: 120, valueFormatter: fmtNumber,
@@ -339,7 +339,7 @@ async function loadAr() {
 // ═══ 탭 4: 매입매출관리 (기존) ═══════════════════════════════════
 
 async function loadContractList() {
-  const res = await fetch('/api/v1/contract-periods');
+  const res = await fetch('/api/v1/ledger/periods');
   if (!res.ok) return;
   const data = await res.json();
   allContracts = data;
@@ -407,7 +407,7 @@ function renderPnl(data) {
         return `<td class="cell-number">${fmtCell(v)}</td>`;
       }).join('');
       return `<tr>
-        <td>${r.customer_name}</td>
+        <td>${r.partner_name}</td>
         <td>${r.contact_name || ''}</td>
         <td>${r.contact_phone || ''}</td>
         <td>${r.contact_email || ''}</td>

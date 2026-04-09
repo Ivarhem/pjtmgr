@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고객사/프로젝트 셀렉터 배치</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 20px; }
+  h1 { font-size: 20px; margin-bottom: 4px; color: #fff; }
+  .subtitle { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .options { display: flex; flex-direction: column; gap: 20px; }
+  .option {
+    background: #1a1d27; border-radius: 12px; border: 2px solid #2a2d3a;
+    cursor: pointer; transition: all 0.2s; overflow: hidden;
+  }
+  .option:hover { border-color: #3a3d5a; }
+  .option.selected { border-color: #5b8def; }
+  .option-header {
+    display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+    border-bottom: 1px solid #252836;
+  }
+  .option-letter {
+    width: 32px; height: 32px; border-radius: 8px; background: #252836;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: #5b8def; flex-shrink: 0;
+  }
+  .option.selected .option-letter { background: #5b8def; color: #fff; }
+  .option-title { font-size: 14px; font-weight: 600; }
+  .option-desc { font-size: 12px; color: #888; margin-top: 2px; }
+  .option-body { padding: 16px 20px; }
+
+  /* 목업 */
+  .browser-mock { background: #12141c; border-radius: 8px; overflow: hidden; border: 1px solid #252836; }
+
+  .mock-topbar {
+    background: #1a1d27; height: 36px; display: flex; align-items: center;
+    padding: 0 16px; border-bottom: 1px solid #252836; gap: 12px;
+  }
+  .mock-logo { font-size: 13px; font-weight: 700; color: #5b8def; }
+  .mock-module-sw { font-size: 11px; color: #888; background: #252836; padding: 2px 8px; border-radius: 4px; }
+  .mock-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 11px; color: #888; }
+  .mock-badge { background: rgba(91,141,239,0.15); color: #5b8def; padding: 2px 8px; border-radius: 4px; font-size: 10px; }
+
+  .mock-subnav {
+    background: #1e2130; height: 42px; display: flex; align-items: center;
+    padding: 0 16px; border-bottom: 1px solid #252836; gap: 0;
+  }
+  .mock-nav-item {
+    padding: 0 14px; height: 42px; display: flex; align-items: center;
+    font-size: 12px; color: #888; border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .mock-nav-item.active { color: #5b8def; border-bottom-color: #5b8def; font-weight: 600; }
+  .mock-nav-item:hover { color: #ccc; }
+
+  .mock-ctx-select {
+    background: #252836; border: 1px solid #3a3d4a; border-radius: 4px;
+    padding: 3px 8px; font-size: 11px; color: #ccc; min-width: 100px;
+  }
+  .mock-ctx-group {
+    display: flex; align-items: center; gap: 6px; font-size: 11px;
+  }
+  .mock-ctx-label { color: #666; font-size: 10px; }
+
+  .mock-content {
+    min-height: 120px; padding: 16px; display: flex; align-items: center;
+    justify-content: center; color: #444; font-size: 12px;
+  }
+
+  .mock-context-bar {
+    background: #1a1d27; height: 34px; display: flex; align-items: center;
+    padding: 0 16px; border-bottom: 1px solid #252836; gap: 16px;
+  }
+
+  .mock-sep { width: 1px; height: 20px; background: #3a3d4a; margin: 0 4px; }
+
+  .pros-cons { display: flex; gap: 12px; margin-top: 10px; font-size: 11px; }
+  .pros, .cons { flex: 1; }
+  .pros h4 { color: #4ecd5e; font-size: 11px; margin-bottom: 4px; }
+  .cons h4 { color: #e74c3c; font-size: 11px; margin-bottom: 4px; }
+  .pros li, .cons li { color: #888; margin-left: 14px; margin-bottom: 2px; }
+  .recommend { background: rgba(91,141,239,0.1); border: 1px solid rgba(91,141,239,0.3); border-radius: 6px; padding: 8px 12px; margin-top: 8px; font-size: 11px; color: #5b8def; }
+</style>
+</head>
+<body>
+
+<h1>고객사/프로젝트 셀렉터 배치</h1>
+<p class="subtitle">수평 메뉴(subnav) 구조를 유지하면서 고객사/프로젝트 컨텍스트를 어디에 배치할지 선택하세요.</p>
+
+<div class="options">
+
+  <!-- 방안 A: subnav 왼쪽에 셀렉터 통합 -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="option-header">
+      <div class="option-letter">A</div>
+      <div>
+        <div class="option-title">subnav 좌측에 셀렉터 통합</div>
+        <div class="option-desc">메뉴 바 왼쪽에 고객사/프로젝트 드롭다운, 오른쪽에 페이지 메뉴</div>
+      </div>
+    </div>
+    <div class="option-body">
+      <div class="browser-mock">
+        <div class="mock-topbar">
+          <span class="mock-logo">프로젝트관리</span>
+          <span class="mock-module-sw">영업관리 전환</span>
+          <div class="mock-topbar-right">
+            <span>admin</span>
+            <span style="color:#666;">로그아웃</span>
+          </div>
+        </div>
+        <div class="mock-subnav">
+          <div class="mock-ctx-group">
+            <span class="mock-ctx-label">고객사</span>
+            <select class="mock-ctx-select"><option>OO공사</option></select>
+          </div>
+          <div class="mock-ctx-group" style="margin-left:4px;">
+            <span class="mock-ctx-label">프로젝트</span>
+            <select class="mock-ctx-select" style="min-width:140px;"><option>전체</option></select>
+          </div>
+          <div class="mock-sep"></div>
+          <div class="mock-nav-item">프로젝트</div>
+          <div class="mock-nav-item active">자산</div>
+          <div class="mock-nav-item">IP인벤토리</div>
+          <div class="mock-nav-item">포트맵</div>
+          <div class="mock-nav-item">정책정의</div>
+          <div class="mock-nav-item">적용현황</div>
+          <div class="mock-nav-item">담당자</div>
+          <div class="mock-nav-item">이력</div>
+          <div class="mock-nav-item">현황판</div>
+        </div>
+        <div class="mock-content">(자산 목록 영역)</div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>회계모듈과 동일한 1줄 subnav 구조</li>
+          <li>컨텍스트(고객사)와 메뉴가 한 줄에 — 시선 이동 최소</li>
+          <li>추가 행 불필요 — 화면 공간 절약</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>메뉴 9개 + 셀렉터 2개 = 수평 공간 부족 가능</li>
+          <li>회계모듈(메뉴 4개)보다 항목이 많아 좁은 화면에서 넘침</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 방안 B: topbar에 셀렉터, subnav에 메뉴만 -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="option-header">
+      <div class="option-letter">B</div>
+      <div>
+        <div class="option-title">topbar에 셀렉터 + subnav에 메뉴만</div>
+        <div class="option-desc">고객사/프로젝트 선택은 상단 topbar, 하위 메뉴는 기존 subnav에</div>
+      </div>
+    </div>
+    <div class="option-body">
+      <div class="browser-mock">
+        <div class="mock-topbar">
+          <span class="mock-logo">프로젝트관리</span>
+          <span class="mock-module-sw">영업관리 전환</span>
+          <div class="mock-topbar-right">
+            <div class="mock-ctx-group">
+              <select class="mock-ctx-select"><option>OO공사</option></select>
+            </div>
+            <div class="mock-ctx-group">
+              <select class="mock-ctx-select" style="min-width:120px;"><option>전체</option></select>
+            </div>
+            <div class="mock-sep"></div>
+            <span>admin</span>
+            <span style="color:#666;">로그아웃</span>
+          </div>
+        </div>
+        <div class="mock-subnav">
+          <div class="mock-nav-item">프로젝트</div>
+          <div class="mock-nav-item active">자산</div>
+          <div class="mock-nav-item">IP인벤토리</div>
+          <div class="mock-nav-item">포트맵</div>
+          <div class="mock-nav-item">정책정의</div>
+          <div class="mock-nav-item">적용현황</div>
+          <div class="mock-nav-item">담당자</div>
+          <div class="mock-nav-item">이력</div>
+          <div class="mock-nav-item">현황판</div>
+        </div>
+        <div class="mock-content">(자산 목록 영역)</div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>subnav에 메뉴만 — 회계모듈과 완전 동일 패턴</li>
+          <li>메뉴 공간 여유</li>
+          <li>고객사 셀렉터가 항상 고정 위치 (topbar는 스크롤 시에도 유지)</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>topbar가 약간 복잡해짐 (모듈전환 + 셀렉터 + 유저)</li>
+          <li>회계모듈에는 없는 topbar 요소 — 모듈 간 topbar 비대칭</li>
+        </ul></div>
+      </div>
+      <div class="recommend">추천: 셀렉터와 메뉴 역할 분리가 명확, topbar는 "컨텍스트", subnav는 "페이지"</div>
+    </div>
+  </div>
+
+  <!-- 방안 C: 별도 컨텍스트 바 추가 -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="option-header">
+      <div class="option-letter">C</div>
+      <div>
+        <div class="option-title">topbar + 컨텍스트 바 + subnav (3단)</div>
+        <div class="option-desc">고객사/프로젝트 선택 전용 줄 추가, subnav는 메뉴만</div>
+      </div>
+    </div>
+    <div class="option-body">
+      <div class="browser-mock">
+        <div class="mock-topbar">
+          <span class="mock-logo">프로젝트관리</span>
+          <span class="mock-module-sw">영업관리 전환</span>
+          <div class="mock-topbar-right">
+            <span>admin</span>
+            <span style="color:#666;">로그아웃</span>
+          </div>
+        </div>
+        <div class="mock-context-bar">
+          <div class="mock-ctx-group">
+            <span class="mock-ctx-label">고객사</span>
+            <select class="mock-ctx-select"><option>OO공사</option></select>
+          </div>
+          <div class="mock-ctx-group">
+            <span class="mock-ctx-label">프로젝트</span>
+            <select class="mock-ctx-select" style="min-width:150px;"><option>전체</option></select>
+          </div>
+          <div style="margin-left:auto;">
+            <span class="mock-badge">OO공사 / 3개 프로젝트 / 자산 47건</span>
+          </div>
+        </div>
+        <div class="mock-subnav">
+          <div class="mock-nav-item">프로젝트</div>
+          <div class="mock-nav-item active">자산</div>
+          <div class="mock-nav-item">IP인벤토리</div>
+          <div class="mock-nav-item">포트맵</div>
+          <div class="mock-nav-item">정책정의</div>
+          <div class="mock-nav-item">적용현황</div>
+          <div class="mock-nav-item">담당자</div>
+          <div class="mock-nav-item">이력</div>
+          <div class="mock-nav-item">현황판</div>
+        </div>
+        <div class="mock-content">(자산 목록 영역)</div>
+      </div>
+      <div class="pros-cons">
+        <div class="pros"><h4>장점</h4><ul>
+          <li>각 줄의 역할이 명확 (인증 / 컨텍스트 / 페이지)</li>
+          <li>컨텍스트 바에 요약 정보 표시 가능</li>
+          <li>향후 필터 확장 용이 (기간, 상태 등)</li>
+        </ul></div>
+        <div class="cons"><h4>단점</h4><ul>
+          <li>헤더가 3줄 — 컨텐츠 영역 줄어듦</li>
+          <li>회계모듈과 구조 차이 큼</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleSelect(el) {
+  document.querySelectorAll('.option').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  try {
+    fetch('/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'click', choice: el.dataset.choice, text: el.querySelector('.option-title').textContent, timestamp: Math.floor(Date.now() / 1000) }),
+    });
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

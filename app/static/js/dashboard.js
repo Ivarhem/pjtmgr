@@ -82,21 +82,21 @@
   }
 
   async function initFilters() {
-    const [users, customers] = await Promise.all([
+    const [users, partners] = await Promise.all([
       fetch('/api/v1/users').then(r => r.json()),
-      fetch('/api/v1/customers').then(r => r.json()),
+      fetch('/api/v1/partners').then(r => r.json()),
     ]);
     const depts = [...new Set(users.map(u => u.department).filter(Boolean))].sort();
     const deptMenu = document.querySelector('#dash-drop-dept .chk-drop-menu');
-    deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${d}"> ${d}</label>`).join('');
+    deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${escapeHtml(d)}"> ${escapeHtml(d)}</label>`).join('');
 
     const ownerMenu = document.querySelector('#dash-drop-owner .chk-drop-menu');
     ownerMenu.innerHTML = users.filter(u => u.is_active).sort((a, b) => a.name.localeCompare(b.name))
-      .map(u => `<label><input type="checkbox" value="${u.id}"> ${u.name}</label>`).join('');
+      .map(u => `<label><input type="checkbox" value="${u.id}"> ${escapeHtml(u.name)}</label>`).join('');
 
-    const custMenu = document.querySelector('#dash-drop-customer .chk-drop-menu');
-    custMenu.innerHTML = customers.sort((a, b) => a.name.localeCompare(b.name))
-      .map(c => `<label><input type="checkbox" value="${c.id}"> ${c.name}</label>`).join('');
+    const custMenu = document.querySelector('#dash-drop-partner .chk-drop-menu');
+    custMenu.innerHTML = partners.sort((a, b) => a.name.localeCompare(b.name))
+      .map(c => `<label><input type="checkbox" value="${c.id}"> ${escapeHtml(c.name)}</label>`).join('');
   }
 
   // ── 필터 파라미터 수집 ──────────────────────────────────────────
@@ -109,7 +109,7 @@
     document.querySelectorAll('#dash-drop-stage input:checked').forEach(cb => params.append('stage', cb.value));
     document.querySelectorAll('#dash-drop-dept input:checked').forEach(cb => params.append('department', cb.value));
     document.querySelectorAll('#dash-drop-owner input:checked').forEach(cb => params.append('owner_id', cb.value));
-    document.querySelectorAll('#dash-drop-customer input:checked').forEach(cb => params.append('customer_id', cb.value));
+    document.querySelectorAll('#dash-drop-partner input:checked').forEach(cb => params.append('partner_id', cb.value));
     params.set('group_by', groupBy);
     return params;
   }
@@ -179,7 +179,7 @@
       renderTrend(data.trend);
       renderByType(data.by_type);
       renderByDept(data.by_department);
-      renderTopCustomers(data.top_customers);
+      renderTopPartners(data.top_partners);
       renderArWarnings(data.ar_warnings);
       loadTargetVsActual();
     } catch (e) {
@@ -196,7 +196,7 @@
     if(!el) return;
 
     const targetRate = k.target_revenue > 0
-      ? safe_pct(k.actual_revenue, k.target_revenue) : null;
+      ? safePct(k.actual_revenue, k.target_revenue) : null;
     const gpSub = `GP% ${k.gp_pct != null ? k.gp_pct + '%' : '-'}`;
     const arSub = `미수율 ${k.ar_rate != null ? k.ar_rate + '%' : '-'}`;
 
@@ -223,7 +223,7 @@
     `).join('');
   }
 
-  function safe_pct(n, d) {
+  function safePct(n, d) {
     return d > 0 ? Math.round(n / d * 1000) / 10 : null;
   }
 
@@ -470,7 +470,7 @@
 
   // ── Top 10 거래처 ──────────────────────────────────────────────
 
-  function renderTopCustomers(rows) {
+  function renderTopPartners(rows) {
     const tbody = document.querySelector('#tbl-top-cust tbody');
     if (!tbody) return;
     if (!rows.length) {
@@ -479,7 +479,7 @@
     }
     tbody.innerHTML = rows.map((r, i) => `<tr>
       <td class="cell-center">${i + 1}</td>
-      <td>${r.customer_name}</td>
+      <td>${r.partner_name}</td>
       <td class="cell-number">${fmt(r.actual_revenue)}</td>
       <td class="cell-number">${r.contract_count}</td>
     </tr>`).join('');

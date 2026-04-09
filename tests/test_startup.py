@@ -1,15 +1,16 @@
 import pytest
 
-from app.app_factory import create_app
-from app.auth.middleware import AuthMiddleware
-from app.exceptions import NotFoundError
-from app.exceptions import UnauthorizedError
-from app.models.contract import Contract
-from app.models.user import User
-from app.routers import health as health_router
-from app.schemas.receipt import ReceiptCreate
-from app.services import contract as contract_service
-from app.services import receipt as receipt_service
+from app.core.app_factory import _detect_module
+from app.core.app_factory import create_app
+from app.core.auth.middleware import AuthMiddleware
+from app.core.exceptions import NotFoundError
+from app.core.exceptions import UnauthorizedError
+from app.modules.common.models.user import User
+from app.modules.common.routers import health as health_router
+from app.modules.common.schemas.contract import ContractCreate
+from app.modules.accounting.schemas.receipt import ReceiptCreate
+from app.modules.accounting.services import receipt as receipt_service
+from app.modules.common.services import contract_service as common_contract_service
 
 
 def test_create_app_registers_core_routes() -> None:
@@ -22,11 +23,19 @@ def test_create_app_registers_core_routes() -> None:
     assert any(m.cls.__name__ == "SessionMiddleware" for m in app.user_middleware)
 
 
+def test_detect_module_includes_infra_role_pages() -> None:
+    assert _detect_module("/asset-roles") == "infra"
+    assert _detect_module("/inventory/assets") == "infra"
+    assert _detect_module("/infra-import") == "infra"
+    assert _detect_module("/physical-layout") == "infra"
+    assert _detect_module("/classification-schemes") == "infra"
+
+
 def test_lifespan_uses_split_startup_steps(monkeypatch) -> None:
     calls: list[str] = []
 
-    monkeypatch.setattr("app.startup.lifespan.prepare_database", lambda: calls.append("db"))
-    monkeypatch.setattr("app.startup.lifespan.initialize_reference_data", lambda: calls.append("bootstrap"))
+    monkeypatch.setattr("app.core.startup.lifespan.prepare_database", lambda: calls.append("db"))
+    monkeypatch.setattr("app.core.startup.lifespan.initialize_reference_data", lambda: calls.append("bootstrap"))
 
     async def _run() -> None:
         app = create_app()
@@ -47,16 +56,16 @@ def test_prepare_database_runs_upgrade_for_fresh_db(monkeypatch) -> None:
         def get_table_names() -> list[str]:
             return []
 
-    monkeypatch.setattr("app.startup.database_init.inspect", lambda _engine: _Inspector())
-    monkeypatch.setattr("app.startup.database_init.ENV", "production")
+    monkeypatch.setattr("app.core.startup.database_init.inspect", lambda _engine: _Inspector())
+    monkeypatch.setattr("app.core.startup.database_init.ENV", "production")
     monkeypatch.setattr(
-        "app.startup.database_init.Base.metadata.create_all",
+        "app.core.startup.database_init.Base.metadata.create_all",
         lambda **_kwargs: calls.append(("create_all", "")),
     )
     monkeypatch.setattr("alembic.command.upgrade", lambda _cfg, rev: calls.append(("upgrade", rev)))
     monkeypatch.setattr("alembic.command.stamp", lambda _cfg, rev: calls.append(("stamp", rev)))
 
-    from app.startup.database_init import prepare_database
+    from app.core.startup.database_init import prepare_database
 
     prepare_database()
 
@@ -94,30 +103,38 @@ def test_health_check_hides_internal_error_details(monkeypatch) -> None:
     assert response == {"status": "degraded", "db": "unavailable"}
 
 
-def test_contract_service_checks_access_in_service_layer(db_session) -> None:
-    owner = User(name="담당자", login_id="owner", role="user")
-    outsider = User(name="외부자", login_id="outsider", role="user")
-    contract = Contract(contract_name="테스트 사업", contract_type="MA", owner=owner, status="active")
-    db_session.add_all([owner, outsider, contract])
+def test_contract_service_checks_access_in_service_layer(db_session, user_role_id) -> None:
+    owner = User(name="담당자", login_id="owner", role_id=user_role_id)
+    outsider = User(name="외부자", login_id="outsider", role_id=user_role_id)
+    db_session.add_all([owner, outsider])
     db_session.commit()
+    contract = common_contract_service.create_contract(
+        db_session,
+        ContractCreate(contract_name="테스트 사업", contract_type="MA"),
+        created_by=owner.id,
+    )
 
     with pytest.raises(NotFoundError):
-        contract_service.get_contract(db_session, contract.id, current_user=outsider)
+        common_contract_service.get_contract(db_session, contract["id"], current_user=outsider)
 
 
-def test_receipt_service_checks_access_in_service_layer(db_session) -> None:
-    owner = User(name="담당자", login_id="owner", role="user")
-    outsider = User(name="외부자", login_id="outsider", role="user")
-    contract = Contract(contract_name="테스트 사업", contract_type="MA", owner=owner, status="active")
-    db_session.add_all([owner, outsider, contract])
+def test_receipt_service_checks_access_in_service_layer(db_session, user_role_id) -> None:
+    owner = User(name="담당자", login_id="owner", role_id=user_role_id)
+    outsider = User(name="외부자", login_id="outsider", role_id=user_role_id)
+    db_session.add_all([owner, outsider])
     db_session.commit()
+    contract = common_contract_service.create_contract(
+        db_session,
+        ContractCreate(contract_name="테스트 사업", contract_type="MA"),
+        created_by=owner.id,
+    )
 
     with pytest.raises(NotFoundError):
         receipt_service.create_receipt(
             db_session,
-            contract.id,
+            contract["id"],
             ReceiptCreate(
-                customer_id=None,
+                partner_id=None,
                 receipt_date="2026-03-01",
                 revenue_month="2026-03-01",
                 amount=1000,

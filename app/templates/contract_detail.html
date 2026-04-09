@@ -82,7 +82,7 @@
     </label>
     <label class="grid-filter-item">
       <span>거래처</span>
-      <input type="text" id="ledger-filter-customer" placeholder="거래처명 검색" class="filter-text-sm">
+      <input type="text" id="ledger-filter-partner" placeholder="거래처명 검색" class="filter-text-sm">
     </label>
     <label class="grid-filter-item">
       <span>상태</span>
@@ -133,7 +133,7 @@
     </label>
     <label class="grid-filter-item">
       <span>거래처</span>
-      <input type="text" id="receipt-filter-customer" placeholder="거래처명 검색" class="filter-text-sm">
+      <input type="text" id="receipt-filter-partner" placeholder="거래처명 검색" class="filter-text-sm">
     </label>
     <button id="btn-receipt-filter" class="btn btn-secondary btn-compact">조회</button>
     <button id="btn-receipt-filter-reset" class="btn btn-secondary btn-compact btn-text-muted">초기화</button>
@@ -204,7 +204,7 @@
         계획사업 (미체크 시 수시사업)
       </label>
       <label class="full-width">매출처
-        <select id="add-period-customer">
+        <select id="add-period-partner">
           <option value="" data-term-key="customer" data-term-prefix="-- " data-term-suffix=" 동일 --">-- 고객 동일 --</option>
         </select>
       </label>
@@ -297,7 +297,7 @@
         <option value="매입">매입</option>
       </select>
     </label>
-    <label>거래처 <select id="repeat-customer"></select></label>
+    <label>거래처 <select id="repeat-partner"></select></label>
     <label>금액(원) <input type="number" id="repeat-amount"></label>
     <label class="full-width chk-inline">
       <input type="checkbox" id="repeat-use-forecast"> Forecast 매입 기준 (매출 - GP)
@@ -339,7 +339,7 @@
 {% include "{components}/_modal_add_contract.html" %}
 
 <!-- 인라인 거래처 등록 모달 -->
-<dialog id="modal-new-customer" class="modal modal-sm">
+<dialog id="modal-new-partner" class="modal modal-sm">
   <h2>거래처 등록</h2>
   <div class="form-grid">
     <label class="full-width">거래처명 <input type="text" id="new-cust-name-inline" placeholder="거래처명 입력" required></label>

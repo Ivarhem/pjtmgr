@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}정책 적용 현황 - 프로젝트관리{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
+{% block content %}
+<div class="tab-nav">
+  <a href="/policy-definitions" class="tab-btn">정책 정의</a>
+  <a href="/policies" class="tab-btn active">적용 현황</a>
+  <div class="tab-nav-actions">
+    <button class="btn btn-primary" id="btn-add-assignment">적용 등록</button>
+  </div>
+</div>
+
+<!-- 프로젝트별 준수율 요약 카드 -->
+<div id="compliance-summary" class="summary-cards mb-md"></div>
+
+<div class="filter-bar">
+  <label>
+    상태
+    <select id="filter-status">
+      <option value="">전체</option>
+    </select>
+  </label>
+  <button class="btn btn-primary" id="btn-filter">조회</button>
+</div>
+
+<div class="card">
+  <div id="grid-assignments" class="ag-theme-quartz infra-grid infra-grid-500"></div>
+</div>
+
+<!-- 정책 적용 모달 -->
+<dialog id="modal-assignment" class="modal">
+  <h2 id="modal-assignment-title">정책 적용 등록</h2>
+  <form id="form-assignment" class="form-grid">
+    <input type="hidden" id="assignment-id">
+    <label>
+      정책
+      <select id="assignment-policy-id" required></select>
+    </label>
+    <label>
+      자산 (선택)
+      <select id="assignment-asset-id">
+        <option value="">전체 프로젝트</option>
+      </select>
+    </label>
+    <label>
+      상태
+      <select id="assignment-status">
+        <option value="not_checked">미확인</option>
+        <option value="compliant">준수</option>
+        <option value="non_compliant">미준수</option>
+        <option value="exception">예외</option>
+        <option value="not_applicable">해당없음</option>
+      </select>
+    </label>
+    <label>
+      확인자
+      <input type="text" id="assignment-checked-by">
+    </label>
+    <label>
+      확인일
+      <input type="date" id="assignment-checked-date">
+    </label>
+    <label class="full-width">
+      예외 사유
+      <textarea id="assignment-exception-reason" rows="2"></textarea>
+    </label>
+    <label class="full-width">
+      증적 메모
+      <textarea id="assignment-evidence-note" rows="2"></textarea>
+    </label>
+  </form>
+  <div class="modal-actions">
+    <button class="btn btn-secondary" id="btn-cancel-assignment">취소</button>
+    <button class="btn btn-primary" id="btn-save-assignment">등록</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/infra_policies.js"></script>
+{% endblock %}

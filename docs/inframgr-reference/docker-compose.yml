@@ -1,0 +1,40 @@
+services:
+  pjtmgr-db:
+    image: postgres:16
+    container_name: pjtmgr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "${DB_HOST_PORT:-5432}:5432"
+    volumes:
+      - pjtmgr_postgres_data:/var/lib/postgresql/data
+
+  app:
+    container_name: pjtmgr-app
+    build:
+      context: .
+    depends_on:
+      pjtmgr-db:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY}
+      BOOTSTRAP_ADMIN_LOGIN_ID: ${BOOTSTRAP_ADMIN_LOGIN_ID}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME}
+    ports:
+      - "${APP_HOST_PORT:-9000}:8000"
+    restart: unless-stopped
+
+volumes:
+  pjtmgr_postgres_data:
+    name: pjtmgr_postgres_data

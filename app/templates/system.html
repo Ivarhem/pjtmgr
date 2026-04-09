@@ -2,15 +2,24 @@
 {% block title %}시스템 관리{% endblock %}
 {% block styles %}
 <link rel="stylesheet" href="/static/css/system.css">
+<link rel="stylesheet" href="/static/css/infra_common.css">
 {% endblock %}
 {% block content %}
-<div class="page-header">
-  <h1>시스템 관리</h1>
+<div class="tab-nav" id="system-tabs">
+  <button class="tab-btn active" data-tab="common">공통</button>
+  {% if "accounting" in enabled_modules %}
+  <button class="tab-btn" data-tab="accounting">영업관리</button>
+  {% endif %}
+  {% if "infra" in enabled_modules %}
+  <button class="tab-btn" data-tab="infra">프로젝트관리</button>
+  {% endif %}
 </div>
+
+<div id="tab-common">
 <p class="data-note">※ 시스템 전반 설정을 관리합니다. 조직명, 사업유형(MA/SI/HW 등)의 기본값, UI에 표시되는 용어를 커스터마이징할 수 있습니다.</p>
 
 <!-- 기본 설정 -->
-<div class="sys-section sys-section-narrow">
+<div class="sys-section">
   <h2 class="sys-section-title">기본 설정</h2>
   <div class="form-grid form-grid-single">
     <label>
@@ -21,6 +30,12 @@
       비밀번호 최소 길이
       <input type="number" id="input-password-min-length" min="8" max="64" placeholder="예: 8">
     </label>
+    <label>카탈로그 라벨 언어
+      <select id="input-catalog-label-lang" class="input-select">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+      </select>
+    </label>
   </div>
   <div class="modal-actions">
     <button id="btn-save-settings" class="btn btn-primary">저장</button>
@@ -28,6 +43,42 @@
   <p class="data-note">설정된 조직명은 상단 브랜드명 앞에 표시됩니다. 비밀번호 최소 길이는 비밀번호 변경 화면과 서버 검증에 함께 적용됩니다.</p>
 </div>
 
+<!-- 용어 관리 -->
+<div class="sys-section">
+  <div class="sys-section-header">
+    <h2 class="sys-section-title">용어 관리</h2>
+    <button id="btn-add-term" class="btn btn-primary btn-sm">+ 추가</button>
+  </div>
+  <p class="data-note sys-note">화면에 표시되는 용어를 커스터마이징합니다. 예를 들어 '고객'이라는 용어를 조직에 맞게 '거래처'로 변경할 수 있습니다. 커스텀 표시명을 비워두면 기본값이 사용됩니다.</p>
+  <div class="sys-table-wrap">
+    <table class="sys-table" id="term-config-table">
+      <colgroup>
+        <col class="col-w50">
+        <col class="col-w130">
+        <col class="col-w80">
+        <col class="col-w80">
+        <col class="col-w80">
+        <col class="col-w50">
+        <col class="col-w80">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>구분</th>
+          <th>키</th>
+          <th>표준명(한)</th>
+          <th>기본 표시명</th>
+          <th>커스텀 표시명</th>
+          <th>활성</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="term-config-tbody"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<div id="tab-accounting" class="is-hidden">
 <!-- 사업유형 관리 -->
 <div class="sys-section">
   <div class="sys-section-header">
@@ -63,38 +114,66 @@
     </table>
   </div>
 </div>
+</div>
 
-<!-- 용어 관리 -->
-<div class="sys-section">
-  <div class="sys-section-header">
-    <h2 class="sys-section-title">용어 관리</h2>
-    <button id="btn-add-term" class="btn btn-primary btn-sm">+ 추가</button>
-  </div>
-  <p class="data-note sys-note">화면에 표시되는 용어를 커스터마이징합니다. 예를 들어 '고객'이라는 용어를 조직에 맞게 '거래처'로 변경할 수 있습니다. 커스텀 표시명을 비워두면 기본값이 사용됩니다.</p>
-  <div class="sys-table-wrap">
-    <table class="sys-table" id="term-config-table">
-      <colgroup>
-        <col class="col-w50">
-        <col class="col-w130">
-        <col class="col-w80">
-        <col class="col-w80">
-        <col class="col-w80">
-        <col class="col-w50">
-        <col class="col-w80">
-      </colgroup>
-      <thead>
-        <tr>
-          <th>구분</th>
-          <th>키</th>
-          <th>표준명(한)</th>
-          <th>기본 표시명</th>
-          <th>커스텀 표시명</th>
-          <th>활성</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="term-config-tbody"></tbody>
-    </table>
+<div id="tab-infra" class="is-hidden">
+  <p class="data-note">분류 속성의 아이템과 alias를 관리합니다. 속성 키를 선택하고 아이템을 추가/편집하세요.</p>
+  <div class="sys-section">
+    <div class="catalog-toolbar">
+      <select class="input-select" id="system-attr-key-filter"></select>
+      <input type="text" class="input-search" id="system-attr-search" placeholder="아이템 검색">
+      <button type="button" class="btn btn-primary btn-sm attr-write-only" id="btn-system-attr-add">+ 아이템 추가</button>
+    </div>
+    <div class="catalog-integrity-placeholder">
+      <div id="grid-system-attrs" class="ag-theme-quartz catalog-integrity-grid"></div>
+      <aside class="catalog-integrity-detail-placeholder catalog-integrity-detail-form" id="system-attr-detail">
+        <div id="system-attr-empty">
+          <h3>아이템 편집</h3>
+          <p>좌측에서 아이템을 선택하거나 새 아이템을 추가하세요.</p>
+        </div>
+        <div id="system-attr-form" class="is-hidden catalog-integrity-detail-form">
+          <div class="catalog-integrity-detail-head">
+            <h3 id="system-attr-title">아이템 편집</h3>
+          </div>
+          <div class="catalog-integrity-form-grid">
+            <label>아이템 키
+              <input type="text" class="input-text" id="system-attr-option-key" placeholder="예: fw, l3_switch (영소문자+숫자+밑줄)">
+            </label>
+            <label>아이템명 (영문)
+              <input type="text" class="input-text" id="system-attr-option-label" placeholder="예: Firewall, L3 Switch">
+            </label>
+            <label>아이템명 (한글)
+              <input type="text" class="input-text" id="system-attr-option-label-kr" placeholder="예: 방화벽, L3 스위치">
+            </label>
+            <label class="is-hidden" id="system-attr-domain-label">도메인
+              <select class="input-select" id="system-attr-domain-option">
+                <option value="">선택 안 함</option>
+              </select>
+            </label>
+            <label>정렬순서
+              <input type="number" class="input-text" id="system-attr-sort-order" value="100">
+            </label>
+            <label class="catalog-integrity-checkbox">
+              활성
+              <input type="checkbox" id="system-attr-active" checked>
+            </label>
+          </div>
+          <div class="catalog-integrity-alias-section" id="system-attr-alias-section">
+            <h4>Alias 목록</h4>
+            <div class="tag-input-wrap">
+              <span class="tag-list" id="system-attr-alias-list"></span>
+              <input type="text" class="tag-input-field attr-write-only" id="system-attr-alias-input" placeholder="alias 입력 후 Enter">
+            </div>
+          </div>
+          <div class="catalog-integrity-form-actions">
+            <button type="button" class="btn btn-primary attr-write-only" id="btn-system-attr-save">저장</button>
+            <button type="button" class="btn btn-secondary" id="btn-system-attr-cancel">취소</button>
+            <span class="catalog-integrity-form-actions-spacer"></span>
+            <button type="button" class="btn btn-danger attr-write-only is-hidden" id="btn-system-attr-delete">삭제</button>
+          </div>
+        </div>
+      </aside>
+    </div>
   </div>
 </div>
 
@@ -186,6 +265,7 @@
     <button type="button" id="btn-dt-submit" class="btn btn-primary">저장</button>
   </div>
 </dialog>
+
 {% endblock %}
 
 {% block scripts %}

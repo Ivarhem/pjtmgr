@@ -26,6 +26,7 @@
   {% block styles %}{% endblock %}
 </head>
 <body>
+  {% set mc = request.state.module_context %}
   <nav class="topbar">
     <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
       <i data-lucide="menu" class="icon-menu"></i>
@@ -33,8 +34,61 @@
     </button>
     <a href="/" class="nav-brand">
       <img src="/static/img/logo.svg" alt="Logo" class="nav-logo">
-      <span id="nav-brand-text">영업관리 시스템</span>
     </a>
+    {% if "accounting" in enabled_modules and "infra" in enabled_modules %}
+    <div class="module-dropdown" id="module-dropdown">
+      <button class="module-dropdown-btn" id="module-dropdown-btn">
+        {% if request.state.module_context == 'infra' %}
+          <i data-lucide="server" class="icon-sm"></i> 프로젝트관리
+        {% else %}
+          <i data-lucide="briefcase" class="icon-sm"></i> 영업관리
+        {% endif %}
+        <i data-lucide="chevron-down" class="icon-xs"></i>
+      </button>
+      <div class="module-dropdown-menu" id="module-dropdown-menu">
+        <a href="/my-contracts" class="module-dropdown-item {% if request.state.module_context == 'accounting' %}active{% endif %}">
+          <i data-lucide="briefcase" class="icon-sm"></i> 영업관리
+        </a>
+        <a href="/periods" class="module-dropdown-item {% if request.state.module_context == 'infra' %}active{% endif %}">
+          <i data-lucide="server" class="icon-sm"></i> 프로젝트관리
+        </a>
+      </div>
+    </div>
+    {% endif %}
+    {% if "infra" in enabled_modules and mc == "infra" %}
+    <span class="topbar-sep"></span>
+    <div class="ctx-selector">
+      <label class="ctx-label">고객사</label>
+      <div class="ctx-combo" id="ctx-partner-combo">
+        <input type="text" id="ctx-partner" class="ctx-input" placeholder="고객사 검색" autocomplete="off">
+        <div class="ctx-dropdown is-hidden" id="ctx-partner-dropdown"></div>
+      </div>
+    </div>
+    <div class="ctx-selector ctx-project-selector" id="ctx-project-display">
+      <label class="ctx-label">프로젝트</label>
+      <a href="/periods" class="ctx-project-link" id="ctx-project-link" title="프로젝트 목록에서 선택">
+        <span id="ctx-project-text" class="ctx-project-name">선택 안 됨</span>
+      </a>
+      <button class="ctx-project-clear is-hidden" id="ctx-project-clear" title="선택 해제">&times;</button>
+    </div>
+    <select class="ctx-scope-filter" id="ctx-scope-filter" title="데이터 범위 필터">
+      <option value="all">전체</option>
+      <option value="partner">고객사 기준</option>
+      <option value="project">프로젝트 기준</option>
+    </select>
+    <!-- 고객사 신규등록 모달 -->
+    <dialog id="ctx-modal-partner" class="modal modal-sm">
+      <h2>고객사 등록</h2>
+      <div class="form-grid">
+        <label class="full-width">고객사명 <input type="text" id="ctx-new-partner-name" placeholder="고객사명 입력" required></label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="ctx-btn-cust-cancel">취소</button>
+        <button type="button" class="btn btn-primary" id="ctx-btn-cust-submit">등록</button>
+      </div>
+    </dialog>
+    <!-- 프로젝트 등록은 프로젝트 목록 페이지에서 수행 -->
+    {% endif %}
     <div class="topbar-right">
       <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
         <i data-lucide="sun" class="sun"></i>
@@ -43,6 +97,9 @@
       <button class="theme-toggle" id="toggle-subnav-desc" title="도움말 표시/숨김">
         <i data-lucide="help-circle"></i>
       </button>
+      <a class="theme-toggle admin-only is-hidden" href="/users" title="사용자 관리">
+        <i data-lucide="user-cog"></i>
+      </a>
       <span class="topbar-user" id="topbar-user"></span>
       <button class="btn-logout" onclick="doLogout()">로그아웃</button>
     </div>
@@ -51,23 +108,100 @@
   <div class="nav-container">
     <nav class="subnav">
       <ul class="subnav-links">
-        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
+        {# --- 영업관리 (accounting 컨텍스트일 때만) --- #}
+        {% if "accounting" in enabled_modules and mc == "accounting" %}
+
         <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
         <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
-        <li><a href="/customers"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
+        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
         <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
-        <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
+        {% endif %}
+
+        {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
+        {% if "infra" in enabled_modules and mc == "infra" %}
+
+        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
+        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
+        <li><a href="/physical-layout"><i class="icon" data-lucide="layout-grid"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">업체 배정·담당자 연결</small></span></a></li>
+        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
+
+        {% endif %}
+
+        {# --- 단일 모듈만 활성일 때: 해당 모듈 전체 표시 --- #}
+        {% if "accounting" in enabled_modules and "infra" not in enabled_modules %}
+
+        <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
+        <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
+        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
+        <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
+        {% endif %}
+        {% if "infra" in enabled_modules and "accounting" not in enabled_modules %}
+
+        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
+        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
+        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
+        <li><a href="/physical-layout"><i class="icon" data-lucide="layout-grid"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
+        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">업체 배정·담당자 연결</small></span></a></li>
+        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
+
+        {% endif %}
+
         <li class="subnav-sep"></li>
-        <li class="admin-only admin-nav-item subnav-divider is-hidden"><a href="/users"><i class="icon" data-lucide="users"></i><span>사용자 관리<small class="subnav-sub">계정 등록·역할·권한 설정</small></span></a></li>
-        <li class="admin-only admin-nav-item is-hidden"><a href="/system"><i class="icon" data-lucide="sliders-horizontal"></i><span>시스템 관리<small class="subnav-sub">조직명·사업유형·용어 설정</small></span></a></li>
+        <li class="nav-group-header">기준정보/관리</li>
+
+        {# --- 공통 메뉴 (모듈 무관) --- #}
+
+        <li><a href="/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
+        <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">제품 카탈로그·기준정보 관리</small></span></a></li>
+        <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
+        <li class="admin-only is-hidden"><a href="/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
       </ul>
     </nav>
   </div>
   <script>
-    // Active link highlighting
-    document.querySelectorAll('.subnav-links a').forEach(a => {
-      if (a.getAttribute('href') === window.location.pathname) a.classList.add('active');
+    // Active link highlighting (with group mapping for tabbed pages)
+    const _navGroups = {
+      '/asset-roles': '/assets',
+      '/inventory/assets': '/assets',
+      '/port-maps': '/ip-inventory',
+      '/infra-import': '/assets',
+      '/catalog-management/integrity': '/product-catalog',
+      '/catalog-integrity': '/product-catalog',
+    };
+    const _activePath = _navGroups[window.location.pathname] || window.location.pathname;
+    document.querySelectorAll('.subnav-links a, .topbar-right a').forEach(a => {
+      if (a.getAttribute('href') === _activePath) a.classList.add('active');
     });
+
+    // Scope filter: restore saved value on every page load
+    (function() {
+      const sf = document.getElementById('ctx-scope-filter');
+      if (!sf) return;
+      sf.value = localStorage.getItem('infra_scope_filter') || 'all';
+      sf.addEventListener('change', () => {
+        localStorage.setItem('infra_scope_filter', sf.value);
+        window.dispatchEvent(new CustomEvent('ctx-changed', {
+          detail: {
+            partnerId: window.getCtxPartnerId ? window.getCtxPartnerId() : null,
+            projectId: window.getCtxProjectId ? window.getCtxProjectId() : null,
+          },
+        }));
+      });
+    })();
+
+    // Module dropdown toggle
+    (function() {
+      const btn = document.getElementById('module-dropdown-btn');
+      const menu = document.getElementById('module-dropdown-menu');
+      if (!btn || !menu) return;
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('open');
+      });
+      document.addEventListener('click', () => menu.classList.remove('open'));
+    })();
 
     // Mobile navigation toggle
     (function() {
@@ -104,9 +238,58 @@
         }
       }
       if (settings?.org_name) {
-        document.getElementById('nav-brand-text').textContent = settings.org_name + ' 영업관리시스템';
+        document.title = settings.org_name + ' ' + document.title;
       }
+
+      // 고객사/프로젝트 셀렉터 초기화 (infra 모듈 활성 시)
+      {% if "infra" in enabled_modules and mc == "infra" %}
+      if (me) initContextSelectors();
+      {% endif %}
+
+      // 미제출 산출물 로그인 알림 (infra 모듈 활성 시, 세션당 1회)
+      {% if "infra" in enabled_modules %}
+      if (me && !sessionStorage.getItem('infra_notif_shown')) {
+        checkUnsubmittedDeliverables();
+      }
+      {% endif %}
     });
+
+    {% if "infra" in enabled_modules %}
+    async function checkUnsubmittedDeliverables() {
+      try {
+        const prefRes = await fetch('/api/v1/preferences/infra.notify_unsubmitted');
+        if (prefRes.ok) {
+          const pref = await prefRes.json();
+          if (pref.value === 'false') return;
+        }
+        const res = await fetch('/api/v1/infra-dashboard/unsubmitted');
+        if (!res.ok) return;
+        const items = await res.json();
+        if (items.length > 0) {
+          sessionStorage.setItem('infra_notif_shown', '1');
+          const toast = document.createElement('div');
+          toast.className = 'toast toast-warning';
+          const text = document.createTextNode(`미제출 산출물 ${items.length}건이 있습니다. `);
+          const link = document.createElement('a');
+          link.href = '/infra-dashboard';
+          link.textContent = '현황판에서 확인';
+          toast.appendChild(text);
+          toast.appendChild(link);
+          let container = document.querySelector('.toast-container');
+          if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+          }
+          container.appendChild(toast);
+          setTimeout(() => {
+            toast.classList.add('toast-out');
+            toast.addEventListener('animationend', () => toast.remove());
+          }, 6000);
+        }
+      } catch (_) { /* 알림 실패는 무시 */ }
+    }
+    {% endif %}
 
     async function doLogout() {
       await fetch('/api/v1/auth/logout', { method: 'POST' });

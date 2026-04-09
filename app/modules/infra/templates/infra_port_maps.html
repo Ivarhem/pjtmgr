@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}포트맵 - SI Project Inventory{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
+<link rel="stylesheet" href="/static/css/infra_common.css">
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="tab-nav">
+  <a href="/ip-inventory" class="tab-btn">IP 인벤토리</a>
+  <a href="/port-maps" class="tab-btn active">포트맵</a>
+  <div class="tab-nav-actions">
+    <button class="btn btn-secondary btn-sm" id="btn-toggle-edit">편집</button>
+    <button class="btn btn-primary btn-sm is-hidden" id="btn-save-edit">저장</button>
+    <button class="btn btn-secondary btn-sm is-hidden" id="btn-cancel-edit">취소</button>
+    <button class="btn btn-primary" id="btn-add-portmap">배선 등록</button>
+  </div>
+</div>
+<div id="portmap-import-panel" class="card is-hidden infra-import-compact-panel">
+  <div class="infra-import-compact-row">
+    <label class="infra-compact-label">Excel (.xlsx)
+      <input type="file" id="portmap-import-file" accept=".xlsx" class="infra-compact-input">
+    </label>
+    <button class="btn btn-primary btn-sm" id="btn-portmap-import-run">Import</button>
+    <button class="btn btn-sm" id="btn-portmap-import-close">닫기</button>
+    <span class="text-muted infra-compact-help">※ 프로젝트 필터에서 선택한 프로젝트에 Import됩니다</span>
+  </div>
+  <div id="portmap-import-result" class="infra-import-result-text"></div>
+</div>
+
+<div id="ctx-empty-portmaps" class="placeholder-message is-hidden">
+  고객사를 먼저 선택하세요.
+  <span class="text-secondary placeholder-sub">상단 고객사 셀렉터에서 고객사를 선택하면 데이터를 확인할 수 있습니다.</span>
+</div>
+
+<div id="edit-mode-bar" class="edit-mode-bar is-hidden">
+  <span class="edit-mode-label">편집 모드</span>
+  <span class="edit-mode-count" id="edit-mode-count">변경 0건</span>
+  <span class="edit-mode-errors is-hidden" id="edit-mode-errors">오류 0건</span>
+  <span class="edit-mode-separator">|</span>
+  <span class="edit-mode-selection is-hidden" id="edit-mode-selection"></span>
+</div>
+
+<div id="portmaps-content" class="card">
+  <div id="grid-portmaps" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
+</div>
+
+<!-- 배선 등록/수정 모달 -->
+<dialog id="modal-portmap" class="modal-dialog modal-lg">
+  <div class="modal-content">
+    <h3 id="modal-portmap-title">배선 등록</h3>
+    <input type="hidden" id="portmap-id">
+
+    <div class="form-grid-2col">
+      <fieldset><legend>출발 (Start)</legend>
+        <label>자산 <input type="text" id="portmap-src-asset" placeholder="자산명 검색" autocomplete="off"></label>
+        <label>인터페이스 <select id="portmap-src-iface"><option value="">— 선택 —</option></select></label>
+      </fieldset>
+      <fieldset><legend>도착 (End)</legend>
+        <label>자산 <input type="text" id="portmap-dst-asset" placeholder="자산명 검색" autocomplete="off"></label>
+        <label>인터페이스 <select id="portmap-dst-iface"><option value="">— 선택 —</option></select></label>
+      </fieldset>
+    </div>
+
+    <fieldset><legend>공통 정보</legend>
+      <div class="form-grid">
+        <label>순번 <input type="number" id="portmap-seq"></label>
+        <label>케이블번호 <input type="text" id="portmap-cable-no"></label>
+        <label>포설신청 <input type="text" id="portmap-cable-request"></label>
+        <label>용도 <input type="text" id="portmap-purpose"></label>
+        <label>요약 <input type="text" id="portmap-summary"></label>
+        <label>Protocol <input type="text" id="portmap-protocol"></label>
+        <label>Port <input type="number" id="portmap-port"></label>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>케이블 정보</legend>
+      <div class="form-grid">
+        <label>연결유형 <select id="portmap-connection-type">
+          <option value="">-</option><option value="physical">physical</option><option value="logical">logical</option>
+        </select></label>
+        <label>케이블종류 <select id="portmap-cable-type">
+          <option value="">-</option><option value="SM">SM</option><option value="MM">MM</option><option value="UTP">UTP</option><option value="STP">STP</option><option value="DAC">DAC</option><option value="other">other</option>
+        </select></label>
+        <label>속도 <select id="portmap-cable-speed">
+          <option value="">-</option><option value="100M">100M</option><option value="1G">1G</option><option value="10G">10G</option><option value="25G">25G</option><option value="40G">40G</option><option value="100G">100G</option><option value="other">other</option>
+        </select></label>
+        <label>Duplex <select id="portmap-duplex">
+          <option value="">-</option><option value="full">full</option><option value="half">half</option><option value="auto">auto</option>
+        </select></label>
+        <label>케이블분류 <select id="portmap-cable-category">
+          <option value="">-</option><option value="backbone">backbone</option><option value="distribution">distribution</option><option value="access">access</option><option value="management">management</option><option value="other">other</option>
+        </select></label>
+        <label>상태 <select id="portmap-status">
+          <option value="required">필요</option><option value="open">오픈</option><option value="closed">차단</option><option value="pending">대기</option>
+        </select></label>
+      </div>
+    </fieldset>
+
+    <label>비고 <textarea id="portmap-note" rows="2"></textarea></label>
+
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="btn-cancel-portmap">취소</button>
+      <button class="btn btn-primary" id="btn-save-portmap">등록</button>
+    </div>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/grid_edit_mode.js"></script>
+<script src="/static/js/infra_port_maps.js"></script>
+{% endblock %}
