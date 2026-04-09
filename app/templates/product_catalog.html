@@ -253,6 +253,29 @@
       </select>
     </label>
     <label class="full-width">참조 URL <input type="url" id="product-reference-url" placeholder="https://..."></label>
+    <hr class="full-width product-optional-divider">
+    <label>라이선스 유형
+      <select id="product-license-type">
+        <option value="">미지정</option>
+        <option value="perpetual">영구</option>
+        <option value="subscription">구독</option>
+        <option value="eval">평가</option>
+        <option value="oem">OEM</option>
+      </select>
+    </label>
+    <label>라이선스 기준
+      <select id="product-license-unit">
+        <option value="">미지정</option>
+        <option value="site">사이트별</option>
+        <option value="host">호스트별</option>
+        <option value="core">코어별</option>
+        <option value="user">사용자별</option>
+        <option value="device">장비별</option>
+        <option value="instance">인스턴스별</option>
+        <option value="session">세션별</option>
+        <option value="cpu">CPU별</option>
+      </select>
+    </label>
     <p class="modal-hint full-width" id="product-classification-hint"></p>
   </form>
   <div class="modal-actions">

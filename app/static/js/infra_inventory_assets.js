@@ -83,7 +83,19 @@ async function loadProjectFilter() {
   }
 }
 
+function _populateFilterStatus() {
+  const sel = document.getElementById("filter-status");
+  if (!sel) return;
+  Object.entries(ASSET_STATUS_MAP).forEach(([val, lbl]) => {
+    const opt = document.createElement("option");
+    opt.value = val;
+    opt.textContent = lbl;
+    sel.appendChild(opt);
+  });
+}
+
 function initGrid() {
+  _populateFilterStatus();
   const gridDiv = document.getElementById("grid-inventory-assets");
   gridApi = agGrid.createGrid(gridDiv, {
     columnDefs,

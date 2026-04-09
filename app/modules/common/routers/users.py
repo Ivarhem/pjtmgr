@@ -1,16 +1,25 @@
 from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.auth.dependencies import require_admin
+from app.core.auth.dependencies import get_current_user
+from app.modules.common.models.user import User
 from app.modules.common.schemas.user import UserCreate, UserUpdate, UserRead
 from app.modules.common.services import user as svc
 from app.core.file_validation import validate_csv
+from app.core.auth.authorization import can_manage_users
+from app.core.exceptions import PermissionDeniedError
 
 router = APIRouter(
     prefix="/api/v1/users",
     tags=["users"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(get_current_user)],
 )
+
+
+def _require_user_manage(current_user: User = Depends(get_current_user)) -> User:
+    if not can_manage_users(current_user):
+        raise PermissionDeniedError("사용자 관리 권한이 없습니다.")
+    return current_user
 
 
 @router.get("", response_model=list[UserRead])
@@ -19,17 +28,17 @@ def list_users(db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=UserRead, status_code=201)
-def create_user(data: UserCreate, db: Session = Depends(get_db)):
+def create_user(data: UserCreate, db: Session = Depends(get_db), _: User = Depends(_require_user_manage)):
     return svc.create_user(db, data)
 
 
 @router.delete("/{user_id}", status_code=204)
-def delete_user(user_id: int, db: Session = Depends(get_db)) -> None:
+def delete_user(user_id: int, db: Session = Depends(get_db), _: User = Depends(_require_user_manage)) -> None:
     svc.delete_user(db, user_id)
 
 
 @router.patch("/{user_id}", response_model=UserRead)
-def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db)):
+def update_user(user_id: int, data: UserUpdate, db: Session = Depends(get_db), _: User = Depends(_require_user_manage)):
     return svc.update_user(db, user_id, data)
 
 

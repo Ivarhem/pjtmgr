@@ -475,9 +475,11 @@ body.dark-mode .toast { box-shadow: var(--modal-shadow); }
 /* ── Detail panel (하단 상세) ── */
 .detail-panel { border-top: 2px solid var(--primary-color); padding: 16px; background: var(--surface-color); border-radius: 0 0 var(--control-radius) var(--control-radius); margin-top: -1px; }
 .detail-panel.is-hidden { display: none; }
-.detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.detail-title { font-size: 15px; font-weight: 600; }
-.detail-header-actions { display: flex; gap: 6px; }
+.detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.detail-title-group { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.detail-title { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-subtitle { font-size: 12px; color: var(--text-color-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail-header-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .detail-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 12px; }
 .detail-tabs .tab-btn { padding: 6px 14px; font-size: 12px; border: none; background: none; cursor: pointer; color: var(--text-color-secondary); border-bottom: 2px solid transparent; }
 .detail-tabs .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }

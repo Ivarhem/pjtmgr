@@ -1,5 +1,13 @@
 /* ── 제품 카탈로그 ── */
 
+const LICENSE_TYPE_LABELS = {
+  perpetual: "영구", subscription: "구독", eval: "평가", oem: "OEM",
+};
+const LICENSE_UNIT_LABELS = {
+  site: "사이트별", host: "호스트별", core: "코어별", user: "사용자별",
+  device: "장비별", instance: "인스턴스별", session: "세션별", cpu: "CPU별",
+};
+
 let catalogGridApi, ifaceGridApi;
 let currentProductId = null;
 let currentProductType = null;
@@ -1814,6 +1822,8 @@ function renderDetail(d) {
   infoGrid.appendChild(_infoRow("출처", d.source_name || "-"));
   infoGrid.appendChild(_infoRow("검증상태", d.verification_status || "-"));
   infoGrid.appendChild(_infoRow("검증일", fmtDate(d.last_verified_at)));
+  infoGrid.appendChild(_infoRow("라이선스 유형", LICENSE_TYPE_LABELS[d.default_license_type] || d.default_license_type || "-"));
+  infoGrid.appendChild(_infoRow("라이선스 기준", LICENSE_UNIT_LABELS[d.default_license_unit] || d.default_license_unit || "-"));
   infoGrid.appendChild(_infoRow("등록일", fmtDate(d.created_at)));
   infoGrid.appendChild(_infoRow("수정일", fmtDate(d.updated_at)));
 
@@ -1980,6 +1990,8 @@ async function openCreateProduct() {
   await syncCatalogAttributeInputs({}, true);
   document.getElementById("product-attr-imp-type").dataset.autoSet = "true";
   document.getElementById("product-reference-url").value = "";
+  document.getElementById("product-license-type").value = "";
+  document.getElementById("product-license-unit").value = "";
   document.getElementById("modal-product-title").textContent = "제품 등록";
   document.getElementById("btn-save-product").textContent = "등록";
   resetProductSimilarityBox();
@@ -2010,6 +2022,8 @@ async function openEditProduct() {
       platform: attrMap.platform,
     }, true);
     document.getElementById("product-reference-url").value = d.reference_url || "";
+    document.getElementById("product-license-type").value = d.default_license_type || "";
+    document.getElementById("product-license-unit").value = d.default_license_unit || "";
     document.getElementById("modal-product-title").textContent = "제품 수정";
     document.getElementById("btn-save-product").textContent = "저장";
     await loadProductNameList(currentProductId);
@@ -2049,6 +2063,8 @@ async function saveProduct() {
     product_type: productType,
     version: document.getElementById("product-version").value || null,
     reference_url: document.getElementById("product-reference-url").value || null,
+    default_license_type: document.getElementById("product-license-type").value || null,
+    default_license_unit: document.getElementById("product-license-unit").value || null,
     attributes: buildCatalogAttributePayload(attrValues),
   };
 

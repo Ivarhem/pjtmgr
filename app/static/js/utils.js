@@ -1579,12 +1579,20 @@ class TaggedHeaderComponent {
   init(params) {
     this.params = params;
     this.el = document.createElement("div");
+    this.el.className = "tagged-header";
     this.el.style.display = "inline-flex";
     this.el.style.alignItems = "center";
     this.el.style.gap = "4px";
+    this.el.style.width = "100%";
 
     const label = document.createElement("span");
     label.textContent = params.displayName;
+    label.style.cursor = params.enableSorting ? "pointer" : "default";
+    if (params.enableSorting) {
+      label.addEventListener("click", (e) => {
+        params.progressSort(e.shiftKey);
+      });
+    }
     this.el.appendChild(label);
 
     const tags = params.tags || [];
@@ -1595,17 +1603,34 @@ class TaggedHeaderComponent {
       this.el.appendChild(span);
     });
 
-    if (params.enableSorting) {
-      this.el.style.cursor = "pointer";
-      this.el.addEventListener("click", (e) => {
-        params.progressSort(e.shiftKey);
+    // 필터 버튼 (컬럼에 filter가 활성화된 경우)
+    if (params.enableMenu || params.enableFilterButton || params.column?.isFilterAllowed()) {
+      const filterBtn = document.createElement("span");
+      filterBtn.className = "tagged-header-filter ag-icon ag-icon-filter";
+      filterBtn.style.cssText = "cursor:pointer; margin-left:auto; opacity:0.4; font-size:12px;";
+      filterBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        params.showColumnMenu(filterBtn);
       });
+      this.el.appendChild(filterBtn);
+
+      // 필터 활성 시 아이콘 강조
+      this.filterChangedListener = () => {
+        const isActive = params.column.isFilterActive();
+        filterBtn.style.opacity = isActive ? "1" : "0.4";
+        filterBtn.classList.toggle("ag-filter-active", isActive);
+      };
+      params.column.addEventListener("filterChanged", this.filterChangedListener);
     }
   }
 
   getGui() { return this.el; }
   refresh() { return false; }
-  destroy() {}
+  destroy() {
+    if (this.filterChangedListener && this.params?.column) {
+      this.params.column.removeEventListener("filterChanged", this.filterChangedListener);
+    }
+  }
 }
 
 // ── ComboBox Cell Editor Factory ─────────────────────────────────
@@ -1769,4 +1794,82 @@ function createComboBoxCellEditor(opts) {
     isPopup() { return true; }
     destroy() { this._dropdown.remove(); }
   };
+}
+
+
+// ── Sub-Grid (상세 패널 내 인라인 그리드) 공통 헬퍼 ──────────────
+/**
+ * 상세 패널 내 서브 그리드를 생성한다.
+ * 그리드 마지막 행에 "+ 추가" 행이 pinned 표시되며, 클릭 시 onAdd 콜백을 호출한다.
+ *
+ * @param {HTMLElement} container - 그리드를 삽입할 부모 요소
+ * @param {Object} opts
+ * @param {Array} opts.columnDefs - ag-Grid 컬럼 정의
+ * @param {Array} opts.rowData - 초기 데이터
+ * @param {string} opts.addLabel - 추가 행 텍스트 (예: "+ 라이선스 추가")
+ * @param {Function} opts.onAdd - 추가 행 클릭 시 콜백 (gridApi) => void
+ * @param {Function} [opts.onCellValueChanged] - 셀 변경 ��들러
+ * @param {string} [opts.hint] - 그리드 하단 힌트 텍스트
+ * @returns {Object} { gridApi, gridEl }
+ */
+function createSubGrid(container, opts) {
+  const {
+    columnDefs, rowData, addLabel = "+ 추가",
+    onAdd, onCellValueChanged, hint,
+  } = opts;
+
+  const gridEl = document.createElement("div");
+  gridEl.className = "ag-theme-quartz infra-grid";
+  gridEl.style.width = "100%";
+  container.appendChild(gridEl);
+
+  const addRowData = [{ _isAddRow: true }];
+
+  class AddRowRenderer {
+    init(params) {
+      this.el = document.createElement("div");
+      this.el.className = "btn-grid-add-inline";
+      this.el.textContent = addLabel;
+    }
+    getGui() { return this.el; }
+  }
+
+  const gridApi = agGrid.createGrid(gridEl, {
+    columnDefs,
+    rowData,
+    pinnedBottomRowData: addRowData,
+    defaultColDef: { resizable: true, sortable: false, filter: false },
+    domLayout: "autoHeight",
+    singleClickEdit: true,
+    stopEditingWhenCellsLoseFocus: true,
+    popupParent: document.body,
+    noRowsOverlayComponent: class { init() { this.el = document.createElement("div"); } getGui() { return this.el; } },
+    isFullWidthRow: (params) => !!params.rowNode.data?._isAddRow,
+    fullWidthCellRenderer: AddRowRenderer,
+    getRowClass: (params) => params.data?._isAddRow ? "sub-grid-add-row" : "",
+    onCellValueChanged: (event) => {
+      if (event.data?._isAddRow) return;
+      if (onCellValueChanged) onCellValueChanged(event);
+    },
+    onRowClicked: (event) => {
+      if (event.data?._isAddRow && onAdd) onAdd(gridApi);
+    },
+  });
+
+  // 데이터 0건일 때 body 영역 min-height 인라인 스타일 강제 제거
+  setTimeout(() => {
+    gridEl.querySelectorAll(".ag-body-viewport, .ag-center-cols-viewport, .ag-body, .ag-body-clipper").forEach((el) => {
+      el.style.minHeight = "0";
+    });
+  }, 0);
+
+  if (hint) {
+    const hintEl = document.createElement("p");
+    hintEl.className = "text-muted";
+    hintEl.style.cssText = "font-size:11px; margin:4px 0 0; line-height:1.5;";
+    hintEl.textContent = hint;
+    container.appendChild(hintEl);
+  }
+
+  return { gridApi, gridEl };
 }

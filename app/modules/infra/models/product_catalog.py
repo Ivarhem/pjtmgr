@@ -34,6 +34,8 @@ class ProductCatalog(TimestampMixin, Base):
     normalized_name: Mapped[str | None] = mapped_column(String(400), nullable=True, index=True)
     is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False)
     similar_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    default_license_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    default_license_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     attribute_values = relationship(
         "ProductCatalogAttributeValue",

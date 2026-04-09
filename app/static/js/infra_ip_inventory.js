@@ -108,7 +108,7 @@ function showSubnetDetail(subnet) {
     const dt = document.createElement("dt");
     dt.textContent = label;
     const dd = document.createElement("dd");
-    dd.textContent = val || "—";
+    dd.textContent = val || "";
     fields.appendChild(dt);
     fields.appendChild(dd);
   });

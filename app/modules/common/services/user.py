@@ -223,6 +223,7 @@ def _serialize_user(user: User) -> dict:
 def _permission_flags_from_payload(payload: dict | None) -> dict[str, bool]:
     raw = payload or {}
     return {
+        "admin": bool(raw.get("admin")),
         "common_manage": bool(raw.get("common_manage")),
         "accounting_use": bool(raw.get("accounting_use") or raw.get("accounting_manage")),
         "accounting_manage": bool(raw.get("accounting_manage")),
@@ -235,7 +236,7 @@ def _permission_flags_from_payload(payload: dict | None) -> dict[str, bool]:
 
 def _permissions_from_flags(flags: dict[str, bool]) -> dict:
     permissions = {
-        "admin": False,
+        "admin": flags.get("admin", False),
         "modules": {},
         "common": {"manage": flags["common_manage"]},
         "scopes": {},
@@ -263,10 +264,12 @@ def _permissions_from_flags(flags: dict[str, bool]) -> dict:
 
 def _permission_tags(permissions: dict) -> list[str]:
     tags: list[str] = []
+    if permissions.get("admin"):
+        tags.append("관리자")
     modules = permissions.get("modules", {}) or {}
     catalog = permissions.get("catalog", {}) or {}
     legacy_infra_manage = modules.get("infra") == "full" and not catalog
-    if permissions.get("admin") or permissions.get("common", {}).get("manage"):
+    if permissions.get("common", {}).get("manage") and not permissions.get("admin"):
         tags.append("공통관리")
     if permissions.get("admin") or permissions.get("scopes", {}).get("accounting") == "all":
         tags.append("영업관리")

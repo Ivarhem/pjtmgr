@@ -31,6 +31,8 @@ class ProductCatalogCreate(BaseModel):
     verification_status: str | None = None
     import_batch_id: str | None = None
     attributes: list[ProductCatalogAttributeValueWrite] | None = None
+    default_license_type: str | None = None
+    default_license_unit: str | None = None
 
 
 class ProductCatalogUpdate(BaseModel):
@@ -49,6 +51,8 @@ class ProductCatalogUpdate(BaseModel):
     verification_status: str | None = None
     import_batch_id: str | None = None
     attributes: list[ProductCatalogAttributeValueWrite] | None = None
+    default_license_type: str | None = None
+    default_license_unit: str | None = None
 
 
 class ProductCatalogRead(BaseModel):
@@ -77,6 +81,8 @@ class ProductCatalogRead(BaseModel):
     classification_level_5_name: str | None = None
     is_placeholder: bool
     similar_count: int = 0
+    default_license_type: str | None = None
+    default_license_unit: str | None = None
     created_at: datetime
     updated_at: datetime
 

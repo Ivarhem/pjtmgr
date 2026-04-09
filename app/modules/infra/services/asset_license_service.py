@@ -43,6 +43,7 @@ def create_asset_license(
 
     lic = AssetLicense(**payload.model_dump())
     db.add(lic)
+    _sync_catalog_license_policy(db, lic.asset_id, lic.license_type, lic.license_unit)
     audit.log(
         db,
         user_id=current_user.id,
@@ -66,6 +67,9 @@ def update_asset_license(
 
     for field, value in changes.items():
         setattr(lic, field, value)
+
+    if "license_type" in changes or "license_unit" in changes:
+        _sync_catalog_license_policy(db, lic.asset_id, lic.license_type, lic.license_unit)
 
     audit.log(
         db,
@@ -105,6 +109,33 @@ def _ensure_asset_exists(db: Session, asset_id: int) -> None:
 
     if db.get(Asset, asset_id) is None:
         raise NotFoundError("Asset not found")
+
+
+def _sync_catalog_license_policy(
+    db: Session,
+    asset_id: int,
+    license_type: str | None,
+    license_unit: str | None,
+) -> None:
+    """자산의 카탈로그에 라이선스 정책이 없으면 업데이트한다."""
+    from app.modules.infra.models.asset import Asset
+    from app.modules.infra.models.product_catalog import ProductCatalog
+
+    asset = db.get(Asset, asset_id)
+    if not asset or not asset.model_id:
+        return
+    catalog = db.get(ProductCatalog, asset.model_id)
+    if not catalog:
+        return
+    changed = False
+    if license_type and catalog.default_license_type != license_type:
+        catalog.default_license_type = license_type
+        changed = True
+    if license_unit and catalog.default_license_unit != license_unit:
+        catalog.default_license_unit = license_unit
+        changed = True
+    if changed:
+        db.add(catalog)
 
 
 def _require_inventory_edit(current_user: User) -> None:

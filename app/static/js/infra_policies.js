@@ -87,7 +87,19 @@ async function loadDropdowns() {
   } catch { showToast("드롭다운을 불러올 수 없습니다.", "error"); }
 }
 
+function _populateFilterStatus() {
+  const sel = document.getElementById("filter-status");
+  if (!sel) return;
+  Object.entries(ASSIGNMENT_STATUS_MAP).forEach(([val, lbl]) => {
+    const opt = document.createElement("option");
+    opt.value = val;
+    opt.textContent = lbl;
+    sel.appendChild(opt);
+  });
+}
+
 function initGrid() {
+  _populateFilterStatus();
   assignGridApi = agGrid.createGrid(document.getElementById("grid-assignments"), {
     columnDefs: assignColDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },

@@ -17,8 +17,9 @@ class AssetLicense(TimestampMixin, Base):
         ForeignKey("assets.id", ondelete="CASCADE"), index=True
     )
     license_type: Mapped[str] = mapped_column(String(50))
+    license_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    license_quantity: Mapped[str | None] = mapped_column(String(100), nullable=True)
     license_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    licensed_to: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    start_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    end_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)

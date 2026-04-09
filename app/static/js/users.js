@@ -1,6 +1,7 @@
 const COL_STATE_KEY = 'users_col_state_v2';
 
 const PERMISSION_DEFS = [
+  { key: 'admin', label: '관리자' },
   { key: 'common_manage', label: '공통관리' },
   { key: 'accounting_use', label: '영업사용' },
   { key: 'accounting_manage', label: '영업관리' },
@@ -17,6 +18,7 @@ function getPermissionFlags(row) {
   const catalog = permissions.catalog || {};
   const legacyInfraManage = modules.infra === 'full' && !Object.prototype.hasOwnProperty.call(permissions, 'catalog');
   return {
+    admin: !!permissions.admin,
     common_manage: !!(permissions.admin || permissions.common?.manage),
     accounting_use: modules.accounting === 'read' || modules.accounting === 'full',
     accounting_manage: permissions.admin || scopes.accounting === 'all',
@@ -29,6 +31,7 @@ function getPermissionFlags(row) {
 
 function buildPermissionsPayload(prefix) {
   return {
+    admin: document.getElementById(`${prefix}-perm-admin`).checked,
     common_manage: document.getElementById(`${prefix}-perm-common-manage`).checked,
     accounting_use: document.getElementById(`${prefix}-perm-accounting-use`).checked,
     accounting_manage: document.getElementById(`${prefix}-perm-accounting-manage`).checked,
@@ -145,7 +148,7 @@ function openAddModal() {
 async function submitNew() {
   const name = document.getElementById('new-name').value.trim();
   if (!name) {
-    alert('이름을 입력하세요.');
+    showToast('이름을 입력하세요.', 'warning');
     return;
   }
   const body = {
@@ -162,17 +165,18 @@ async function submitNew() {
   });
   if (res.ok) {
     document.getElementById('modal-add').close();
+    showToast('사용자가 등록되었습니다.');
     await loadData();
   } else {
     const err = await res.json().catch(() => ({}));
-    alert(err.detail || '등록에 실패했습니다.');
+    showToast(err.detail || '등록에 실패했습니다.', 'error');
   }
 }
 
 function openBulkPermissionsModal() {
   const rows = gridApi.getSelectedRows();
   if (!rows.length) {
-    alert('권한을 변경할 사용자를 선택하세요.');
+    showToast('권한을 변경할 사용자를 선택하세요.', 'warning');
     return;
   }
   fillPermissionCheckboxes('bulk', getPermissionFlags(rows[0]));
@@ -182,7 +186,7 @@ function openBulkPermissionsModal() {
 async function applyBulkPermissions() {
   const rows = gridApi.getSelectedRows();
   if (!rows.length) {
-    alert('권한을 변경할 사용자를 선택하세요.');
+    showToast('권한을 변경할 사용자를 선택하세요.', 'warning');
     return;
   }
   const permissions = buildPermissionsPayload('bulk');
@@ -195,18 +199,18 @@ async function applyBulkPermissions() {
   )));
   const failed = results.filter((item) => !item.res.ok);
   if (failed.length) {
-    alert(failed.map((item) => `${item.row.name}: ${item.data?.detail || '실패'}`).join('\n'));
+    showToast(failed.map((item) => `${item.row.name}: ${item.data?.detail || '실패'}`).join(', '), 'error');
     return;
   }
   document.getElementById('modal-bulk-permissions').close();
   await loadData();
-  alert(`${rows.length}명 권한이 변경되었습니다.`);
+  showToast(`${rows.length}명 권한이 변경되었습니다.`);
 }
 
 async function importCsv() {
   const file = document.getElementById('import-csv-file').files[0];
   if (!file) {
-    alert('파일을 선택하세요.');
+    showToast('파일을 선택하세요.', 'warning');
     return;
   }
   const fd = new FormData();
@@ -218,17 +222,17 @@ async function importCsv() {
     const parts = [`신규 ${data.created}명`];
     if (data.updated) parts.push(`업데이트 ${data.updated}명`);
     if (data.skipped) parts.push(`건너뜀 ${data.skipped}명`);
-    alert(`가져오기 완료: ${parts.join(', ')}`);
+    showToast(`가져오기 완료: ${parts.join(', ')}`);
     await loadData();
   } else {
-    alert('가져오기에 실패했습니다.');
+    showToast('가져오기에 실패했습니다.', 'error');
   }
 }
 
 async function resetPassword() {
   const rows = gridApi.getSelectedRows();
   if (rows.length === 0) {
-    alert('비밀번호를 초기화할 사용자를 선택하세요.');
+    showToast('비밀번호를 초기화할 사용자를 선택하세요.', 'warning');
     return;
   }
   const names = rows.map((r) => r.name).join(', ');
@@ -242,14 +246,14 @@ async function resetPassword() {
   );
   const ok = results.filter((r) => r.res.ok);
   const failed = results.filter((r) => !r.res.ok);
-  if (ok.length > 0) alert(`${ok.length}명 비밀번호 초기화 완료`);
-  if (failed.length > 0) alert(failed.map((r) => `${r.name}: ${r.data?.detail || '실패'}`).join('\n'));
+  if (ok.length > 0) showToast(`${ok.length}명 비밀번호 초기화 완료`);
+  if (failed.length > 0) showToast(failed.map((r) => `${r.name}: ${r.data?.detail || '실패'}`).join(', '), 'error');
 }
 
 async function deleteSelected() {
   const rows = gridApi.getSelectedRows();
   if (rows.length === 0) {
-    alert('삭제할 사용자를 선택하세요.');
+    showToast('삭제할 사용자를 선택하세요.', 'warning');
     return;
   }
   if (!await showConfirmDialog(`선택한 ${rows.length}명을 삭제하시겠습니까?`, {
@@ -263,13 +267,13 @@ async function deleteSelected() {
   const failed = results.filter((r) => !r.res.ok && r.res.status !== 403);
   rows.forEach((r) => changedRows.delete(r.id));
   await loadData();
-  if (denied.length > 0) alert(denied.map((r) => r.data?.detail).join('\n'));
-  if (failed.length > 0) alert(`${failed.length}건 삭제에 실패했습니다.`);
+  if (denied.length > 0) showToast(denied.map((r) => r.data?.detail).join(', '), 'error');
+  if (failed.length > 0) showToast(`${failed.length}건 삭제에 실패했습니다.`, 'error');
 }
 
 async function saveChanges() {
   if (changedRows.size === 0) {
-    alert('변경된 내용이 없습니다.');
+    showToast('변경된 내용이 없습니다.', 'info');
     return;
   }
   const count = changedRows.size;
@@ -291,13 +295,13 @@ async function saveChanges() {
   const errored = results.filter((r) => !r.ok && r.status !== 403);
   if (denied.length > 0) {
     const messages = await Promise.all(denied.map((r) => r.json().then((d) => d.detail)));
-    alert(messages.join('\n'));
+    showToast(messages.join(', '), 'error');
   }
   if (errored.length > 0) {
-    alert('일부 저장에 실패했습니다.');
+    showToast('일부 저장에 실패했습니다.', 'error');
   } else {
     changedRows.clear();
-    if (!denied.length) alert(`${count}건 저장 완료`);
+    if (!denied.length) showToast(`${count}건 저장 완료`);
   }
   await loadData();
 }

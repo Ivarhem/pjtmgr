@@ -85,7 +85,7 @@ const ASSET_EVENT_TEMPLATES = {
 };
 
 function formatDateTime(value) {
-  if (!value) return "—";
+  if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString("ko-KR", {
@@ -503,7 +503,7 @@ class RoleCellEditor {
     this.input.placeholder = "역할명 입력 또는 검색";
     // 현재 역할명으로 초기값 설정
     const currentName = getRoleNameById(params.data?.current_role_id, params.data?.current_role_names);
-    this.input.value = currentName === "—" ? "" : currentName;
+    this.input.value = currentName === "" ? "" : currentName;
     this.container.appendChild(this.input);
 
     this.dropdown = document.createElement("div");
@@ -621,9 +621,9 @@ function getGridCellClass(field, row = null) {
 }
 
 function getRoleNameById(roleId, fallbackNames) {
-  if (!roleId) return fallbackNames?.length ? fallbackNames.join(", ") : "—";
+  if (!roleId) return fallbackNames?.length ? fallbackNames.join(", ") : "";
   const match = _assetRoleOptions.find((role) => role.id === Number(roleId));
-  return match?.role_name || fallbackNames?.[0] || "—";
+  return match?.role_name || fallbackNames?.[0] || "";
 }
 
 /* ── 자산 정보 컬럼 (분류체계 앞) ── */
@@ -632,6 +632,11 @@ const ASSET_INFO_COLS = [
     field: "asset_name", headerName: "자산명", flex: 1.2, minWidth: 220,
     headerComponent: TaggedHeaderComponent,
     headerComponentParams: { tags: ["필수", "고유"] },
+    filter: "agTextColumnFilter",
+    filterParams: {
+      filterOptions: ["contains", "notContains", "equals", "notEqual", "startsWith", "endsWith", "blank", "notBlank"],
+      defaultOption: "contains",
+    },
     editable: () => isGridFieldEditable("asset_name"),
     cellRenderer: (params) => {
       const wrapper = document.createElement("span");
@@ -657,37 +662,50 @@ const ASSET_INFO_COLS = [
     cellEditor: RoleCellEditor,
     cellDataType: false,
     valueFormatter: (p) => getRoleNameById(p.value, p.data?.current_role_names),
+    filterValueGetter: (p) => getRoleNameById(p.data?.current_role_id, p.data?.current_role_names),
     cellClass: (p) => getGridCellClass("current_role_id", p.data),
   },
   { field: "hostname", headerName: "호스트명", width: 160, editable: () => isGridFieldEditable("hostname"), cellClass: (p) => getGridCellClass(p.colDef.field) },
   {
+    field: "vendor", headerName: "제조사", width: 140,
+    valueFormatter: (p) => p.value || "",
+    editable: false,
+    cellClass: (p) => getGridCellClass(p.colDef.field),
+  },
+  {
     field: "model", headerName: "모델명", width: 190,
     valueFormatter: (p) => {
-      if (p.value && typeof p.value === "object") return p.value.display || "—";
-      return p.value || "—";
+      if (p.value && typeof p.value === "object") return p.value.display || "";
+      return p.value || "";
     },
     editable: () => isGridFieldEditable("model"),
     cellEditor: CatalogCellEditor,
     cellDataType: false,
     cellClass: (p) => getGridCellClass(p.colDef.field),
   },
-  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "—", editable: () => isGridFieldEditable("serial_no"), cellClass: (p) => getGridCellClass(p.colDef.field) },
+  { field: "serial_no", headerName: "시리얼번호", width: 160, valueFormatter: (p) => p.value || "", editable: () => isGridFieldEditable("serial_no"), cellClass: (p) => getGridCellClass(p.colDef.field) },
   {
     field: "center_id",
     headerName: "센터정보",
     width: 170,
     cellDataType: false,
     valueFormatter: (p) => {
-      if (!p.value) return p.data?.center || "—";
+      if (!p.value) return p.data?.center || "";
       const c = _layoutCentersCache.find((x) => x.id === Number(p.value));
-      return c ? c.center_name : (p.data?.center_label || "—");
+      return c ? c.center_name : (p.data?.center_label || "");
+    },
+    filterValueGetter: (p) => {
+      const id = p.data?.center_id;
+      if (!id) return p.data?.center || "";
+      const c = _layoutCentersCache.find((x) => x.id === Number(id));
+      return c ? c.center_name : (p.data?.center_label || "");
     },
     editable: () => isGridFieldEditable("center_id"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: () => ({
       values: ["", ..._layoutCentersCache.map((c) => String(c.id))],
       formatValue: (v) => {
-        if (!v) return "—";
+        if (!v) return "";
         const c = _layoutCentersCache.find((x) => String(x.id) === String(v));
         return c ? c.center_name : v;
       },
@@ -701,9 +719,10 @@ const ASSET_INFO_COLS = [
     editable: () => isGridFieldEditable("environment"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: Object.keys(ENV_MAP) },
-    valueFormatter: (p) => ENV_MAP[p.value] || p.value || "—",
+    valueFormatter: (p) => ENV_MAP[p.value] || p.value || "",
+    filterValueGetter: (p) => ENV_MAP[p.data?.environment] || p.data?.environment || "",
     cellRenderer: (params) => {
-      const label = ENV_MAP[params.value] || params.value || "—";
+      const label = ENV_MAP[params.value] || params.value || "";
       const span = document.createElement("span");
       span.className = "badge badge-env-" + (params.value || "unknown");
       span.textContent = label;
@@ -718,6 +737,7 @@ const ASSET_INFO_COLS = [
     editable: () => isGridFieldEditable("status"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: Object.keys(ASSET_STATUS_MAP) },
+    filterValueGetter: (p) => ASSET_STATUS_MAP[p.data?.status] || p.data?.status || "",
     cellRenderer: (params) => {
       const label = ASSET_STATUS_MAP[params.value] || params.value;
       const span = document.createElement("span");
@@ -737,34 +757,40 @@ const ASSET_CODE_COLS = [
     headerName: "프로젝트코드",
     width: 160,
     editable: () => isGridFieldEditable("project_asset_number"),
-    valueFormatter: (p) => p.value || "—",
+    valueFormatter: (p) => p.value || "",
     cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
   },
-  { field: "customer_asset_number", headerName: "고객자산코드", width: 150, valueFormatter: (p) => p.value || "—", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
+  { field: "customer_asset_number", headerName: "고객자산코드", width: 150, valueFormatter: (p) => p.value || "", hide: true, editable: false, cellClass: () => getGridCellClass("customer_asset_number") },
   {
     field: "period_id",
     headerName: "귀속프로젝트",
     width: 220,
     cellDataType: false,
     valueFormatter: (p) => {
-      if (!p.value) return "—";
+      if (!p.value) return "";
       const period = _periodsCache.find((x) => x.id === Number(p.value));
-      return period ? (period.contract_name || period.period_label || p.value) : (p.data?.contract_name || p.data?.period_label || "—");
+      return period ? (period.contract_name || period.period_label || p.value) : (p.data?.contract_name || p.data?.period_label || "");
+    },
+    filterValueGetter: (p) => {
+      const id = p.data?.period_id;
+      if (!id) return "";
+      const period = _periodsCache.find((x) => x.id === Number(id));
+      return period ? (period.contract_name || period.period_label || id) : (p.data?.contract_name || p.data?.period_label || "");
     },
     editable: () => isGridFieldEditable("period_id"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: () => ({
       values: ["", ..._periodsCache.map((p) => String(p.id))],
       formatValue: (v) => {
-        if (!v) return "—";
+        if (!v) return "";
         const p = _periodsCache.find((x) => String(x.id) === String(v));
         return p ? (p.contract_name || p.period_label || v) : v;
       },
     }),
     cellClass: (p) => getGridCellClass("period_id"),
   },
-  { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
-  { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "—", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+  { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+  { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
 ];
 
 /** 분류체계 깊이에 따라 동적 컬럼을 생성한다. */
@@ -775,7 +801,7 @@ function buildClassificationCols(depth) {
       field: `classification_level_${i}_name`,
       headerName: _classificationLevelAliases[i - 1] || `${i}레벨`,
       width: 130,
-      valueFormatter: (p) => p.value || "—",
+      valueFormatter: (p) => p.value || "",
       editable: false,
       cellClass: (p) => getGridCellClass(p.colDef.field, p.data),
     });
@@ -935,7 +961,7 @@ function updateAssetClassificationPreview(text) {
   const preview = document.getElementById("asset-classification-preview");
   const chip = document.getElementById("asset-classification-chip");
   if (!preview) return;
-  if (text && text !== "—") {
+  if (text && text !== "") {
     preview.textContent = text;
     if (chip) chip.classList.add("is-active");
   } else {
@@ -1130,8 +1156,20 @@ async function loadGridRoleOptions() {
 
 /* ── Grid init ── */
 
+function _populateFilterStatus() {
+  const sel = document.getElementById("filter-status");
+  if (!sel) return;
+  Object.entries(ASSET_STATUS_MAP).forEach(([val, lbl]) => {
+    const opt = document.createElement("option");
+    opt.value = val;
+    opt.textContent = lbl;
+    sel.appendChild(opt);
+  });
+}
+
 async function initGrid() {
   const partnerId = getCtxPartnerId();
+  _populateFilterStatus();
   await Promise.all([
     loadGridRoleOptions(),
     loadLayoutCenters(partnerId),
@@ -1473,75 +1511,33 @@ const DETAIL_TAB_FIELDS = {
       title: "식별 및 기준 정보",
       description: "자산을 식별하고 역할과 기준 모델을 확인하는 핵심 정보입니다.",
       fields: [
-        ["시스템ID", "system_id"],
         ["프로젝트코드", "project_asset_number"],
         ["고객자산코드", "customer_asset_number"],
-        ["자산명", "asset_name"],
-        ["역할명", "current_role_names", (v) => v && v.length ? v.join(", ") : "—"],
-        ["귀속사업", "period_id", () => _selectedAsset?.period_label || "—"],
-        ["상위분류", "catalog_kind", (v) => CATALOG_KIND_LABELS[v] || v],
-        ["분류 경로", "classification_path"],
-      ],
-    },
-    {
-      title: "사양 및 식별자",
-      description: "실물 장비 또는 기준 제품을 식별하는 데 필요한 값입니다.",
-      fields: [
-        ["제조사", "vendor"],
-        ["모델", "model"],
+        ["역할명", "current_role_names", (v) => v && v.length ? v.join(", ") : ""],
+        ["귀속사업", "period_id", () => _selectedAsset?.period_label || ""],
         ["시리얼", "serial_no"],
         ["장비 ID", "equipment_id"],
         ["자산 번호", "asset_number"],
         ["자산 등급", "asset_class"],
       ],
     },
-    {
-      title: "하드웨어 요약",
-      description: "하드웨어 자산에서 주로 확인하는 사양 요약입니다.",
-      onlyKinds: ["hardware"],
-      fields: [
-        ["크기(U)", "size_unit"],
-        ["LC", "lc_count"],
-        ["HA", "ha_count"],
-        ["UTP", "utp_count"],
-        ["전원", "power_count"],
-        ["전원 유형", "power_type"],
-        ["펌웨어", "firmware_version"],
-      ],
-    },
   ],
   operations: [
-    {
-      title: "설치 위치",
-      description: "센터와 위치, 반입 시점처럼 현장 배치를 파악하는 정보입니다.",
-      fields: [
-        ["센터", "center_label", (v) => v || _selectedAsset?.center || "—"],
-        ["전산실", "room_label"],
-        ["랙", "rack_label", (v) => v || _selectedAsset?.rack_no || "—"],
-        ["랙 유닛", "rack_unit"],
-        ["위치", "location"],
-        ["입고일", "received_date"],
-        ["도입 연도", "year_acquired"],
-      ],
-    },
     {
       title: "운영 속성",
       description: "운영 상태와 환경, 담당 부서처럼 운영 기준을 파악하는 정보입니다.",
       fields: [
         ["환경", "environment", (v) => ENV_MAP[v] || v],
         ["상태", "status", (v) => ASSET_STATUS_MAP[v] || v],
+        ["센터", "center_label", (v) => v || _selectedAsset?.center || ""],
+        ["전산실", "room_label"],
+        ["랙", "rack_label", (v) => v || _selectedAsset?.rack_no || ""],
+        ["랙 유닛", "rack_unit"],
+        ["위치", "location"],
         ["부서", "dept"],
         ["유지보수 업체", "maintenance_vendor"],
-      ],
-    },
-    {
-      title: "호스트 / 서비스",
-      description: "호스트명, 서비스 식별에 필요한 값을 모아 봅니다.",
-      fields: [
-        ["호스트명", "hostname"],
-        ["클러스터", "cluster"],
-        ["서비스명", "service_name"],
-        ["존", "zone"],
+        ["입고일", "received_date"],
+        ["도입 연도", "year_acquired"],
       ],
     },
   ],
@@ -1594,7 +1590,8 @@ function showAssetDetail(asset) {
   syncAssetRoleActionButtons();
   syncAssetLayoutState(true);
   document.getElementById("detail-asset-name").textContent =
-    asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "");
+    [asset.asset_name, asset.hostname ? `(${asset.hostname})` : ""].filter(Boolean).join(" ");
+  document.getElementById("detail-asset-subtitle").textContent = asset.system_id || "";
   renderDetailTab("overview");
 }
 
@@ -1749,8 +1746,9 @@ function reopenDetail() {
     return;
   }
   syncAssetLayoutState(true);
-  document.getElementById("detail-asset-name").textContent =
-    _selectedAsset.asset_name + (_selectedAsset.hostname ? " (" + _selectedAsset.hostname + ")" : "");
+  document.getElementById("detail-asset-name").textContent = _selectedAsset.asset_name;
+  document.getElementById("detail-asset-subtitle").textContent =
+    [_selectedAsset.vendor, _selectedAsset.hostname ? `(${_selectedAsset.hostname})` : ""].filter(Boolean).join(" ");
   renderDetailTab(_currentTab || "overview");
 }
 
@@ -1789,7 +1787,7 @@ function renderDetailTab(tab) {
 function getDetailFieldValue(key, fmt) {
   const raw = _selectedAsset?.[key];
   if (fmt) return fmt(raw);
-  if (raw == null || raw === "") return "—";
+  if (raw == null || raw === "") return "";
   return String(raw);
 }
 
@@ -1803,7 +1801,7 @@ function getDetailFieldClass(key) {
 
 function hasVisibleFieldValue(key, fmt) {
   const value = getDetailFieldValue(key, fmt);
-  return value !== "—";
+  return value !== "";
 }
 
 function createDetailSectionCard(title, description) {
@@ -1866,8 +1864,9 @@ async function renderOverviewSubSections(container) {
   wrap.className = "asset-detail-sections";
   container.appendChild(wrap);
   const groups = [
+    ["제품 정보", "제조사와 모델, 분류 경로를 확인합니다.", renderProductInfoTab],
+    ["라이선스", "이 자산의 라이선스 정보를 관리합니다.", renderLicensesTab],
     ["별칭", "고객사명, 레거시명, 내부명을 함께 관리합니다.", renderAliasesTab],
-    ["라이선스", "이 자산 자체의 라이선스 정보를 관리합니다.", renderLicensesTab],
   ];
   for (const [title, description, renderer] of groups) {
     const section = createDetailSectionCard(title, description);
@@ -2251,7 +2250,7 @@ function _subTable(container, columns, rows, actions) {
       const td = document.createElement("td");
       td.className = "asset-subtable-cell";
       const v = row[c.field];
-      td.textContent = c.fmt ? c.fmt(v, row) : (v != null ? String(v) : "—");
+      td.textContent = c.fmt ? c.fmt(v, row) : (v != null ? String(v) : "");
       if (c.className) td.classList.add(c.className);
       tr.appendChild(td);
     });
@@ -2338,65 +2337,163 @@ const LICENSE_TYPE_MAP = {
   perpetual: "영구", subscription: "구독", eval: "평가", oem: "OEM",
 };
 
+const LICENSE_UNIT_MAP = {
+  site: "사이트별", host: "호스트별", core: "코어별", user: "사용자별",
+  device: "장비별", instance: "인스턴스별", session: "세션별", cpu: "CPU별",
+};
+
+async function renderProductInfoTab(container) {
+  const productFields = [
+    ["제조사", "vendor"],
+    ["모델", "model"],
+    ["분류 경로", "classification_path"],
+  ];
+  const visibleFields = productFields.filter(([, key]) => {
+    const v = _selectedAsset?.[key];
+    return v != null && v !== "";
+  });
+  if (visibleFields.length) {
+    const grid = document.createElement("div");
+    grid.className = "detail-grid asset-detail-grid";
+    visibleFields.forEach(([label, key]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = String(_selectedAsset[key]);
+      grid.appendChild(dt);
+      grid.appendChild(dd);
+    });
+    container.appendChild(grid);
+  }
+}
+
+let _licenseGridApi = null;
+
+const LICENSE_COL_DEFS = [
+  {
+    field: "license_type", headerName: "유형", width: 90,
+    editable: true, cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: Object.keys(LICENSE_TYPE_MAP) },
+    valueFormatter: (p) => LICENSE_TYPE_MAP[p.value] || p.value || "",
+  },
+  {
+    field: "license_unit", headerName: "기준", width: 110,
+    editable: true, cellEditor: "agSelectCellEditor",
+    cellEditorParams: { values: ["", ...Object.keys(LICENSE_UNIT_MAP)] },
+    valueFormatter: (p) => LICENSE_UNIT_MAP[p.value] || p.value || "",
+  },
+  { field: "license_quantity", headerName: "기준값", width: 120, editable: true },
+  { field: "license_key", headerName: "라이선스 키", width: 160, editable: true },
+  { field: "start_date", headerName: "시작", width: 110, editable: true },
+  { field: "end_date", headerName: "종료", width: 110, editable: true },
+  { field: "note", headerName: "메모", flex: 1, minWidth: 100, editable: true },
+  {
+    headerName: "", width: 40, sortable: false, filter: false,
+    cellRenderer: (params) => {
+      if (!params.data?.id && !params.data?._isNew) return "";
+      const btn = document.createElement("button");
+      btn.className = "btn-icon btn-icon-danger";
+      btn.textContent = "\u00d7";
+      btn.title = "삭제";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteLicense(params.data, params.api);
+      });
+      return btn;
+    },
+  },
+];
+
 async function renderLicensesTab(container) {
-  _subTabHeader(container, "라이선스", () => openLicenseModal());
+  if (_licenseGridApi) { _licenseGridApi.destroy(); _licenseGridApi = null; }
   try {
     const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/licenses");
-    _subTable(container, [
-      { label: "유형", field: "license_type", fmt: (v) => LICENSE_TYPE_MAP[v] || v },
-      { label: "라이선스 키", field: "license_key" },
-      { label: "귀속", field: "licensed_to" },
-      { label: "시작일", field: "start_date" },
-      { label: "만료일", field: "end_date" },
-      { label: "메모", field: "note" },
-    ], data, [
-      { label: "수정", handler: (r) => openLicenseModal(r) },
-      { label: "삭제", danger: true, handler: (r) => deleteLicense(r) },
-    ]);
+    const { gridApi } = createSubGrid(container, {
+      columnDefs: LICENSE_COL_DEFS,
+      rowData: data,
+      addLabel: "+ 라이선스 추가",
+      onAdd: () => addLicenseRow(),
+      onCellValueChanged: handleLicenseCellChanged,
+      hint: "기준: 과금 단위 선택 · 기준값: 수량/조건 입력 (예: 500-User, 16-Core)",
+    });
+    _licenseGridApi = gridApi;
   } catch (e) { showToast(e.message, "error"); }
 }
 
-function openLicenseModal(lic) {
-  const m = document.getElementById("modal-license");
-  document.getElementById("lic-id").value = lic ? lic.id : "";
-  document.getElementById("lic-type").value = lic ? lic.license_type : "perpetual";
-  document.getElementById("lic-key").value = lic ? (lic.license_key || "") : "";
-  document.getElementById("lic-licensed-to").value = lic ? (lic.licensed_to || "") : "";
-  document.getElementById("lic-start-date").value = lic ? (lic.start_date || "") : "";
-  document.getElementById("lic-end-date").value = lic ? (lic.end_date || "") : "";
-  document.getElementById("lic-note").value = lic ? (lic.note || "") : "";
-  document.getElementById("modal-license-title").textContent = lic ? "라이선스 수정" : "라이선스 추가";
-  m.showModal();
+async function handleLicenseCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue) return;
+  if (data._isNew) {
+    // 새 행: 유형이 지정되면 즉시 저장
+    if (data.license_type) {
+      const created = await saveLicenseNewRow(data);
+      if (created) {
+        Object.assign(data, created);
+        delete data._isNew;
+        event.api.refreshCells({ rowNodes: [event.node], force: true });
+      }
+    }
+    return;
+  }
+  try {
+    await apiFetch("/api/v1/asset-licenses/" + data.id, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue || null },
+    });
+  } catch (e) {
+    data[colDef.field] = oldValue;
+    event.api.refreshCells({ rowNodes: [event.node], force: true });
+    showToast(e.message, "error");
+  }
 }
 
-async function saveLicense() {
-  const licId = document.getElementById("lic-id").value;
+function addLicenseRow() {
+  if (!_licenseGridApi) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const catType = _selectedAsset?.catalog_license_type || "perpetual";
+  const catUnit = _selectedAsset?.catalog_license_unit || "";
+  const newRow = {
+    _isNew: true,
+    license_type: catType,
+    license_unit: catUnit,
+    license_quantity: "",
+    license_key: "",
+    start_date: today,
+    end_date: "영구",
+    note: "",
+  };
+  _licenseGridApi.applyTransaction({ add: [newRow] });
+  const lastIdx = _licenseGridApi.getDisplayedRowCount() - 1;
+  _licenseGridApi.startEditingCell({ rowIndex: lastIdx, colKey: "license_quantity" });
+}
+
+async function saveLicenseNewRow(rowData) {
   const payload = {
-    license_type: document.getElementById("lic-type").value,
-    license_key: document.getElementById("lic-key").value || null,
-    licensed_to: document.getElementById("lic-licensed-to").value || null,
-    start_date: document.getElementById("lic-start-date").value || null,
-    end_date: document.getElementById("lic-end-date").value || null,
-    note: document.getElementById("lic-note").value || null,
+    license_type: rowData.license_type || "perpetual",
+    license_unit: rowData.license_unit || null,
+    license_quantity: rowData.license_quantity || null,
+    license_key: rowData.license_key || null,
+    start_date: rowData.start_date || null,
+    end_date: rowData.end_date || null,
+    note: rowData.note || null,
   };
   try {
-    if (licId) {
-      await apiFetch("/api/v1/asset-licenses/" + licId, { method: "PATCH", body: payload });
-    } else {
-      await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/licenses", { method: "POST", body: payload });
-    }
-    document.getElementById("modal-license").close();
-    showToast(licId ? "수정되었습니다." : "추가되었습니다.");
-    renderDetailTab("overview");
-  } catch (e) { showToast(e.message, "error"); }
+    return await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/licenses", {
+      method: "POST", body: payload,
+    });
+  } catch (e) { showToast(e.message, "error"); return null; }
 }
 
-async function deleteLicense(lic) {
+async function deleteLicense(lic, gridApi) {
+  if (lic._isNew) {
+    gridApi.applyTransaction({ remove: [lic] });
+    return;
+  }
   confirmDelete("라이선스를 삭제하시겠습니까?", async () => {
     try {
       await apiFetch("/api/v1/asset-licenses/" + lic.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("overview");
+      gridApi.applyTransaction({ remove: [lic] });
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -2523,7 +2620,7 @@ async function renderRelatedPartnersTab(container) {
         label: "유효기간",
         field: "valid_from",
         fmt: (_, row) => {
-          const from = row.valid_from || "—";
+          const from = row.valid_from || "";
           const to = row.valid_to || "현재";
           return `${from} ~ ${to}`;
         },
@@ -2695,64 +2792,95 @@ async function deleteRelation(rel) {
 
 const ALIAS_TYPE_MAP = { INTERNAL: "내부", CUSTOMER: "고객사", VENDOR: "벤더", TEAM: "팀", LEGACY: "레거시", ETC: "기타" };
 
+let _aliasGridApi = null;
+
+const ALIAS_COL_DEFS = [
+  { field: "alias_name", headerName: "명칭", flex: 1, minWidth: 150, editable: true },
+  { field: "note", headerName: "메모", flex: 1, minWidth: 150, editable: true },
+  {
+    headerName: "", width: 40, sortable: false, filter: false,
+    cellRenderer: (params) => {
+      if (!params.data?.id && !params.data?._isNew) return "";
+      const btn = document.createElement("button");
+      btn.className = "btn-icon btn-icon-danger";
+      btn.textContent = "\u00d7";
+      btn.title = "삭제";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteAlias(params.data, params.api);
+      });
+      return btn;
+    },
+  },
+];
+
 async function renderAliasesTab(container) {
-  _subTabHeader(container, "별칭", () => openAliasModal());
+  if (_aliasGridApi) { _aliasGridApi.destroy(); _aliasGridApi = null; }
   try {
     const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/aliases");
-    _subTable(container, [
-      { label: "별칭", field: "alias_name" },
-      { label: "유형", field: "alias_type", fmt: v => ALIAS_TYPE_MAP[v] || v },
-      { label: "출처", field: "source_text", fmt: (v, r) => r.source_partner_id ? "업체#" + r.source_partner_id : (v || "—") },
-      { label: "대표", field: "is_primary", fmt: v => v ? "●" : "" },
-      { label: "비고", field: "note" },
-    ], data, [
-      { label: "수정", handler: (r) => openAliasModal(r) },
-      { label: "삭제", danger: true, handler: (r) => deleteAlias(r) },
-    ]);
+    const { gridApi } = createSubGrid(container, {
+      columnDefs: ALIAS_COL_DEFS,
+      rowData: data,
+      addLabel: "+ 별칭 추가",
+      onAdd: () => addAliasRow(),
+      onCellValueChanged: handleAliasCellChanged,
+    });
+    _aliasGridApi = gridApi;
   } catch (e) { showToast(e.message, "error"); }
 }
 
-function openAliasModal(alias) {
-  const m = document.getElementById("modal-alias");
-  document.getElementById("alias-id").value = alias ? alias.id : "";
-  document.getElementById("alias-name").value = alias ? alias.alias_name : "";
-  document.getElementById("alias-type").value = alias ? alias.alias_type : "INTERNAL";
-  document.getElementById("alias-source-partner").value = alias ? (alias.source_partner_id || "") : "";
-  document.getElementById("alias-source-text").value = alias ? (alias.source_text || "") : "";
-  document.getElementById("alias-note").value = alias ? (alias.note || "") : "";
-  document.getElementById("alias-is-primary").checked = alias ? alias.is_primary : false;
-  document.getElementById("modal-alias-title").textContent = alias ? "별칭 수정" : "별칭 추가";
-  m.showModal();
-}
-
-async function saveAlias() {
-  const aliasId = document.getElementById("alias-id").value;
-  const payload = {
-    alias_name: document.getElementById("alias-name").value,
-    alias_type: document.getElementById("alias-type").value,
-    source_partner_id: document.getElementById("alias-source-partner").value ? Number(document.getElementById("alias-source-partner").value) : null,
-    source_text: document.getElementById("alias-source-text").value || null,
-    note: document.getElementById("alias-note").value || null,
-    is_primary: document.getElementById("alias-is-primary").checked,
-  };
-  try {
-    if (aliasId) {
-      await apiFetch("/api/v1/asset-aliases/" + aliasId, { method: "PATCH", body: payload });
-    } else {
-      await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/aliases", { method: "POST", body: payload });
+async function handleAliasCellChanged(event) {
+  const { data, colDef, newValue, oldValue } = event;
+  if (newValue === oldValue) return;
+  if (data._isNew) {
+    if (data.alias_name) {
+      const created = await saveAliasNewRow(data);
+      if (created) {
+        Object.assign(data, created);
+        delete data._isNew;
+        event.api.refreshCells({ rowNodes: [event.node], force: true });
+      }
     }
-    document.getElementById("modal-alias").close();
-    showToast(aliasId ? "수정되었습니다." : "추가되었습니다.");
-    renderDetailTab("overview");
-  } catch (e) { showToast(e.message, "error"); }
+    return;
+  }
+  try {
+    await apiFetch("/api/v1/asset-aliases/" + data.id, {
+      method: "PATCH",
+      body: { [colDef.field]: newValue || null },
+    });
+  } catch (e) {
+    data[colDef.field] = oldValue;
+    event.api.refreshCells({ rowNodes: [event.node], force: true });
+    showToast(e.message, "error");
+  }
 }
 
-async function deleteAlias(alias) {
+function addAliasRow() {
+  if (!_aliasGridApi) return;
+  _aliasGridApi.applyTransaction({ add: [{ _isNew: true, alias_name: "", note: "" }] });
+  const lastIdx = _aliasGridApi.getDisplayedRowCount() - 1;
+  _aliasGridApi.startEditingCell({ rowIndex: lastIdx, colKey: "alias_name" });
+}
+
+async function saveAliasNewRow(rowData) {
+  try {
+    return await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/aliases", {
+      method: "POST",
+      body: { alias_name: rowData.alias_name, alias_type: "INTERNAL", note: rowData.note || null },
+    });
+  } catch (e) { showToast(e.message, "error"); return null; }
+}
+
+async function deleteAlias(alias, gridApi) {
+  if (alias._isNew) {
+    gridApi.applyTransaction({ remove: [alias] });
+    return;
+  }
   confirmDelete("별칭 '" + alias.alias_name + "'을(를) 삭제하시겠습니까?", async () => {
     try {
       await apiFetch("/api/v1/asset-aliases/" + alias.id, { method: "DELETE" });
       showToast("삭제되었습니다.");
-      renderDetailTab("overview");
+      gridApi.applyTransaction({ remove: [alias] });
     } catch (e) { showToast(e.message, "error"); }
   });
 }
@@ -2916,7 +3044,7 @@ async function buildDetailEditFields(tab) {
       input = document.createElement("select");
       const empty = document.createElement("option");
       empty.value = "";
-      empty.textContent = "—";
+      empty.textContent = "";
       input.appendChild(empty);
       Object.entries(ENV_MAP).forEach(([val, lbl]) => {
         const opt = document.createElement("option");
@@ -3000,26 +3128,21 @@ function closeDetailEditModal() {
   document.getElementById("modal-asset-detail-edit").close();
 }
 
-async function saveDetailEdit(tab) {
+async function saveDetailEdit() {
   const form = document.getElementById("form-asset-detail-edit");
   if (!form) return;
-  const fields = DETAIL_EDIT_FIELDS[tab];
   const changes = {};
-  fields.forEach(([label, key]) => {
-    const input = form.querySelector('[data-field="' + key + '"]');
-    if (!input) return;
+  form.querySelectorAll("[data-field]").forEach((input) => {
+    const key = input.dataset.field;
     const val = input.value.trim();
     const original = _selectedAsset[key];
-    if (key === "period_id") {
+    if (["period_id", "model_id", "center_id", "room_id", "rack_id"].includes(key)) {
       const parsed = val === "" ? null : Number(val);
-      if (parsed !== original) changes[key] = parsed;
-    } else if (key === "model_id") {
-      const parsed = val === "" ? null : Number(val);
-      const original = _selectedAsset.model_id;
-      if (parsed !== original && parsed !== null) changes.model_id = parsed;
-    } else if (["center_id", "room_id", "rack_id"].includes(key)) {
-      const parsed = val === "" ? null : Number(val);
-      if (parsed !== original) changes[key] = parsed;
+      if (key === "model_id") {
+        if (parsed !== original && parsed !== null) changes.model_id = parsed;
+      } else {
+        if (parsed !== original) changes[key] = parsed;
+      }
     } else if (NUMERIC_FIELDS.includes(key)) {
       const numVal = val === "" ? null : Number(val);
       if (numVal !== original) changes[key] = numVal;
@@ -3037,7 +3160,7 @@ async function saveDetailEdit(tab) {
     Object.assign(_selectedAsset, updated);
     showToast("수정되었습니다.");
     closeDetailEditModal();
-    renderDetailTab(tab);
+    renderDetailTab(_currentTab);
     await loadAssets();
   } catch (err) {
     showToast(err.message, "error");
@@ -3053,12 +3176,7 @@ function closeDetail({ clearSelection = true } = {}) {
 }
 
 function syncAssetRoleActionButtons() {
-  const hasRole = !!_selectedAsset?.current_role_id;
-  ["btn-asset-replacement", "btn-asset-failover", "btn-asset-repurpose"].forEach((id) => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.disabled = !_selectedAsset || !hasRole;
-  });
+  // 교체/장애대체/용도전환 버튼 제거됨 — 추후 재도입 시 복원
 }
 
 /* ── Modal (간소화 등록) ── */
@@ -3173,7 +3291,7 @@ function clearSelectedCatalog({ keepSearch = false } = {}) {
     combo.reset();
   }
   document.getElementById("btn-clear-catalog").classList.add("is-hidden");
-  updateAssetClassificationPreview("—");
+  updateAssetClassificationPreview("");
   updateAssetSaveState();
 }
 
@@ -3248,7 +3366,7 @@ async function openCreateModal() {
   fillSelectOptions(document.getElementById("asset-center-id"), [], "id", (item) => item.id, "-- 선택 안함 --");
   fillSelectOptions(document.getElementById("asset-room-id"), [], "id", (item) => item.id, "-- 센터 선택 --", null, true);
   fillSelectOptions(document.getElementById("asset-rack-id"), [], "id", (item) => item.id, "-- 전산실 선택 --", null, true);
-  updateAssetClassificationPreview("—");
+  updateAssetClassificationPreview("");
 
   // 귀속사업 드롭다운 채우기
   const periodSel = document.getElementById("asset-period");
@@ -3357,11 +3475,11 @@ async function renderHistoryTab(container) {
       </div>
       <div class="asset-history-stat">
         <span class="asset-history-stat-label">최근 변경</span>
-        <strong class="asset-history-stat-value">${latest?.occurred_at ? formatDateTime(latest.occurred_at) : "—"}</strong>
+        <strong class="asset-history-stat-value">${latest?.occurred_at ? formatDateTime(latest.occurred_at) : ""}</strong>
       </div>
       <div class="asset-history-stat">
         <span class="asset-history-stat-label">주요 유형</span>
-        <strong class="asset-history-stat-value">${topType ? `${ASSET_EVENT_LABELS[topType[0]] || topType[0]} ${topType[1]}건` : "—"}</strong>
+        <strong class="asset-history-stat-value">${topType ? `${ASSET_EVENT_LABELS[topType[0]] || topType[0]} ${topType[1]}건` : ""}</strong>
       </div>
     `;
     container.appendChild(summary);
@@ -4122,17 +4240,35 @@ document.getElementById("btn-clear-catalog").addEventListener("click", () => {
 });
 document.getElementById("btn-edit-asset").addEventListener("click", async () => {
   if (!_selectedAsset) return;
-  const editableTabs = ["overview", "operations"];
-  if (!editableTabs.includes(_currentTab)) {
-    showToast("이 탭은 개별 항목을 추가/수정하세요.", "info");
-    return;
-  }
   if (_detailEditMode) { closeDetailEditModal(); return; }
-  await openDetailEditModal(_currentTab);
+  _detailEditMode = true;
+  const title = document.getElementById("asset-detail-edit-title");
+  const desc = document.getElementById("asset-detail-edit-desc");
+  title.textContent = "자산 기본 정보 수정";
+  desc.textContent = "자산명과 호스트명을 변경합니다.";
+  const container = document.getElementById("asset-detail-edit-fields");
+  container.textContent = "";
+  const fields = [
+    ["자산명", "asset_name", _selectedAsset.asset_name || ""],
+    ["호스트명", "hostname", _selectedAsset.hostname || ""],
+  ];
+  let firstInput = null;
+  for (const [label, field, value] of fields) {
+    const wrap = document.createElement("label");
+    wrap.className = "full-width";
+    wrap.textContent = label;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.dataset.field = field;
+    input.className = "edit-input";
+    input.value = value;
+    wrap.appendChild(input);
+    container.appendChild(wrap);
+    if (!firstInput) firstInput = input;
+  }
+  document.getElementById("modal-asset-detail-edit").showModal();
+  if (firstInput) { firstInput.focus(); firstInput.select(); }
 });
-document.getElementById("btn-asset-replacement").addEventListener("click", () => openAssetRoleActionModal("replacement"));
-document.getElementById("btn-asset-failover").addEventListener("click", () => openAssetRoleActionModal("failover"));
-document.getElementById("btn-asset-repurpose").addEventListener("click", () => openAssetRoleActionModal("repurpose"));
 document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
 
 document.getElementById("catalog-kind-filter-modal").addEventListener("change", () => {
@@ -4222,17 +4358,13 @@ document.getElementById("btn-cancel-rp").addEventListener("click", () => documen
 document.getElementById("btn-save-rp").addEventListener("click", saveRelatedPartner);
 document.getElementById("btn-cancel-rel").addEventListener("click", () => document.getElementById("modal-relation").close());
 document.getElementById("btn-save-rel").addEventListener("click", saveRelation);
-document.getElementById("btn-cancel-alias").addEventListener("click", () => document.getElementById("modal-alias").close());
-document.getElementById("btn-save-alias").addEventListener("click", saveAlias);
 document.getElementById("btn-cancel-iface").addEventListener("click", () => document.getElementById("modal-interface").close());
 document.getElementById("btn-save-iface").addEventListener("click", saveInterface);
 document.getElementById("iface-type").addEventListener("change", () => refreshLagMemberSection(null));
-document.getElementById("btn-cancel-lic").addEventListener("click", () => document.getElementById("modal-license").close());
-document.getElementById("btn-save-lic").addEventListener("click", saveLicense);
 document.getElementById("btn-cancel-event").addEventListener("click", () => document.getElementById("modal-event").close());
 document.getElementById("btn-save-event").addEventListener("click", saveEvent);
 document.getElementById("btn-cancel-asset-detail-edit").addEventListener("click", closeDetailEditModal);
-document.getElementById("btn-save-asset-detail-edit").addEventListener("click", () => saveDetailEdit(_currentTab));
+document.getElementById("btn-save-asset-detail-edit").addEventListener("click", () => saveDetailEdit());
 document.getElementById("btn-cancel-asset-role-action").addEventListener("click", () => document.getElementById("modal-asset-role-action").close());
 document.getElementById("btn-save-asset-role-action").addEventListener("click", saveAssetRoleAction);
 document.getElementById("ct-role-preset").addEventListener("change", syncContactRoleInput);

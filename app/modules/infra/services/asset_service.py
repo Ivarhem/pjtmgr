@@ -131,7 +131,10 @@ def enrich_assets_with_aliases(db: Session, assets: list[Asset]) -> list[dict]:
     for asset in assets:
         d = {c.key: getattr(asset, c.key) for c in Asset.__table__.columns}
         d["aliases"] = alias_map.get(asset.id, [])
+        catalog_entity = catalog_entity_map.get(asset.model_id)
         d["catalog_kind"] = catalog_map.get(asset.model_id)
+        d["catalog_license_type"] = catalog_entity.default_license_type if catalog_entity else None
+        d["catalog_license_unit"] = catalog_entity.default_license_unit if catalog_entity else None
         current_roles = role_map.get(asset.id, [])
         d["current_role_names"] = [role["name"] for role in current_roles]
         d["current_role_id"] = current_roles[0]["id"] if current_roles else None
@@ -248,7 +251,10 @@ def enrich_assets_with_period(
         d["period_id"] = period_id
         d["period_label"] = period.period_label if period else None
         d["contract_name"] = period.contract.contract_name if period and period.contract else None
+        catalog_entity = catalog_entity_map.get(a.model_id)
         d["catalog_kind"] = catalog_map.get(a.model_id)
+        d["catalog_license_type"] = catalog_entity.default_license_type if catalog_entity else None
+        d["catalog_license_unit"] = catalog_entity.default_license_unit if catalog_entity else None
         current_roles = role_map.get(a.id, [])
         d["current_role_names"] = [role["name"] for role in current_roles]
         d["current_role_id"] = current_roles[0]["id"] if current_roles else None
@@ -259,7 +265,7 @@ def enrich_assets_with_period(
         d["rack_is_fallback_text"] = bool(not a.rack_id and a.rack_no)
         classification_info = _build_classification_info(
             db,
-            catalog_entity_map.get(a.model_id),
+            catalog_entity,
             period_id=period_id,
             category=a.category,
             subcategory=a.subcategory,

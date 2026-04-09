@@ -142,6 +142,8 @@ class AssetRead(BaseModel):
     classification_level_4_name: str | None = None
     classification_level_5_name: str | None = None
     catalog_kind: str | None = None
+    catalog_license_type: str | None = None
+    catalog_license_unit: str | None = None
     current_role_names: list[str] = []
     current_role_id: int | None = None
     aliases: list[str] = []

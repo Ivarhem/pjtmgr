@@ -417,12 +417,12 @@ function showRoleDetail(role) {
   document.getElementById("role-detail-title").textContent = role.role_name;
   document.getElementById("role-info-name").textContent = role.role_name;
   document.getElementById("role-info-status").textContent = ROLE_STATUS_LABELS[role.status] || role.status;
-  document.getElementById("role-info-period").textContent = role.contract_period_label || "—";
+  document.getElementById("role-info-period").textContent = role.contract_period_label || "";
   document.getElementById("role-info-current-asset").textContent =
     role.current_asset_name
-      ? `${role.current_asset_name} (${role.current_asset_system_id || "—"})`
+      ? `${role.current_asset_name} (${role.current_asset_system_id || ""})`
       : "미할당";
-  document.getElementById("role-info-note").textContent = role.note || "—";
+  document.getElementById("role-info-note").textContent = role.note || "";
 
   syncRoleActionButtons();
   loadCurrentAssignments();
@@ -484,10 +484,10 @@ function handleMinimizeRoleDetail() {
 let assignmentGridApi;
 
 const assignmentColDefs = [
-  { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 160, valueFormatter: (p) => p.value || "—" },
-  { field: "system_id", headerName: "시스템ID", width: 140, valueFormatter: (p) => p.value || "—" },
-  { field: "assignment_type", headerName: "할당유형", width: 100, valueFormatter: (p) => ASSIGNMENT_TYPE_LABELS[p.value] || p.value || "—" },
-  { field: "valid_from", headerName: "시작일", width: 110, valueFormatter: (p) => p.value || "—" },
+  { field: "asset_name", headerName: "자산명", flex: 1, minWidth: 160, valueFormatter: (p) => p.value || "" },
+  { field: "system_id", headerName: "시스템ID", width: 140, valueFormatter: (p) => p.value || "" },
+  { field: "assignment_type", headerName: "할당유형", width: 100, valueFormatter: (p) => ASSIGNMENT_TYPE_LABELS[p.value] || p.value || "" },
+  { field: "valid_from", headerName: "시작일", width: 110, valueFormatter: (p) => p.value || "" },
   { field: "valid_to", headerName: "종료일", width: 110, valueFormatter: (p) => p.value || "현재" },
   { field: "note", headerName: "비고", width: 150, valueFormatter: (p) => p.value || "" },
 ];
@@ -710,7 +710,7 @@ async function openRoleAssignmentModal(assignment) {
   _rolePartnerAssetsCache.forEach((a) => {
     const opt = document.createElement("option");
     opt.value = a.id;
-    opt.textContent = `${a.asset_name} (${a.system_id || "—"})`;
+    opt.textContent = `${a.asset_name} (${a.system_id || ""})`;
     select.appendChild(opt);
   });
 
@@ -815,7 +815,7 @@ async function openRoleActionModal(actionType) {
     _rolePartnerAssetsCache.forEach((a) => {
       const opt = document.createElement("option");
       opt.value = a.id;
-      opt.textContent = `${a.asset_name} (${a.system_id || "—"})`;
+      opt.textContent = `${a.asset_name} (${a.system_id || ""})`;
       select.appendChild(opt);
     });
   }

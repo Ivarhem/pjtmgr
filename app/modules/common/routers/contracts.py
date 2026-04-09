@@ -44,9 +44,9 @@ def get_contract(
 def create_contract(
     data: ContractCreate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ) -> ContractRead:
-    return svc.create_contract(db, data, created_by=_admin.id)
+    return svc.create_contract(db, data, created_by=current_user.id)
 
 
 @router.patch("/contracts/{contract_id}", response_model=ContractRead)
@@ -54,9 +54,9 @@ def update_contract(
     contract_id: int,
     data: ContractUpdate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ) -> ContractRead:
-    return svc.update_contract(db, contract_id, data, current_user=_admin)
+    return svc.update_contract(db, contract_id, data, current_user=current_user)
 
 
 @router.post("/contracts/bulk-assign-owner")
@@ -105,9 +105,9 @@ def create_period(
     contract_id: int,
     data: ContractPeriodCreate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    return svc.create_period(db, contract_id, data, current_user=_admin)
+    return svc.create_period(db, contract_id, data, current_user=current_user)
 
 
 @router.get("/contract-periods/{period_id}")
@@ -124,9 +124,9 @@ def update_period(
     period_id: int,
     data: ContractPeriodUpdate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    return svc.update_period(db, period_id, data, current_user=_admin)
+    return svc.update_period(db, period_id, data, current_user=current_user)
 
 
 @router.delete("/contract-periods/{period_id}", status_code=204)

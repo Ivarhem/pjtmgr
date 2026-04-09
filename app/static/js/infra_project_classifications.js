@@ -261,7 +261,7 @@ function renderTreeNode(node) {
             <span class="classification-tree-name">${escapeHtml(node.node_name)}</span>
             <span class="classification-tree-code">${escapeHtml(node.node_code)}</span>
           </span>
-          <span class="classification-tree-path">${escapeHtml(node.path_label || "—")}</span>
+          <span class="classification-tree-path">${escapeHtml(node.path_label || "")}</span>
         </span>
         <span class="classification-tree-meta">
           <span class="classification-pill classification-pill-alias">${escapeHtml(levelAlias)}</span>
@@ -295,15 +295,15 @@ function renderDetail() {
   const parent = _classificationNodes.find((item) => item.id === node.parent_id);
   document.getElementById("classification-detail-title").textContent = node.node_name;
   document.getElementById("classification-detail-help").textContent = "선택한 분류 노드의 경로와 운영 메모를 확인할 수 있습니다.";
-  document.getElementById("classification-detail-code").textContent = node.node_code || "—";
-  document.getElementById("classification-detail-name").textContent = node.node_name || "—";
-  document.getElementById("classification-detail-level").textContent = `${String(node.level || "—")}레벨 · ${getClassificationAlias(node.level || 1)}`;
+  document.getElementById("classification-detail-code").textContent = node.node_code || "";
+  document.getElementById("classification-detail-name").textContent = node.node_name || "";
+  document.getElementById("classification-detail-level").textContent = `${String(node.level || "")}레벨 · ${getClassificationAlias(node.level || 1)}`;
   document.getElementById("classification-detail-status").textContent = node.is_active ? "활성" : "비활성";
-  document.getElementById("classification-detail-sort-order").textContent = String(node.sort_order ?? "—");
+  document.getElementById("classification-detail-sort-order").textContent = String(node.sort_order ?? "");
   document.getElementById("classification-detail-parent").textContent = parent?.node_name || "최상위";
   document.getElementById("classification-detail-project").textContent = _currentScheme?.project_label || currentProjectLabel();
-  document.getElementById("classification-detail-note").textContent = node.note || "—";
-  document.getElementById("classification-detail-path").textContent = node.path_label || "—";
+  document.getElementById("classification-detail-note").textContent = node.note || "";
+  document.getElementById("classification-detail-path").textContent = node.path_label || "";
 }
 
 function refreshAll() {

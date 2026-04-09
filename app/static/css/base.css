@@ -710,6 +710,23 @@ label.chk-inline { flex-direction: row; align-items: center; gap: 8px; cursor: p
   margin: 12px 0 0;
   line-height: 1.45;
 }
+.role-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.role-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.role-check input[type="checkbox"] {
+  margin: 0;
+}
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .confirm-dialog-message {
   white-space: pre-line;
