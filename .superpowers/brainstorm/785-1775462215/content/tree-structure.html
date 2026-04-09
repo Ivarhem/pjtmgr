@@ -1,0 +1,91 @@
+<h2>역할 트리 구조: 어떤 계층이 자연스러운가?</h2>
+<p class="subtitle">좌측 트리에 역할을 어떤 기준으로 그룹핑할지 결정합니다. 클릭해서 선호하는 구조를 선택하세요.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>센터 → 도메인 → 역할</h3>
+      <p>물리 위치 중심. 센터별로 장비를 관리하는 인프라 운영자 관점.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-body" style="font-family:monospace;font-size:13px;line-height:1.8;padding:12px">
+          <div>▼ <b>IDC-A 센터</b></div>
+          <div style="padding-left:20px">▼ <b>보안</b> (5)</div>
+          <div style="padding-left:40px;color:#666">인터넷방화벽#1</div>
+          <div style="padding-left:40px;color:#666">내부방화벽#1</div>
+          <div style="padding-left:40px;color:#666">IPS#1</div>
+          <div style="padding-left:20px">▼ <b>네트워크</b> (3)</div>
+          <div style="padding-left:40px;color:#666">L3스위치#1</div>
+          <div style="padding-left:40px;color:#666">L2스위치#1</div>
+          <div>▼ <b>IDC-B 센터</b></div>
+          <div style="padding-left:20px">▼ <b>서버</b> (8)</div>
+          <div style="padding-left:40px;color:#666">WEB서버#1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>사업 → 도메인 → 역할</h3>
+      <p>프로젝트 중심. 사업별로 역할을 관리하는 PM/영업 관점.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-body" style="font-family:monospace;font-size:13px;line-height:1.8;padding:12px">
+          <div>▼ <b>Y25A 네트워크 유지보수</b></div>
+          <div style="padding-left:20px">▼ <b>보안</b> (4)</div>
+          <div style="padding-left:40px;color:#666">인터넷방화벽#1</div>
+          <div style="padding-left:40px;color:#666">IPS#1</div>
+          <div style="padding-left:20px">▼ <b>네트워크</b> (2)</div>
+          <div style="padding-left:40px;color:#666">L3스위치#1</div>
+          <div>▼ <b>Y25B 보안장비 교체</b></div>
+          <div style="padding-left:20px">▼ <b>보안</b> (3)</div>
+          <div style="padding-left:40px;color:#666">DR인터넷방화벽#1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>도메인 → 제품군 → 역할</h3>
+      <p>카탈로그 분류 중심. 제품 카탈로그와 동일한 분류체계 기반.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-body" style="font-family:monospace;font-size:13px;line-height:1.8;padding:12px">
+          <div>▼ <b>보안</b></div>
+          <div style="padding-left:20px">▼ <b>방화벽</b> (4)</div>
+          <div style="padding-left:40px;color:#666">인터넷방화벽#1</div>
+          <div style="padding-left:40px;color:#666">내부방화벽#1</div>
+          <div style="padding-left:40px;color:#666">DR인터넷방화벽#1</div>
+          <div style="padding-left:20px">▼ <b>IPS</b> (2)</div>
+          <div style="padding-left:40px;color:#666">IPS#1</div>
+          <div>▼ <b>네트워크</b></div>
+          <div style="padding-left:20px">▼ <b>L3 스위치</b> (3)</div>
+          <div style="padding-left:40px;color:#666">L3스위치#1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>전환 가능 트리 (프리셋)</h3>
+      <p>상단 드롭다운으로 기준을 전환. 카탈로그 레이아웃 프리셋과 동일 개념.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-body" style="font-family:monospace;font-size:13px;line-height:1.8;padding:12px">
+          <div style="background:#f1f5f9;padding:6px 10px;border-radius:4px;margin-bottom:8px">
+            기준: <b>[센터 → 도메인 ▼]</b>
+          </div>
+          <div>▼ <b>IDC-A 센터</b></div>
+          <div style="padding-left:20px">▼ <b>보안</b> (5)</div>
+          <div style="padding-left:40px;color:#666">인터넷방화벽#1 ...</div>
+          <div style="margin-top:8px;color:#888;font-size:12px">
+            프리셋: 센터→도메인 | 사업→도메인 | 도메인→제품군
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

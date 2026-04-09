@@ -1,0 +1,71 @@
+<h2>자산 상세 — 인터페이스 패널 위치</h2>
+<p class="subtitle">현재 connections 탭에 소프트웨어, IP 할당, 담당자, 관련업체, 자산 관계, 별칭이 있습니다.<br>인터페이스 패널을 어디에 배치할지 선택해 주세요.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>connections 탭 최상단에 추가</h3>
+      <p>현재 탭 구조 유지. connections 탭 내에서 <strong>소프트웨어 위, 첫 번째 섹션</strong>으로 인터페이스 배치.<br>
+      IP 할당 섹션은 그대로 두되, 인터페이스 선택 드롭다운 추가.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">connections 탭 — 섹션 순서</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.8;">
+          <div style="padding:6px 12px;background:#e3f0ff;border-left:3px solid #2563eb;margin-bottom:4px;">🔌 <strong>인터페이스</strong> (NEW) — physical, lag, virtual 목록 + CRUD</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">💿 소프트웨어</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">🌐 IP 할당 — 인터페이스 선택 후 IP 할당</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">👤 담당자</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">🏢 관련업체</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">🔗 자산 관계</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;">📛 별칭</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>별도 탭으로 분리</h3>
+      <p>기존 4탭(overview, operations, connections, history)에 <strong>"인터페이스" 탭 추가</strong>.<br>
+      인터페이스 + IP 할당을 이 탭에 통합. connections 탭에서 IP 할당 제거.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">탭 구조</div>
+        <div class="mockup-body" style="font-size:13px;">
+          <div style="display:flex;gap:0;border-bottom:2px solid #2563eb;margin-bottom:8px;">
+            <span style="padding:6px 14px;border:1px solid #ddd;border-bottom:none;">개요</span>
+            <span style="padding:6px 14px;border:1px solid #ddd;border-bottom:none;">운영</span>
+            <span style="padding:6px 14px;background:#2563eb;color:white;font-weight:600;">인터페이스</span>
+            <span style="padding:6px 14px;border:1px solid #ddd;border-bottom:none;">연결</span>
+            <span style="padding:6px 14px;border:1px solid #ddd;border-bottom:none;">이력</span>
+          </div>
+          <div style="padding:6px 12px;background:#e3f0ff;border-left:3px solid #2563eb;margin-bottom:4px;">🔌 인터페이스 목록 (physical, lag, virtual)</div>
+          <div style="padding:6px 12px;background:#e3f0ff;border-left:3px solid #2563eb;">🌐 IP 할당 — 인터페이스 기반</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>connections 탭 내, 인터페이스 → IP 계층 구조</h3>
+      <p>connections 탭 유지. 인터페이스 섹션을 추가하되, IP 할당 섹션을 <strong>인터페이스 하위로 통합</strong>.<br>
+      인터페이스를 선택하면 해당 인터페이스의 IP가 바로 보이는 트리형 구조.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">connections 탭 — 계층 구조</div>
+        <div class="mockup-body" style="font-size:13px;line-height:1.8;">
+          <div style="padding:6px 12px;background:#e3f0ff;border-left:3px solid #2563eb;margin-bottom:2px;">🔌 <strong>인터페이스 & IP</strong> (NEW)</div>
+          <div style="padding:4px 12px 4px 32px;background:#f0f7ff;font-size:12px;margin-bottom:1px;">ge-0/0/1 (physical, 1G) — 10.1.1.10 (서비스)</div>
+          <div style="padding:4px 12px 4px 32px;background:#f0f7ff;font-size:12px;margin-bottom:1px;">ge-0/0/2 (physical, 1G) — 할당 없음</div>
+          <div style="padding:4px 12px 4px 32px;background:#f0f7ff;font-size:12px;margin-bottom:4px;">bond0 (lag, 10G) — 10.1.2.1 (관리)</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">💿 소프트웨어</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">👤 담당자</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">🏢 관련업체</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;margin-bottom:4px;">🔗 자산 관계</div>
+          <div style="padding:6px 12px;border-left:3px solid #ddd;">📛 별칭</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
