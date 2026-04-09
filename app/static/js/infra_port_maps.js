@@ -121,7 +121,12 @@ const EDITABLE_FIELDS = [
   "connection_type", "cable_no", "cable_type", "cable_speed", "purpose", "status",
 ];
 
+const EDIT_MODE_FIELDS = new Set([
+  "connection_type", "cable_no", "cable_type", "cable_speed", "purpose", "status",
+]);
+
 let gridApi;
+let editMode;
 
 /* ── Data Loading ── */
 
@@ -150,12 +155,30 @@ async function loadPortMaps() {
   } catch (err) { showToast(err.message, "error"); }
 }
 
+async function portmapSaveEditMode() {
+  if (!editMode) return;
+  const result = await editMode.save();
+  if (result.success && result.count > 0) {
+    showToast(`${result.count}건 포트맵이 업데이트되었습니다.`);
+    editMode.toggle(false);
+  } else if (result.success && result.count === 0) {
+    showToast("변경사항이 없습니다.", "info");
+    editMode.toggle(false);
+  }
+}
+
+function portmapCancelEditMode() {
+  if (!editMode) return;
+  editMode.cancel();
+  editMode.toggle(false);
+}
+
 function initGrid() {
   const gridEl = document.getElementById("grid-portmaps");
   gridApi = agGrid.createGrid(gridEl, {
     columnDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
-    rowSelection: "single", animateRows: true, enableCellTextSelection: true,
+    rowSelection: "multiple", animateRows: true, enableCellTextSelection: true,
     ...buildStandardGridBehavior({
       type: "modal-edit",
       onEdit: (data) => openEditModal(data),
@@ -163,10 +186,67 @@ function initGrid() {
     onCellValueChanged: handlePortMapCellChanged,
   });
 
+  editMode = new GridEditMode({
+    gridApi,
+    editableFields: EDIT_MODE_FIELDS,
+    bulkEndpoint: () => `/api/v1/port-maps/bulk?partner_id=${getCtxPartnerId()}`,
+    prefix: "portmap",
+
+    onAfterSave: (results) => {
+      for (const updated of results) {
+        let node = null;
+        gridApi.forEachNode((n) => { if (n.data?.id === updated.id) node = n; });
+        if (node) Object.assign(node.data, updated);
+      }
+    },
+
+    bulkApplyFields: [
+      { field: "connection_type", label: "연결유형", type: "select",
+        options: () => [
+          { value: "physical", label: "physical" },
+          { value: "logical", label: "logical" },
+        ],
+      },
+      { field: "cable_type", label: "케이블", type: "select",
+        options: () => ["SM", "MM", "UTP", "STP", "DAC", "other"]
+          .map((v) => ({ value: v, label: v })),
+      },
+      { field: "cable_speed", label: "속도", type: "select",
+        options: () => ["100M", "1G", "10G", "25G", "40G", "100G", "other"]
+          .map((v) => ({ value: v, label: v })),
+      },
+      { field: "status", label: "상태", type: "select",
+        options: () => Object.entries(PORTMAP_STATUS_MAP)
+          .map(([v, l]) => ({ value: v, label: l })),
+      },
+    ],
+
+    selectors: {
+      toggleBtn: "#btn-toggle-edit",
+      saveBtn: "#btn-save-edit",
+      cancelBtn: "#btn-cancel-edit",
+      statusBar: "#edit-mode-bar",
+      changeCount: "#edit-mode-count",
+      errorCount: "#edit-mode-errors",
+      bulkContainer: "#edit-mode-selection",
+    },
+  });
+
   addCopyPasteHandler(gridEl, gridApi, {
     editableFields: EDITABLE_FIELDS,
     onPaste: (changes) => {
-      // PATCH each changed row
+      if (editMode && editMode.isActive()) {
+        // 편집 모드: 단순 필드는 dirty 축적, asset/interface 필드는 무시
+        for (const c of changes) {
+          const node = gridApi.getDisplayedRowAtIndex(c.rowIndex);
+          if (node?.data?.id && EDIT_MODE_FIELDS.has(c.field)) {
+            editMode.markDirty(node.data.id, c.field, c.newValue, c.oldValue);
+          }
+        }
+        gridApi.refreshCells({ force: true });
+        return;
+      }
+      // 비편집 모드: 기존 동작 (개별 PATCH per row)
       const rowIds = [...new Set(changes.map(c => c.rowIndex))];
       rowIds.forEach(ri => {
         const node = gridApi.getDisplayedRowAtIndex(ri);
@@ -189,6 +269,12 @@ async function handlePortMapCellChanged(event) {
   const { data, colDef, newValue, oldValue } = event;
   if (newValue === oldValue || !data.id) return;
   const field = colDef.field;
+
+  // 편집 모드: 단순 필드는 dirty 축적
+  if (editMode && editMode.isActive() && EDIT_MODE_FIELDS.has(field)) {
+    editMode.handleCellChange(event);
+    return;
+  }
 
   try {
     // Asset name cells: resolve to asset_id and update hostname
@@ -471,5 +557,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("btn-add-portmap").addEventListener("click", openCreateModal);
 document.getElementById("btn-cancel-portmap").addEventListener("click", () => modal.close());
 document.getElementById("btn-save-portmap").addEventListener("click", savePortMap);
+document.getElementById("btn-save-edit").addEventListener("click", portmapSaveEditMode);
+document.getElementById("btn-cancel-edit").addEventListener("click", portmapCancelEditMode);
 initProjectFilterCheckbox(loadPortMaps);
 window.addEventListener("ctx-changed", loadPortMaps);
