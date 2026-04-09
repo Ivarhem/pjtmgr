@@ -285,13 +285,119 @@ class GridEditMode {
     if (saveBtn) saveBtn.disabled = this.hasErrors();
   }
 
-  /** Task 5: bulk apply UI DOM 구성 */
-  _buildBulkApplyUI(container) {}
+  _buildBulkApplyUI(container) {
+    if (!container) return;
+    container.replaceChildren();
 
-  /** Task 5: bulk apply <select> 옵션 채우기 */
-  _populateBulkSelects() {}
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `${this.prefix}-sel-all`;
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        this.gridApi.selectAll();
+      } else {
+        this.gridApi.deselectAll();
+      }
+    });
+    label.appendChild(checkbox);
+    const countSpan = document.createElement("span");
+    countSpan.id = `${this.prefix}-sel-count`;
+    countSpan.textContent = " 선택";
+    label.appendChild(countSpan);
+    container.appendChild(label);
 
-  /** Task 5: 선택 행 수에 따라 bulk apply 버튼 활성화 */
-  _updateBulkSelectionUI() {}
+    for (const bf of this.bulkApplyFields) {
+      const wrapper = document.createElement("label");
+      wrapper.textContent = bf.label + " ";
+      const sel = document.createElement("select");
+      sel.className = "select-sm";
+      sel.id = `${this.prefix}-bulk-${bf.field}`;
+      sel.appendChild(new Option("--", ""));
+      wrapper.appendChild(sel);
+      container.appendChild(wrapper);
+    }
+
+    const btn = document.createElement("button");
+    btn.className = "btn btn-primary btn-xs";
+    btn.textContent = "선택 행에 적용";
+    btn.addEventListener("click", () => this._applyBulkValues());
+    container.appendChild(btn);
+  }
+
+  _populateBulkSelects() {
+    for (const bf of this.bulkApplyFields) {
+      const sel = document.getElementById(`${this.prefix}-bulk-${bf.field}`);
+      if (!sel) continue;
+      const currentVal = sel.value;
+      sel.replaceChildren();
+      sel.appendChild(new Option("--", ""));
+      const options = bf.options();
+      for (const opt of options) {
+        sel.appendChild(new Option(opt.label, opt.value));
+      }
+      sel.value = currentVal || "";
+    }
+  }
+
+  _updateBulkSelectionUI() {
+    const container = this.selectors.bulkContainer
+      ? document.querySelector(this.selectors.bulkContainer) : null;
+    const countEl = document.getElementById(`${this.prefix}-sel-count`);
+    if (!container) return;
+
+    const agSelected = this.gridApi.getSelectedNodes().length;
+    let chkSelected = 0;
+    this.gridApi.forEachNode((n) => { if (n.data?._selected) chkSelected++; });
+    const selCount = Math.max(agSelected, chkSelected);
+
+    if (this._active && selCount > 0) {
+      container.classList.remove("is-hidden");
+      if (countEl) countEl.textContent = ` ${selCount}행 선택`;
+    } else {
+      container.classList.add("is-hidden");
+    }
+  }
+
+  _applyBulkValues() {
+    const selected = this.gridApi.getSelectedNodes().filter((n) => n.data);
+    if (!selected.length) {
+      showToast("행을 먼저 선택하세요.", "warning");
+      return;
+    }
+
+    const valuesToApply = [];
+    for (const bf of this.bulkApplyFields) {
+      const sel = document.getElementById(`${this.prefix}-bulk-${bf.field}`);
+      const val = sel?.value;
+      if (val) valuesToApply.push({ field: bf.field, value: val });
+    }
+
+    if (!valuesToApply.length) {
+      showToast("적용할 값을 선택하세요.", "warning");
+      return;
+    }
+
+    let count = 0;
+    for (const node of selected) {
+      const d = node.data;
+      for (const { field, value } of valuesToApply) {
+        const old = d[field];
+        const coerced = (typeof old === "number") ? Number(value) : value;
+        d[field] = coerced;
+        if (d.id) this.markDirty(d.id, field, coerced, old);
+      }
+      count++;
+    }
+
+    for (const bf of this.bulkApplyFields) {
+      const sel = document.getElementById(`${this.prefix}-bulk-${bf.field}`);
+      if (sel) sel.value = "";
+    }
+
+    this.gridApi.refreshCells({ force: true });
+    this._updateStatusBar();
+    showToast(`${count}행에 일괄 적용됨`);
+  }
 
 } // class GridEditMode 끝
