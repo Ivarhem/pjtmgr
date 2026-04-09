@@ -40,14 +40,7 @@
   <span class="edit-mode-count" id="edit-mode-count">변경 0건</span>
   <span class="edit-mode-errors is-hidden" id="edit-mode-errors">오류 0건</span>
   <span class="edit-mode-separator">|</span>
-  <span class="edit-mode-selection is-hidden" id="edit-mode-selection">
-    <span id="edit-mode-sel-count">0행 선택</span>
-    <label>귀속프로젝트 <select id="bulk-period-id" class="select-sm"><option value="">--</option></select></label>
-    <label>센터 <select id="bulk-center-id" class="select-sm"><option value="">--</option></select></label>
-    <label>환경 <select id="bulk-environment" class="select-sm"><option value="">--</option></select></label>
-    <label>상태 <select id="bulk-status" class="select-sm"><option value="">--</option></select></label>
-    <button class="btn btn-primary btn-xs" id="btn-bulk-apply">선택 행에 적용</button>
-  </span>
+  <span class="edit-mode-selection is-hidden" id="edit-mode-selection"></span>
 </div>
 
 <div id="asset-layout" class="asset-layout">
@@ -531,5 +524,6 @@
 
 {% block scripts %}
 <script src="/static/js/modal_combobox.js"></script>
+<script src="/static/js/grid_edit_mode.js"></script>
 <script src="/static/js/infra_assets.js"></script>
 {% endblock %}
