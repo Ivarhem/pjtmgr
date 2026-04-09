@@ -174,10 +174,54 @@ class GridEditMode {
     this._updateStatusBar();
   }
 
+  handleCellChange(event) {
+    const row = event?.data;
+    if (!this._active) return false;
+    if (!row?.id) return false;
+
+    const field = event.colDef?.field;
+    if (!field) return false;
+
+    if (this.normalizeChange) {
+      const result = this.normalizeChange(event);
+      if (result === "reject") {
+        row[field] = event.oldValue;
+        this.gridApi.refreshCells({ rowNodes: [event.node], force: true });
+        return false;
+      }
+      if (result) {
+        if (result.rowMutations) Object.assign(row, result.rowMutations);
+        for (const dc of result.dirtyChanges) {
+          this.markDirty(row.id, dc.field, dc.value, dc.oldValue);
+        }
+        this.gridApi.refreshCells({ rowNodes: [event.node], force: true });
+        return true;
+      }
+    }
+
+    this.markDirty(row.id, field, event.newValue, event.oldValue);
+    this.gridApi.refreshCells({ force: true });
+    return true;
+  }
+
   // ── Stubs (implemented in later tasks) ────────────────────────────────────
 
-  /** Task 3: 상태바 텍스트 갱신 */
-  _updateStatusBar() {}
+  _updateStatusBar() {
+    const countEl = this.selectors.changeCount
+      ? document.querySelector(this.selectors.changeCount) : null;
+    const errorsEl = this.selectors.errorCount
+      ? document.querySelector(this.selectors.errorCount) : null;
+    const saveBtn = this.selectors.saveBtn
+      ? document.querySelector(this.selectors.saveBtn) : null;
+
+    if (countEl) countEl.textContent = `변경 ${this._dirtyRows.size}건`;
+    if (errorsEl) {
+      const errCount = this._errorCells.size;
+      errorsEl.textContent = `오류 ${errCount}건`;
+      errorsEl.classList.toggle("is-hidden", errCount === 0);
+    }
+    if (saveBtn) saveBtn.disabled = this.hasErrors();
+  }
 
   /** Task 5: bulk apply UI DOM 구성 */
   _buildBulkApplyUI(container) {}
