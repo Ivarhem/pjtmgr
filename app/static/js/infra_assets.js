@@ -134,258 +134,73 @@ const GRID_EDITABLE_FIELDS = new Set([
   "serial_no",
 ]);
 
-/* ── Edit mode state ── */
-let _editMode = false;
-const _dirtyRows = new Map();       // Map<rowId, {field: newValue}>
-const _originalValues = new Map();   // Map<rowId, {field: originalValue}>
-const _errorCells = new Map();       // Map<"rowId:field", errorMessage>
+/* ── Edit mode: GridEditMode 클래스로 이전됨 (grid_edit_mode.js) ── */
+let editMode; // GridEditMode 인스턴스 — initGrid() 후 초기화
 
-const REQUIRED_FIELDS = new Set(["asset_name"]);
+function assetNormalizeChange(event) {
+  const field = event.colDef.field;
+  if (field !== "model") return null;
 
-function isEditMode() { return _editMode; }
+  const val = event.newValue;
+  if (!val || !val._catalogModelId) return "reject";
 
-function toggleEditMode(force) {
-  _editMode = force !== undefined ? force : !_editMode;
-  document.body.classList.toggle("edit-mode-active", _editMode);
-  const btnToggle = document.getElementById("btn-toggle-edit");
-  const btnSave = document.getElementById("btn-save-edit");
-  const btnCancel = document.getElementById("btn-cancel-edit");
-  const bar = document.getElementById("edit-mode-bar");
-  if (_editMode) {
-    btnToggle.classList.add("is-hidden");
-    btnSave.classList.remove("is-hidden");
-    btnCancel.classList.remove("is-hidden");
-    bar.classList.remove("is-hidden");
-    _populateBulkSelects();
-  } else {
-    btnToggle.classList.remove("is-hidden");
-    btnSave.classList.add("is-hidden");
-    btnCancel.classList.add("is-hidden");
-    bar.classList.add("is-hidden");
-    gridApi.deselectAll();
+  return {
+    rowMutations: {
+      model_id: val._catalogModelId,
+      vendor: val._catalogVendor || "",
+      model: val._catalogName || val.display || "",
+    },
+    dirtyChanges: [
+      { field: "model_id", value: val._catalogModelId, oldValue: event.data.model_id },
+    ],
+  };
+}
+
+async function assetSaveEditMode() {
+  if (editMode.hasErrors()) {
+    showToast("검증 오류가 있어 저장할 수 없습니다.", "warning");
+    return;
   }
-  _updateEditModeBar();
-  _updateBulkSelectionUI();
-  gridApi.refreshCells({ force: true });
-}
 
-function markDirty(rowId, field, newValue, oldValue) {
-  if (!_dirtyRows.has(rowId)) _dirtyRows.set(rowId, {});
-  if (!_originalValues.has(rowId)) _originalValues.set(rowId, {});
-  const dirty = _dirtyRows.get(rowId);
-  const originals = _originalValues.get(rowId);
-  if (!(field in originals)) originals[field] = oldValue;
-  if (newValue === originals[field]) {
-    delete dirty[field];
-    if (Object.keys(dirty).length === 0) {
-      _dirtyRows.delete(rowId);
-      _originalValues.delete(rowId);
-    }
-  } else {
-    dirty[field] = newValue;
-  }
-  validateCell(rowId, field, newValue);
-  _updateEditModeBar();
-}
-
-function isDirty(rowId, field) {
-  const d = _dirtyRows.get(rowId);
-  return d ? field in d : false;
-}
-
-function hasErrors() { return _errorCells.size > 0; }
-
-function validateCell(rowId, field, value) {
-  const key = `${rowId}:${field}`;
-  if (REQUIRED_FIELDS.has(field) && (!value || !String(value).trim())) {
-    _errorCells.set(key, "필수값입니다");
-    return false;
-  }
-  _errorCells.delete(key);
-  return true;
-}
-
-function getCellError(rowId, field) {
-  return _errorCells.get(`${rowId}:${field}`) || null;
-}
-
-function _updateEditModeBar() {
-  const countEl = document.getElementById("edit-mode-count");
-  const errorsEl = document.getElementById("edit-mode-errors");
-  const btnSave = document.getElementById("btn-save-edit");
-  if (countEl) countEl.textContent = `변경 ${_dirtyRows.size}건`;
-  if (errorsEl) {
-    const errCount = _errorCells.size;
-    errorsEl.textContent = `오류 ${errCount}건`;
-    errorsEl.classList.toggle("is-hidden", errCount === 0);
-  }
-  if (btnSave) btnSave.disabled = hasErrors();
-}
-
-async function saveEditMode() {
-  if (hasErrors()) { showToast("검증 오류가 있어 저장할 수 없습니다.", "warning"); return; }
   const hadNewRows = _hasNewRows;
   if (_hasNewRows) {
     await saveNewAssets();
   }
-  if (_dirtyRows.size === 0) {
-    if (hadNewRows && !_hasNewRows) {
-      toggleEditMode(false);
-      return;
+
+  const result = await editMode.save();
+
+  if (result.success && result.count === 0 && !_hasNewRows) {
+    if (hadNewRows) {
+      editMode.toggle(false);
+    } else {
+      showToast("변경사항이 없습니다.", "info");
+      editMode.toggle(false);
     }
-    if (hadNewRows && _hasNewRows) {
-      showToast("저장되지 않은 신규 자산이 남아 있습니다. 필수값과 모델 선택을 확인하세요.", "warning");
-      return;
-    }
-    showToast("변경사항이 없습니다.", "info");
-    toggleEditMode(false);
     return;
   }
-  const items = [];
-  for (const [rowId, changes] of _dirtyRows) items.push({ id: rowId, changes });
-  try {
-    const results = await apiFetch(_assetPatchUrl("/api/v1/assets/bulk"), {
-      method: "PATCH",
-      body: { items },
-    });
-    for (const updated of results) {
-      let node = null;
-      gridApi.forEachNode((n) => { if (n.data?.id === updated.id) node = n; });
-      if (node) applyAssetRowUpdate(node.data, updated);
-    }
-    showToast(`${results.length}건 자산이 업데이트되었습니다.`);
-    _dirtyRows.clear();
-    _originalValues.clear();
-    _errorCells.clear();
-    toggleEditMode(false);
-  } catch (err) {
-    showToast("저장 실패: " + err.message, "error");
-  }
-}
-
-function cancelEditMode() {
-  for (const [rowId, originals] of _originalValues) {
-    let node = null;
-    gridApi.forEachNode((n) => { if (n.data?.id === rowId) node = n; });
-    if (node) {
-      for (const [field, value] of Object.entries(originals)) node.data[field] = value;
-    }
-  }
-  _dirtyRows.clear();
-  _originalValues.clear();
-  _errorCells.clear();
-  toggleEditMode(false);
-  gridApi.refreshCells({ force: true });
-}
-
-/* ── 일괄 적용 (편집 모드) ── */
-
-function _populateBulkSelects() {
-  _populateSelectFromList("bulk-period-id", _periodsCache, (p) => ({ value: p.id, label: p.contract_name || p.period_label || String(p.id) }));
-  _populateSelectFromList("bulk-center-id", _layoutCentersCache, (c) => ({ value: c.id, label: c.center_name }));
-  _populateSelectFromEntries("bulk-environment", ENV_MAP);
-  _populateSelectFromEntries("bulk-status", ASSET_STATUS_MAP);
-}
-
-function _populateSelectFromList(elId, items, mapper) {
-  const sel = document.getElementById(elId);
-  sel.textContent = "";
-  const blank = document.createElement("option");
-  blank.value = "";
-  blank.textContent = "--";
-  sel.appendChild(blank);
-  for (const item of items) {
-    const { value, label } = mapper(item);
-    const opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = label;
-    sel.appendChild(opt);
-  }
-}
-
-function _populateSelectFromEntries(elId, map) {
-  const sel = document.getElementById(elId);
-  sel.textContent = "";
-  const blank = document.createElement("option");
-  blank.value = "";
-  blank.textContent = "--";
-  sel.appendChild(blank);
-  for (const [k, v] of Object.entries(map)) {
-    const opt = document.createElement("option");
-    opt.value = k;
-    opt.textContent = v;
-    sel.appendChild(opt);
-  }
-}
-
-function _updateBulkSelectionUI() {
-  const bar = document.getElementById("edit-mode-bar");
-  const selPanel = document.getElementById("edit-mode-selection");
-  const countEl = document.getElementById("edit-mode-sel-count");
-  if (!selPanel || !bar) return;
-
-  const agSelected = gridApi.getSelectedNodes().length;
-  let chkSelected = 0;
-  gridApi.forEachNode((n) => { if (n.data?._selected) chkSelected++; });
-  const selCount = Math.max(agSelected, chkSelected);
-
-  if (_editMode && selCount > 0) {
-    // 편집 모드 + 선택 있음: 상태바는 이미 보이므로 선택 영역만 표시
-    selPanel.classList.remove("is-hidden");
-    if (countEl) countEl.textContent = `${selCount}행 선택`;
-  } else {
-    selPanel.classList.add("is-hidden");
-  }
-}
-
-function _applyBulkValues() {
-  const selected = gridApi.getSelectedNodes().filter(n => n.data);
-  if (!selected.length) { showToast("행을 먼저 선택하세요.", "warning"); return; }
-
-  const periodId = document.getElementById("bulk-period-id").value;
-  const centerId = document.getElementById("bulk-center-id").value;
-  const env = document.getElementById("bulk-environment").value;
-  const status = document.getElementById("bulk-status").value;
-
-  if (!periodId && !centerId && !env && !status) {
-    showToast("적용할 값을 선택하세요.", "warning");
+  if (result.count === 0 && _hasNewRows) {
+    showToast("저장되지 않은 신규 자산이 남아 있습니다. 필수값과 모델 선택을 확인하세요.", "warning");
     return;
   }
-
-  let count = 0;
-  for (const node of selected) {
-    const d = node.data;
-    if (periodId) {
-      const old = d.period_id;
-      d.period_id = Number(periodId);
-      if (d.id) markDirty(d.id, "period_id", d.period_id, old);
-    }
-    if (centerId) {
-      const old = d.center_id;
-      d.center_id = Number(centerId);
-      if (d.id) markDirty(d.id, "center_id", d.center_id, old);
-    }
-    if (env) {
-      const old = d.environment;
-      d.environment = env;
-      if (d.id) markDirty(d.id, "environment", env, old);
-    }
-    if (status) {
-      const old = d.status;
-      d.status = status;
-      if (d.id) markDirty(d.id, "status", status, old);
-    }
-    count++;
+  if (result.success) {
+    showToast(`${result.count}건 자산이 업데이트되었습니다.`);
+    if (!_hasNewRows) editMode.toggle(false);
   }
+}
 
-  document.getElementById("bulk-period-id").value = "";
-  document.getElementById("bulk-center-id").value = "";
-  document.getElementById("bulk-environment").value = "";
-  document.getElementById("bulk-status").value = "";
+function assetCancelEditMode() {
+  editMode.cancel();
 
-  gridApi.refreshCells({ force: true });
-  _updateEditModeBar();
-  showToast(`${count}행에 일괄 적용됨`);
+  const newNodes = [];
+  gridApi.forEachNode((n) => { if (n.data._isNew) newNodes.push(n.data); });
+  if (newNodes.length) {
+    gridApi.applyTransaction({ remove: newNodes });
+  }
+  _hasNewRows = false;
+  _updateNewRowIndicators();
+  _updateDeleteButtonVisibility();
+
+  editMode.toggle(false);
 }
 
 /* ── CatalogCellEditor (AG Grid 셀 에디터) ── */
@@ -654,9 +469,9 @@ function getGridCellClass(field, row = null) {
   const classes = [];
   classes.push(GRID_EDITABLE_FIELDS.has(field) ? "infra-cell-editable" : "infra-cell-readonly");
   if (isRawFallbackField(field, row)) classes.push("infra-cell-rawtext");
-  if (_editMode && row?.id) {
-    if (isDirty(row.id, field)) classes.push("infra-cell-dirty");
-    if (getCellError(row.id, field)) classes.push("infra-cell-error");
+  if (editMode && editMode.isActive() && row?.id) {
+    if (editMode.isDirty(row.id, field)) classes.push("infra-cell-dirty");
+    if (editMode.getCellError(row.id, field)) classes.push("infra-cell-error");
   }
   return classes.join(" ");
 }
@@ -873,7 +688,6 @@ const ASSET_CHK_COL = {
         });
         gridApi.refreshCells({ columns: ["_selected"], force: true });
         _updateDeleteButtonVisibility();
-        _updateBulkSelectionUI();
       });
     }
     getGui() { return this.el; }
@@ -891,7 +705,6 @@ const ASSET_CHK_COL = {
       params.data._selected = cb.checked;
       params.node.setSelected(cb.checked);
       _updateDeleteButtonVisibility();
-      _updateBulkSelectionUI();
     });
     return cb;
   },
@@ -1236,7 +1049,7 @@ async function initGrid() {
       type: 'detail-panel',
       onSelect: (data) => {
         // 일반 모드: 싱글 선택처럼 동작 (이전 선택 해제)
-        if (!_editMode) {
+        if (!editMode || !editMode.isActive()) {
           gridApi.deselectAll();
           gridApi.getRowNode(String(data.id))?.setSelected(true);
         }
@@ -1245,7 +1058,7 @@ async function initGrid() {
       onCellValueChanged: handleGridCellValueChanged,
     }),
     onSelectionChanged: () => {
-      _updateBulkSelectionUI();
+      // bulk selection UI는 GridEditMode가 자체 이벤트 리스너로 관리
     },
     onColumnMoved: saveGridColumnState,
     onColumnVisible: saveGridColumnState,
@@ -1255,6 +1068,61 @@ async function initGrid() {
       if (event.finished) saveGridColumnState();
     },
   });
+
+  // ── GridEditMode 인스턴스 생성 ──
+  editMode = new GridEditMode({
+    gridApi,
+    editableFields: GRID_EDITABLE_FIELDS,
+    bulkEndpoint: () => _assetPatchUrl("/api/v1/assets/bulk"),
+    requiredFields: new Set(["asset_name"]),
+    normalizeChange: assetNormalizeChange,
+    prefix: "asset",
+
+    onBeforeSave: (items) => items,
+
+    onAfterSave: (results) => {
+      for (const updated of results) {
+        let node = null;
+        gridApi.forEachNode((n) => { if (n.data?.id === updated.id) node = n; });
+        if (node) applyAssetRowUpdate(node.data, updated);
+      }
+    },
+
+    bulkApplyFields: [
+      { field: "period_id", label: "귀속프로젝트", type: "select",
+        options: () => _periodsCache.map((p) => ({
+          value: p.id,
+          label: p.contract_name || p.period_label || String(p.id),
+        })),
+      },
+      { field: "center_id", label: "센터", type: "select",
+        options: () => _layoutCentersCache.map((c) => ({
+          value: c.id, label: c.center_name,
+        })),
+      },
+      { field: "environment", label: "환경", type: "select",
+        options: () => Object.entries(ENV_MAP).map(([v, l]) => ({
+          value: v, label: l,
+        })),
+      },
+      { field: "status", label: "상태", type: "select",
+        options: () => Object.entries(ASSET_STATUS_MAP).map(([v, l]) => ({
+          value: v, label: l,
+        })),
+      },
+    ],
+
+    selectors: {
+      toggleBtn: "#btn-toggle-edit",
+      saveBtn: "#btn-save-edit",
+      cancelBtn: "#btn-cancel-edit",
+      statusBar: "#edit-mode-bar",
+      changeCount: "#edit-mode-count",
+      errorCount: "#edit-mode-errors",
+      bulkContainer: "#edit-mode-selection",
+    },
+  });
+
   // ── 복사/붙여넣기 핸들러 ──
   // 커스텀 에디터 / FK ID 필드는 텍스트 붙여넣기 대상에서 제외
   const PASTE_SKIP_FIELDS = new Set(["current_role_id", "center_id", "period_id"]);
@@ -1278,7 +1146,7 @@ async function initGrid() {
     },
     onPaste: async (changes) => {
       // 편집 모드가 아니면 붙여넣기 차단
-      if (!_editMode) {
+      if (!editMode || !editMode.isActive()) {
         // 붙여넣기로 변경된 값을 원복
         for (const c of changes) {
           const node = gridApi.getDisplayedRowAtIndex(c.rowIndex);
@@ -1346,24 +1214,16 @@ async function initGrid() {
       }
       if (modelChanges.length) gridApi.refreshCells({ force: true });
 
-      if (_editMode) {
+      if (editMode && editMode.isActive()) {
         for (const c of changes) {
           const node = gridApi.getDisplayedRowAtIndex(c.rowIndex);
           if (node?.data?.id && c.field !== "model") {
-            markDirty(node.data.id, c.field, c.newValue, c.oldValue);
+            editMode.markDirty(node.data.id, c.field, c.newValue, c.oldValue);
           } else if (node?.data?.id && c.field === "model" && node.data.model_id) {
-            const original = modelOriginals.get(node.data.id) || {
-              model: c.oldValue,
-              vendor: node.data.vendor,
-              model_id: null,
-            };
-            _rememberOriginalField(node.data.id, "model", original.model);
-            _rememberOriginalField(node.data.id, "vendor", original.vendor);
-            _rememberOriginalField(node.data.id, "model_id", original.model_id);
-            markDirty(node.data.id, "model_id", node.data.model_id, original.model_id);
+            const original = modelOriginals.get(node.data.id) || {};
+            editMode.markDirty(node.data.id, "model_id", node.data.model_id, original.model_id ?? null);
           }
         }
-        _updateEditModeBar();
         gridApi.refreshCells({ force: true });
       } else {
         // Normal mode: 기존 행만 즉시 PATCH
@@ -1415,7 +1275,7 @@ async function initGrid() {
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "s") {
       e.preventDefault();
-      if (_editMode) saveEditMode();
+      if (editMode && editMode.isActive()) assetSaveEditMode();
     }
   });
 
@@ -1446,11 +1306,6 @@ function applyAssetRowUpdate(row, updated) {
   gridApi?.refreshCells({ force: true });
 }
 
-function _rememberOriginalField(rowId, field, value) {
-  if (!_originalValues.has(rowId)) _originalValues.set(rowId, {});
-  const originals = _originalValues.get(rowId);
-  if (!(field in originals)) originals[field] = value;
-}
 
 function _assetPatchUrl(path) {
   const params = new URLSearchParams();
@@ -1487,26 +1342,8 @@ async function handleGridCellValueChanged(event) {
     return;
   }
   // ── 편집 모드: dirty 축적만 하고 서버 전송 안 함 ──
-  if (_editMode && row.id) {
-    if (field === "model") {
-      const val = event.newValue;
-      if (!val || !val._catalogModelId) {
-        row.model = event.oldValue;
-        gridApi.refreshCells({ rowNodes: [event.node], force: true });
-        return;
-      }
-      _rememberOriginalField(row.id, "model", event.oldValue);
-      _rememberOriginalField(row.id, "vendor", row.vendor);
-      _rememberOriginalField(row.id, "model_id", row.model_id);
-      row.model_id = val._catalogModelId;
-      row.vendor = val._catalogVendor || row.vendor || "";
-      row.model = val._catalogName || val.display || row.model;
-      markDirty(row.id, "model_id", row.model_id, _originalValues.get(row.id).model_id);
-      gridApi.refreshCells({ rowNodes: [event.node], force: true });
-      return;
-    }
-    markDirty(row.id, field, event.newValue, event.oldValue);
-    gridApi.refreshCells({ force: true });
+  if (editMode && editMode.isActive() && row.id) {
+    editMode.handleCellChange(event);
     return;
   }
   if (field !== "current_role_id" && event.newValue === event.oldValue) return;
@@ -4335,10 +4172,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAssetSplitter();
   initGrid();
 });
-document.getElementById("btn-toggle-edit").addEventListener("click", () => toggleEditMode());
-document.getElementById("btn-save-edit").addEventListener("click", saveEditMode);
-document.getElementById("btn-cancel-edit").addEventListener("click", cancelEditMode);
-document.getElementById("btn-bulk-apply").addEventListener("click", _applyBulkValues);
+// btn-toggle-edit: GridEditMode 생성자가 바인딩
+document.getElementById("btn-save-edit").addEventListener("click", assetSaveEditMode);
+document.getElementById("btn-cancel-edit").addEventListener("click", assetCancelEditMode);
+// btn-bulk-apply: GridEditMode가 동적 생성 시 바인딩
 document.getElementById("btn-add-asset-row-bottom").addEventListener("click", addAssetRow);
 document.getElementById("btn-save-new-assets").addEventListener("click", saveNewAssets);
 document.getElementById("btn-delete-selected").addEventListener("click", deleteSelectedAssets);
