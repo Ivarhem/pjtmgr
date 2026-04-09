@@ -79,3 +79,12 @@ class PortMapRead(BaseModel):
     dst_hostname: str | None = None
     dst_interface_name: str | None = None
     dst_zone: str | None = None
+
+
+class PortMapBulkUpdateItem(BaseModel):
+    id: int
+    changes: dict
+
+
+class PortMapBulkUpdateRequest(BaseModel):
+    items: list[PortMapBulkUpdateItem]

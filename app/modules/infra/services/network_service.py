@@ -401,6 +401,25 @@ def delete_port_map(db: Session, port_map_id: int, current_user) -> None:
     db.commit()
 
 
+def bulk_update_port_maps(
+    db: Session,
+    items: list,
+    current_user,
+) -> list[dict]:
+    """여러 포트맵을 일괄 업데이트한다."""
+    allowed_fields = set(PortMapUpdate.model_fields.keys())
+    results: list[PortMap] = []
+    for item in items:
+        filtered = {k: v for k, v in item.changes.items() if k in allowed_fields}
+        if not filtered:
+            continue
+        payload = PortMapUpdate(**filtered)
+        updated = update_port_map(db, item.id, payload, current_user)
+        results.append(updated)
+    iface_map = build_interface_map(db, results)
+    return [enrich_port_map(pm, iface_map) for pm in results]
+
+
 # ── Private helpers ──
 
 

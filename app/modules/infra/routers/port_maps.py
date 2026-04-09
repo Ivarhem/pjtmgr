@@ -7,11 +7,13 @@ from app.core.auth.dependencies import get_current_user
 from app.modules.common.models.user import User
 from app.core.database import get_db
 from app.modules.infra.schemas.port_map import (
+    PortMapBulkUpdateRequest,
     PortMapCreate,
     PortMapRead,
     PortMapUpdate,
 )
 from app.modules.infra.services.network_service import (
+    bulk_update_port_maps,
     create_port_map,
     delete_port_map,
     get_port_map,
@@ -31,6 +33,16 @@ def list_port_maps_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> list[PortMapRead]:
     return [PortMapRead(**pm) for pm in list_port_maps_enriched(db, partner_id, period_id)]
+
+
+@router.patch("/bulk", response_model=list[PortMapRead])
+def bulk_update_port_maps_endpoint(
+    payload: PortMapBulkUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[PortMapRead]:
+    results = bulk_update_port_maps(db, payload.items, current_user)
+    return [PortMapRead(**pm) for pm in results]
 
 
 @router.post(
