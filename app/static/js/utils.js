@@ -1,5 +1,14 @@
 // ── 공유 상수 (인프라 도메인) ──────────────────────────────────────
 
+const ROOT_PATH = window.__ROOT_PATH__ || document.body?.dataset?.rootPath || '';
+
+function withRootPath(path) {
+  if (!path) return ROOT_PATH || '';
+  if (/^https?:\/\//.test(path)) return path;
+  if (!path.startsWith('/')) path = '/' + path;
+  return `${ROOT_PATH}${path}`;
+}
+
 const ASSET_STATUS_MAP = {
   planned: "도입예정",
   standby: "대기",
@@ -31,7 +40,7 @@ let _termLabelsCache = null;
 async function loadTermLabels() {
   if (!_termLabelsCache) {
     try {
-      const res = await fetch('/api/v1/term-configs/labels');
+      const res = await fetch(withRootPath('/api/v1/term-configs/labels'));
       _termLabelsCache = res.ok ? await res.json() : {};
     } catch {
       _termLabelsCache = {};
@@ -90,7 +99,7 @@ async function apiFetch(url, opts = {}) {
     fetchOpts.headers['Content-Type'] = 'application/json';
     fetchOpts.body = JSON.stringify(opts.body);
   }
-  const res = await fetch(url, fetchOpts);
+  const res = await fetch(withRootPath(url), fetchOpts);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const detail = body.detail;

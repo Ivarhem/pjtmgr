@@ -13,13 +13,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   columnDefs = buildContractPeriodColumns({ showOwner: true });
   const gridOptions = buildContractGridOptions({
     columnDefs,
-    backPath: '/contracts',
+    backPath: withRootPath('/contracts'),
     partnerInputId: 'filter-partner-text',
     nameInputId: 'filter-name-text',
     onColChange: () => saveColState(gridApi, COL_STATE_KEY),
   });
 
-  const me = await fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null);
+  const me = await fetch(withRootPath('/api/v1/auth/me')).then(r => r.ok ? r.json() : null);
   currentMe = me;
   await initDropdownFilters(me);
   loadPartnerDatalist();
@@ -97,7 +97,7 @@ async function loadData() {
   }
 
   saveFilterState(FILTER_STATE_KEY);
-  const res = await fetch(`/api/v1/ledger/periods?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/ledger/periods?${params}`));
   const data = await res.json();
   gridApi.setGridOption('rowData', data);
   gridApi.onFilterChanged();
@@ -110,7 +110,7 @@ async function initDropdownFilters(me = null) {
   await populateContractTypeSelect('add-contract-type');
 
   // 부서 옵션 API에서 동적 로드
-  const users = await fetch('/api/v1/users').then(r => r.json());
+  const users = await fetch(withRootPath('/api/v1/users')).then(r => r.json());
   allUsers = users;
   // 담당자 검색용 datalist 생성
   const dl = document.getElementById('user-list');

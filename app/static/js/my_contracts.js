@@ -12,13 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   columnDefs = buildContractPeriodColumns({ showOwner: false });
   const gridOptions = buildContractGridOptions({
     columnDefs,
-    backPath: '/my-contracts',
+    backPath: withRootPath('/my-contracts'),
     partnerInputId: 'filter-partner-text',
     nameInputId: 'filter-name-text',
     onColChange: () => saveColState(gridApi, COL_STATE_KEY),
   });
 
-  const me = await fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null);
+  const me = await fetch(withRootPath('/api/v1/auth/me')).then(r => r.ok ? r.json() : null);
   currentUserId = me?.id ?? null;
 
   loadPartnerDatalist();
@@ -78,7 +78,7 @@ async function loadData() {
   if (currentUserId) params.set('owner_id', currentUserId);
 
   saveFilterState(FILTER_STATE_KEY);
-  const res = await fetch(`/api/v1/ledger/periods?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/ledger/periods?${params}`));
   const data = await res.json();
   gridApi.setGridOption('rowData', data);
   gridApi.onFilterChanged();
@@ -96,7 +96,7 @@ async function loadSummary() {
     document.querySelectorAll('#drop-calendar-year input:checked').forEach(cb => params.append('calendar_year', cb.value));
     document.querySelectorAll('#drop-period input:checked').forEach(cb => params.append('period_year', cb.value));
   }
-  const res = await fetch(`/api/v1/my-contracts/summary?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/my-contracts/summary?${params}`));
   if (!res.ok) return;
   const s = await res.json();
   const el = document.getElementById('my-contracts-summary');
