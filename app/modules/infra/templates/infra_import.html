@@ -79,11 +79,11 @@
   <div id="result-summary" class="infra-import-result-summary"></div>
   <div class="infra-import-actions">
     <button class="btn" id="btn-another">다른 파일 Import</button>
-    <a class="btn btn-primary" id="btn-go-project" href="/projects">프로젝트 보기</a>
+    <a class="btn btn-primary" id="btn-go-project" href="{{ request.scope.root_path or "" }}/projects">프로젝트 보기</a>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/infra_import.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_import.js"></script>
 {% endblock %}

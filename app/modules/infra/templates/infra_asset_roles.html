@@ -2,7 +2,7 @@
 {% block title %}역할 기준 보기{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/infra_common.css">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">
 {% endblock %}
 
 {% block content %}
@@ -228,5 +228,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/infra_asset_roles.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_asset_roles.js"></script>
 {% endblock %}

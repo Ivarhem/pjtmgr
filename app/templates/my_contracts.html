@@ -78,5 +78,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/my_contracts.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/my_contracts.js"></script>
 {% endblock %}

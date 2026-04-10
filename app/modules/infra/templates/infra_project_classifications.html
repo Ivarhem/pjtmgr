@@ -2,7 +2,7 @@
 {% block title %}프로젝트 분류체계{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/infra_common.css?v=20260326-classification-scroll">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260326-classification-scroll">
 {% endblock %}
 
 {% block content %}
@@ -186,5 +186,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/infra_project_classifications.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_project_classifications.js"></script>
 {% endblock %}

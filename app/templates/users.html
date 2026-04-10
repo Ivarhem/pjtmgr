@@ -97,5 +97,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/users.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/users.js"></script>
 {% endblock %}

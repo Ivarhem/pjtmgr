@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}사업 상세{% endblock %}
-{% block styles %}<link rel="stylesheet" href="/static/css/contract_detail.css">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/contract_detail.css">{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
-    <a id="back-link" href="/contracts" class="back-link">← 목록으로</a>
+    <a id="back-link" href="{{ request.scope.root_path or "" }}/contracts" class="back-link">← 목록으로</a>
     <h1 id="contract-title">로딩 중...</h1>
   </div>
   <div class="header-actions">
@@ -369,5 +369,5 @@
 
 {% block scripts %}
 <script>const CONTRACT_PERIOD_ID = {{ contract_period_id }};const INIT_CONTRACT_ID = {{ contract_id }};</script>
-<script src="/static/js/contract_detail.js?v=20260311f"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/contract_detail.js?v=20260311f"></script>
 {% endblock %}

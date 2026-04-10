@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}기준정보 관리{% endblock %}
-{% block styles %}<link rel="stylesheet" href="/static/css/infra_common.css">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">{% endblock %}
 {% block content %}
 <div class="tab-nav">
-  <a href="/product-catalog" class="tab-btn">제품 카탈로그</a>
+  <a href="{{ request.scope.root_path or "" }}/product-catalog" class="tab-btn">제품 카탈로그</a>
   <a href="/catalog-management/integrity" class="tab-btn active">기준정보 관리</a>
 </div>
 <p class="data-note">제품 카탈로그에 등록되는 제조사를 관리하고, 유사·중복 제품을 비교하여 병합하거나 무시 처리할 수 있습니다. 제조사별 별칭(alias)을 등록하면 제품 등록 시 검색 정확도가 높아집니다.</p>
@@ -104,5 +104,5 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/infra_catalog_integrity.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_catalog_integrity.js"></script>
 {% endblock %}

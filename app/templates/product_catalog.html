@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}제품 카탈로그{% endblock %}
-{% block styles %}<link rel="stylesheet" href="/static/css/infra_common.css">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">{% endblock %}
 {% block content %}
 <div class="tab-nav">
-  <a href="/product-catalog" class="tab-btn active">제품 카탈로그</a>
+  <a href="{{ request.scope.root_path or "" }}/product-catalog" class="tab-btn active">제품 카탈로그</a>
   <a href="/catalog-management/integrity" class="tab-btn">기준정보 관리</a>
   <div class="tab-nav-actions">
     <button class="btn btn-secondary" id="btn-open-import">SPEC/EOSL Import</button>
@@ -487,6 +487,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/modal_combobox.js"></script>
-<script src="/static/js/infra_product_catalog.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/modal_combobox.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js"></script>
 {% endblock %}

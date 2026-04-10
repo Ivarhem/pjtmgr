@@ -4,7 +4,7 @@
 {% block styles %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
-<link rel="stylesheet" href="/static/css/infra_common.css">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">
 {% endblock %}
 
 {% block head_scripts %}
@@ -26,5 +26,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/infra_audit_history.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_audit_history.js"></script>
 {% endblock %}

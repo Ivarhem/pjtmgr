@@ -81,7 +81,7 @@
   <div class="import-section">
     <div class="import-section-title">
       <span class="import-step-badge">①</span> 영업기회
-      <a href="/api/v1/excel/template/contracts" class="btn btn-secondary btn-xs" download>↓ 템플릿</a>
+      <a href="{{ request.scope.root_path or "" }}/api/v1/excel/template/contracts" class="btn btn-secondary btn-xs" download>↓ 템플릿</a>
     </div>
     <div class="import-section-body">
       <p class="import-guide">중복(동일 연도+사업명) 시 덮어쓰기/건너뛰기를 선택합니다.</p>
@@ -102,7 +102,7 @@
   <div class="import-section">
     <div class="import-section-title">
       <span class="import-step-badge">②</span> 월별계획
-      <a href="/api/v1/excel/template/forecast" class="btn btn-secondary btn-xs" download>↓ 현황 포함 템플릿</a>
+      <a href="{{ request.scope.root_path or "" }}/api/v1/excel/template/forecast" class="btn btn-secondary btn-xs" download>↓ 현황 포함 템플릿</a>
     </div>
     <div class="import-section-body">
       <p class="import-guide">기간ID·연도·사업명(참고) 컬럼이 포함된 템플릿을 내려받아 월별 매출/GP를 입력 후 업로드하세요.</p>
@@ -118,7 +118,7 @@
   <div class="import-section">
     <div class="import-section-title">
       <span class="import-step-badge">③</span> 실적
-      <a href="/api/v1/excel/template/transaction-lines" class="btn btn-secondary btn-xs" download>↓ 현황 포함 템플릿</a>
+      <a href="{{ request.scope.root_path or "" }}/api/v1/excel/template/transaction-lines" class="btn btn-secondary btn-xs" download>↓ 현황 포함 템플릿</a>
     </div>
     <div class="import-section-body">
       <p class="import-guide">기간ID·연도·사업명(참고) 컬럼이 포함된 템플릿을 내려받아 거래처·월별 금액을 입력 후 업로드하세요.</p>
@@ -152,5 +152,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/contracts.js?v=20260316a"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/contracts.js?v=20260316a"></script>
 {% endblock %}

@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}영업관리{% endblock %}</title>
-  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="{{ request.scope.root_path or "" }}/static/img/logo.svg" type="image/svg+xml">
   
-  <script src="/static/js/lucide.js"></script>
+  <script src="{{ request.scope.root_path or "" }}/static/js/lucide.js"></script>
 
   <!-- AG Grid Community -->
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/dist/ag-grid-community.min.js"></script>
@@ -17,12 +17,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz-dark.css" />
   
-  <script src="/static/js/utils.js"></script>
+  <script src="{{ request.scope.root_path or "" }}/static/js/utils.js"></script>
   <!-- HTMX -->
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   
-  <link rel="stylesheet" href="/static/css/base.css">
-  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/base.css">
+  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/components.css">
   {% block styles %}{% endblock %}
 </head>
 <body>
@@ -33,7 +33,7 @@
       <i data-lucide="x" class="icon-close"></i>
     </button>
     <a href="/" class="nav-brand">
-      <img src="/static/img/logo.svg" alt="Logo" class="nav-logo">
+      <img src="{{ request.scope.root_path or "" }}/static/img/logo.svg" alt="Logo" class="nav-logo">
     </a>
     {% if "accounting" in enabled_modules and "infra" in enabled_modules %}
     <div class="module-dropdown" id="module-dropdown">
@@ -46,7 +46,7 @@
         <i data-lucide="chevron-down" class="icon-xs"></i>
       </button>
       <div class="module-dropdown-menu" id="module-dropdown-menu">
-        <a href="/my-contracts" class="module-dropdown-item {% if request.state.module_context == 'accounting' %}active{% endif %}">
+        <a href="{{ request.scope.root_path or "" }}/my-contracts" class="module-dropdown-item {% if request.state.module_context == 'accounting' %}active{% endif %}">
           <i data-lucide="briefcase" class="icon-sm"></i> 영업관리
         </a>
         <a href="/periods" class="module-dropdown-item {% if request.state.module_context == 'infra' %}active{% endif %}">
@@ -111,10 +111,10 @@
         {# --- 영업관리 (accounting 컨텍스트일 때만) --- #}
         {% if "accounting" in enabled_modules and mc == "accounting" %}
 
-        <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
-        <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
-        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
-        <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
         {% endif %}
 
         {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
@@ -132,10 +132,10 @@
         {# --- 단일 모듈만 활성일 때: 해당 모듈 전체 표시 --- #}
         {% if "accounting" in enabled_modules and "infra" not in enabled_modules %}
 
-        <li><a href="/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
-        <li><a href="/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
-        <li><a href="/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
-        <li><a href="/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/dashboard"><i class="icon" data-lucide="layout-grid"></i><span>대시보드<small class="subnav-sub">매출·GP·미수금 한눈에 보기</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/reports"><i class="icon" data-lucide="bar-chart-3"></i><span>보고서<small class="subnav-sub">실적 집계·비교·Excel 내보내기</small></span></a></li>
         {% endif %}
         {% if "infra" in enabled_modules and "accounting" not in enabled_modules %}
 
@@ -153,10 +153,10 @@
 
         {# --- 공통 메뉴 (모듈 무관) --- #}
 
-        <li><a href="/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
-        <li><a href="/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">제품 카탈로그·기준정보 관리</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">제품 카탈로그·기준정보 관리</small></span></a></li>
         <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
-        <li class="admin-only is-hidden"><a href="/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
+        <li class="admin-only is-hidden"><a href="{{ request.scope.root_path or "" }}/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
       </ul>
     </nav>
   </div>

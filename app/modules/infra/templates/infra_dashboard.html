@@ -2,7 +2,7 @@
 {% block title %}현황판 - 프로젝트관리{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/static/css/infra_common.css">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">
 {% endblock %}
 
 {% block content %}
@@ -56,5 +56,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/infra_dashboard.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_dashboard.js"></script>
 {% endblock %}

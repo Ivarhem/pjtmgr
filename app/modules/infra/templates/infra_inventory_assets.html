@@ -5,7 +5,7 @@
 <div class="page-header">
   <h1>자산 검색</h1>
   <div class="infra-inline-actions">
-    <a href="/api/v1/infra-excel/template/inventory" class="btn btn-secondary">양식 다운로드</a>
+    <a href="{{ request.scope.root_path or "" }}/api/v1/infra-excel/template/inventory" class="btn btn-secondary">양식 다운로드</a>
     <button class="btn btn-secondary" id="btn-asset-import-toggle">Excel Import</button>
   </div>
 </div>
@@ -58,5 +58,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/infra_inventory_assets.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_inventory_assets.js"></script>
 {% endblock %}
