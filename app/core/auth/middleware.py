@@ -20,15 +20,19 @@ _PUBLIC_EXACT = {"/login", "/api/v1/auth/login", "/api/v1/health"}
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
+        root_path = (request.scope.get("root_path") or "").rstrip("/")
+        normalized_path = path
+        if root_path and normalized_path.startswith(root_path):
+            normalized_path = normalized_path[len(root_path):] or "/"
 
         # 공개 경로 허용
-        if path in _PUBLIC_EXACT or any(path.startswith(p) for p in _PUBLIC_PREFIXES):
+        if normalized_path in _PUBLIC_EXACT or any(normalized_path.startswith(p) for p in _PUBLIC_PREFIXES):
             return await call_next(request)
 
         # 세션 확인
         user_id = request.session.get("user_id")
         if not user_id:
-            if path.startswith("/api/"):
+            if normalized_path.startswith("/api/"):
                 raise UnauthorizedError("로그인이 필요합니다.")
             return RedirectResponse(url=_with_root_path(request, "/login"))
 
