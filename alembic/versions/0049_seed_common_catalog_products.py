@@ -179,7 +179,7 @@ def upgrade() -> None:
         {"vendor": "Microsoft", "name": "SQL Server 2022", "product_type": "software", "domain": "db", "imp_type": "sw", "product_family": "dbms", "platform": "windows"},
         {"vendor": "PostgreSQL", "name": "PostgreSQL 16", "product_type": "software", "domain": "db", "imp_type": "sw", "product_family": "dbms", "platform": "linux"},
         {"vendor": "MySQL", "name": "MySQL Enterprise 8.4", "product_type": "software", "domain": "db", "imp_type": "sw", "product_family": "dbms", "platform": "linux"},
-        {"vendor": "OpenAI", "name": "GPT-4.1 mini", "product_type": "model", "domain": "generic", "imp_type": "svc", "product_family": "generic", "platform": None},
+        {"vendor": "OpenAI", "name": "GPT-4.1 mini", "product_type": "model", "domain": "sec", "imp_type": "svc", "product_family": "generic", "platform": None},
     ]
 
     for product in products:
