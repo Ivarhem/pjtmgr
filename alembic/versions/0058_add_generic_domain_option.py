@@ -52,8 +52,8 @@ def upgrade() -> None:
         conn.execute(
             sa.text(
                 "INSERT INTO catalog_attribute_options "
-                "(attribute_id, option_key, label, label_kr, sort_order, is_active) "
-                "VALUES (:aid, 'generic', 'Generic', '기타', :so, true)"
+                "(attribute_id, option_key, label, label_kr, sort_order, is_active, created_at, updated_at) "
+                "VALUES (:aid, 'generic', 'Generic', '기타', :so, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             ),
             {"aid": domain_attr_id, "so": (max_sort or 0) + 10},
         )
