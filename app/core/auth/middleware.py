@@ -3,6 +3,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
+
+def _with_root_path(request: Request, path: str) -> str:
+    root_path = (request.scope.get("root_path") or "").rstrip("/")
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{root_path}{path}" if root_path else path
+
 from app.core.exceptions import UnauthorizedError
 
 # 인증 없이 접근 가능한 경로
@@ -23,7 +30,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not user_id:
             if path.startswith("/api/"):
                 raise UnauthorizedError("로그인이 필요합니다.")
-            return RedirectResponse(url="/login")
+            return RedirectResponse(url=_with_root_path(request, "/login"))
 
         # request.state에 user_id 설정 (페이지 라우터에서 사용)
         request.state.user_id = user_id

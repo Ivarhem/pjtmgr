@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>로그인 - 영업관리 시스템</title>
-  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/css/base.css">
-  <link rel="stylesheet" href="/static/css/login.css">
+  <link rel="icon" href="{{ request.scope.root_path or '' }}/static/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ request.scope.root_path or '' }}/static/css/base.css">
+  <link rel="stylesheet" href="{{ request.scope.root_path or '' }}/static/css/login.css">
 </head>
 <body class="login-page">
   <div class="login-container">
-    <img src="/static/img/logo.svg" alt="Logo" class="login-logo">
+    <img src="{{ request.scope.root_path or '' }}/static/img/logo.svg" alt="Logo" class="login-logo">
     <div class="login-card">
       <h1 class="login-title">영업관리 시스템</h1>
       <form onsubmit="doLogin(event)">
@@ -46,7 +46,8 @@
       btn.textContent = '로그인 중...';
 
       try {
-        const res = await fetch('/api/v1/auth/login', {
+        const rootPath = {{ (request.scope.root_path or '') | tojson }};
+        const res = await fetch(`${rootPath}/api/v1/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ login_id, password }),
@@ -55,7 +56,7 @@
         if (res.ok) {
           const data = await res.json();
           sessionStorage.removeItem('infra_notif_shown');
-          window.location.href = data.must_change_password ? '/change-password' : '/';
+          window.location.href = data.must_change_password ? `${rootPath}/change-password` : `${rootPath}/`;
         } else {
           const err = await res.json().catch(() => ({}));
           errorMsg.textContent = err.detail || '로그인에 실패했습니다. 다시 시도해주세요.';

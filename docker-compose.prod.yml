@@ -1,0 +1,50 @@
+services:
+  sales-db:
+    image: postgres:16
+    container_name: sales-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: projmgr
+      POSTGRES_USER: projmgr
+      POSTGRES_PASSWORD: projmgr
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U projmgr -d projmgr"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - sales_postgres_data:/var/lib/postgresql/data
+
+  sales-app:
+    container_name: sales-app
+    build:
+      context: /service/services/sales
+    depends_on:
+      sales-db:
+        condition: service_healthy
+    env_file:
+      - /service/services/sales/.env
+    environment:
+      ENV: production
+      DATABASE_URL: postgresql://projmgr:projmgr@sales-db:5432/projmgr
+      SESSION_SECRET_KEY: ray-sales-session-secret-change-this
+      BOOTSTRAP_ADMIN_LOGIN_ID: admin
+      BOOTSTRAP_ADMIN_PASSWORD: change-this-admin-password
+      BOOTSTRAP_ADMIN_NAME: 관리자
+      ENABLED_MODULES: common,accounting,infra
+      APP_ROOT_PATH: /sales
+      SKIP_LIFESPAN_ALEMBIC: "1"
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 9000"]
+    ports:
+      - "127.0.0.1:9000:9000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen(http://localhost:9000/api/v1/health)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  sales_postgres_data:
+    name: sales_postgres_data

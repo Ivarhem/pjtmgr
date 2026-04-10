@@ -42,7 +42,8 @@ _APP_ROOT = Path(__file__).resolve().parent.parent
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="사업관리 통합 플랫폼", lifespan=lifespan)
+    root_path = os.getenv("APP_ROOT_PATH", "")
+    app = FastAPI(title="사업관리 통합 플랫폼", lifespan=lifespan, root_path=root_path)
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     app.add_middleware(ModuleContextMiddleware)

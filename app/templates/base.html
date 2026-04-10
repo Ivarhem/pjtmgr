@@ -271,7 +271,8 @@
           toast.className = 'toast toast-warning';
           const text = document.createTextNode(`미제출 산출물 ${items.length}건이 있습니다. `);
           const link = document.createElement('a');
-          link.href = '/infra-dashboard';
+          const rootPath = {{ (request.scope.root_path or '') | tojson }};
+          link.href = `${rootPath}/infra-dashboard`;
           link.textContent = '현황판에서 확인';
           toast.appendChild(text);
           toast.appendChild(link);
@@ -292,8 +293,9 @@
     {% endif %}
 
     async function doLogout() {
-      await fetch('/api/v1/auth/logout', { method: 'POST' });
-      window.location.href = '/login';
+      const rootPath = {{ (request.scope.root_path or '') | tojson }};
+      await fetch(`${rootPath}/api/v1/auth/logout`, { method: 'POST' });
+      window.location.href = `${rootPath}/login`;
     }
   </script>
 

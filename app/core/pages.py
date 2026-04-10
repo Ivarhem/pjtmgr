@@ -10,6 +10,13 @@ from app.modules.common.services.setting import get_password_min_length
 router = APIRouter(tags=["pages"])
 
 
+def _with_root_path(request: Request, path: str) -> str:
+    root_path = (request.scope.get("root_path") or "").rstrip("/")
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{root_path}{path}" if root_path else path
+
+
 def _templates(request: Request):
     """Get the Jinja2Templates instance from app state."""
     return request.app.state.templates
@@ -35,11 +42,11 @@ def index(request: Request) -> RedirectResponse:
     user_id = getattr(request.state, "user_id", None)
 
     if not user_id:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url=_with_root_path(request, "/login"))
 
     if "accounting" in enabled:
-        return RedirectResponse(url="/my-contracts")
+        return RedirectResponse(url=_with_root_path(request, "/my-contracts"))
     elif "infra" in enabled:
-        return RedirectResponse(url="/projects")
+        return RedirectResponse(url=_with_root_path(request, "/projects"))
     else:
-        return RedirectResponse(url="/login")
+        return RedirectResponse(url=_with_root_path(request, "/login"))
