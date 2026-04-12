@@ -97,8 +97,12 @@ def ensure_bootstrap_admin(
         existing.name = name or existing.name
         existing.role_id = role_id
         existing.is_active = True
-        existing.password_hash = hash_password(password)
-        existing.must_change_password = True
+        # Do not silently overwrite an existing user's password during bootstrap.
+        # Bootstrap should ensure an admin exists, not reset credentials on every fresh
+        # initialization or migration-driven startup.
+        if not existing.password_hash:
+            existing.password_hash = hash_password(password)
+            existing.must_change_password = True
         db.commit()
         db.refresh(existing)
         return existing
