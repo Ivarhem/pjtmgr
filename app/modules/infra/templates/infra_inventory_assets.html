@@ -5,8 +5,8 @@
 <div class="page-header">
   <h1>자산 검색</h1>
   <div class="infra-inline-actions">
-    <a href="{{ request.scope.root_path or "" }}/api/v1/infra-excel/template/inventory" class="btn btn-secondary">양식 다운로드</a>
-    <button class="btn btn-secondary" id="btn-asset-import-toggle">Excel Import</button>
+    <a href="{{ request.scope.root_path or "" }}/api/v1/infra-excel/template/inventory" class="btn btn-secondary btn-sm">양식 다운로드</a>
+    <button class="btn btn-secondary btn-sm" id="btn-asset-import-toggle">Excel Import</button>
   </div>
 </div>
 <div id="asset-import-panel" class="card is-hidden infra-import-compact-panel">
@@ -49,7 +49,7 @@
     검색
     <input type="text" id="filter-search" placeholder="자산명, 호스트명, IP, 장비ID">
   </label>
-  <button class="btn btn-primary" id="btn-search">검색</button>
+  <button class="btn btn-primary btn-sm" id="btn-search">검색</button>
 </div>
 
 <div class="card">

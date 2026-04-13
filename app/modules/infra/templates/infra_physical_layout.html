@@ -8,11 +8,14 @@
 {% block content %}
 <div class="page-header">
   <h1><i data-lucide="layout-grid" class="icon-sm"></i> 배치</h1>
-  <div class="infra-inline-actions">
-    <select id="rack-label-base" class="select-sm" title="U 라벨 기준">
-      <option value="start">U 기준: Start (하→상, EIA-310)</option>
-      <option value="end">U 기준: End (상→하)</option>
-    </select>
+  <div class="infra-inline-actions infra-inline-actions-spread">
+    <label class="layout-inline-select" title="저장되는 U 번호는 항상 EIA-310 기준이며, 이 설정은 표시 방향만 바꿉니다.">
+      U 기준
+      <select id="rack-label-base">
+        <option value="start">Start</option>
+        <option value="end">End</option>
+      </select>
+    </label>
     <button class="btn btn-secondary btn-sm" id="btn-add-center">센터 등록</button>
     <button class="btn btn-secondary btn-sm" id="btn-add-room" disabled>전산실 등록</button>
     <button class="btn btn-primary btn-sm" id="btn-add-rack" disabled>랙 등록</button>

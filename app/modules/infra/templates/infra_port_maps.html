@@ -16,12 +16,26 @@
   <a href="{{ request.scope.root_path or "" }}/ip-inventory" class="tab-btn">IP 인벤토리</a>
   <a href="{{ request.scope.root_path or "" }}/port-maps" class="tab-btn active">포트맵</a>
   <div class="tab-nav-actions">
+    <button class="btn btn-secondary btn-sm" id="btn-col-chooser">열 설정</button>
+    <div id="col-chooser-menu" class="col-chooser-menu is-hidden"></div>
     <button class="btn btn-secondary btn-sm" id="btn-toggle-edit">편집</button>
     <button class="btn btn-primary btn-sm is-hidden" id="btn-save-edit">저장</button>
     <button class="btn btn-secondary btn-sm is-hidden" id="btn-cancel-edit">취소</button>
-    <button class="btn btn-primary" id="btn-add-portmap">배선 등록</button>
+    <button class="btn btn-primary btn-sm is-hidden" id="btn-save-new-portmaps">저장</button>
+    <button class="btn btn-primary btn-sm" id="btn-add-portmap">배선 등록</button>
   </div>
 </div>
+
+<p class="text-secondary text-sm mb-md">
+  자산 목록처럼 그리드에서 빠르게 조회/편집하고, 필요한 경우 모달에서 상세 연결 정보를 보완합니다.
+</p>
+
+<div class="filter-bar">
+  <label>통합 검색
+    <input type="text" id="portmap-search" placeholder="자산명, 인터페이스, 호스트, 케이블번호">
+  </label>
+</div>
+
 <div id="portmap-import-panel" class="card is-hidden infra-import-compact-panel">
   <div class="infra-import-compact-row">
     <label class="infra-compact-label">Excel (.xlsx)
@@ -49,6 +63,9 @@
 
 <div id="portmaps-content" class="card">
   <div id="grid-portmaps" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
+  <div class="grid-add-row-bar">
+    <button id="btn-add-portmap-row-bottom" class="grid-add-row-btn" type="button">+ 배선 추가</button>
+  </div>
 </div>
 
 <!-- 배선 등록/수정 모달 -->
@@ -82,12 +99,21 @@
 
     <fieldset><legend>케이블 정보</legend>
       <div class="form-grid">
-        <label>연결유형 <select id="portmap-connection-type">
-          <option value="">-</option><option value="physical">physical</option><option value="logical">logical</option>
+        <label>프리셋 <select id="portmap-link-preset">
+          <option value="direct-copper">active · direct · copper · UTP</option>
+          <option value="breakout-fiber">active · breakout · fiber · LC</option>
+        </select></label>
+        <label>연결모드 <select id="portmap-connection-type">
+          <option value="direct">direct</option><option value="breakout">breakout</option><option value="logical">logical</option>
         </select></label>
         <label>케이블종류 <select id="portmap-cable-type">
           <option value="">-</option><option value="SM">SM</option><option value="MM">MM</option><option value="UTP">UTP</option><option value="STP">STP</option><option value="DAC">DAC</option><option value="other">other</option>
         </select></label>
+        <label>매체분류 <select id="portmap-media-category">
+          <option value="copper">copper</option><option value="fiber">fiber</option><option value="dac">dac</option><option value="other">other</option>
+        </select></label>
+        <label>출발 타입 <select id="portmap-src-connector-type"></select></label>
+        <label>도착 타입 <select id="portmap-dst-connector-type"></select></label>
         <label>속도 <select id="portmap-cable-speed">
           <option value="">-</option><option value="100M">100M</option><option value="1G">1G</option><option value="10G">10G</option><option value="25G">25G</option><option value="40G">40G</option><option value="100G">100G</option><option value="other">other</option>
         </select></label>
@@ -98,7 +124,7 @@
           <option value="">-</option><option value="backbone">backbone</option><option value="distribution">distribution</option><option value="access">access</option><option value="management">management</option><option value="other">other</option>
         </select></label>
         <label>상태 <select id="portmap-status">
-          <option value="required">필요</option><option value="open">오픈</option><option value="closed">차단</option><option value="pending">대기</option>
+          <option value="active">active</option><option value="planned">planned</option><option value="temporary">temporary</option><option value="retired">retired</option><option value="candidate">candidate</option>
         </select></label>
       </div>
     </fieldset>
@@ -115,5 +141,5 @@
 
 {% block scripts %}
 <script src="{{ request.scope.root_path or "" }}/static/js/grid_edit_mode.js?v=20260413e"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_port_maps.js?v=20260413e"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_port_maps.js?v=20260413h"></script>
 {% endblock %}

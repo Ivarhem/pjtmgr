@@ -89,6 +89,7 @@ def authenticate(db: Session, login_id: str, password: str) -> User | None:
 
 def change_password(db: Session, user: User, current_password: str, new_password: str) -> None:
     """비밀번호 변경. 현재 비밀번호 검증 후 새 비밀번호로 교체."""
+    user = db.merge(user)
     if not user.password_hash or not verify_password(current_password, user.password_hash):
         raise BusinessRuleError("현재 비밀번호가 올바르지 않습니다.", status_code=400)
     min_length = get_password_min_length(db)

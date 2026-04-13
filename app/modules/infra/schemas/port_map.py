@@ -9,6 +9,10 @@ class PortMapCreate(BaseModel):
     partner_id: int
     src_interface_id: int | None = None
     dst_interface_id: int | None = None
+    src_asset_name_raw: str | None = None
+    src_interface_name_raw: str | None = None
+    dst_asset_name_raw: str | None = None
+    dst_interface_name_raw: str | None = None
     protocol: str | None = None
     port: int | None = None
     purpose: str | None = None
@@ -20,6 +24,9 @@ class PortMapCreate(BaseModel):
     cable_no: str | None = None
     cable_request: str | None = None
     cable_type: str | None = None
+    media_category: str | None = None
+    src_connector_type: str | None = None
+    dst_connector_type: str | None = None
     cable_speed: str | None = None
     duplex: str | None = None
     cable_category: str | None = None
@@ -28,6 +35,10 @@ class PortMapCreate(BaseModel):
 class PortMapUpdate(BaseModel):
     src_interface_id: int | None = None
     dst_interface_id: int | None = None
+    src_asset_name_raw: str | None = None
+    src_interface_name_raw: str | None = None
+    dst_asset_name_raw: str | None = None
+    dst_interface_name_raw: str | None = None
     protocol: str | None = None
     port: int | None = None
     purpose: str | None = None
@@ -39,6 +50,9 @@ class PortMapUpdate(BaseModel):
     cable_no: str | None = None
     cable_request: str | None = None
     cable_type: str | None = None
+    media_category: str | None = None
+    src_connector_type: str | None = None
+    dst_connector_type: str | None = None
     cable_speed: str | None = None
     duplex: str | None = None
     cable_category: str | None = None
@@ -51,6 +65,10 @@ class PortMapRead(BaseModel):
     partner_id: int
     src_interface_id: int | None
     dst_interface_id: int | None
+    src_asset_name_raw: str | None
+    src_interface_name_raw: str | None
+    dst_asset_name_raw: str | None
+    dst_interface_name_raw: str | None
     protocol: str | None
     port: int | None
     purpose: str | None
@@ -62,6 +80,9 @@ class PortMapRead(BaseModel):
     cable_no: str | None
     cable_request: str | None
     cable_type: str | None
+    media_category: str | None
+    src_connector_type: str | None
+    dst_connector_type: str | None
     cable_speed: str | None
     duplex: str | None
     cable_category: str | None

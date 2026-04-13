@@ -715,7 +715,7 @@ async function initContextSelectors() {
     // 사이드바 프로젝트 메뉴 링크 (항상 /periods — 상세는 인라인 패널)
     const navLink = document.getElementById('nav-project-link');
     if (navLink) {
-      navLink.href = '/periods';
+      navLink.href = withRootPath('/periods');
       navLink.dataset.hasProject = item ? '1' : '';
     }
     if (item && item.id) {

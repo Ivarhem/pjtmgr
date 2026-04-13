@@ -298,6 +298,75 @@ body.dark-mode .import-msg-error { background: #450a0a; color: #fca5a5; border-c
   display: flex;
   gap: 4px;
 }
+.infra-inline-actions-spread {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.layout-inline-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-color);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.layout-inline-select select {
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 12px;
+  font-weight: 600;
+  padding-right: 18px;
+}
+
+.layout-inline-select select:focus {
+  outline: none;
+}
+
+.infra-inline-actions-spread {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-field-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--surface-color);
+}
+
+.inline-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+.inline-field-select {
+  min-width: 92px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  height: 28px;
+  color: var(--text-color);
+}
+
+.inline-field-select:focus {
+  outline: none;
+}
+
 
 .infra-import-help {
   margin-bottom: 16px;
@@ -3273,8 +3342,8 @@ body.dark-mode .catalog-management-result {
 .unplaced-racks { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; min-height: 48px; background: var(--color-gray-50, #f9fafb); border: 1px dashed var(--color-gray-300, #d1d5db); border-radius: 6px; margin-top: 12px; }
 .unplaced-rack-chip { padding: 4px 10px; background: var(--color-gray-200, #e5e7eb); border-radius: 4px; font-size: 12px; cursor: grab; }
 .unplaced-rack-chip:active { cursor: grabbing; }
-.floor-plan-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-.floor-plan-toolbar .select-sm { font-size: 12px; padding: 4px 8px; }
+.floor-plan-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.floor-plan-toolbar .select-sm { font-size: 12px; }
 
 /* ── Infra utility classes (replacing inline styles) ── */
 .form-grid-1-2 { grid-template-columns: 1fr 2fr; }
@@ -3287,3 +3356,83 @@ body.dark-mode .catalog-management-result {
 .p-md { padding: 12px; }
 .mx-auto { margin: auto; }
 .placeholder-sub { display: block; margin-top: 0.5rem; font-size: 0.875rem; }
+
+
+body.dark-mode .layout-inline-select {
+  background: var(--bg-color-secondary);
+  border-color: var(--border-color);
+}
+
+body.dark-mode .layout-inline-select select {
+  color: var(--text-color);
+  background: transparent;
+  color-scheme: dark;
+}
+
+body.dark-mode .layout-inline-select select option {
+  background: var(--bg-primary);
+  color: var(--text-color);
+}
+
+body.dark-mode .catalog-category-panel,
+body.dark-mode .classification-tree-node {
+  background: var(--bg-primary);
+}
+
+body.dark-mode .floor-plan-grid {
+  background: var(--bg-color-secondary);
+  border-color: var(--border-color);
+}
+
+body.dark-mode .floor-plan-cell.empty,
+body.dark-mode .floor-plan-cell.line-slot.disabled {
+  background: color-mix(in srgb, var(--bg-primary) 84%, var(--text-color) 16%);
+}
+
+body.dark-mode .floor-plan-cell.line-slot {
+  background: color-mix(in srgb, var(--primary-color, #2563eb) 12%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--primary-color, #2563eb) 45%, var(--border-color));
+}
+
+body.dark-mode .floor-plan-cell.line-slot.has-rack {
+  background: color-mix(in srgb, var(--primary-color, #2563eb) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--primary-color, #2563eb) 70%, var(--border-color));
+  color: var(--text-color);
+}
+
+body.dark-mode .floor-plan-cell.line-slot.drag-over {
+  background: color-mix(in srgb, #22c55e 18%, var(--bg-primary));
+  border-color: color-mix(in srgb, #22c55e 60%, var(--border-color));
+}
+
+body.dark-mode .floor-plan-cell.line-slot.drag-invalid {
+  background: color-mix(in srgb, #ef4444 16%, var(--bg-primary));
+  border-color: color-mix(in srgb, #ef4444 56%, var(--border-color));
+}
+
+body.dark-mode .floor-plan-header,
+body.dark-mode .floor-plan-row-label {
+  color: var(--text-color-secondary);
+}
+
+body.dark-mode .unplaced-racks {
+  background: var(--bg-color-secondary);
+  border-color: var(--border-color);
+}
+
+body.dark-mode .unplaced-rack-chip {
+  background: color-mix(in srgb, var(--bg-primary) 82%, var(--text-color) 18%);
+  color: var(--text-color);
+}
+
+body.dark-mode .floor-plan-toolbar .select-sm {
+  background: var(--bg-color-secondary);
+  color: var(--text-color);
+  border-color: var(--border-color);
+  color-scheme: dark;
+}
+
+body.dark-mode .floor-plan-toolbar .select-sm option {
+  background: var(--bg-primary);
+  color: var(--text-color);
+}

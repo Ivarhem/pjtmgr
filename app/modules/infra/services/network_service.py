@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
@@ -273,17 +273,19 @@ def enrich_port_map(pm: PortMap, iface_map: dict[int, dict]) -> dict:
 
     src_info = iface_map.get(pm.src_interface_id) if pm.src_interface_id is not None else None
     data["src_asset_id"] = src_info["asset_id"] if src_info else None
-    data["src_asset_name"] = src_info["asset_name"] if src_info else None
+    data["src_asset_name"] = src_info["asset_name"] if src_info else (pm.src_asset_name_raw or None)
     data["src_hostname"] = src_info["hostname"] if src_info else None
-    data["src_interface_name"] = src_info["iface_name"] if src_info else None
+    data["src_interface_name"] = src_info["iface_name"] if src_info else (pm.src_interface_name_raw or None)
     data["src_zone"] = src_info["zone"] if src_info else None
+    data["src_is_registered"] = bool(src_info)
 
     dst_info = iface_map.get(pm.dst_interface_id) if pm.dst_interface_id is not None else None
     data["dst_asset_id"] = dst_info["asset_id"] if dst_info else None
-    data["dst_asset_name"] = dst_info["asset_name"] if dst_info else None
+    data["dst_asset_name"] = dst_info["asset_name"] if dst_info else (pm.dst_asset_name_raw or None)
     data["dst_hostname"] = dst_info["hostname"] if dst_info else None
-    data["dst_interface_name"] = dst_info["iface_name"] if dst_info else None
+    data["dst_interface_name"] = dst_info["iface_name"] if dst_info else (pm.dst_interface_name_raw or None)
     data["dst_zone"] = dst_info["zone"] if dst_info else None
+    data["dst_is_registered"] = bool(dst_info)
 
     return data
 
@@ -342,16 +344,11 @@ def create_port_map(db: Session, payload: PortMapCreate, current_user) -> PortMa
     _require_inventory_edit(current_user)
     ensure_partner_exists(db, payload.partner_id)
 
-    if payload.src_interface_id is not None:
-        iface = db.get(AssetInterface, payload.src_interface_id)
-        if iface is None:
-            raise NotFoundError("Source interface not found")
-    if payload.dst_interface_id is not None:
-        iface = db.get(AssetInterface, payload.dst_interface_id)
-        if iface is None:
-            raise NotFoundError("Destination interface not found")
+    resolved = _resolve_port_map_payload(db, payload.model_dump(), payload.partner_id, current_user)
+    _validate_port_map_duplicate(db, payload.partner_id, resolved)
+    _validate_port_map_media(db, resolved)
 
-    port_map = PortMap(**payload.model_dump())
+    port_map = PortMap(**resolved)
     db.add(port_map)
     audit.log(
         db, user_id=current_user.id, action="create", entity_type="port_map",
@@ -368,17 +365,14 @@ def update_port_map(
     _require_inventory_edit(current_user)
     port_map = get_port_map(db, port_map_id)
     changes = payload.model_dump(exclude_unset=True)
+    merged = {col.name: getattr(port_map, col.name) for col in port_map.__table__.columns}
+    merged.update(changes)
 
-    if "src_interface_id" in changes and changes["src_interface_id"] is not None:
-        iface = db.get(AssetInterface, changes["src_interface_id"])
-        if iface is None:
-            raise NotFoundError("Source interface not found")
-    if "dst_interface_id" in changes and changes["dst_interface_id"] is not None:
-        iface = db.get(AssetInterface, changes["dst_interface_id"])
-        if iface is None:
-            raise NotFoundError("Destination interface not found")
+    resolved = _resolve_port_map_payload(db, merged, port_map.partner_id, current_user)
+    _validate_port_map_duplicate(db, port_map.partner_id, resolved, exclude_id=port_map.id)
+    _validate_port_map_media(db, resolved)
 
-    for field, value in changes.items():
+    for field, value in resolved.items():
         setattr(port_map, field, value)
 
     audit.log(
@@ -421,6 +415,157 @@ def bulk_update_port_maps(
 
 
 # ── Private helpers ──
+
+
+def _normalized_name(value: str | None) -> str:
+    return (value or "").strip().casefold()
+
+
+def _find_partner_asset_by_name(db: Session, partner_id: int, asset_name: str | None) -> Asset | None:
+    name = (asset_name or "").strip()
+    if not name:
+        return None
+    return db.scalar(
+        select(Asset)
+        .where(Asset.partner_id == partner_id, func.lower(Asset.asset_name) == name.lower())
+        .limit(1)
+    )
+
+
+def _find_or_create_interface(
+    db: Session,
+    asset_id: int,
+    interface_name: str | None,
+    cable_speed: str | None,
+    cable_type: str | None,
+    current_user,
+) -> AssetInterface | None:
+    name = (interface_name or "").strip()
+    if not name:
+        return None
+    existing = db.scalar(
+        select(AssetInterface)
+        .where(AssetInterface.asset_id == asset_id, func.lower(AssetInterface.name) == name.lower())
+        .limit(1)
+    )
+    if existing is not None:
+        return existing
+    iface = AssetInterface(
+        asset_id=asset_id,
+        name=name,
+        if_type="physical",
+        speed=cable_speed or None,
+        media_type=_infer_media_type(cable_type),
+        admin_status="up",
+        sort_order=0,
+    )
+    db.add(iface)
+    db.flush()
+    return iface
+
+
+def _infer_media_type(cable_type: str | None) -> str | None:
+    if not cable_type:
+        return None
+    cable_type = cable_type.upper()
+    if cable_type in {"SM", "MM"}:
+        return "fiber"
+    if cable_type in {"UTP", "STP"}:
+        return "copper"
+    if cable_type == "DAC":
+        return "dac"
+    return None
+
+
+def _resolve_side(db: Session, data: dict, side: str, partner_id: int) -> None:
+    asset_name_key = f"{side}_asset_name_raw"
+    iface_name_key = f"{side}_interface_name_raw"
+    iface_id_key = f"{side}_interface_id"
+    asset = None
+    if data.get(iface_id_key):
+        iface = db.get(AssetInterface, data[iface_id_key])
+        if iface is None:
+            raise NotFoundError(f"{side} interface not found")
+        asset = db.get(Asset, iface.asset_id)
+        data[asset_name_key] = asset.asset_name if asset else data.get(asset_name_key)
+        data[iface_name_key] = iface.name
+        return
+
+    asset = _find_partner_asset_by_name(db, partner_id, data.get(asset_name_key))
+    if asset is None:
+        data[iface_id_key] = None
+        return
+
+    iface = _find_or_create_interface(
+        db,
+        asset.id,
+        data.get(iface_name_key),
+        data.get("cable_speed"),
+        data.get("cable_type"),
+        None,
+    )
+    data[iface_id_key] = iface.id if iface else None
+    data[asset_name_key] = asset.asset_name
+    if iface is not None:
+        data[iface_name_key] = iface.name
+
+
+def _resolve_port_map_payload(db: Session, data: dict, partner_id: int, current_user) -> dict:
+    resolved = dict(data)
+    _resolve_side(db, resolved, "src", partner_id)
+    _resolve_side(db, resolved, "dst", partner_id)
+    _validate_registered_assets_required(resolved)
+    return resolved
+
+
+def _portmap_pair_key(data: dict) -> tuple[tuple[str, str], tuple[str, str]]:
+    src = (_normalized_name(data.get("src_asset_name_raw")), _normalized_name(data.get("src_interface_name_raw")))
+    dst = (_normalized_name(data.get("dst_asset_name_raw")), _normalized_name(data.get("dst_interface_name_raw")))
+    return tuple(sorted([src, dst]))
+
+
+def _validate_registered_assets_required(data: dict) -> None:
+    for side in ("src", "dst"):
+        asset_name = (data.get(f"{side}_asset_name_raw") or "").strip()
+        if not asset_name:
+            continue
+        asset_id = data.get(f"{side}_asset_id")
+        interface_id = data.get(f"{side}_interface_id")
+        if asset_id is None and interface_id is None:
+            raise BusinessRuleError("미등록 자산은 포트맵에 저장할 수 없습니다. 먼저 자산 목록에 등록하세요.")
+
+
+def _validate_port_map_duplicate(db: Session, partner_id: int, data: dict, exclude_id: int | None = None) -> None:
+    pair_key = _portmap_pair_key(data)
+    rows = db.scalars(select(PortMap).where(PortMap.partner_id == partner_id)).all()
+    for row in rows:
+        if exclude_id is not None and row.id == exclude_id:
+            continue
+        if _portmap_pair_key({
+            "src_asset_name_raw": row.src_asset_name_raw,
+            "src_interface_name_raw": row.src_interface_name_raw,
+            "dst_asset_name_raw": row.dst_asset_name_raw,
+            "dst_interface_name_raw": row.dst_interface_name_raw,
+        }) == pair_key:
+            raise DuplicateError("동일한 연결이 이미 등록되어 있습니다. 반대 방향 중복도 허용되지 않습니다.")
+
+
+def _validate_port_map_media(db: Session, data: dict) -> None:
+    src_iface = db.get(AssetInterface, data.get("src_interface_id")) if data.get("src_interface_id") else None
+    dst_iface = db.get(AssetInterface, data.get("dst_interface_id")) if data.get("dst_interface_id") else None
+    media_category = data.get("media_category") or _infer_media_type(data.get("cable_type"))
+    if src_iface and dst_iface and src_iface.media_type and dst_iface.media_type:
+        if src_iface.media_type != dst_iface.media_type:
+            raise BusinessRuleError("출발/도착 인터페이스의 매체 유형이 서로 다릅니다.")
+    if media_category:
+        for iface in (src_iface, dst_iface):
+            if iface and iface.media_type and iface.media_type != media_category:
+                raise BusinessRuleError("포트맵 매체 분류와 인터페이스 매체 유형이 일치하지 않습니다.")
+    if media_category == "fiber":
+        src_type = (data.get("src_connector_type") or "").strip()
+        dst_type = (data.get("dst_connector_type") or "").strip()
+        if src_type and dst_type and src_type != dst_type:
+            raise BusinessRuleError("광 커넥터 타입이 서로 다릅니다. 필요 시 타입을 직접 조정하세요.")
 
 
 def _ensure_asset_exists(db: Session, asset_id: int) -> Asset:

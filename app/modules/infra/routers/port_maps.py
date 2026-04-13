@@ -14,8 +14,10 @@ from app.modules.infra.schemas.port_map import (
 )
 from app.modules.infra.services.network_service import (
     bulk_update_port_maps,
+    build_interface_map,
     create_port_map,
     delete_port_map,
+    enrich_port_map,
     get_port_map,
     list_port_maps_enriched,
     update_port_map,
@@ -55,7 +57,8 @@ def create_port_map_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> PortMapRead:
-    return create_port_map(db, payload, current_user)
+    pm = create_port_map(db, payload, current_user)
+    return PortMapRead(**enrich_port_map(pm, build_interface_map(db, [pm])))
 
 
 @router.get("/{port_map_id}", response_model=PortMapRead)
@@ -64,7 +67,8 @@ def get_port_map_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> PortMapRead:
-    return get_port_map(db, port_map_id)
+    pm = get_port_map(db, port_map_id)
+    return PortMapRead(**enrich_port_map(pm, build_interface_map(db, [pm])))
 
 
 @router.patch("/{port_map_id}", response_model=PortMapRead)
@@ -74,7 +78,8 @@ def update_port_map_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> PortMapRead:
-    return update_port_map(db, port_map_id, payload, current_user)
+    pm = update_port_map(db, port_map_id, payload, current_user)
+    return PortMapRead(**enrich_port_map(pm, build_interface_map(db, [pm])))
 
 
 @router.delete("/{port_map_id}", status_code=status.HTTP_204_NO_CONTENT)

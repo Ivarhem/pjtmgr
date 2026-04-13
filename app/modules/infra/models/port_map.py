@@ -25,6 +25,10 @@ class PortMap(TimestampMixin, Base):
     dst_interface_id: Mapped[int | None] = mapped_column(
         ForeignKey("asset_interfaces.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    src_asset_name_raw: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    src_interface_name_raw: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    dst_asset_name_raw: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    dst_interface_name_raw: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     protocol: Mapped[str | None] = mapped_column(String(20), nullable=True)
     port: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -41,6 +45,9 @@ class PortMap(TimestampMixin, Base):
     cable_no: Mapped[str | None] = mapped_column(String(100), nullable=True)
     cable_request: Mapped[str | None] = mapped_column(String(200), nullable=True)
     cable_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    media_category: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    src_connector_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    dst_connector_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     cable_speed: Mapped[str | None] = mapped_column(String(30), nullable=True)
     duplex: Mapped[str | None] = mapped_column(String(30), nullable=True)
     cable_category: Mapped[str | None] = mapped_column(String(50), nullable=True)
