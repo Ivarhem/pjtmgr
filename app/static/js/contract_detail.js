@@ -80,13 +80,13 @@ function _updateDirtyIndicators() {
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTermLabels();
   applyTermLabels();
-  me = await fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null);
+  me = await fetch(withRootPath('/api/v1/auth/me')).then(r => r.ok ? r.json() : null);
   // 뒤로가기 링크: sessionStorage에 저장된 진입 경로 사용
   const backLink = document.getElementById('back-link');
   if (backLink) {
     const backPath = sessionStorage.getItem('contract-back');
-    if (backPath === '/my-contracts') {
-      backLink.href = '/my-contracts';
+    if (backPath === withRootPath('/my-contracts')) {
+      backLink.href = withRootPath('/my-contracts');
       backLink.textContent = '← 내 사업';
     }
   }
@@ -841,7 +841,7 @@ function renderPeriodTabs(periods) {
           switchToPeriodView();
         } else if (selectedPeriodIds.size === 1) {
           const targetId = [...selectedPeriodIds][0];
-          window.location.href = `/contracts/${targetId}#period`;
+          window.location.href = withRootPath(`/contracts/${targetId}#period`);
         } else {
           switchToMultiView();
         }
@@ -852,7 +852,7 @@ function renderPeriodTabs(periods) {
           selectedPeriodIds.add(CONTRACT_PERIOD_ID);
           switchToPeriodView();
         } else {
-          window.location.href = `/contracts/${pid}#period`;
+          window.location.href = withRootPath(`/contracts/${pid}#period`);
         }
       }
     });
@@ -2127,7 +2127,7 @@ async function submitAddPeriod() {
   }).catch(() => {});
 
   document.getElementById('modal-add-period').close();
-  window.location.href = `/contracts/${newPeriod.id}`;
+  window.location.href = withRootPath(`/contracts/${newPeriod.id}`);
 }
 
 /** Period의 계산서 발행 규칙으로 발행일 계산.
@@ -2601,10 +2601,10 @@ async function deletePeriodById(periodId, label) {
   }
 
   if (allPeriods.length <= 1) {
-    window.location.href = '/contracts';
+    window.location.href = withRootPath('/contracts');
   } else if (periodId === CONTRACT_PERIOD_ID) {
     const other = allPeriods.find(p => p.id !== periodId);
-    window.location.href = `/contracts/${other.id}`;
+    window.location.href = withRootPath(`/contracts/${other.id}`);
   } else {
     window.location.reload();
   }

@@ -83,8 +83,8 @@
 
   async function initFilters() {
     const [users, partners] = await Promise.all([
-      fetch('/api/v1/users').then(r => r.json()),
-      fetch('/api/v1/partners').then(r => r.json()),
+      fetch(withRootPath('/api/v1/users')).then(r => r.json()),
+      fetch(withRootPath('/api/v1/partners')).then(r => r.json()),
     ]);
     const depts = [...new Set(users.map(u => u.department).filter(Boolean))].sort();
     const deptMenu = document.querySelector('#dash-drop-dept .chk-drop-menu');
@@ -172,7 +172,7 @@
     saveDashFilterState();
     try {
       const params = getFilterParams();
-      const res = await fetch(`/api/v1/dashboard/summary?${params}`);
+      const res = await fetch(withRootPath(`/api/v1/dashboard/summary?${params}`));
       if (!res.ok) throw new Error('데이터 조회 실패');
       const data = await res.json();
       renderKpis(data.kpis);
@@ -495,7 +495,7 @@
       return;
     }
     tbody.innerHTML = rows.map(r => `<tr>
-      <td><a href="/contracts/${r.contract_id}" class="ar-contract-link">${r.contract_name}</a></td>
+      <td><a href="${withRootPath(`/contracts/${r.contract_id}`)}" class="ar-contract-link">${r.contract_name}</a></td>
       <td>${r.owner_name || '-'}</td>
       <td class="cell-number">${fmt(r.actual_revenue)}</td>
       <td class="cell-number">${fmt(r.receipt)}</td>
@@ -512,7 +512,7 @@
       // stage 필터는 target-vs-actual에 적용하지 않음 (전체 기간 대상)
       params.delete('stage');
       params.set('group_by', groupBy);
-      const res = await fetch(`/api/v1/dashboard/target-vs-actual?${params}`);
+      const res = await fetch(withRootPath(`/api/v1/dashboard/target-vs-actual?${params}`));
       if (!res.ok) throw new Error('목표 vs 실적 조회 실패');
       const data = await res.json();
       renderTvaTable(data.rows, data.totals);

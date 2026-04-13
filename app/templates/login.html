@@ -56,7 +56,7 @@
         if (res.ok) {
           const data = await res.json();
           sessionStorage.removeItem('infra_notif_shown');
-          window.location.href = data.must_change_password ? `${rootPath}/change-password` : `${rootPath}/`;
+          window.location.href = data.must_change_password ? `${rootPath}/change-password` : './';
         } else {
           const err = await res.json().catch(() => ({}));
           errorMsg.textContent = err.detail || '로그인에 실패했습니다. 다시 시도해주세요.';

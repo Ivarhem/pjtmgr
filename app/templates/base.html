@@ -25,14 +25,14 @@
   <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/components.css">
   {% block styles %}{% endblock %}
 </head>
-<body>
+<body data-root-path="{{ request.scope.root_path or "" }}">
   {% set mc = request.state.module_context %}
   <nav class="topbar">
     <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
       <i data-lucide="menu" class="icon-menu"></i>
       <i data-lucide="x" class="icon-close"></i>
     </button>
-    <a href="/" class="nav-brand">
+    <a href="{{ request.scope.root_path or "" }}/" class="nav-brand">
       <img src="{{ request.scope.root_path or "" }}/static/img/logo.svg" alt="Logo" class="nav-logo">
     </a>
     {% if "accounting" in enabled_modules and "infra" in enabled_modules %}
@@ -49,7 +49,7 @@
         <a href="{{ request.scope.root_path or "" }}/my-contracts" class="module-dropdown-item {% if request.state.module_context == 'accounting' %}active{% endif %}">
           <i data-lucide="briefcase" class="icon-sm"></i> 영업관리
         </a>
-        <a href="/periods" class="module-dropdown-item {% if request.state.module_context == 'infra' %}active{% endif %}">
+        <a href="{{ request.scope.root_path or "" }}/periods" class="module-dropdown-item {% if request.state.module_context == 'infra' %}active{% endif %}">
           <i data-lucide="server" class="icon-sm"></i> 프로젝트관리
         </a>
       </div>
@@ -66,7 +66,7 @@
     </div>
     <div class="ctx-selector ctx-project-selector" id="ctx-project-display">
       <label class="ctx-label">프로젝트</label>
-      <a href="/periods" class="ctx-project-link" id="ctx-project-link" title="프로젝트 목록에서 선택">
+      <a href="{{ request.scope.root_path or "" }}/periods" class="ctx-project-link" id="ctx-project-link" title="프로젝트 목록에서 선택">
         <span id="ctx-project-text" class="ctx-project-name">선택 안 됨</span>
       </a>
       <button class="ctx-project-clear is-hidden" id="ctx-project-clear" title="선택 해제">&times;</button>
@@ -224,9 +224,10 @@
     })();
 
     // Auth and settings fetch
+    const rootPath = {{ (request.scope.root_path or '') | tojson }};
     Promise.all([
-      fetch('/api/v1/auth/me').then(r => r.ok ? r.json() : null),
-      fetch('/api/v1/settings').then(r => r.ok ? r.json() : null),
+      fetch(`${rootPath}/api/v1/auth/me`).then(r => r.ok ? r.json() : null),
+      fetch(`${rootPath}/api/v1/settings`).then(r => r.ok ? r.json() : null),
     ]).then(([me, settings]) => {
       if (me) {
         document.getElementById('topbar-user').textContent = me.name;
@@ -257,12 +258,12 @@
     {% if "infra" in enabled_modules %}
     async function checkUnsubmittedDeliverables() {
       try {
-        const prefRes = await fetch('/api/v1/preferences/infra.notify_unsubmitted');
+        const prefRes = await fetch(`${rootPath}/api/v1/preferences/infra.notify_unsubmitted`);
         if (prefRes.ok) {
           const pref = await prefRes.json();
           if (pref.value === 'false') return;
         }
-        const res = await fetch('/api/v1/infra-dashboard/unsubmitted');
+        const res = await fetch(`${rootPath}/api/v1/infra-dashboard/unsubmitted`);
         if (!res.ok) return;
         const items = await res.json();
         if (items.length > 0) {
@@ -271,7 +272,6 @@
           toast.className = 'toast toast-warning';
           const text = document.createTextNode(`미제출 산출물 ${items.length}건이 있습니다. `);
           const link = document.createElement('a');
-          const rootPath = {{ (request.scope.root_path or '') | tojson }};
           link.href = `${rootPath}/infra-dashboard`;
           link.textContent = '현황판에서 확인';
           toast.appendChild(text);

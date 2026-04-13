@@ -435,7 +435,7 @@ function toggleYearDropdowns(enabled) {
 let _contractTypesCache = null;
 async function loadContractTypes() {
   if (!_contractTypesCache) {
-    const res = await fetch('/api/v1/contract-types');
+    const res = await fetch(withRootPath('/api/v1/contract-types'));
     _contractTypesCache = res.ok ? await res.json() : [];
   }
   return _contractTypesCache;
@@ -555,7 +555,7 @@ async function initContextSelectors() {
   // 사이드바 프로젝트 링크 즉시 설정 (항상 /periods — 상세는 인라인 패널)
   const _navLink = document.getElementById('nav-project-link');
   if (_navLink) {
-    _navLink.href = '/periods';
+    _navLink.href = withRootPath('/periods');
     if (_cachedProjectId) {
       _navLink.dataset.hasProject = '1';
     } else {
@@ -1046,9 +1046,9 @@ async function submitContractModal(loadDataFn, onUpdated) {
       const created = await res.json();
       showToast('사업이 등록되었습니다. 기간 정보를 입력하세요.', 'info');
       // 상세 페이지로 이동 (Period 추가 모달 자동 팝업은 상세 페이지에서 처리)
-      sessionStorage.setItem('contract-back', window.location.pathname === '/my-contracts' ? '/my-contracts' : '/contracts');
+      sessionStorage.setItem('contract-back', window.location.pathname === withRootPath('/my-contracts') ? withRootPath('/my-contracts') : withRootPath('/contracts'));
       sessionStorage.setItem('contract-auto-add-period', 'true');
-      window.location.href = `/contracts/new/${created.id}`;
+      window.location.href = withRootPath(`/contracts/new/${created.id}`);
     } else {
       const err = await res.json().catch(() => ({}));
       showToast(err.detail || '등록에 실패했습니다.', 'error');
@@ -1182,7 +1182,7 @@ function buildContractGridOptions(opts) {
       type: 'navigate',
       onEdit: (d) => {
         sessionStorage.setItem('contract-back', opts.backPath);
-        window.location.href = `/contracts/${d.id}`;
+        window.location.href = withRootPath(`/contracts/${d.id}`);
       },
     }),
     isExternalFilterPresent: () => getPartnerFilter() !== '' || getNameFilter() !== '',
@@ -1199,7 +1199,7 @@ function buildContractGridOptions(opts) {
 
 /** 거래처 datalist 로드 */
 function loadPartnerDatalist() {
-  fetch('/api/v1/partners').then(r => r.json()).then(custs => {
+  fetch(withRootPath('/api/v1/partners')).then(r => r.json()).then(custs => {
     const dl = document.getElementById('partner-list');
     if (dl) dl.innerHTML = custs.map(c => `<option value="${escapeHtml(c.name)}">`).join('');
   });
