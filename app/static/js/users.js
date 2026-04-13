@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function loadData() {
-  const res = await fetch('/api/v1/users');
+  const res = await fetch(withRootPath('/api/v1/users'));
   const data = await res.json();
   gridApi.setGridOption('rowData', data);
   changedRows.clear();
@@ -158,7 +158,7 @@ async function submitNew() {
     login_id: document.getElementById('new-login-id').value.trim() || null,
     permissions: buildPermissionsPayload('new'),
   };
-  const res = await fetch('/api/v1/users', {
+  const res = await fetch(withRootPath('/api/v1/users'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -191,7 +191,7 @@ async function applyBulkPermissions() {
   }
   const permissions = buildPermissionsPayload('bulk');
   const results = await Promise.all(rows.map((row) => (
-    fetch(`/api/v1/users/${row.id}`, {
+    fetch(withRootPath(`/api/v1/users/${row.id}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ permissions }),
@@ -215,7 +215,7 @@ async function importCsv() {
   }
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch('/api/v1/users/import-csv', { method: 'POST', body: fd });
+  const res = await fetch(withRootPath('/api/v1/users/import-csv'), { method: 'POST', body: fd });
   if (res.ok) {
     const data = await res.json();
     document.getElementById('modal-import-csv').close();
@@ -241,7 +241,7 @@ async function resetPassword() {
     confirmText: '초기화',
   })) return;
   const results = await Promise.all(
-    rows.map((r) => fetch(`/api/v1/users/${r.id}/reset-password`, { method: 'POST' })
+    rows.map((r) => fetch(withRootPath(`/api/v1/users/${r.id}/reset-password`), { method: 'POST' })
       .then(async (res) => ({ res, name: r.name, data: res.ok ? null : await res.json() }))),
   );
   const ok = results.filter((r) => r.res.ok);
@@ -261,7 +261,7 @@ async function deleteSelected() {
     confirmText: '삭제',
   })) return;
   const results = await Promise.all(
-    rows.map((r) => fetch(`/api/v1/users/${r.id}`, { method: 'DELETE' }).then(async (res) => ({ res, data: res.ok ? null : await res.json() }))),
+    rows.map((r) => fetch(withRootPath(`/api/v1/users/${r.id}`), { method: 'DELETE' }).then(async (res) => ({ res, data: res.ok ? null : await res.json() }))),
   );
   const denied = results.filter((r) => r.res.status === 403);
   const failed = results.filter((r) => !r.res.ok && r.res.status !== 403);
@@ -278,7 +278,7 @@ async function saveChanges() {
   }
   const count = changedRows.size;
   const promises = [...changedRows.values()].map((row) => (
-    fetch(`/api/v1/users/${row.id}`, {
+    fetch(withRootPath(`/api/v1/users/${row.id}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

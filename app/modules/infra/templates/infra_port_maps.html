@@ -13,8 +13,8 @@
 
 {% block content %}
 <div class="tab-nav">
-  <a href="/ip-inventory" class="tab-btn">IP 인벤토리</a>
-  <a href="/port-maps" class="tab-btn active">포트맵</a>
+  <a href="{{ request.scope.root_path or "" }}/ip-inventory" class="tab-btn">IP 인벤토리</a>
+  <a href="{{ request.scope.root_path or "" }}/port-maps" class="tab-btn active">포트맵</a>
   <div class="tab-nav-actions">
     <button class="btn btn-secondary btn-sm" id="btn-toggle-edit">편집</button>
     <button class="btn btn-primary btn-sm is-hidden" id="btn-save-edit">저장</button>
@@ -114,6 +114,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/grid_edit_mode.js"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_port_maps.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/grid_edit_mode.js?v=20260413e"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_port_maps.js?v=20260413e"></script>
 {% endblock %}

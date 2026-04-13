@@ -6,7 +6,10 @@
   <title>{% block title %}영업관리{% endblock %}</title>
   <link rel="icon" href="{{ request.scope.root_path or "" }}/static/img/logo.svg" type="image/svg+xml">
   
-  <script src="{{ request.scope.root_path or "" }}/static/js/lucide.js"></script>
+  <script src="{{ request.scope.root_path or "" }}/static/js/lucide.js?v=20260413e"></script>
+  <script>
+    window.__ROOT_PATH__ = {{ (request.scope.root_path or '') | tojson }};
+  </script>
 
   <!-- AG Grid Community -->
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/dist/ag-grid-community.min.js"></script>
@@ -17,7 +20,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz-dark.css" />
   
-  <script src="{{ request.scope.root_path or "" }}/static/js/utils.js"></script>
+  <script src="{{ request.scope.root_path or "" }}/static/js/utils.js?v=20260413d"></script>
   <!-- HTMX -->
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   
@@ -161,8 +164,16 @@
     </nav>
   </div>
   <script>
+    const rootPath = {{ (request.scope.root_path or '') | tojson }};
+
     // Active link highlighting (with group mapping for tabbed pages)
     const _navGroups = {
+      [`${rootPath}/asset-roles`]: `${rootPath}/assets`,
+      [`${rootPath}/inventory/assets`]: `${rootPath}/assets`,
+      [`${rootPath}/port-maps`]: `${rootPath}/ip-inventory`,
+      [`${rootPath}/infra-import`]: `${rootPath}/assets`,
+      [`${rootPath}/catalog-management/integrity`]: `${rootPath}/product-catalog`,
+      [`${rootPath}/catalog-integrity`]: `${rootPath}/product-catalog`,
       '/asset-roles': '/assets',
       '/inventory/assets': '/assets',
       '/port-maps': '/ip-inventory',
@@ -222,9 +233,7 @@
         localStorage.setItem('hide_desc', document.body.classList.contains('hide-desc') ? '1' : '0');
       });
     })();
-
     // Auth and settings fetch
-    const rootPath = {{ (request.scope.root_path or '') | tojson }};
     Promise.all([
       fetch(`${rootPath}/api/v1/auth/me`).then(r => r.ok ? r.json() : null),
       fetch(`${rootPath}/api/v1/settings`).then(r => r.ok ? r.json() : null),

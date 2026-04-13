@@ -5,7 +5,7 @@
 <div class="page-header">
   <h1>거래처 관리</h1>
   <div class="header-actions">
-    <button id="btn-add" class="btn btn-primary">+ 신규 등록</button>
+    <button id="btn-add" class="btn btn-primary" onclick="document.getElementById('modal-add').showModal()">+ 신규 등록</button>
     <button id="btn-delete-partner" class="btn btn-danger">삭제</button>
   </div>
 </div>
@@ -123,8 +123,8 @@
     <label class="full-width"><span class="label-text">거래처명<span class="req">*</span></span> <input type="text" id="new-partner-name" placeholder="거래처명 입력" required></label>
   </div>
   <div class="modal-actions">
-    <button type="button" id="btn-cancel" class="btn btn-secondary">취소</button>
-    <button type="button" id="btn-submit" class="btn btn-primary">등록</button>
+    <button type="button" id="btn-cancel" class="btn btn-secondary" onclick="document.getElementById('modal-add').close()">취소</button>
+    <button type="button" id="btn-submit" class="btn btn-primary" onclick="submitPartnerDirect()">등록</button>
   </div>
 </dialog>
 
@@ -179,6 +179,26 @@
 
 {% endblock %}
 
+
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/partners.js"></script>
+<script>
+async function submitPartnerDirect() {
+  const name = document.getElementById('new-partner-name').value.trim();
+  if (!name) { alert('거래처명을 입력하세요.'); return; }
+  const rootPath = {{ (request.scope.root_path or '') | tojson }};
+  const res = await fetch(`${rootPath}/api/v1/partners`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (res.ok) {
+    document.getElementById('modal-add').close();
+    window.location.reload();
+    return;
+  }
+  const err = await res.json().catch(() => ({}));
+  alert(err.detail || '등록에 실패했습니다.');
+}
+</script>
+<script src="{{ request.scope.root_path or "" }}/static/js/partners.js?v=20260413c"></script>
 {% endblock %}

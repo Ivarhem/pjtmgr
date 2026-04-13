@@ -162,7 +162,7 @@ document.getElementById("btn-asset-import-run")?.addEventListener("click", async
   const r = document.getElementById("asset-import-result");
   setImportResultState(r, "", null);
   try {
-    const res = await fetch("/api/v1/infra-excel/import/confirm", { method: "POST", body: fd });
+    const res = await fetch(withRootPath("/api/v1/infra-excel/import/confirm"), { method: "POST", body: fd });
     const data = await res.json();
     if (!res.ok) {
       setImportResultState(r, "오류: " + (data.detail || "실패"), "error");

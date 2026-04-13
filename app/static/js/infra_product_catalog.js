@@ -2271,7 +2271,7 @@ async function previewCatalogImport() {
   if (!formData) return;
 
   try {
-    const res = await fetch("/api/v1/infra-excel/import/preview", {
+    const res = await fetch(withRootPath("/api/v1/infra-excel/import/preview"), {
       method: "POST",
       body: formData,
       credentials: "same-origin",
@@ -2301,7 +2301,7 @@ async function confirmCatalogImport() {
   if (!formData) return;
 
   try {
-    const res = await fetch("/api/v1/infra-excel/import/confirm", {
+    const res = await fetch(withRootPath("/api/v1/infra-excel/import/confirm"), {
       method: "POST",
       body: formData,
       credentials: "same-origin",

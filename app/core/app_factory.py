@@ -195,7 +195,11 @@ class ModuleContextMiddleware:
 
         request = Request(scope)
         path = request.url.path
-        detected = _detect_module(path)
+        root_path = (scope.get("root_path") or "").rstrip("/")
+        normalized_path = path
+        if root_path and normalized_path.startswith(root_path):
+            normalized_path = normalized_path[len(root_path):] or "/"
+        detected = _detect_module(normalized_path)
         cookie_val = request.cookies.get(self.COOKIE_NAME)
 
         # Module page → use detected; common page → use cookie fallback
@@ -213,8 +217,9 @@ class ModuleContextMiddleware:
         async def send_with_cookie(message):
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
+                cookie_path = root_path or "/"
                 cookie = (
-                    f"{self.COOKIE_NAME}={detected}; Path=/; "
+                    f"{self.COOKIE_NAME}={detected}; Path={cookie_path}; "
                     "HttpOnly; SameSite=Lax; Max-Age=31536000"
                 )
                 headers.append((b"set-cookie", cookie.encode()))

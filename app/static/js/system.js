@@ -419,7 +419,7 @@ function bindSystemTabs() {
 }
 
 async function loadSettings() {
-  const res = await fetch("/api/v1/settings");
+  const res = await fetch(withRootPath("/api/v1/settings"));
   const data = await res.json();
   document.getElementById("input-org-name").value = data.org_name ?? "";
   document.getElementById("input-password-min-length").value = data.password_min_length ?? 8;
@@ -437,7 +437,7 @@ function bindSettingsActions() {
     const orgName = document.getElementById("input-org-name").value.trim();
     const passwordMinLength = parseInt(document.getElementById("input-password-min-length").value, 10);
     const [res] = await Promise.all([
-      fetch("/api/v1/settings", {
+      fetch(withRootPath("/api/v1/settings"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -470,7 +470,7 @@ function bindContractTypeActions() {
 }
 
 async function loadContractTypeTable() {
-  const res = await fetch("/api/v1/contract-types?active_only=false");
+  const res = await fetch(withRootPath("/api/v1/contract-types?active_only=false"));
   const types = await res.json();
   const tbody = document.getElementById("contract-type-tbody");
   tbody.innerHTML = types.map((dt) => `
@@ -512,7 +512,7 @@ async function openContractTypeModal(code = null) {
     title.textContent = "사업유형 수정";
     codeInput.value = code;
     codeInput.readOnly = true;
-    const res = await fetch("/api/v1/contract-types?active_only=false");
+    const res = await fetch(withRootPath("/api/v1/contract-types?active_only=false"));
     const types = await res.json();
     const dt = types.find((item) => item.code === code);
     if (dt) {
@@ -561,12 +561,12 @@ async function submitContractType() {
   };
 
   const res = editingCode
-    ? await fetch(`/api/v1/contract-types/${encodeURIComponent(editingCode)}`, {
+    ? await fetch(withRootPath(`/api/v1/contract-types/${encodeURIComponent(editingCode)}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-    : await fetch("/api/v1/contract-types", {
+    : await fetch(withRootPath("/api/v1/contract-types"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...body, code }),
@@ -593,7 +593,7 @@ function bindTermActions() {
 }
 
 async function loadTermConfigTable() {
-  const res = await fetch("/api/v1/term-configs?active_only=false");
+  const res = await fetch(withRootPath("/api/v1/term-configs?active_only=false"));
   const terms = await res.json();
   const tbody = document.getElementById("term-config-tbody");
   tbody.innerHTML = terms.map((term) => `
@@ -624,7 +624,7 @@ async function openTermModal(termKey = null) {
     document.getElementById("tc-category").disabled = true;
     document.getElementById("tc-standard-ko").readOnly = true;
     document.getElementById("tc-default-label").readOnly = true;
-    const res = await fetch(`/api/v1/term-configs/${encodeURIComponent(termKey)}`);
+    const res = await fetch(withRootPath(`/api/v1/term-configs/${encodeURIComponent(termKey)}`));
     const term = await res.json();
     keyInput.value = term.term_key;
     document.getElementById("tc-category").value = term.category;
@@ -674,12 +674,12 @@ async function submitTermConfig() {
   };
 
   const res = editingTermKey
-    ? await fetch(`/api/v1/term-configs/${encodeURIComponent(editingTermKey)}`, {
+    ? await fetch(withRootPath(`/api/v1/term-configs/${encodeURIComponent(editingTermKey)}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     })
-    : await fetch("/api/v1/term-configs", {
+    : await fetch(withRootPath("/api/v1/term-configs"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...body, term_key: termKey }),
@@ -699,7 +699,7 @@ async function resetTermLabel(termKey) {
     title: "표시명 초기화",
     confirmText: "초기화",
   })) return;
-  const res = await fetch(`/api/v1/term-configs/${encodeURIComponent(termKey)}/reset`, { method: "POST" });
+  const res = await fetch(withRootPath(`/api/v1/term-configs/${encodeURIComponent(termKey)}/reset`), { method: "POST" });
   if (res.ok) {
     await loadTermConfigTable();
     return;

@@ -7,8 +7,8 @@
 
 {% block content %}
 <div class="tab-nav">
-  <a href="/policy-definitions" class="tab-btn">정책 정의</a>
-  <a href="/policies" class="tab-btn active">적용 현황</a>
+  <a href="{{ request.scope.root_path or "" }}/policy-definitions" class="tab-btn">정책 정의</a>
+  <a href="{{ request.scope.root_path or "" }}/policies" class="tab-btn active">적용 현황</a>
   <div class="tab-nav-actions">
     <button class="btn btn-primary" id="btn-add-assignment">적용 등록</button>
   </div>
@@ -81,5 +81,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_policies.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_policies.js?v=20260413e"></script>
 {% endblock %}

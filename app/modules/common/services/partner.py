@@ -57,16 +57,8 @@ def list_partners(
         if not partner_ids:
             return []
         query = db.query(Partner).filter(Partner.id.in_(partner_ids))
-    elif not current_user or has_full_contract_scope(current_user):
-        query = db.query(Partner)
     else:
-        contract_ids = list_accessible_contract_ids(db, current_user)
-        if not contract_ids:
-            return []
-        partner_ids = _collect_partner_ids(db, contract_ids)
-        if not partner_ids:
-            return []
-        query = db.query(Partner).filter(Partner.id.in_(partner_ids))
+        query = db.query(Partner)
 
     if partner_type:
         query = query.filter(Partner.partner_type == partner_type)

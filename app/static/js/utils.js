@@ -1,12 +1,15 @@
 // ── 공유 상수 (인프라 도메인) ──────────────────────────────────────
 
-const ROOT_PATH = window.__ROOT_PATH__ || document.body?.dataset?.rootPath || '';
+function getRootPath() {
+  return window.__ROOT_PATH__ || document.body?.dataset?.rootPath || '';
+}
 
 function withRootPath(path) {
-  if (!path) return ROOT_PATH || '';
+  const rootPath = getRootPath();
+  if (!path) return rootPath || '';
   if (/^https?:\/\//.test(path)) return path;
   if (!path.startsWith('/')) path = '/' + path;
-  return `${ROOT_PATH}${path}`;
+  return `${rootPath}${path}`;
 }
 
 const ASSET_STATUS_MAP = {
@@ -737,7 +740,7 @@ async function initContextSelectors() {
 
   // ── 초기 복원 ──
   try {
-    const prefRes = await fetch('/api/v1/preferences/infra.pinned_partner_id');
+    const prefRes = await fetch(withRootPath('/api/v1/preferences/infra.pinned_partner_id'));
     if (prefRes.ok) {
       const pref = await prefRes.json();
       if (pref.value) {
@@ -799,7 +802,7 @@ let _pickerPartners = [];
 
 /** 거래처 목록을 가져와 캐시 */
 async function _loadPickerPartners() {
-  const res = await fetch('/api/v1/partners');
+  const res = await fetch(withRootPath('/api/v1/partners'));
   _pickerPartners = res.ok ? await res.json() : [];
   return _pickerPartners;
 }
@@ -924,7 +927,7 @@ function initEndPartnerPicker() {
   document.getElementById('btn-new-cust-submit-add')?.addEventListener('click', async () => {
     const name = document.getElementById('new-cust-name-from-add').value.trim();
     if (!name) { alert('거래처명을 입력하세요.'); return; }
-    const res = await fetch('/api/v1/partners', {
+    const res = await fetch(withRootPath('/api/v1/partners'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
@@ -978,11 +981,11 @@ function openContractModal(contract = null) {
 /** END 고객 이름 → ID 변환 (없으면 자동 생성) */
 async function _resolveEndPartnerId(name) {
   if (!name) return null;
-  const custRes = await fetch('/api/v1/partners');
+  const custRes = await fetch(withRootPath('/api/v1/partners'));
   const custs = custRes.ok ? await custRes.json() : [];
   let cust = custs.find(c => c.name === name);
   if (!cust) {
-    const createRes = await fetch('/api/v1/partners', {
+    const createRes = await fetch(withRootPath('/api/v1/partners'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
@@ -1018,7 +1021,7 @@ async function submitContractModal(loadDataFn, onUpdated) {
   if (contractId) {
     // 수정 모드
     const body = { contract_name: contractName, contract_type: contractType, end_partner_id: endPartnerId };
-    const res = await fetch(`/api/v1/contracts/${contractId}`, {
+    const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1035,7 +1038,7 @@ async function submitContractModal(loadDataFn, onUpdated) {
   } else {
     // 신규 등록
     const body = { contract_name: contractName, contract_type: contractType, end_partner_id: endPartnerId };
-    const res = await fetch('/api/v1/contracts', {
+    const res = await fetch(withRootPath('/api/v1/contracts'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -1083,12 +1086,12 @@ async function deleteSelectedContracts(gridApi, loadDataFn) {
     const selected = selectedByContract.get(contractId) || 0;
     const total = allPeriodsByContract.get(contractId) || 0;
     if (selected >= total) {
-      return fetch(`/api/v1/contracts/${contractId}`, { method: 'DELETE' })
+      return fetch(withRootPath(`/api/v1/contracts/${contractId}`), { method: 'DELETE' })
         .then(res => ({ res, type: 'contract', contractId }));
     } else {
       const periods = rows.filter(r => r.contract_id === contractId);
       return Promise.all(
-        periods.map(r => fetch(`/api/v1/contract-periods/${r.id}`, { method: 'DELETE' })
+        periods.map(r => fetch(withRootPath(`/api/v1/contract-periods/${r.id}`), { method: 'DELETE' })
           .then(res => ({ res, type: 'period', id: r.id })))
       );
     }

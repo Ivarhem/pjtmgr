@@ -104,7 +104,7 @@ function renderProjectPartners(container, partners, contacts) {
         if (asset.hostname) parts.push(asset.hostname);
         const roleLabel = RELATED_PARTNER_ROLE_LABELS[asset.relation_type] || asset.relation_type || "기타";
         chip.addEventListener("click", () => {
-          window.location.href = "/assets?asset_id=" + encodeURIComponent(String(asset.id));
+          window.location.href = withRootPath("/assets?asset_id=" + encodeURIComponent(String(asset.id)));
         });
         chip.innerHTML = `
           <strong>${escapeHtml(asset.asset_name || "(자산명 없음)")}</strong>

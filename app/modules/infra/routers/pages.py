@@ -10,6 +10,13 @@ def _templates(request: Request):
     return request.app.state.templates
 
 
+def _with_root_path(request: Request, path: str) -> str:
+    root_path = (request.scope.get("root_path") or "").rstrip("/")
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{root_path}{path}" if root_path else path
+
+
 @router.get("/periods", response_class=HTMLResponse)
 def periods_page(request: Request) -> HTMLResponse:
     return _templates(request).TemplateResponse(
@@ -20,19 +27,19 @@ def periods_page(request: Request) -> HTMLResponse:
 @router.get("/periods/{period_id}")
 def period_detail_redirect(request: Request, period_id: int) -> RedirectResponse:
     """Project detail merged into /periods list page (inline panel)."""
-    return RedirectResponse("/periods", status_code=302)
+    return RedirectResponse(_with_root_path(request, "/periods"), status_code=302)
 
 
 @router.get("/projects")
 def projects_redirect(request: Request) -> RedirectResponse:
     """Legacy /projects URL redirects to /periods."""
-    return RedirectResponse("/periods", status_code=301)
+    return RedirectResponse(_with_root_path(request, "/periods"), status_code=301)
 
 
 @router.get("/projects/{project_id}")
 def project_detail_redirect(request: Request, project_id: int) -> RedirectResponse:
     """Legacy project detail redirects to periods list."""
-    return RedirectResponse("/periods", status_code=302)
+    return RedirectResponse(_with_root_path(request, "/periods"), status_code=302)
 
 
 @router.get("/assets", response_class=HTMLResponse)
@@ -92,16 +99,16 @@ def audit_history_page(request: Request) -> HTMLResponse:
 @router.get("/infra-dashboard")
 def infra_dashboard_page(request: Request) -> RedirectResponse:
     """Dashboard merged into /periods page."""
-    return RedirectResponse("/periods", status_code=301)
+    return RedirectResponse(_with_root_path(request, "/periods"), status_code=301)
 
 
 @router.get("/inventory/assets")
 def inventory_assets_page(request: Request) -> RedirectResponse:
     """Legacy inventory URL redirects to the unified assets workspace."""
-    return RedirectResponse("/assets", status_code=301)
+    return RedirectResponse(_with_root_path(request, "/assets"), status_code=301)
 
 
 @router.get("/infra-import")
 def infra_import_page(request: Request) -> RedirectResponse:
     """Legacy import page redirects to assets where import is available."""
-    return RedirectResponse("/assets", status_code=301)
+    return RedirectResponse(_with_root_path(request, "/assets"), status_code=301)

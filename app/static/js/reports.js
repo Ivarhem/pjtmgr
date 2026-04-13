@@ -34,7 +34,7 @@ function initDateDefaults() {
 }
 
 async function initFilters() {
-  const users = await fetch('/api/v1/users').then(r => r.json());
+  const users = await fetch(withRootPath('/api/v1/users')).then(r => r.json());
   const depts = [...new Set(users.map(u => u.department).filter(Boolean))].sort();
   const deptMenu = document.querySelector('#rpt-drop-dept .chk-drop-menu');
   deptMenu.innerHTML = depts.map(d => `<label><input type="checkbox" value="${escapeHtml(d)}"> ${escapeHtml(d)}</label>`).join('');
@@ -156,11 +156,11 @@ function loadCurrentTab() {
 function exportCurrentTab() {
   const params = getFilterParams();
   if (currentTab === 'summary') {
-    window.location.href = `/api/v1/reports/summary/export?${params}`;
+    window.location.href = withRootPath(`/api/v1/reports/summary/export?${params}`);
   } else if (currentTab === 'forecast-actual') {
-    window.location.href = `/api/v1/reports/forecast-vs-actual/export?${params}`;
+    window.location.href = withRootPath(`/api/v1/reports/forecast-vs-actual/export?${params}`);
   } else if (currentTab === 'receivables') {
-    window.location.href = `/api/v1/reports/receivables/export?${params}`;
+    window.location.href = withRootPath(`/api/v1/reports/receivables/export?${params}`);
   }
 }
 
@@ -168,7 +168,7 @@ function exportCurrentTab() {
 
 async function loadSummary() {
   const params = getFilterParams();
-  const res = await fetch(`/api/v1/reports/summary?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/reports/summary?${params}`));
   if (!res.ok) { alert('데이터 조회에 실패했습니다.'); return; }
   const data = await res.json();
   renderKpis(data.kpis);
@@ -265,7 +265,7 @@ function initFaGrid() {
     onColumnResized: (e) => { if (e.finished) saveColState(faGridApi, FA_COL_STATE_KEY); },
     onCellClicked: e => {
       if (e.column.getColId() === 'contract_name' && e.data?.contract_period_id) {
-        window.location.href = `/contracts/${e.data.contract_period_id}`;
+        window.location.href = withRootPath(`/contracts/${e.data.contract_period_id}`);
       }
     },
   });
@@ -277,7 +277,7 @@ function initFaGrid() {
 async function loadFa() {
   if (!faGridApi) initFaGrid();
   const params = getFilterParams();
-  const res = await fetch(`/api/v1/reports/forecast-vs-actual?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/reports/forecast-vs-actual?${params}`));
   if (!res.ok) { alert('데이터 조회에 실패했습니다.'); return; }
   const data = await res.json();
   faGridApi.setGridOption('rowData', data.rows);
@@ -321,7 +321,7 @@ function initArGrid() {
 async function loadAr() {
   if (!arGridApi) initArGrid();
   const params = getFilterParams();
-  const res = await fetch(`/api/v1/reports/receivables?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/reports/receivables?${params}`));
   if (!res.ok) { alert('데이터 조회에 실패했습니다.'); return; }
   const data = await res.json();
   arGridApi.setGridOption('rowData', data.rows);
@@ -339,7 +339,7 @@ async function loadAr() {
 // ═══ 탭 4: 매입매출관리 (기존) ═══════════════════════════════════
 
 async function loadContractList() {
-  const res = await fetch('/api/v1/ledger/periods');
+  const res = await fetch(withRootPath('/api/v1/ledger/periods'));
   if (!res.ok) return;
   const data = await res.json();
   allContracts = data;
@@ -374,7 +374,7 @@ async function loadPnlData() {
   const params = new URLSearchParams();
   if (year) params.set('period_year', year);
 
-  const res = await fetch(`/api/v1/reports/contract-pnl/${contract.contract_id}?${params}`);
+  const res = await fetch(withRootPath(`/api/v1/reports/contract-pnl/${contract.contract_id}?${params}`));
   if (!res.ok) { alert('데이터 조회에 실패했습니다.'); return; }
   const data = await res.json();
   renderPnl(data);
@@ -385,7 +385,7 @@ function exportPnl() {
   const year = document.getElementById('pnl-year-select').value;
   const params = new URLSearchParams();
   if (year) params.set('period_year', year);
-  window.location.href = `/api/v1/reports/contract-pnl/${currentPnlContractId}/export?${params}`;
+  window.location.href = withRootPath(`/api/v1/reports/contract-pnl/${currentPnlContractId}/export?${params}`);
 }
 
 function renderPnl(data) {

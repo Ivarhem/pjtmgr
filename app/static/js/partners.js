@@ -31,7 +31,7 @@ const listColDefs = [
 ];
 
 // ── 초기화 ────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
+async function initPartnersPage() {
   await loadTermLabels();
   applyTermLabels();
 
@@ -120,7 +120,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initPartnersPage().catch((err) => console.error('partners init failed', err));
+  });
+} else {
+  initPartnersPage().catch((err) => console.error('partners init failed', err));
+}
 
 // ── 상태 저장/복원 키 ─────────────────────────────────────────
 const LS_ACTIVE_TAB = 'cust_active_tab';
@@ -433,7 +441,7 @@ function renderContractsGrid(contracts) {
     },
     onCellClicked: (e) => {
       if (e.column.getColId() === 'contract_name' && e.data?.period_id) {
-        window.location.href = `/contracts/${e.data.period_id}`;
+        window.location.href = withRootPath(`/contracts/${e.data.period_id}`);
       }
     },
     onModelUpdated: () => {
@@ -619,7 +627,7 @@ function renderContractContactGrid(contacts) {
     doesExternalFilterPass: (node) => !node.data.is_completed,
     onCellClicked: (e) => {
       if (e.column.getColId() === 'contract_name' && e.data?.contract_period_id) {
-        window.location.href = `/contracts/${e.data.contract_period_id}`;
+        window.location.href = withRootPath(`/contracts/${e.data.contract_period_id}`);
       }
     },
     onCellValueChanged: (e) => {

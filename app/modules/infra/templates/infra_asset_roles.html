@@ -7,8 +7,8 @@
 
 {% block content %}
 <div class="tab-nav">
-  <a href="/assets" class="tab-btn">자산 목록</a>
-  <a href="/asset-roles" class="tab-btn active">역할 기준 보기</a>
+  <a href="{{ request.scope.root_path or "" }}/assets" class="tab-btn">자산 목록</a>
+  <a href="{{ request.scope.root_path or "" }}/asset-roles" class="tab-btn active">역할 기준 보기</a>
 </div>
 
 <div class="catalog-layout" id="role-layout">
@@ -228,5 +228,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_asset_roles.js"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_asset_roles.js?v=20260413e"></script>
 {% endblock %}

@@ -77,7 +77,7 @@
     btn.textContent = '파싱 중...';
 
     try {
-      const res = await fetch('/api/v1/infra-excel/import/preview', { method: 'POST', body: fd });
+      const res = await fetch(withRootPath('/api/v1/infra-excel/import/preview'), { method: 'POST', body: fd });
       const data = await res.json();
 
       if (!res.ok) {
@@ -198,7 +198,7 @@
     btn.textContent = 'Import 중...';
 
     try {
-      const res = await fetch('/api/v1/infra-excel/import/confirm', { method: 'POST', body: fd });
+      const res = await fetch(withRootPath('/api/v1/infra-excel/import/confirm'), { method: 'POST', body: fd });
       const data = await res.json();
 
       if (!res.ok) {

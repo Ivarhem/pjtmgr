@@ -193,7 +193,7 @@ async function loadAll() {
   // 신규 Contract (Period 없음): INIT_CONTRACT_ID로 진입
   if (CONTRACT_PERIOD_ID === 0 && INIT_CONTRACT_ID > 0) {
     contractId = INIT_CONTRACT_ID;
-    const contractRes = await fetch(`/api/v1/contracts/${contractId}`);
+    const contractRes = await fetch(withRootPath(`/api/v1/contracts/${contractId}`));
     if (!contractRes.ok) { document.getElementById('contract-title').textContent = '로딩 실패'; return; }
     const contract = await contractRes.json();
     currentContract = contract;
@@ -218,8 +218,8 @@ async function loadAll() {
   }
 
   const [res, salesDetailRes] = await Promise.all([
-    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`),
-    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`),
+    fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`)),
+    fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`)),
   ]);
   if (!res.ok) { document.getElementById('contract-title').textContent = '로딩 실패'; return; }
   periodData = await res.json();
@@ -231,12 +231,12 @@ async function loadAll() {
   contractId = periodData.contract_id;
 
   const [contractRes, periodsRes, forecastRes, ledgerRes, receiptsRes, allocRes] = await Promise.all([
-    fetch(`/api/v1/contracts/${contractId}`),
-    fetch(`/api/v1/contracts/${contractId}/periods`),
-    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/forecasts`),
-    fetch(`/api/v1/contracts/${contractId}/ledger`),
-    fetch(`/api/v1/contracts/${contractId}/receipts`),
-    fetch(`/api/v1/contracts/${contractId}/receipt-matches`),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}`)),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/periods`)),
+    fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/forecasts`)),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/ledger`)),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/receipts`)),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/receipt-matches`)),
   ]);
   if ([contractRes, periodsRes, forecastRes, ledgerRes, receiptsRes].some(r => !r.ok)) {
     document.getElementById('contract-title').textContent = '데이터 로딩 실패';
@@ -347,7 +347,7 @@ function applyViewMode() {
 }
 
 async function loadPartners() {
-  const res = await fetch('/api/v1/partners');
+  const res = await fetch(withRootPath('/api/v1/partners'));
   partners = await res.json();
   // datalist for partner autocomplete
   const dl = document.getElementById('partner-list');
@@ -355,7 +355,7 @@ async function loadPartners() {
 }
 
 async function loadUsers() {
-  const res = await fetch('/api/v1/users');
+  const res = await fetch(withRootPath('/api/v1/users'));
   if (res.ok) {
     users = await res.json();
     const dl = document.getElementById('user-list');
@@ -510,7 +510,7 @@ function renderPeriodInfoSections() {
 async function loadPeriodContacts(periodId) {
   const bar = document.getElementById(`period-contacts-${periodId}`);
   if (!bar) return;
-  const res = await fetch(`/api/v1/contract-periods/${periodId}/contacts`);
+  const res = await fetch(withRootPath(`/api/v1/contract-periods/${periodId}/contacts`));
   if (!res.ok) { bar.classList.add('is-hidden'); return; }
   const contacts = await res.json();
   if (!contacts.length) { bar.classList.add('is-hidden'); return; }
@@ -530,7 +530,7 @@ async function togglePeriodCompleted(periodId, newValue) {
     confirmText: '진행',
   })) return;
 
-  const res = await fetch(`/api/v1/contract-periods/${periodId}`, {
+  const res = await fetch(withRootPath(`/api/v1/contract-periods/${periodId}`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ is_completed: newValue }),
@@ -711,11 +711,11 @@ async function savePeriodInfo() {
   };
 
   const [res, sdRes] = await Promise.all([
-    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`, {
+    fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}`), {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(periodBody),
     }),
-    fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`, {
+    fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`), {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(salesDetailBody),
     }),
@@ -861,7 +861,7 @@ function renderPeriodTabs(periods) {
 
 async function _ensureAllForecasts() {
   if (cachedAllForecasts) return cachedAllForecasts;
-  const res = await fetch(`/api/v1/contracts/${contractId}/all-forecasts`);
+  const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}/all-forecasts`));
   cachedAllForecasts = res.ok ? await res.json() : [];
   return cachedAllForecasts;
 }
@@ -1010,7 +1010,7 @@ function switchToPeriodView() {
   }
 
   // Forecast 그리드 복원 — 원래 period 데이터로
-  fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/forecasts`)
+  fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/forecasts`))
     .then(r => r.json())
     .then(forecasts => {
       lastForecastTotals = {
@@ -1287,7 +1287,7 @@ async function applyEditExpected() {
     const dist = _distributeAmounts(currentContract.contract_type, months, salesTotal, gpTotal);
 
     // 1. Period expected 정보 업데이트 (sales-detail)
-    const patchRes = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`, {
+    const patchRes = await fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/sales-detail`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1321,7 +1321,7 @@ async function applyEditExpected() {
 
     // 4. allPeriods 갱신
     cachedAllForecasts = null;
-    const periodsRes = await fetch(`/api/v1/contracts/${contractId}/periods`);
+    const periodsRes = await fetch(withRootPath(`/api/v1/contracts/${contractId}/periods`));
     if (periodsRes.ok) allPeriods = await periodsRes.json();
 
     renderPeriodTabs(allPeriods);
@@ -1573,10 +1573,10 @@ async function deleteSelectedLedgerRows() {
   const toRemove = [];
   for (const row of selected) {
     if (row.type === '입금' && row._receipt_id) {
-      const r = await fetch(`/api/v1/receipts/${row._receipt_id}`, { method: 'DELETE' });
+      const r = await fetch(withRootPath(`/api/v1/receipts/${row._receipt_id}`), { method: 'DELETE' });
       if (!r.ok) { alert(`입금 삭제 실패: ${row.partner_name || ''} ${row.date || ''}`); continue; }
     } else if (row.transaction_line_id) {
-      const r = await fetch(`/api/v1/transaction-lines/${row.transaction_line_id}`, { method: 'DELETE' });
+      const r = await fetch(withRootPath(`/api/v1/transaction-lines/${row.transaction_line_id}`), { method: 'DELETE' });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         alert(err.detail || `삭제 실패: ${row.partner_name || ''} ${row.revenue_month || ''}`);
@@ -1614,7 +1614,7 @@ async function _doSaveForecast() {
   const items = months
     .filter(k => (salesRow?.[k] || 0) !== 0 || (gpRow?.[k] || 0) !== 0)
     .map(k => ({ forecast_month: k, revenue_amount: salesRow?.[k] || 0, gp_amount: gpRow?.[k] || 0 }));
-  const res = await fetch(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/forecasts`, {
+  const res = await fetch(withRootPath(`/api/v1/contract-periods/${CONTRACT_PERIOD_ID}/forecasts`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(items),
@@ -1700,8 +1700,8 @@ async function _doSaveLedger() {
         description: row.description || null,
       };
       return row.transaction_line_id
-        ? fetch(`/api/v1/transaction-lines/${row.transaction_line_id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        : fetch(`/api/v1/contracts/${contractId}/transaction-lines`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        ? fetch(withRootPath(`/api/v1/transaction-lines/${row.transaction_line_id}`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : fetch(withRootPath(`/api/v1/contracts/${contractId}/transaction-lines`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     });
 
   // 입금 저장 (통합 뷰일 때)
@@ -1715,8 +1715,8 @@ async function _doSaveLedger() {
         description: row.description || null,
       };
       return row._receipt_id
-        ? fetch(`/api/v1/receipts/${row._receipt_id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        : fetch(`/api/v1/contracts/${contractId}/receipts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        ? fetch(withRootPath(`/api/v1/receipts/${row._receipt_id}`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : fetch(withRootPath(`/api/v1/contracts/${contractId}/receipts`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     });
 
   const results = await Promise.all([...txnLineReqs, ...receiptReqs]);
@@ -1730,10 +1730,10 @@ async function _doSaveLedger() {
 // ── 부분 재로드 ────────────────────────────────────────────────
 async function reloadLedger() {
   const [ledgerRes, partnersRes, receiptsRes, allocRes] = await Promise.all([
-    fetch(`/api/v1/contracts/${contractId}/ledger`),
-    fetch('/api/v1/partners'),
-    fetch(`/api/v1/contracts/${contractId}/receipts`),
-    fetch(`/api/v1/contracts/${contractId}/receipt-matches`),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/ledger`)),
+    fetch(withRootPath('/api/v1/partners')),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/receipts`)),
+    fetch(withRootPath(`/api/v1/contracts/${contractId}/receipt-matches`)),
   ]);
   const ledger = await ledgerRes.json();
   partners = await partnersRes.json();
@@ -2089,7 +2089,7 @@ async function submitAddPeriod() {
   if (custId) body.partner_id = parseInt(custId);
   body.is_planned = document.getElementById('add-period-is-planned').checked;
 
-  const res = await fetch(`/api/v1/contracts/${contractId}/periods`, {
+  const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}/periods`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -2120,7 +2120,7 @@ async function submitAddPeriod() {
   if (invHoliday) salesBody.invoice_holiday_adjust = invHoliday;
 
   // Save sales-detail to the new period
-  await fetch(`/api/v1/contract-periods/${newPeriod.id}/sales-detail`, {
+  await fetch(withRootPath(`/api/v1/contract-periods/${newPeriod.id}/sales-detail`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(salesBody),
@@ -2540,7 +2540,7 @@ function _openNewPartnerPopup(prefill) {
 async function _submitNewPartnerInline() {
   const name = document.getElementById('new-cust-name-inline').value.trim();
   if (!name) { alert('거래처명을 입력하세요.'); return; }
-  const res = await fetch('/api/v1/partners', {
+  const res = await fetch(withRootPath('/api/v1/partners'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -2593,7 +2593,7 @@ async function deletePeriodById(periodId, label) {
     confirmText: '삭제',
   })) return;
 
-  const res = await fetch(`/api/v1/contract-periods/${periodId}`, { method: 'DELETE' });
+  const res = await fetch(withRootPath(`/api/v1/contract-periods/${periodId}`), { method: 'DELETE' });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     alert(err.detail || 'Period 삭제에 실패했습니다.');
@@ -2613,7 +2613,7 @@ async function deletePeriodById(periodId, label) {
 async function importFromForecast() {
   if (!contractId || !CONTRACT_PERIOD_ID) return;
 
-  const res = await fetch(`/api/v1/contracts/${contractId}/forecast-sync-preview`);
+  const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}/forecast-sync-preview`));
   if (!res.ok) { alert('Forecast 대조에 실패했습니다.'); return; }
   const preview = await res.json();
 
@@ -2656,7 +2656,7 @@ async function importFromForecast() {
 
 async function submitForecastSync() {
   const deleteIds = [...document.querySelectorAll('.sync-delete-chk:checked')].map(c => parseInt(c.value));
-  const res = await fetch(`/api/v1/contracts/${contractId}/forecast-sync`, {
+  const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}/forecast-sync`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ delete_ids: deleteIds }),
@@ -2865,8 +2865,8 @@ async function _doSaveReceipt() {
         description: row.description || null,
       };
       return row.id
-        ? fetch(`/api/v1/receipts/${row.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        : fetch(`/api/v1/contracts/${contractId}/receipts`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        ? fetch(withRootPath(`/api/v1/receipts/${row.id}`), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        : fetch(withRootPath(`/api/v1/contracts/${contractId}/receipts`), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     });
 
   const results = await Promise.all(reqs);
@@ -2891,7 +2891,7 @@ async function deleteSelectedReceiptRows() {
   const toRemove = [];
   for (const row of selected) {
     if (row.id) {
-      const r = await fetch(`/api/v1/receipts/${row.id}`, { method: 'DELETE' });
+      const r = await fetch(withRootPath(`/api/v1/receipts/${row.id}`), { method: 'DELETE' });
       if (!r.ok) { alert(`삭제 실패: ${row.partner_name || ''} ${row.receipt_date || ''}`); continue; }
     }
     toRemove.push(row);
@@ -3140,7 +3140,7 @@ async function onReceiptMatchCellChanged(e) {
     return;
   }
   try {
-    const res = await fetch(`/api/v1/receipt-matches/${id}`, {
+    const res = await fetch(withRootPath(`/api/v1/receipt-matches/${id}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ matched_amount: newAmount }),
@@ -3175,7 +3175,7 @@ async function autoMatch() {
     title: '자동 배분 재실행',
     confirmText: '재실행',
   })) return;
-  const res = await fetch(`/api/v1/contracts/${contractId}/receipt-matches/auto`, { method: 'POST' });
+  const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}/receipt-matches/auto`), { method: 'POST' });
   if (!res.ok) { showToast('자동 배분 실패', 'error'); return; }
   showToast('자동 배분이 완료되었습니다.');
   await reloadLedger();
@@ -3217,7 +3217,7 @@ async function saveManualMatch() {
   if (!amount || amount <= 0) { showToast('배분 금액을 입력하세요.', 'error'); return; }
 
   try {
-    const res = await fetch(`/api/v1/contracts/${contractId}/receipt-matches`, {
+    const res = await fetch(withRootPath(`/api/v1/contracts/${contractId}/receipt-matches`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3252,7 +3252,7 @@ async function deleteSelectedMatches() {
   let failed = 0;
   for (const row of selected) {
     try {
-      const res = await fetch(`/api/v1/receipt-matches/${row.id}`, { method: 'DELETE' });
+      const res = await fetch(withRootPath(`/api/v1/receipt-matches/${row.id}`), { method: 'DELETE' });
       if (!res.ok) failed++;
     } catch { failed++; }
   }
