@@ -167,7 +167,7 @@ async function loadData(restoreLast = false) {
   const params = new URLSearchParams();
   const chkMy = document.getElementById('chk-my-partners');
   if (chkMy && chkMy.checked) params.set('my_only', 'true');
-  const res = await fetch('/api/v1/partners?' + params.toString());
+  const res = await fetch(withRootPath('/api/v1/partners?' + params.toString()));
   allPartners = await res.json();
   gridApi.setGridOption('rowData', allPartners);
   gridApi.onFilterChanged();
@@ -175,7 +175,7 @@ async function loadData(restoreLast = false) {
   // 초기 로드 시 서버에 저장된 마지막 선택 거래처 복원
   if (restoreLast && !selectedPartnerId) {
     try {
-      const prefRes = await fetch('/api/v1/preferences/last_selected_partner');
+      const prefRes = await fetch(withRootPath('/api/v1/preferences/last_selected_partner'));
       const pref = await prefRes.json();
       if (pref.value) {
         const lastId = parseInt(pref.value, 10);
@@ -203,7 +203,7 @@ async function loadData(restoreLast = false) {
 function selectPartner(partnerId) {
   selectedPartnerId = partnerId;
   loadDetail(partnerId);
-  fetch('/api/v1/preferences/last_selected_partner', {
+  fetch(withRootPath('/api/v1/preferences/last_selected_partner'), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ value: String(partnerId) }),
@@ -333,7 +333,7 @@ function hideDetail() {
 // ══════════════════════════════════════════════════════════════
 async function loadContractsTab() {
   if (!selectedPartnerId) return;
-  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/contracts`);
+  const res = await fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}/contracts`));
   if (!res.ok) { console.error('contracts API error', res.status); return; }
   contractsData = await res.json();
   relatedContracts = contractsData.contracts || [];
@@ -456,8 +456,8 @@ function renderContractsGrid(contracts) {
 async function loadContactsTab() {
   if (!selectedPartnerId) return;
   const [mcRes, dcRes] = await Promise.all([
-    fetch(`/api/v1/partners/${selectedPartnerId}/contacts`),
-    fetch(`/api/v1/partners/${selectedPartnerId}/contract-contacts-pivoted`),
+    fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}/contacts`)),
+    fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}/contract-contacts-pivoted`)),
   ]);
   masterContacts = await mcRes.json();
   const contractContacts = await dcRes.json();
@@ -658,11 +658,11 @@ async function saveAllContractContacts() {
       try {
         if (!pendingCcId && existingId) {
           // 삭제
-          const res = await fetch(`/api/v1/contract-contacts/${existingId}`, { method: 'DELETE' });
+          const res = await fetch(withRootPath(`/api/v1/contract-contacts/${existingId}`), { method: 'DELETE' });
           if (!res.ok) errors.push(`${row.contract_name} ${roleType} 삭제 실패`);
         } else if (pendingCcId && existingId) {
           // 수정
-          const res = await fetch(`/api/v1/contract-contacts/${existingId}`, {
+          const res = await fetch(withRootPath(`/api/v1/contract-contacts/${existingId}`), {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ partner_contact_id: pendingCcId, contact_type: roleType }),
@@ -670,7 +670,7 @@ async function saveAllContractContacts() {
           if (!res.ok) errors.push(`${row.contract_name} ${roleType} 수정 실패`);
         } else if (pendingCcId && !existingId) {
           // 신규 생성
-          const res = await fetch(`/api/v1/contract-periods/${row.contract_period_id}/contacts`, {
+          const res = await fetch(withRootPath(`/api/v1/contract-periods/${row.contract_period_id}/contacts`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -703,7 +703,7 @@ async function saveAllContractContacts() {
 // ══════════════════════════════════════════════════════════════
 async function loadFinancialsTab() {
   if (!selectedPartnerId) return;
-  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/financials`);
+  const res = await fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}/financials`));
   if (!res.ok) { console.error('financials API error', res.status); return; }
   const data = await res.json();
 
@@ -860,7 +860,7 @@ function renderFinancialsGrid(lines) {
 // ══════════════════════════════════════════════════════════════
 async function loadReceiptsTab() {
   if (!selectedPartnerId) return;
-  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/receipts`);
+  const res = await fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}/receipts`));
   if (!res.ok) { console.error('receipts API error', res.status); return; }
   const data = await res.json();
 
@@ -986,7 +986,7 @@ function renderReceiptsGrid(receipts) {
 async function submitNew() {
   const name = document.getElementById('new-partner-name').value.trim();
   if (!name) { alert('거래처명을 입력하세요.'); return; }
-  const res = await fetch('/api/v1/partners', {
+  const res = await fetch(withRootPath('/api/v1/partners'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
@@ -1004,7 +1004,7 @@ async function saveInfo() {
   if (!selectedPartnerId) return;
   const name = document.getElementById('info-name').value.trim();
   if (!name) { showToast('거래처명을 입력하세요.', 'error'); return; }
-  const res = await fetch(`/api/v1/partners/${selectedPartnerId}`, {
+  const res = await fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1035,7 +1035,7 @@ async function deletePartner() {
     title: '거래처 삭제',
     confirmText: '삭제',
   })) return;
-  const res = await fetch(`/api/v1/partners/${selectedPartnerId}`, { method: 'DELETE' });
+  const res = await fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}`), { method: 'DELETE' });
   if (res.ok) {
     selectedPartnerId = null;
     hideDetail();
@@ -1077,7 +1077,7 @@ async function submitNewMasterContact() {
     email: document.getElementById('new-mc-email').value.trim() || null,
     roles: checkedRoles,
   };
-  const res = await fetch(`/api/v1/partners/${selectedPartnerId}/contacts`, {
+  const res = await fetch(withRootPath(`/api/v1/partners/${selectedPartnerId}/contacts`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1098,7 +1098,7 @@ async function deleteMasterContact(contactId, contactName) {
     title: '담당자 삭제',
     confirmText: '삭제',
   })) return;
-  const res = await fetch(`/api/v1/partners/contacts/${contactId}`, { method: 'DELETE' });
+  const res = await fetch(withRootPath(`/api/v1/partners/contacts/${contactId}`), { method: 'DELETE' });
   if (res.ok) {
     loadedTabs['contacts'] = false;
     loadedTabs['contacts'] = true;
@@ -1143,7 +1143,7 @@ async function submitEditMasterContact() {
     email: document.getElementById('edit-mc-email').value.trim() || null,
     roles: checkedRoles,
   };
-  const res = await fetch(`/api/v1/partners/contacts/${contactId}`, {
+  const res = await fetch(withRootPath(`/api/v1/partners/contacts/${contactId}`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
