@@ -97,7 +97,7 @@
       <button class="theme-toggle" id="toggle-subnav-desc" title="도움말 표시/숨김">
         <i data-lucide="help-circle"></i>
       </button>
-      <a class="theme-toggle admin-only is-hidden" href="/users" title="사용자 관리">
+      <a class="theme-toggle admin-only is-hidden" href="{{ request.scope.root_path or "" }}/users" title="사용자 관리">
         <i data-lucide="user-cog"></i>
       </a>
       <span class="topbar-user" id="topbar-user"></span>
@@ -120,12 +120,12 @@
         {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
         {% if "infra" in enabled_modules and mc == "infra" %}
 
-        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
-        <li><a href="/physical-layout"><i class="icon" data-lucide="layout-grid"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
-        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">업체 배정·담당자 연결</small></span></a></li>
-        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/physical-layout"><i class="icon" data-lucide="layout-grid"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">업체 배정·담당자 연결</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
 
         {% endif %}
 
@@ -139,12 +139,12 @@
         {% endif %}
         {% if "infra" in enabled_modules and "accounting" not in enabled_modules %}
 
-        <li><a href="/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
-        <li><a href="/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
-        <li><a href="/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
-        <li><a href="/physical-layout"><i class="icon" data-lucide="layout-grid"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
-        <li><a href="/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">업체 배정·담당자 연결</small></span></a></li>
-        <li><a href="/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/ip-inventory"><i class="icon" data-lucide="network"></i><span>네트워크<small class="subnav-sub">IP 인벤토리·포트맵</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/physical-layout"><i class="icon" data-lucide="layout-grid"></i><span>배치<small class="subnav-sub">센터·전산실·랙</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/contacts"><i class="icon" data-lucide="users"></i><span>협력업체<small class="subnav-sub">업체 배정·담당자 연결</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/audit-history"><i class="icon" data-lucide="history"></i><span>이력<small class="subnav-sub">변경 추적·감사 조회</small></span></a></li>
 
         {% endif %}
 
@@ -155,7 +155,7 @@
 
         <li><a href="{{ request.scope.root_path or "" }}/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
         <li><a href="{{ request.scope.root_path or "" }}/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">제품 카탈로그·기준정보 관리</small></span></a></li>
-        <li><a href="/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
         <li class="admin-only is-hidden"><a href="{{ request.scope.root_path or "" }}/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
       </ul>
     </nav>
