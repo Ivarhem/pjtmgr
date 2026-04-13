@@ -226,7 +226,7 @@ async function validateImportContracts() {
     _setImportStatus('import-status-contracts', '<span class="import-loading">검사 중...</span>');
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch('/api/v1/excel/validate', { method: 'POST', body: fd });
+    const res = await fetch(withRootPath('/api/v1/excel/validate'), { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || data.valid === false) {
@@ -256,7 +256,7 @@ async function doImportContracts() {
     const fd = new FormData();
     fd.append('file', file);
     fd.append('on_duplicate', onDuplicate);
-    const res = await fetch('/api/v1/excel/import', { method: 'POST', body: fd });
+    const res = await fetch(withRootPath('/api/v1/excel/import'), { method: 'POST', body: fd });
     if (res.ok) {
       const data = await res.json();
       _setImportStatus('import-status-contracts',
@@ -295,7 +295,7 @@ async function submitAssignOwner() {
     ownerUserId = user.id;
   }
 
-  const res = await fetch('/api/v1/contracts/bulk-assign-owner', {
+  const res = await fetch(withRootPath('/api/v1/contracts/bulk-assign-owner'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ contract_ids: contractIds, owner_user_id: ownerUserId }),
@@ -322,7 +322,7 @@ async function doImportSheet(type) {
 
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(`/api/v1/excel/import/${type}`, { method: 'POST', body: fd });
+    const res = await fetch(withRootPath(`/api/v1/excel/import/${type}`), { method: 'POST', body: fd });
     if (res.ok) {
       const data = await res.json();
       _setImportStatus(statusEl, `<span class="import-ok">✔ 완료: ${data.saved}건 저장</span>`);
