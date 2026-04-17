@@ -863,7 +863,26 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     addAction("수정", () => openRoomModal(nodeData));
     addAction("삭제", () => deleteRoom(nodeData));
   } else if (nodeType === "line") {
-    if (nodeData?.is_unassigned) addAction("랙 추가", () => { _selectedRoomId = nodeData.room_id; _selectedSlotContext = null; openRackModal(); });
+    if (nodeData?.is_unassigned) {
+      addAction("랙 추가", () => { _selectedRoomId = nodeData.room_id; _selectedSlotContext = null; openRackModal(); });
+    } else {
+      addAction("삭제", async () => {
+        if (!confirm(`라인 '${nodeData.line_name}'을(를) 삭제하시겠습니까? 배치된 랙은 미배치 상태로 전환됩니다.`)) return;
+        try {
+          await apiFetch("/api/v1/rack-lines/" + nodeData.id, { method: "DELETE" });
+          showToast("라인을 삭제했습니다.");
+          await loadTree();
+          const content = document.getElementById("layout-content");
+          if (content) {
+            content.textContent = "";
+            const roomData = _findRoomData(nodeData.room_id);
+            if (roomData) renderRoomView(content, roomData);
+          }
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+    }
   } else if (nodeType === "rack") {
     addAction("수정", () => openRackModal(nodeData));
     addAction("삭제", () => deleteRack(nodeData));
@@ -1323,8 +1342,9 @@ async function renderRoomView(container, room) {
       const crossExcluded = isCrossCellExcluded(room.id, crossContext);
 
       if (!layoutEntry) {
-        cell.classList.add("empty");
-        if (crossExcluded) cell.classList.add("disabled", "axis-excluded");
+        cell.classList.add("empty", "coord-empty");
+        if (crossExcluded) cell.classList.add("is-excluded");
+        else cell.textContent = `${c + 1},${r + 1}`;
         cell.title = crossExcluded ? "제외된 빈 칸" : `빈 칸 (${c + 1}, ${r + 1})`;
         cell.addEventListener("mouseenter", () => {
           cell.classList.add("slot-hover");
@@ -1404,7 +1424,7 @@ async function renderRoomView(container, room) {
       cell.dataset.position = positionIndex;
       cell.dataset.lineName = line.line_name;
       cell.dataset.slotKey = `${line.id}:${positionIndex}`;
-      if (slotExcluded) cell.classList.add("disabled", "axis-excluded");
+      if (slotExcluded) cell.classList.add("is-excluded");
       if (line.direction) cell.classList.add(`line-${line.direction}`);
       const selectSlot = (message, extra = {}) => {
         _selectedSlotKey = cell.dataset.slotKey;
@@ -1442,7 +1462,7 @@ async function renderRoomView(container, room) {
         cell.classList.add("has-rack");
         cell.draggable = true;
         cell.dataset.rackId = rack.id;
-        cell.textContent = _getRackDisplayCode(rack, { line, positionIndex, rackLines });
+        cell.textContent = getSlotDefaultCode({ line, positionIndex }) || `${line.line_name}-${positionIndex + 1}`;
         cell.title = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
         cell.addEventListener("click", () => {
           const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
@@ -1461,7 +1481,7 @@ async function renderRoomView(container, room) {
         });
       } else {
         cell.classList.add("slot-empty");
-        cell.textContent = _codeDisplay === "rack_position" ? getSlotDefaultCode({ line, positionIndex }) : `${line.line_name}-${positionIndex + 1}`;
+        cell.textContent = getSlotDefaultCode({ line, positionIndex }) || `${line.line_name}-${positionIndex + 1}`;
         cell.title = `${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} (빈 슬롯)`;
         cell.addEventListener("click", () => {
           if (_editMode) {
