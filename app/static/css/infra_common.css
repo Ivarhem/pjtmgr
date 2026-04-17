@@ -3437,7 +3437,7 @@ body.dark-mode .catalog-management-result {
 .floor-plan-cell.empty.coord-empty { font-size: calc(var(--floor-cell-font-size) - 1px); font-weight: 500; }
 .floor-plan-cell.line-slot { background: var(--color-gray-100, #f3f4f6); border: 1px solid var(--color-gray-300, #d1d5db); color: var(--color-gray-700, #374151); }
 .floor-plan-cell.line-slot.slot-empty { background: color-mix(in srgb, var(--color-gray-100, #f3f4f6) 92%, var(--bg-primary, #ffffff)); border: 1px solid var(--color-gray-300, #d1d5db); color: var(--color-gray-500, #6b7280); font-weight: 500; }
-.floor-plan-cell.line-slot.has-rack { background: var(--color-blue-100, #dbeafe); border: 1px solid var(--color-blue-400, #60a5fa); color: var(--color-blue-900, #1e3a8a); font-weight: 700; }
+.floor-plan-cell.line-slot.has-rack { background: var(--color-gray-100, #f3f4f6); border: 1px solid var(--color-gray-400, #9ca3af); color: var(--color-gray-800, #1f2937); font-weight: 700; }
 .floor-plan-cell.is-excluded { background: var(--color-gray-200, #e5e7eb); border: 1px solid var(--color-gray-300, #d1d5db); color: transparent; }
 .floor-plan-cell.drag-over { background: var(--color-green-100, #dcfce7); border: 1px solid var(--color-green-400, #4ade80); }
 .floor-plan-cell.drag-invalid { background: var(--color-red-50, #fef2f2); border: 1px solid var(--color-red-300, #fca5a5); }
@@ -3534,8 +3534,18 @@ body.dark-mode .floor-plan-cell.line-slot.slot-empty {
 body.dark-mode .floor-plan-cell.line-slot.has-rack {
   background: #0b0b0d;
   border-style: solid;
-  border-color: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #ffffff 28%);
+  border-color: color-mix(in srgb, var(--border-color) 72%, #ffffff 28%);
   color: #ffffff;
+}
+
+body.dark-mode .floor-plan-cell.line-slot.line-selected.slot-empty {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--primary-color, #2563eb) 75%, #ffffff 25%);
+}
+
+body.dark-mode .floor-plan-cell.line-slot.line-selected.has-rack {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--primary-color, #2563eb) 75%, #ffffff 25%);
 }
 
 body.dark-mode .floor-plan-cell.line-slot.drag-over {

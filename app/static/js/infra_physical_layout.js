@@ -1430,6 +1430,7 @@ async function renderRoomView(container, room) {
       const positionIndex = layoutEntry.position;
       const rack = rackByPos[`${line.id}:${positionIndex}`];
       const slotExcluded = (line.disabled_slots || []).includes(positionIndex);
+      const isSelectedLine = _selectedNode?.type === "line" && String(_selectedNode.id) === String(line.id);
       cell.classList.add("line-slot");
       cell.dataset.lineId = line.id;
       cell.dataset.position = positionIndex;
@@ -1437,6 +1438,7 @@ async function renderRoomView(container, room) {
       cell.dataset.slotKey = `${line.id}:${positionIndex}`;
       if (slotExcluded) cell.classList.add("is-excluded");
       if (line.direction) cell.classList.add(`line-${line.direction}`);
+      if (isSelectedLine) cell.classList.add("line-selected");
       const selectSlot = (message, extra = {}) => {
         _selectedSlotKey = cell.dataset.slotKey;
         _selectedSlotContext = { line, colIndex: c, rowIndex: r, lineIndex: c, position: positionIndex, room, rackLines, isDisabled: slotExcluded, isExcluded: slotExcluded, ...extra };
