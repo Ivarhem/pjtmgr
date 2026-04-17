@@ -3,6 +3,7 @@
 const LAYOUT_TREE_WIDTH_KEY = "physicalLayout.treeWidth";
 const LAYOUT_TREE_COLLAPSED_KEY = "physicalLayout.treeCollapsed";
 const LAYOUT_AUTO_COLLAPSE_KEY = "physicalLayout.autoCollapse";
+const LAYOUT_TREE_ACTION_MODE_KEY = "physicalLayout.treeActionMode";
 const LAYOUT_ZOOM_KEY = "physicalLayout.zoom";
 const LAYOUT_AXIS_KEY_PREFIX = "physicalLayout.axis.v2";
 const LAYOUT_ORIENTATION_KEY_PREFIX = "physicalLayout.orientation.v2";
@@ -19,6 +20,8 @@ let _selectedCenterId = null;
 let _selectedRoomId = null;
 let _treeCollapsed = new Set();
 let _layoutAutoCollapse = localStorage.getItem(LAYOUT_AUTO_COLLAPSE_KEY) !== "0";
+let _layoutTreeActionMode = localStorage.getItem(LAYOUT_TREE_ACTION_MODE_KEY) || "compact";
+let _expandedTreeActions = new Set();
 let _layoutTreeRetryTimer = null;
 let _layoutTreeRetryCount = 0;
 let _editMode = false;
@@ -635,6 +638,26 @@ function renderEmptyTree() {
   container.appendChild(p);
 }
 
+function updateLayoutTreeModeBtn() {
+  const btn = document.getElementById("btn-layout-tree-mode");
+  if (!btn) return;
+  const detail = _layoutTreeActionMode === "detail";
+  btn.textContent = detail ? "간단히" : "자세히";
+  btn.className = "btn btn-secondary btn-sm" + (detail ? " is-active" : "");
+  btn.title = detail ? "모든 노드 액션 항상 표시" : "노드별 작은 아이콘으로 액션 표시";
+}
+
+function isTreeActionExpanded(key) {
+  return _layoutTreeActionMode === "detail" || _expandedTreeActions.has(key);
+}
+
+function toggleTreeActionMenu(key) {
+  if (_layoutTreeActionMode === "detail") return;
+  if (_expandedTreeActions.has(key)) _expandedTreeActions.delete(key);
+  else _expandedTreeActions.add(key);
+  renderTree();
+}
+
 function renderTree() {
   const container = document.getElementById("layout-tree");
   container.textContent = "";
@@ -840,8 +863,10 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   btn.addEventListener("click", () => selectNode(nodeType, nodeId, nodeData));
 
   nodeDiv.appendChild(btn);
+  const hasInlineActions = nodeType === "center" || nodeType === "room" || nodeType === "line";
   const actions = document.createElement("div");
   actions.className = "layout-tree-node-actions";
+  const actionsOpen = isTreeActionExpanded(key);
   const addAction = (label, onClick) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -906,6 +931,24 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   } else if (nodeType === "rack") {
     addAction("수정", () => openRackModal(nodeData));
     addAction("삭제", () => deleteRack(nodeData));
+  }
+  if (hasInlineActions) {
+    const actionToggle = document.createElement("button");
+    actionToggle.type = "button";
+    actionToggle.className = "btn btn-icon btn-sm layout-tree-node-toggle";
+    actionToggle.title = actionsOpen ? "노드 작업 닫기" : "노드 작업 열기";
+    actionToggle.setAttribute("aria-expanded", actionsOpen ? "true" : "false");
+    actionToggle.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="3" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg>';
+    actionToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleTreeActionMenu(key);
+    });
+    nodeDiv.appendChild(actionToggle);
+  }
+  if (_layoutTreeActionMode === "detail") {
+    actions.classList.add("is-visible", "is-detail-mode");
+  } else if (actionsOpen) {
+    actions.classList.add("is-visible");
   }
   nodeDiv.appendChild(actions);
   li.appendChild(nodeDiv);
@@ -2230,6 +2273,7 @@ async function loadLabelBaseSetting() {
 document.addEventListener("DOMContentLoaded", () => {
   initTreeSplitter();
   updateLayoutAutoCollapseBtn();
+  updateLayoutTreeModeBtn();
   setLayoutTreeCollapsed(false);
   loadTree()
     .then(() => loadLabelBaseSetting())
@@ -2247,6 +2291,14 @@ document.getElementById("btn-layout-auto-collapse")?.addEventListener("click", (
   localStorage.setItem(LAYOUT_AUTO_COLLAPSE_KEY, _layoutAutoCollapse ? "1" : "0");
   updateLayoutAutoCollapseBtn();
   if (_selectedNode && window.innerWidth > 960) setLayoutTreeCollapsed(_layoutAutoCollapse);
+});
+
+document.getElementById("btn-layout-tree-mode")?.addEventListener("click", () => {
+  _layoutTreeActionMode = _layoutTreeActionMode === "detail" ? "compact" : "detail";
+  localStorage.setItem(LAYOUT_TREE_ACTION_MODE_KEY, _layoutTreeActionMode);
+  if (_layoutTreeActionMode === "detail") _expandedTreeActions.clear();
+  updateLayoutTreeModeBtn();
+  renderTree();
 });
 
 document.getElementById("btn-layout-tree-save")?.addEventListener("click", () => {
@@ -2270,6 +2322,8 @@ window.addEventListener("ctx-changed", () => {
   _selectedCenterId = null;
   _selectedRoomId = null;
   _treeCollapsed.clear();
+  _expandedTreeActions.clear();
+  updateLayoutTreeModeBtn();
   loadTree()
     .then(() => loadLabelBaseSetting())
     .catch(err => showToast(err.message, "error"));
