@@ -866,6 +866,26 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     if (nodeData?.is_unassigned) {
       addAction("랙 추가", () => { _selectedRoomId = nodeData.room_id; _selectedSlotContext = null; openRackModal(); });
     } else {
+      addAction("수정", async () => {
+        const nextName = (prompt("새 라인명을 입력하세요.", nodeData.line_name || "") || "").trim();
+        if (!nextName || nextName === nodeData.line_name) return;
+        try {
+          await apiFetch("/api/v1/rack-lines/" + nodeData.id, {
+            method: "PATCH",
+            body: { line_name: nextName },
+          });
+          showToast("라인명을 변경했습니다.");
+          await loadTree();
+          const content = document.getElementById("layout-content");
+          if (content) {
+            content.textContent = "";
+            const roomData = _findRoomData(nodeData.room_id);
+            if (roomData) renderRoomView(content, roomData);
+          }
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
       addAction("삭제", async () => {
         if (!confirm(`라인 '${nodeData.line_name}'을(를) 삭제하시겠습니까? 배치된 랙은 미배치 상태로 전환됩니다.`)) return;
         try {
