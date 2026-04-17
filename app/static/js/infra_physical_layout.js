@@ -1339,12 +1339,10 @@ async function renderRoomView(container, room) {
       cell.className = "floor-plan-cell";
       const layoutEntry = layout.byCoord.get(`${c}:${r}`);
       const crossContext = { lineIndex: c, positionIndex: r, colIndex: c, rowIndex: r, position: r };
-      const crossExcluded = isCrossCellExcluded(room.id, crossContext);
+      const crossExcluded = false;
 
       if (!layoutEntry) {
-        cell.classList.add("empty", "coord-empty");
-        if (crossExcluded) cell.classList.add("is-excluded");
-        else cell.textContent = `${c + 1},${r + 1}`;
+        cell.classList.add("empty");
         cell.title = crossExcluded ? "제외된 빈 칸" : `빈 칸 (${c + 1}, ${r + 1})`;
         cell.addEventListener("mouseenter", () => {
           cell.classList.add("slot-hover");
@@ -1380,24 +1378,17 @@ async function renderRoomView(container, room) {
             }
             return;
           }
-          if (_editMode) {
-            toggleCrossCellExcluded(room.id, crossContext);
-            const content = document.getElementById("layout-content");
-            content.textContent = "";
-            renderRoomView(content, room);
-            return;
-          }
+          if (_editMode) return;
           _selectedSlotKey = `empty:${c}:${r}`;
-          _selectedSlotContext = { line: null, colIndex: c, rowIndex: r, lineIndex: c, position: r, room, rackLines, isExcluded: crossExcluded };
+          _selectedSlotContext = { line: null, colIndex: c, rowIndex: r, lineIndex: c, position: r, room, rackLines, isExcluded: false };
           grid.querySelectorAll(".floor-plan-cell.slot-selected").forEach((el) => el.classList.remove("slot-selected"));
           cell.classList.add("slot-selected");
-          _setSlotStatus(slotStatus, crossExcluded ? "제외된 빈 칸입니다." : `빈 칸 좌표 ${c + 1}, ${r + 1}`, "선택된 칸");
+          _setSlotStatus(slotStatus, `빈 칸 좌표 ${c + 1}, ${r + 1}`, "선택된 칸");
           renderSlotActions();
         });
         cell.addEventListener("dragover", (e) => {
           e.preventDefault();
-          if (_draggedRackId && !crossExcluded) cell.classList.add("drag-over");
-          if (_draggedRackId && crossExcluded) cell.classList.add("drag-invalid");
+          if (_draggedRackId) cell.classList.add("drag-invalid");
         });
         cell.addEventListener("dragleave", () => {
           cell.classList.remove("drag-over");
@@ -1409,7 +1400,7 @@ async function renderRoomView(container, room) {
           cell.classList.remove("drag-invalid");
           const rackId = Number(e.dataTransfer.getData("application/x-rack-id"));
           if (!rackId) return;
-          await placeRackAtContext(rackId, room, { ...crossContext, line: null, isExcluded: crossExcluded });
+          await placeRackAtContext(rackId, room, { ...crossContext, line: null, isExcluded: true });
         });
         grid.appendChild(cell);
         continue;
@@ -1418,7 +1409,7 @@ async function renderRoomView(container, room) {
       const line = layoutEntry.line;
       const positionIndex = layoutEntry.position;
       const rack = rackByPos[`${line.id}:${positionIndex}`];
-      const slotExcluded = crossExcluded || (line.disabled_slots || []).includes(positionIndex);
+      const slotExcluded = (line.disabled_slots || []).includes(positionIndex);
       cell.classList.add("line-slot");
       cell.dataset.lineId = line.id;
       cell.dataset.position = positionIndex;
