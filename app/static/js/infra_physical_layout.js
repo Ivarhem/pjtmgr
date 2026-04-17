@@ -1,38 +1,569 @@
 /* ── Physical Layout: Tree + Content Panel ── */
 
 const LAYOUT_TREE_WIDTH_KEY = "physicalLayout.treeWidth";
+const LAYOUT_TREE_COLLAPSED_KEY = "physicalLayout.treeCollapsed";
+const LAYOUT_AUTO_COLLAPSE_KEY = "physicalLayout.autoCollapse";
+const LAYOUT_ZOOM_KEY = "physicalLayout.zoom";
+const LAYOUT_AXIS_KEY_PREFIX = "physicalLayout.axis.v2";
+const LAYOUT_ORIENTATION_KEY_PREFIX = "physicalLayout.orientation.v2";
+const LAYOUT_EXCLUDED_CELLS_KEY_PREFIX = "physicalLayout.excludedCells.v2";
+const LAYOUT_LINE_TAGS_KEY_PREFIX = "physicalLayout.lineTags.v2";
+const LAYOUT_NUMBER_RANGE_KEY_PREFIX = "physicalLayout.numberRange.v2";
 
 let _centers = [];
 let _rooms = {};      // centerId -> rooms[]
 let _racks = {};       // roomId -> racks[]
+let _rackLines = {};   // roomId -> rackLines[]
 let _selectedNode = null; // { type, id, data }
 let _selectedCenterId = null;
 let _selectedRoomId = null;
 let _treeCollapsed = new Set();
+let _layoutAutoCollapse = localStorage.getItem(LAYOUT_AUTO_COLLAPSE_KEY) !== "0";
+let _layoutTreeRetryTimer = null;
+let _layoutTreeRetryCount = 0;
 let _editMode = false;
-let _codeDisplay = "rack_code"; // "rack_code" | "project_code" | "system_id"
+let _codeDisplay = "rack_code"; // "rack_code" | "project_code" | "rack_position"
 let _draggedRackId = null;
+let _layoutZoom = Number(localStorage.getItem(LAYOUT_ZOOM_KEY) || 1);
+let _selectedSlotKey = null;
+let _selectedSlotContext = null;
+let _rackCodeSuggestionLocked = false;
+let _lineCreateMode = null;
+let _lineCreateStart = null;
+
+function _getLinePositionLabel(lineName, position) {
+  return `라인 ${lineName} / 위치 ${Number(position) + 1}`;
+}
+
+function _alphaIndex(label) {
+  const s = (label || "").trim().toUpperCase();
+  if (!/^[A-Z]+$/.test(s)) return null;
+  let n = 0;
+  for (const ch of s) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+
+function _alphaLabel(index) {
+  let n = Number(index) + 1;
+  if (!Number.isFinite(n) || n <= 0) return "A";
+  let out = "";
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function getLineLabelByIndex(index, rackLines = []) {
+  const idx = Number(index);
+  if (!Number.isFinite(idx) || idx < 0) return "";
+  const exact = (rackLines || []).find((line) => Number(line.col_index) === idx);
+  const name = String(exact?.line_name || "").trim();
+  if (name) return name;
+  return _alphaLabel(idx);
+}
+
+function getPositionLabel(index) {
+  const idx = Number(index);
+  if (!Number.isFinite(idx) || idx < 0) return "";
+  return String(idx + 1).padStart(2, "0");
+}
+
+function isUnassignedLine(line) {
+  return Number(line?.col_index) === -1 && [line?.start_col, line?.start_row, line?.end_col, line?.end_row].every((v) => v == null);
+}
+
+function getLineCells(line, room) {
+  const startCol = Number(line?.start_col);
+  const startRow = Number(line?.start_row);
+  const endCol = Number(line?.end_col);
+  const endRow = Number(line?.end_row);
+  if ([startCol, startRow, endCol, endRow].every(Number.isFinite)) {
+    if (startCol === endCol) {
+      const step = endRow >= startRow ? 1 : -1;
+      return Array.from({ length: Math.abs(endRow - startRow) + 1 }, (_, idx) => ({
+        col: startCol,
+        row: startRow + (idx * step),
+        position: idx,
+      }));
+    }
+    if (startRow === endRow) {
+      const step = endCol >= startCol ? 1 : -1;
+      return Array.from({ length: Math.abs(endCol - startCol) + 1 }, (_, idx) => ({
+        col: startCol + (idx * step),
+        row: startRow,
+        position: idx,
+      }));
+    }
+  }
+  const colIndex = Number(line?.col_index);
+  const slotCount = Math.max(0, Number(line?.slot_count || room?.grid_rows || 0));
+  if (Number.isFinite(colIndex) && colIndex >= 0 && slotCount > 0) {
+    return Array.from({ length: slotCount }, (_, idx) => ({ col: colIndex, row: idx, position: idx }));
+  }
+  return [];
+}
+
+function buildRoomLineLayout(room, rackLines = []) {
+  const byCoord = new Map();
+  const byLineId = new Map();
+  (rackLines || []).forEach((line) => {
+    if (isUnassignedLine(line)) return;
+    const cells = getLineCells(line, room).filter((cell) => (
+      cell.col >= 0 && cell.col < (room.grid_cols || 0) && cell.row >= 0 && cell.row < (room.grid_rows || 0)
+    ));
+    byLineId.set(Number(line.id), cells);
+    cells.forEach((cell) => {
+      byCoord.set(`${cell.col}:${cell.row}`, { line, position: cell.position, col: cell.col, row: cell.row });
+    });
+  });
+  return { byCoord, byLineId };
+}
+
+function suggestNextLineName(rackLines = []) {
+  const used = (rackLines || [])
+    .map((line) => _alphaIndex(String(line?.line_name || '').trim()))
+    .filter((idx) => idx != null);
+  if (!used.length) return 'A';
+  return _alphaLabel(Math.max(...used) + 1);
+}
+
+function getRoomOrientation(roomId) {
+  try {
+    return localStorage.getItem(`${LAYOUT_ORIENTATION_KEY_PREFIX}.${roomId}`) || "vertical";
+  } catch {
+    return "vertical";
+  }
+}
+
+function setRoomOrientation(roomId, orientation) {
+  const nextOrientation = orientation === "horizontal" ? "horizontal" : "vertical";
+  const prevOrientation = getRoomOrientation(roomId);
+  if (prevOrientation === nextOrientation) {
+    localStorage.setItem(`${LAYOUT_ORIENTATION_KEY_PREFIX}.${roomId}`, nextOrientation);
+    _selectedSlotKey = null;
+    _selectedSlotContext = null;
+    return;
+  }
+  const axisState = getRoomAxisState(roomId);
+  localStorage.setItem(`${LAYOUT_AXIS_KEY_PREFIX}.${roomId}`, JSON.stringify({
+    x: axisState.y || {},
+    y: axisState.x || {},
+  }));
+  const tags = getRoomLineTags(roomId);
+  localStorage.setItem(`${LAYOUT_LINE_TAGS_KEY_PREFIX}.${roomId}`, JSON.stringify(tags));
+  localStorage.setItem(`${LAYOUT_ORIENTATION_KEY_PREFIX}.${roomId}`, nextOrientation);
+  _selectedSlotKey = null;
+  _selectedSlotContext = null;
+}
+
+function getRoomAxisState(roomId) {
+  try {
+    const raw = localStorage.getItem(`${LAYOUT_AXIS_KEY_PREFIX}.${roomId}`);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      x: parsed.x && typeof parsed.x === "object" ? parsed.x : {},
+      y: parsed.y && typeof parsed.y === "object" ? parsed.y : {},
+    };
+  } catch {
+    return { x: {}, y: {} };
+  }
+}
+
+function setRoomAxisValue(roomId, axis, index, value) {
+  const state = getRoomAxisState(roomId);
+  const bucket = axis === "y" ? state.y : state.x;
+  const cleaned = String(value || "").trim();
+  if (cleaned) bucket[String(index)] = cleaned;
+  else delete bucket[String(index)];
+  localStorage.setItem(`${LAYOUT_AXIS_KEY_PREFIX}.${roomId}`, JSON.stringify(state));
+}
+
+function getRoomLineTags(roomId) {
+  try {
+    const raw = localStorage.getItem(`${LAYOUT_LINE_TAGS_KEY_PREFIX}.${roomId}`);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function setRoomLineTag(roomId, index, tag) {
+  const state = getRoomLineTags(roomId);
+  if (!tag || tag === "normal") delete state[String(index)];
+  else state[String(index)] = tag;
+  localStorage.setItem(`${LAYOUT_LINE_TAGS_KEY_PREFIX}.${roomId}`, JSON.stringify(state));
+}
+
+function cycleRoomLineTag(roomId, index) {
+  const current = getRoomLineTags(roomId)[String(index)] || "normal";
+  const order = ["normal", "start", "exclude", "end"];
+  const next = order[(order.indexOf(current) + 1) % order.length];
+  setRoomLineTag(roomId, index, next);
+  return next;
+}
+
+function getRoomNumberRange(roomId) {
+  try {
+    const raw = localStorage.getItem(`${LAYOUT_NUMBER_RANGE_KEY_PREFIX}.${roomId}`);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const start = Number(parsed.start ?? 1);
+    const end = Number(parsed.end ?? 12);
+    const width = Number(parsed.width ?? 2);
+    return { start, end: Math.max(start, end), width: Math.max(1, width) };
+  } catch {
+    return { start: 1, end: 12, width: 2 };
+  }
+}
+
+function setRoomNumberRange(roomId, range) {
+  const next = {
+    start: Number(range.start ?? 1) || 1,
+    end: Number(range.end ?? 12) || 12,
+    width: Number(range.width ?? 2) || 2,
+  };
+  if (next.end < next.start) next.end = next.start;
+  localStorage.setItem(`${LAYOUT_NUMBER_RANGE_KEY_PREFIX}.${roomId}`, JSON.stringify(next));
+}
+
+function getLineAxisKey(roomId) {
+  return getRoomOrientation(roomId) === "vertical" ? "x" : "y";
+}
+
+function getSequenceAxisKey(roomId) {
+  return getLineAxisKey(roomId) === "x" ? "y" : "x";
+}
+
+function getSequenceTags(roomId) {
+  return getRoomLineTags(roomId);
+}
+
+function getActiveSequenceIndices(roomId, totalCount) {
+  const tags = getSequenceTags(roomId);
+  const startIdx = Object.entries(tags).find(([, tag]) => tag === "start")?.[0];
+  const endIdx = Object.entries(tags).find(([, tag]) => tag === "end")?.[0];
+  const excludes = new Set(Object.entries(tags).filter(([, tag]) => tag === "exclude").map(([idx]) => Number(idx)));
+  let active = Array.from({ length: totalCount }, (_, i) => i);
+  if (startIdx != null && endIdx != null) {
+    const lo = Math.min(Number(startIdx), Number(endIdx));
+    const hi = Math.max(Number(startIdx), Number(endIdx));
+    active = active.filter((idx) => idx >= lo && idx <= hi);
+  }
+  return active.filter((idx) => !excludes.has(idx));
+}
+
+function getSequenceTag(index, roomId) {
+  return getSequenceTags(roomId)[String(index)] || "normal";
+}
+
+function getLineLabel(roomId, index, rackLines = [], { fallback = true } = {}) {
+  const state = getRoomAxisState(roomId);
+  const axisKey = getLineAxisKey(roomId);
+  const user = String(state[axisKey]?.[String(index)] || "").trim();
+  if (user) return user;
+  if (!fallback) return "";
+  return getLineLabelByIndex(index, rackLines);
+}
+
+function getNumberLabel(roomId, positionIndex, totalCount = null) {
+  const range = getRoomNumberRange(roomId);
+  const count = totalCount ?? Math.max(range.end, positionIndex + 1);
+  const active = getActiveSequenceIndices(roomId, count);
+  const ordinal = active.indexOf(Number(positionIndex));
+  if (ordinal < 0) return "";
+  const value = range.start + ordinal;
+  if (value > range.end) return "";
+  return String(value).padStart(range.width, "0");
+}
+
+function getActiveLineIndices(roomId, cols, rackLines = []) {
+  const lineCount = getLineAxisKey(roomId) === "x" ? cols : (rackLines.length || cols);
+  const labeled = [];
+  for (let i = 0; i < lineCount; i++) {
+    if (getLineLabel(roomId, i, rackLines, { fallback: true })) labeled.push(i);
+  }
+  return labeled;
+}
+
+function isLineActive(roomId, index, cols, rackLines = []) {
+  return getActiveLineIndices(roomId, cols, rackLines).includes(Number(index));
+}
+
+function getLineTag(roomId, index) {
+  return getSequenceTag(index, roomId);
+}
+
+function getLineTagLabel(tag) {
+  if (tag === "start") return "시작";
+  if (tag === "exclude") return "제외";
+  if (tag === "end") return "종료";
+  return "일반";
+}
+
+function getCrossCellKey({ lineIndex = 0, positionIndex = 0 } = {}) {
+  return `${lineIndex}:${positionIndex}`;
+}
+
+function getRoomExcludedCells(roomId) {
+  try {
+    const raw = localStorage.getItem(`${LAYOUT_EXCLUDED_CELLS_KEY_PREFIX}.${roomId}`);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRoomExcludedCells(roomId, keys) {
+  localStorage.setItem(`${LAYOUT_EXCLUDED_CELLS_KEY_PREFIX}.${roomId}`, JSON.stringify([...new Set(keys)]));
+}
+
+function isCrossCellExcluded(roomId, context) {
+  return getRoomExcludedCells(roomId).includes(getCrossCellKey(context));
+}
+
+function toggleCrossCellExcluded(roomId, context) {
+  const key = getCrossCellKey(context);
+  const keys = getRoomExcludedCells(roomId);
+  const next = keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key];
+  saveRoomExcludedCells(roomId, next);
+}
+
+async function placeRackAtContext(rackId, room, context) {
+  if (!rackId) return;
+  if (context.isExcluded) {
+    showToast("제외된 칸에는 랙을 배치할 수 없습니다.", "warning");
+    return;
+  }
+  const targetLineId = context.line?.id || null;
+  if (!targetLineId) {
+    showToast("라인을 먼저 배치한 뒤 랙을 놓아주세요.", "warning");
+    return;
+  }
+  await apiFetch("/api/v1/racks/" + rackId, {
+    method: "PATCH",
+    body: { rack_line_id: Number(targetLineId), line_position: Number(context.position) },
+  });
+}
+
+function getAxisSuggestedLabel(axis, index, rackLines = []) {
+  if (axis === "x") return getLineLabelByIndex(index, rackLines);
+  return getPositionLabel(index);
+}
+
+function axisHasAnyUserValue(roomId, axis) {
+  const state = getRoomAxisState(roomId);
+  const bucket = axis === "y" ? state.y : state.x;
+  return Object.values(bucket || {}).some((value) => String(value || "").trim());
+}
+
+function resetLineCreateMode() {
+  _lineCreateMode = null;
+  _lineCreateStart = null;
+}
+
+function beginLineCreate(roomId) {
+  _lineCreateMode = { roomId };
+  _lineCreateStart = null;
+}
+
+async function applyTwoPointLine(room, startCtx, endCtx) {
+  if (!startCtx || !endCtx) return;
+  const startCol = Number(startCtx.colIndex ?? startCtx.lineIndex);
+  const startRow = Number(startCtx.rowIndex ?? startCtx.positionIndex);
+  const endCol = Number(endCtx.colIndex ?? endCtx.lineIndex);
+  const endRow = Number(endCtx.rowIndex ?? endCtx.positionIndex);
+  const sameRow = startRow === endRow;
+  const sameCol = startCol === endCol;
+  if (!sameRow && !sameCol) {
+    showToast("시작셀과 종료셀은 같은 행 또는 같은 열이어야 합니다.", "warning");
+    return false;
+  }
+
+  const rackLines = await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines");
+  const suggestedName = suggestNextLineName(rackLines.filter((line) => !isUnassignedLine(line)));
+  const lineName = (prompt("라인명을 입력하세요", suggestedName) || suggestedName || "").trim();
+  if (!lineName) return false;
+
+  const direction = sameRow ? "horizontal" : "vertical";
+  const targetLine = await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines", {
+    method: "POST",
+    body: {
+      line_name: lineName,
+      col_index: Math.min(startCol, endCol),
+      slot_count: (sameRow ? Math.abs(endCol - startCol) : Math.abs(endRow - startRow)) + 1,
+      start_col: startCol,
+      start_row: startRow,
+      end_col: endCol,
+      end_row: endRow,
+      direction,
+      prefix: null,
+    },
+  });
+
+  return { line: targetLine, direction, startCol, startRow, endCol, endRow };
+}
+
+function getSlotDefaultCode({ line = null, lineName = "", positionIndex = 0 } = {}) {
+  const effectiveLineName = (line?.line_name || lineName || "").trim();
+  if (!effectiveLineName) return "";
+  return `${effectiveLineName}-${String(Number(positionIndex) + 1).padStart(2, "0")}`;
+}
+
+function suggestLineNameForColumn(colIndex, rackLines = []) {
+  const sorted = [...rackLines].sort((a, b) => (a.col_index || 0) - (b.col_index || 0));
+  const left = [...sorted].filter((line) => (line.col_index || 0) < colIndex).pop();
+  const right = sorted.find((line) => (line.col_index || 0) > colIndex);
+  const leftIdx = left ? _alphaIndex(left.line_name) : null;
+  const rightIdx = right ? _alphaIndex(right.line_name) : null;
+  if (leftIdx != null) return _alphaLabel(leftIdx + 1);
+  if (rightIdx != null && rightIdx > 0) return _alphaLabel(rightIdx - 1);
+  return _alphaLabel(colIndex);
+}
+
+function suggestRackCode(lineName, position, rowLabel = null) {
+  const cleanLine = (lineName || "").trim().toUpperCase();
+  const pos = String(rowLabel || Number(position) + 1).padStart(2, "0");
+  return cleanLine ? `${cleanLine}-${pos}` : `RACK-${pos}`;
+}
+
+function applySuggestedRackCode({ force = false } = {}) {
+  const input = document.getElementById("rack-code");
+  if (!input) return;
+  if (_rackCodeSuggestionLocked && !force) return;
+  const ctx = _selectedSlotContext;
+  if (!ctx?.line) return;
+  input.value = getSlotDefaultCode({ line: ctx.line, lineName: ctx.line?.line_name, positionIndex: ctx.position }) || suggestRackCode(ctx.line.line_name, ctx.position);
+}
+
+function clampLayoutZoom(value) {
+  return Math.min(1.5, Math.max(0.7, Number(value) || 1));
+}
+
+function setLayoutZoom(value, { persist = true } = {}) {
+  _layoutZoom = clampLayoutZoom(value);
+  if (persist) localStorage.setItem(LAYOUT_ZOOM_KEY, String(_layoutZoom));
+}
+
+function getZoomPercentLabel() {
+  return `${Math.round(_layoutZoom * 100)}%`;
+}
+
+function applyPhysicalLayoutResponsiveSizing() {
+  const shell = document.getElementById("layout-shell");
+  if (shell) {
+    const shellTop = shell.getBoundingClientRect().top;
+    const availableShellHeight = Math.max(360, window.innerHeight - shellTop - 16);
+    shell.style.height = `${availableShellHeight}px`;
+  }
+  document.querySelectorAll(".floor-plan-viewport").forEach((viewport) => {
+    const viewportTop = viewport.getBoundingClientRect().top;
+    const availableViewportHeight = Math.max(240, window.innerHeight - viewportTop - 20);
+    viewport.style.maxHeight = `${availableViewportHeight}px`;
+  });
+}
+
+function enableFloorPlanPanning(viewport) {
+  if (!viewport || viewport.dataset.panningBound === "1") return;
+  viewport.dataset.panningBound = "1";
+  let active = false;
+  let startX = 0;
+  let startY = 0;
+  let scrollLeft = 0;
+  let scrollTop = 0;
+  viewport.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    active = true;
+    startX = event.clientX;
+    startY = event.clientY;
+    scrollLeft = viewport.scrollLeft;
+    scrollTop = viewport.scrollTop;
+    viewport.classList.add("is-panning");
+  });
+  const stop = () => {
+    active = false;
+    viewport.classList.remove("is-panning");
+  };
+  viewport.addEventListener("pointermove", (event) => {
+    if (!active) return;
+    viewport.scrollLeft = scrollLeft - (event.clientX - startX);
+    viewport.scrollTop = scrollTop - (event.clientY - startY);
+  });
+  viewport.addEventListener("pointerup", stop);
+  viewport.addEventListener("pointercancel", stop);
+  viewport.addEventListener("pointerleave", stop);
+}
+
+function _setSlotStatus(statusEl, message, emphasis = "") {
+  if (!statusEl) return;
+  statusEl.innerHTML = "";
+  if (emphasis) {
+    const strong = document.createElement("strong");
+    strong.textContent = emphasis;
+    statusEl.appendChild(strong);
+    statusEl.appendChild(document.createTextNode(" "));
+  }
+  statusEl.appendChild(document.createTextNode(message));
+}
+
 
 /* ── Data Loading ── */
 
+async function getEffectiveLayoutPartnerId() {
+  const direct = getCtxPartnerId();
+  if (direct) return direct;
+  try {
+    const res = await fetch(withRootPath('/api/v1/preferences/infra.pinned_partner_id'));
+    if (res.ok) {
+      const pref = await res.json();
+      if (pref?.value) return pref.value;
+    }
+  } catch {
+    // ignore fallback errors
+  }
+  return null;
+}
+
+function scheduleLayoutTreeRetry() {
+  if (_layoutTreeRetryTimer || _layoutTreeRetryCount >= 8) return;
+  _layoutTreeRetryCount += 1;
+  _layoutTreeRetryTimer = setTimeout(() => {
+    _layoutTreeRetryTimer = null;
+    loadTree()
+      .then(() => loadLabelBaseSetting())
+      .catch(() => {});
+  }, 300 * _layoutTreeRetryCount);
+}
+
 async function loadTree() {
-  const cid = getCtxPartnerId();
+  const cid = await getEffectiveLayoutPartnerId();
   if (!cid) {
     _centers = [];
     _rooms = {};
     _racks = {};
+    _rackLines = {};
     _selectedNode = null;
     _selectedCenterId = null;
     _selectedRoomId = null;
     renderEmptyTree();
     renderEmptyContent();
     syncButtons();
+    scheduleLayoutTreeRetry();
     return;
+  }
+
+  _layoutTreeRetryCount = 0;
+  if (_layoutTreeRetryTimer) {
+    clearTimeout(_layoutTreeRetryTimer);
+    _layoutTreeRetryTimer = null;
   }
 
   _centers = await apiFetch("/api/v1/centers?partner_id=" + cid);
   _rooms = {};
   _racks = {};
+  _rackLines = {};
 
   for (const center of _centers) {
     const rooms = await apiFetch("/api/v1/centers/" + center.id + "/rooms");
@@ -40,6 +571,11 @@ async function loadTree() {
     for (const room of rooms) {
       const racks = await apiFetch("/api/v1/rooms/" + room.id + "/racks");
       _racks[room.id] = racks;
+      try {
+        _rackLines[room.id] = await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines");
+      } catch {
+        _rackLines[room.id] = [];
+      }
     }
   }
 
@@ -77,6 +613,13 @@ function findNodeData(type, id) {
     }
     return null;
   }
+  if (type === "line") {
+    for (const lines of Object.values(_rackLines)) {
+      const line = lines.find(line => String(line.id) === String(id));
+      if (line) return line;
+    }
+    return null;
+  }
   return null;
 }
 
@@ -105,6 +648,60 @@ function renderTree() {
     return;
   }
 
+  const makeRackNode = (rack) => createTreeNode({
+    key: "rack-" + rack.id,
+    icon: "💽",
+    label: rack.rack_name || rack.rack_code,
+    meta: rack.total_units + "U",
+    nodeType: "rack",
+    nodeId: rack.id,
+    nodeData: rack,
+    hasChildren: false,
+    collapsed: false,
+    childUl: null,
+  });
+
+  const makeRoomChildUl = (room, racks) => {
+    const roomChildUl = document.createElement("ul");
+    const roomLines = (_rackLines[room.id] || []).filter((line) => !isUnassignedLine(line)).sort((a, b) => String(a.line_name || "").localeCompare(String(b.line_name || "")));
+    const unassignedRacks = racks.filter(rack => !rack.rack_line_id);
+    const unassignedUl = document.createElement("ul");
+    unassignedRacks.forEach(rack => unassignedUl.appendChild(makeRackNode(rack)));
+
+    roomLines.forEach(line => {
+      const lineRacks = racks.filter(rack => Number(rack.rack_line_id) === Number(line.id));
+      const lineUl = document.createElement("ul");
+      lineRacks.forEach(rack => lineUl.appendChild(makeRackNode(rack)));
+      roomChildUl.appendChild(createTreeNode({
+        key: "line-" + line.id,
+        icon: "📏",
+        label: line.line_name,
+        meta: lineRacks.length + " 랙",
+        nodeType: "line",
+        nodeId: line.id,
+        nodeData: line,
+        hasChildren: lineRacks.length > 0,
+        collapsed: _treeCollapsed.has("line-" + line.id),
+        childUl: lineUl,
+      }));
+    });
+
+    roomChildUl.appendChild(createTreeNode({
+      key: "line-unassigned-" + room.id,
+      icon: "🗂️",
+      label: "미할당 라인",
+      meta: unassignedRacks.length + " 랙",
+      nodeType: "line",
+      nodeId: "unassigned-" + room.id,
+      nodeData: { id: "unassigned-" + room.id, room_id: room.id, line_name: "미할당 라인", is_unassigned: true },
+      hasChildren: unassignedRacks.length > 0,
+      collapsed: _treeCollapsed.has("line-unassigned-" + room.id),
+      childUl: unassignedUl,
+    }));
+
+    return roomChildUl;
+  };
+
   const rootUl = document.createElement("ul");
   rootUl.className = "classification-tree-root";
 
@@ -113,67 +710,46 @@ function renderTree() {
     const centerKey = "center-" + center.id;
     const centerCollapsed = _treeCollapsed.has(centerKey);
 
-    // Group rooms by floor
     const floorMap = {};
     rooms.forEach(room => {
-      const floor = room.floor || "\uAE30\uBCF8\uCE35";
+      const floor = room.floor || "기본층";
       if (!floorMap[floor]) floorMap[floor] = [];
       floorMap[floor].push(room);
     });
     const floorKeys = Object.keys(floorMap).sort((a, b) => a.localeCompare(b, "ko-KR"));
-
-    // Build floor children
     const centerChildUl = document.createElement("ul");
+
     floorKeys.forEach(floor => {
       const floorRooms = floorMap[floor];
       const floorKey = "floor-" + center.id + "-" + floor;
       const floorCollapsed = _treeCollapsed.has(floorKey);
-
-      // Build room children
       const floorChildUl = document.createElement("ul");
+
       floorRooms.forEach(room => {
         const racks = _racks[room.id] || [];
         const roomKey = "room-" + room.id;
         const roomCollapsed = _treeCollapsed.has(roomKey);
-
-        // Build rack children
-        const roomChildUl = document.createElement("ul");
-        racks.forEach(rack => {
-          roomChildUl.appendChild(createTreeNode({
-            key: "rack-" + rack.id,
-            icon: "\uD83D\uDCBD",
-            label: rack.rack_name || rack.rack_code,
-            meta: rack.total_units + "U",
-            nodeType: "rack",
-            nodeId: rack.id,
-            nodeData: rack,
-            hasChildren: false,
-            collapsed: false,
-            childUl: null,
-          }));
-        });
-
+        const roomChildUl = makeRoomChildUl(room, racks);
         floorChildUl.appendChild(createTreeNode({
           key: roomKey,
-          icon: "\uD83D\uDEAA",
+          icon: "🚪",
           label: room.room_name,
-          meta: racks.length + " \uB799",
+          meta: racks.length + " 랙",
           nodeType: "room",
           nodeId: room.id,
           nodeData: room,
-          hasChildren: racks.length > 0,
+          hasChildren: true,
           collapsed: roomCollapsed,
           childUl: roomChildUl,
         }));
       });
 
-      // Only show floor grouping if there are multiple floors
       if (floorKeys.length > 1) {
         centerChildUl.appendChild(createTreeNode({
           key: floorKey,
           icon: "",
           label: floor,
-          meta: floorRooms.length + " \uC2E4",
+          meta: floorRooms.length + " 실",
           nodeType: "floor",
           nodeId: center.id + "-" + floor,
           nodeData: { center, floor, rooms: floorRooms },
@@ -182,50 +758,16 @@ function renderTree() {
           childUl: floorChildUl,
         }));
       } else {
-        // Single floor: attach rooms directly under center
-        floorRooms.forEach(room => {
-          const racks = _racks[room.id] || [];
-          const roomKey = "room-" + room.id;
-          const roomCollapsed2 = _treeCollapsed.has(roomKey);
-
-          const roomChildUl2 = document.createElement("ul");
-          racks.forEach(rack => {
-            roomChildUl2.appendChild(createTreeNode({
-              key: "rack-" + rack.id,
-              icon: "\uD83D\uDCBD",
-              label: rack.rack_name || rack.rack_code,
-              meta: rack.total_units + "U",
-              nodeType: "rack",
-              nodeId: rack.id,
-              nodeData: rack,
-              hasChildren: false,
-              collapsed: false,
-              childUl: null,
-            }));
-          });
-
-          centerChildUl.appendChild(createTreeNode({
-            key: roomKey,
-            icon: "\uD83D\uDEAA",
-            label: room.room_name,
-            meta: racks.length + " \uB799",
-            nodeType: "room",
-            nodeId: room.id,
-            nodeData: room,
-            hasChildren: racks.length > 0,
-            collapsed: roomCollapsed2,
-            childUl: roomChildUl2,
-          }));
-        });
+        Array.from(floorChildUl.children).forEach(child => centerChildUl.appendChild(child));
       }
     });
 
     const totalRacks = rooms.reduce((sum, r) => sum + (_racks[r.id] || []).length, 0);
     rootUl.appendChild(createTreeNode({
       key: centerKey,
-      icon: "\uD83D\uDCCD",
+      icon: "📍",
       label: center.center_name,
-      meta: rooms.length + " \uC2E4 / " + totalRacks + " \uB799",
+      meta: rooms.length + " 실 / " + totalRacks + " 랙",
       nodeType: "center",
       nodeId: center.id,
       nodeData: center,
@@ -298,6 +840,35 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   btn.addEventListener("click", () => selectNode(nodeType, nodeId, nodeData));
 
   nodeDiv.appendChild(btn);
+  const actions = document.createElement("div");
+  actions.className = "layout-tree-node-actions";
+  const addAction = (label, onClick) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-secondary btn-sm layout-tree-node-action";
+    if (label === "삭제") b.classList.add("is-delete-action");
+    b.textContent = label;
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    actions.appendChild(b);
+  };
+  if (nodeType === "center") {
+    addAction("전산실 추가", () => { _selectedCenterId = nodeId; openRoomModal(); });
+    addAction("수정", () => openCenterModal(nodeData));
+    addAction("삭제", () => deleteCenter(nodeData));
+  } else if (nodeType === "room") {
+    addAction("라인 추가", () => { _selectedRoomId = nodeId; beginLineCreate(nodeId); selectNode("room", nodeId, nodeData); });
+    addAction("수정", () => openRoomModal(nodeData));
+    addAction("삭제", () => deleteRoom(nodeData));
+  } else if (nodeType === "line") {
+    if (nodeData?.is_unassigned) addAction("랙 추가", () => { _selectedRoomId = nodeData.room_id; _selectedSlotContext = null; openRackModal(); });
+  } else if (nodeType === "rack") {
+    addAction("수정", () => openRackModal(nodeData));
+    addAction("삭제", () => deleteRack(nodeData));
+  }
+  nodeDiv.appendChild(actions);
   li.appendChild(nodeDiv);
 
   if (hasChildren && childUl) {
@@ -312,6 +883,39 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
 
 /* ── Node Selection ── */
 
+function setLayoutTreeCollapsed(collapsed) {
+  const shell = document.getElementById("layout-shell");
+  const treePanel = document.getElementById("layout-tree-panel");
+  const splitter = document.getElementById("layout-category-splitter");
+  const content = document.getElementById("layout-content");
+  const toggleBtn = document.getElementById("btn-toggle-layout-tree");
+  if (!shell) return;
+  shell.classList.toggle("layout-tree-collapsed", !!collapsed);
+  if (treePanel) treePanel.style.display = collapsed ? "none" : "flex";
+  if (splitter) splitter.style.display = collapsed ? "none" : "block";
+  if (content) content.style.width = collapsed ? "100%" : "";
+  if (toggleBtn) toggleBtn.textContent = collapsed ? "❯" : "❮";
+  localStorage.setItem(LAYOUT_TREE_COLLAPSED_KEY, collapsed ? "1" : "0");
+}
+
+function restoreLayoutTreeCollapsed() {
+  const collapsed = window.innerWidth <= 960 && localStorage.getItem(LAYOUT_TREE_COLLAPSED_KEY) === "1";
+  setLayoutTreeCollapsed(collapsed);
+}
+
+function updateLayoutAutoCollapseBtn() {
+  const btn = document.getElementById("btn-layout-auto-collapse");
+  if (!btn) return;
+  btn.classList.toggle("active", _layoutAutoCollapse);
+  btn.title = _layoutAutoCollapse ? "선택 시 목록 자동 접기 (켜짐)" : "선택 시 목록 자동 접기 (꺼짐)";
+  btn.setAttribute("aria-label", btn.title);
+}
+
+function focusLayoutDetailPanel() {
+  if (!_layoutAutoCollapse || window.innerWidth <= 960) return;
+  setLayoutTreeCollapsed(true);
+}
+
 function selectNode(type, id, data) {
   _selectedNode = { type, id, data };
 
@@ -323,6 +927,14 @@ function selectNode(type, id, data) {
   } else if (type === "room") {
     _selectedCenterId = data.center_id;
     _selectedRoomId = id;
+  } else if (type === "line") {
+    _selectedRoomId = data.room_id;
+    for (const [centerId, rooms] of Object.entries(_rooms)) {
+      if (rooms.some(r => r.id === data.room_id)) {
+        _selectedCenterId = Number(centerId);
+        break;
+      }
+    }
   } else if (type === "rack") {
     _selectedRoomId = data.room_id;
     // Find center from room
@@ -349,7 +961,9 @@ function selectNode(type, id, data) {
   if (type === "center") renderCenterView(content, data);
   else if (type === "floor") renderFloorView(content, data);
   else if (type === "room") renderRoomView(content, data);
+  else if (type === "line") renderRoomView(content, _findRoomData(data.room_id) || data);
   else if (type === "rack") renderRackView(content, data);
+  focusLayoutDetailPanel();
 }
 
 function renderEmptyContent() {
@@ -362,11 +976,14 @@ function renderEmptyContent() {
   p.textContent = "\uC67C\uCABD \uD2B8\uB9AC\uC5D0\uC11C \uC13C\uD130, \uC804\uC0B0\uC2E4 \uB610\uB294 \uB799\uC744 \uC120\uD0DD\uD558\uC138\uC694.";
   div.appendChild(p);
   content.appendChild(div);
+  requestAnimationFrame(() => applyPhysicalLayoutResponsiveSizing());
 }
 
 function syncButtons() {
-  document.getElementById("btn-add-room").disabled = !_selectedCenterId;
-  document.getElementById("btn-add-rack").disabled = !_selectedRoomId;
+  const addRoomBtn = document.getElementById("btn-add-room");
+  const addRackBtn = document.getElementById("btn-add-rack");
+  if (addRoomBtn) addRoomBtn.disabled = !_selectedCenterId;
+  if (addRackBtn) addRackBtn.disabled = !_selectedRoomId;
 }
 
 /* ── Content Views ── */
@@ -425,9 +1042,7 @@ function renderCenterView(container, center) {
   container.appendChild(wrapper);
 
   wrapper.appendChild(createContentHeader(
-    "\uD83D\uDCCD", center.center_name,
-    () => openCenterModal(center),
-    () => deleteCenter(center),
+    "\uD83D\uDCCD", center.center_name
   ));
 
   // Info card
@@ -506,53 +1121,35 @@ async function renderRoomView(container, room) {
   wrapper.style.cssText = "padding:20px;overflow:auto;width:100%;";
   container.appendChild(wrapper);
 
-  // Header
   const header = document.createElement("div");
   header.className = "layout-view-header";
   const h3 = document.createElement("h3");
   h3.textContent = room.room_name + (room.floor ? " (" + room.floor + ")" : "");
   header.appendChild(h3);
 
-  const actions = document.createElement("div");
-  actions.className = "infra-inline-actions";
-  const btnAddRack = document.createElement("button");
-  btnAddRack.className = "btn btn-sm btn-primary";
-  btnAddRack.textContent = "+ 랙 추가";
-  btnAddRack.addEventListener("click", () => openRackModal());
-  actions.appendChild(btnAddRack);
-
-  const btnEditRoom = document.createElement("button");
-  btnEditRoom.className = "btn btn-sm btn-secondary";
-  btnEditRoom.textContent = "전산실 수정";
-  btnEditRoom.addEventListener("click", () => openRoomModal(room));
-  actions.appendChild(btnEditRoom);
-  header.appendChild(actions);
-  wrapper.appendChild(header);
-
-  // Toolbar: edit mode toggle + code display select
-  const toolbar = document.createElement("div");
-  toolbar.className = "floor-plan-toolbar";
+  const headerActions = document.createElement("div");
+  headerActions.className = "infra-inline-actions";
 
   const btnToggleEdit = document.createElement("button");
   btnToggleEdit.className = "btn btn-sm " + (_editMode ? "btn-primary" : "btn-secondary");
-  btnToggleEdit.textContent = _editMode ? "\uD3B8\uC9D1 \uC644\uB8CC" : "\uD3B8\uC9D1 \uBAA8\uB4DC";
+  btnToggleEdit.textContent = _editMode ? "편집 완료" : "편집 모드";
   btnToggleEdit.addEventListener("click", () => {
     _editMode = !_editMode;
     const content = document.getElementById("layout-content");
     content.textContent = "";
     renderRoomView(content, room);
   });
-  toolbar.appendChild(btnToggleEdit);
+  headerActions.appendChild(btnToggleEdit);
 
+  const codeLabel = document.createElement("label");
+  codeLabel.className = "layout-inline-select";
+  codeLabel.textContent = "명칭";
   const codeSelect = document.createElement("select");
-  codeSelect.className = "select-sm";
-  codeSelect.title = "\uD45C\uC2DC \uCF54\uB4DC";
-  const codeOptions = [
-    { value: "rack_code", label: "\uB799\uCF54\uB4DC" },
-    { value: "project_code", label: "\uD504\uB85C\uC81D\uD2B8\uCF54\uB4DC" },
-    { value: "system_id", label: "\uC2DC\uC2A4\uD15CID" },
-  ];
-  codeOptions.forEach(opt => {
+  [
+    { value: "rack_code", label: "랙코드" },
+    { value: "project_code", label: "프로젝트코드" },
+    { value: "rack_position", label: "랙좌표" },
+  ].forEach((opt) => {
     const o = document.createElement("option");
     o.value = opt.value;
     o.textContent = opt.label;
@@ -565,127 +1162,293 @@ async function renderRoomView(container, room) {
     content.textContent = "";
     renderRoomView(content, room);
   });
-  toolbar.appendChild(codeSelect);
-  wrapper.appendChild(toolbar);
+  codeLabel.appendChild(codeSelect);
+  headerActions.appendChild(codeLabel);
 
-  // Fetch rack-lines
+  const zoomWrap = document.createElement("div");
+  zoomWrap.className = "floor-plan-zoom-group";
+  const btnZoomOut = document.createElement("button");
+  btnZoomOut.className = "btn btn-secondary btn-sm";
+  btnZoomOut.textContent = "－";
+  const zoomLabel = document.createElement("span");
+  zoomLabel.className = "floor-plan-zoom-label";
+  zoomLabel.textContent = getZoomPercentLabel();
+  const btnZoomIn = document.createElement("button");
+  btnZoomIn.className = "btn btn-secondary btn-sm";
+  btnZoomIn.textContent = "＋";
+  btnZoomOut.addEventListener("click", () => {
+    setLayoutZoom(_layoutZoom - 0.1);
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRoomView(content, room);
+  });
+  btnZoomIn.addEventListener("click", () => {
+    setLayoutZoom(_layoutZoom + 0.1);
+    const content = document.getElementById("layout-content");
+    content.textContent = "";
+    renderRoomView(content, room);
+  });
+  zoomWrap.appendChild(btnZoomOut);
+  zoomWrap.appendChild(zoomLabel);
+  zoomWrap.appendChild(btnZoomIn);
+  headerActions.appendChild(zoomWrap);
+  header.appendChild(headerActions);
+  wrapper.appendChild(header);
+
+  const slotStatus = document.createElement("div");
+  slotStatus.className = "floor-plan-slot-status";
+  _setSlotStatus(slotStatus, _lineCreateMode?.roomId === room.id ? "라인 추가 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요." : "라인은 가로/세로 직선으로 배치됩니다. 라인 추가 후 슬롯에 랙을 배치하세요.", "안내");
+  const slotActions = document.createElement("div");
+  slotActions.className = "infra-inline-actions";
+  slotActions.style.marginBottom = "12px";
+
   let rackLines = [];
   try {
     rackLines = await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines");
-  } catch { /* empty */ }
-
+  } catch {
+    rackLines = [];
+  }
+  const placedLines = rackLines.filter((line) => !isUnassignedLine(line));
+  const layout = buildRoomLineLayout(room, placedLines);
   const allRacks = _racks[room.id] || [];
   const cols = room.grid_cols || 10;
   const rows = room.grid_rows || 12;
 
-  // Build line-by-column lookup
-  const lineByCol = {};
-  rackLines.forEach(line => { lineByCol[line.col_index] = line; });
-
-  // Build rack position lookup: "lineId-pos" -> rack
   const rackByPos = {};
-  rackLines.forEach(line => {
-    (line.racks || []).forEach(r => {
-      if (r.line_position != null) {
-        rackByPos[line.id + "-" + r.line_position] = r;
-      }
+  placedLines.forEach((line) => {
+    (line.racks || []).forEach((rack) => {
+      if (rack.line_position != null) rackByPos[`${line.id}:${rack.line_position}`] = rack;
     });
   });
-
-  // Identify placed rack IDs
   const placedRackIds = new Set();
-  rackLines.forEach(line => {
-    (line.racks || []).forEach(r => placedRackIds.add(r.id));
-  });
-  const unplacedRacks = allRacks.filter(r => !placedRackIds.has(r.id));
+  placedLines.forEach((line) => (line.racks || []).forEach((rack) => placedRackIds.add(rack.id)));
+  const unplacedRacks = allRacks.filter((rack) => !placedRackIds.has(rack.id));
 
-  // Info row
+  const renderSlotActions = () => {
+    slotActions.textContent = "";
+    const ctx = _selectedSlotContext;
+    if (!ctx) return;
+    if (ctx.line && _editMode) {
+      const btnToggleSlot = document.createElement("button");
+      btnToggleSlot.className = "btn btn-secondary btn-sm";
+      btnToggleSlot.textContent = ctx.isDisabled ? "제외 해제" : "칸 제외";
+      btnToggleSlot.addEventListener("click", () => _toggleDisabledSlot(ctx.line, ctx.position, room));
+      slotActions.appendChild(btnToggleSlot);
+    }
+    if (ctx.line && !ctx.rack && !ctx.isDisabled) {
+      const btnAddRackHere = document.createElement("button");
+      btnAddRackHere.className = "btn btn-primary btn-sm";
+      btnAddRackHere.textContent = "여기에 랙 추가";
+      btnAddRackHere.addEventListener("click", () => openRackModal());
+      slotActions.appendChild(btnAddRackHere);
+    }
+    if (!ctx.line && !_lineCreateMode) {
+      const hint = document.createElement("span");
+      hint.className = "text-muted";
+      hint.style.fontSize = "12px";
+      hint.textContent = "빈 칸은 트리의 라인 추가 후 배치에 사용됩니다.";
+      slotActions.appendChild(hint);
+    }
+  };
+
   const info = document.createElement("div");
   info.className = "layout-view-info";
-  info.textContent = "\uB799 " + allRacks.length + "\uAC1C | \uBC30\uCE58 " + placedRackIds.size + " | \uBBF8\uBC30\uCE58 " + unplacedRacks.length + " | \uACA9\uC790 " + cols + "\u00D7" + rows;
+  info.textContent = `랙 ${allRacks.length}개 | 배치 ${placedRackIds.size} | 미배치 ${unplacedRacks.length} | 격자 ${cols}×${rows} | 라인 ${placedLines.length}`;
   wrapper.appendChild(info);
 
-  // Floor plan grid
+  const floorPlanShell = document.createElement("div");
+  floorPlanShell.className = "floor-plan-shell";
+  wrapper.appendChild(floorPlanShell);
+
+  const floorPlanMain = document.createElement("div");
+  floorPlanMain.className = "floor-plan-main";
+  floorPlanShell.appendChild(floorPlanMain);
+
+  const floorPlanSide = document.createElement("aside");
+  floorPlanSide.className = "floor-plan-side";
+  floorPlanShell.appendChild(floorPlanSide);
+
+  const viewport = document.createElement("div");
+  viewport.className = "floor-plan-viewport";
+  viewport.style.minHeight = "360px";
+  floorPlanMain.appendChild(viewport);
+  enableFloorPlanPanning(viewport);
+  requestAnimationFrame(() => applyPhysicalLayoutResponsiveSizing());
+
+  const canvas = document.createElement("div");
+  canvas.className = "floor-plan-canvas";
+  viewport.appendChild(canvas);
+
   const grid = document.createElement("div");
   grid.className = "floor-plan-grid";
-  grid.style.gridTemplateColumns = "28px repeat(" + cols + ", 64px)";
-  wrapper.appendChild(grid);
+  const cellWidth = Math.round(64 * _layoutZoom);
+  const cellHeight = Math.round(40 * _layoutZoom);
+  const rowLabelWidth = Math.max(24, Math.round(28 * _layoutZoom));
+  grid.style.setProperty("--floor-cell-width", cellWidth + "px");
+  grid.style.setProperty("--floor-cell-height", cellHeight + "px");
+  grid.style.setProperty("--floor-row-label-width", rowLabelWidth + "px");
+  grid.style.setProperty("--floor-cell-font-size", Math.max(9, Math.round(11 * _layoutZoom)) + "px");
+  grid.style.setProperty("--floor-header-font-size", Math.max(9, Math.round(11 * _layoutZoom)) + "px");
+  grid.style.setProperty("--floor-row-label-font-size", Math.max(8, Math.round(10 * _layoutZoom)) + "px");
+  grid.style.gridTemplateColumns = rowLabelWidth + "px repeat(" + cols + ", " + cellWidth + "px) " + rowLabelWidth + "px";
+  canvas.appendChild(grid);
 
-  // Header row: corner + column labels
   const corner = document.createElement("div");
-  corner.className = "floor-plan-row-label";
+  corner.className = "floor-plan-row-label floor-plan-axis-corner";
+  corner.textContent = "좌표";
   grid.appendChild(corner);
 
   for (let c = 0; c < cols; c++) {
-    const colHeader = document.createElement("div");
-    colHeader.className = "floor-plan-header";
-    const line = lineByCol[c];
-    if (line) {
-      colHeader.textContent = line.line_name;
-      if (_editMode) {
-        colHeader.style.cursor = "pointer";
-        colHeader.addEventListener("click", () => _onLineHeaderClick(line, room));
-      }
-    } else {
-      colHeader.textContent = String.fromCharCode(65 + c);
-      if (_editMode) {
-        colHeader.style.cursor = "pointer";
-        colHeader.addEventListener("click", () => _onEmptyColumnClick(c, room));
-      }
-    }
-    grid.appendChild(colHeader);
+    const headerCell = document.createElement("div");
+    headerCell.className = "floor-plan-header floor-plan-axis-header";
+    headerCell.textContent = String(c + 1);
+    grid.appendChild(headerCell);
   }
+  const topRightFrame = document.createElement("div");
+  topRightFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+  topRightFrame.setAttribute("aria-hidden", "true");
+  grid.appendChild(topRightFrame);
 
-  // Data rows
   for (let r = 0; r < rows; r++) {
-    // Row label
     const rowLabel = document.createElement("div");
-    rowLabel.className = "floor-plan-row-label";
+    rowLabel.className = "floor-plan-row-label floor-plan-axis-row";
     rowLabel.textContent = String(r + 1);
     grid.appendChild(rowLabel);
 
     for (let c = 0; c < cols; c++) {
       const cell = document.createElement("div");
       cell.className = "floor-plan-cell";
-      const line = lineByCol[c];
+      const layoutEntry = layout.byCoord.get(`${c}:${r}`);
+      const crossContext = { lineIndex: c, positionIndex: r, colIndex: c, rowIndex: r, position: r };
+      const crossExcluded = isCrossCellExcluded(room.id, crossContext);
 
-      if (!line) {
+      if (!layoutEntry) {
         cell.classList.add("empty");
+        if (crossExcluded) cell.classList.add("disabled", "axis-excluded");
+        cell.title = crossExcluded ? "제외된 빈 칸" : `빈 칸 (${c + 1}, ${r + 1})`;
+        cell.addEventListener("mouseenter", () => {
+          cell.classList.add("slot-hover");
+          _setSlotStatus(slotStatus, _lineCreateMode?.roomId === room.id ? "라인 추가 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요." : `빈 칸 좌표 ${c + 1}, ${r + 1}`, "현재 위치");
+        });
+        cell.addEventListener("mouseleave", () => {
+          cell.classList.remove("slot-hover");
+          if (_selectedSlotKey !== `empty:${c}:${r}`) {
+            _setSlotStatus(slotStatus, _lineCreateMode?.roomId === room.id ? "라인 추가 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요." : "라인은 가로/세로 직선으로 배치됩니다. 라인 추가 후 슬롯에 랙을 배치하세요.", "안내");
+          }
+        });
+        cell.addEventListener("click", async () => {
+          if (_lineCreateMode?.roomId === room.id) {
+            if (!_lineCreateStart) {
+              _lineCreateStart = { colIndex: c, rowIndex: r, lineIndex: c, positionIndex: r };
+              grid.querySelectorAll(".floor-plan-cell.slot-selected").forEach((el) => el.classList.remove("slot-selected"));
+              cell.classList.add("slot-selected");
+              _setSlotStatus(slotStatus, "시작셀이 선택되었습니다. 종료셀을 클릭하세요.", "라인 추가");
+              return;
+            }
+            try {
+              const created = await applyTwoPointLine(room, _lineCreateStart, { colIndex: c, rowIndex: r, lineIndex: c, positionIndex: r });
+              if (created) {
+                resetLineCreateMode();
+                showToast("라인을 생성했습니다.");
+                await loadTree();
+                const content = document.getElementById("layout-content");
+                content.textContent = "";
+                renderRoomView(content, _findRoomData(room.id) || room);
+              }
+            } catch (err) {
+              showToast(err.message, "error");
+            }
+            return;
+          }
+          if (_editMode) {
+            toggleCrossCellExcluded(room.id, crossContext);
+            const content = document.getElementById("layout-content");
+            content.textContent = "";
+            renderRoomView(content, room);
+            return;
+          }
+          _selectedSlotKey = `empty:${c}:${r}`;
+          _selectedSlotContext = { line: null, colIndex: c, rowIndex: r, lineIndex: c, position: r, room, rackLines, isExcluded: crossExcluded };
+          grid.querySelectorAll(".floor-plan-cell.slot-selected").forEach((el) => el.classList.remove("slot-selected"));
+          cell.classList.add("slot-selected");
+          _setSlotStatus(slotStatus, crossExcluded ? "제외된 빈 칸입니다." : `빈 칸 좌표 ${c + 1}, ${r + 1}`, "선택된 칸");
+          renderSlotActions();
+        });
+        cell.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          if (_draggedRackId && !crossExcluded) cell.classList.add("drag-over");
+          if (_draggedRackId && crossExcluded) cell.classList.add("drag-invalid");
+        });
+        cell.addEventListener("dragleave", () => {
+          cell.classList.remove("drag-over");
+          cell.classList.remove("drag-invalid");
+        });
+        cell.addEventListener("drop", async (e) => {
+          e.preventDefault();
+          cell.classList.remove("drag-over");
+          cell.classList.remove("drag-invalid");
+          const rackId = Number(e.dataTransfer.getData("application/x-rack-id"));
+          if (!rackId) return;
+          await placeRackAtContext(rackId, room, { ...crossContext, line: null, isExcluded: crossExcluded });
+        });
         grid.appendChild(cell);
         continue;
       }
 
+      const line = layoutEntry.line;
+      const positionIndex = layoutEntry.position;
+      const rack = rackByPos[`${line.id}:${positionIndex}`];
+      const slotExcluded = crossExcluded || (line.disabled_slots || []).includes(positionIndex);
       cell.classList.add("line-slot");
       cell.dataset.lineId = line.id;
-      cell.dataset.position = r;
-
-      // Check if slot is disabled
-      const disabledSlots = line.disabled_slots || [];
-      if (disabledSlots.includes(r)) {
-        cell.classList.add("disabled");
-        if (_editMode) {
-          cell.addEventListener("click", () => _toggleDisabledSlot(line, r, room));
+      cell.dataset.position = positionIndex;
+      cell.dataset.lineName = line.line_name;
+      cell.dataset.slotKey = `${line.id}:${positionIndex}`;
+      if (slotExcluded) cell.classList.add("disabled", "axis-excluded");
+      if (line.direction) cell.classList.add(`line-${line.direction}`);
+      const selectSlot = (message, extra = {}) => {
+        _selectedSlotKey = cell.dataset.slotKey;
+        _selectedSlotContext = { line, colIndex: c, rowIndex: r, lineIndex: c, position: positionIndex, room, rackLines, isDisabled: slotExcluded, isExcluded: slotExcluded, ...extra };
+        grid.querySelectorAll(".floor-plan-cell.slot-selected").forEach((el) => el.classList.remove("slot-selected"));
+        cell.classList.add("slot-selected");
+        _setSlotStatus(slotStatus, message || `${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} 슬롯입니다.`, "선택된 슬롯");
+        renderSlotActions();
+      };
+      cell.addEventListener("mouseenter", () => {
+        cell.classList.add("slot-hover");
+        _setSlotStatus(slotStatus, `${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} 슬롯입니다.`, "현재 위치");
+      });
+      cell.addEventListener("mouseleave", () => {
+        cell.classList.remove("slot-hover");
+        if (_selectedSlotKey !== cell.dataset.slotKey) {
+          _setSlotStatus(slotStatus, _lineCreateMode?.roomId === room.id ? "라인 추가 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요." : "라인은 가로/세로 직선으로 배치됩니다. 라인 추가 후 슬롯에 랙을 배치하세요.", "안내");
         }
+      });
+
+      if (slotExcluded) {
+        cell.title = `${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} (제외 슬롯)`;
+        cell.addEventListener("click", () => {
+          if (_editMode) {
+            _toggleDisabledSlot(line, positionIndex, room);
+            return;
+          }
+          selectSlot(`${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} 제외된 슬롯입니다.`, { isDisabled: true, isExcluded: true });
+        });
         grid.appendChild(cell);
         continue;
       }
 
-      // Check if rack occupies this slot
-      const rack = rackByPos[line.id + "-" + r];
       if (rack) {
         cell.classList.add("has-rack");
         cell.draggable = true;
         cell.dataset.rackId = rack.id;
-        cell.textContent = _getRackDisplayCode(rack);
+        cell.textContent = _getRackDisplayCode(rack, { line, positionIndex, rackLines });
         cell.title = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
-
-        // Click to select in tree
         cell.addEventListener("click", () => {
-          const fullRack = allRacks.find(ar => ar.id === rack.id) || rack;
+          const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
+          selectSlot(`${_getLinePositionLabel(cell.dataset.lineName, positionIndex)}에 ${rack.rack_name || rack.rack_code} 랙이 배치되어 있습니다.`, { rack });
           selectNode("rack", rack.id, fullRack);
         });
-
-        // Drag start for placed rack
         cell.addEventListener("dragstart", (e) => {
           _draggedRackId = rack.id;
           e.dataTransfer.setData("application/x-rack-id", String(rack.id));
@@ -697,24 +1460,23 @@ async function renderRoomView(container, room) {
           cell.style.opacity = "";
         });
       } else {
-        // Empty line slot
-        if (_editMode) {
-          cell.addEventListener("click", () => _toggleDisabledSlot(line, r, room));
-        }
+        cell.classList.add("slot-empty");
+        cell.textContent = _codeDisplay === "rack_position" ? getSlotDefaultCode({ line, positionIndex }) : `${line.line_name}-${positionIndex + 1}`;
+        cell.title = `${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} (빈 슬롯)`;
+        cell.addEventListener("click", () => {
+          if (_editMode) {
+            _toggleDisabledSlot(line, positionIndex, room);
+            return;
+          }
+          selectSlot(`${_getLinePositionLabel(cell.dataset.lineName, positionIndex)} 빈 슬롯입니다.`);
+        });
       }
 
-      // Drop zone for all line-slot cells (empty or has-rack)
       cell.addEventListener("dragover", (e) => {
         e.preventDefault();
-        if (_draggedRackId && !cell.classList.contains("disabled")) {
-          // Valid if empty or same rack
-          const occupantId = cell.dataset.rackId ? Number(cell.dataset.rackId) : null;
-          if (!occupantId || occupantId === _draggedRackId) {
-            cell.classList.add("drag-over");
-          } else {
-            cell.classList.add("drag-invalid");
-          }
-        }
+        const occupantId = cell.dataset.rackId ? Number(cell.dataset.rackId) : null;
+        if (_draggedRackId && !slotExcluded && (!occupantId || occupantId === _draggedRackId)) cell.classList.add("drag-over");
+        if (_draggedRackId && (slotExcluded || (occupantId && occupantId !== _draggedRackId))) cell.classList.add("drag-invalid");
       });
       cell.addEventListener("dragleave", () => {
         cell.classList.remove("drag-over");
@@ -728,57 +1490,75 @@ async function renderRoomView(container, room) {
         if (!rackId) return;
         const occupantId = cell.dataset.rackId ? Number(cell.dataset.rackId) : null;
         if (occupantId && occupantId !== rackId) {
-          showToast("\uD574\uB2F9 \uC2AC\uB86F\uC740 \uC774\uBBF8 \uB2E4\uB978 \uB799\uC774 \uBC30\uCE58\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", "warning");
+          showToast("해당 슬롯은 이미 다른 랙이 배치되어 있습니다.", "warning");
           return;
         }
-        if (cell.classList.contains("disabled")) {
-          showToast("\uBE44\uD65C\uC131\uD654\uB41C \uC2AC\uB86F\uC5D0\uB294 \uBC30\uCE58\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.", "warning");
+        if (slotExcluded) {
+          showToast("비활성화된 슬롯에는 배치할 수 없습니다.", "warning");
           return;
         }
         try {
-          await apiFetch("/api/v1/racks/" + rackId, {
-            method: "PATCH",
-            body: { rack_line_id: Number(cell.dataset.lineId), line_position: Number(cell.dataset.position) },
-          });
-          showToast("\uB799\uC744 \uBC30\uCE58\uD588\uC2B5\uB2C8\uB2E4.");
+          await placeRackAtContext(rackId, room, { line, position: positionIndex, colIndex: c, rowIndex: r, isExcluded: false });
+          showToast("랙을 배치했습니다.");
           await loadTree();
           const content = document.getElementById("layout-content");
           content.textContent = "";
-          const roomData = _findRoomData(room.id) || room;
-          renderRoomView(content, roomData);
+          renderRoomView(content, _findRoomData(room.id) || room);
         } catch (err) {
           showToast(err.message, "error");
         }
       });
-
       grid.appendChild(cell);
     }
+
+    const rowRightFrame = document.createElement("div");
+    rowRightFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+    rowRightFrame.setAttribute("aria-hidden", "true");
+    grid.appendChild(rowRightFrame);
   }
 
-  // Unplaced racks area
+  const bottomLeftFrame = document.createElement("div");
+  bottomLeftFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+  bottomLeftFrame.setAttribute("aria-hidden", "true");
+  grid.appendChild(bottomLeftFrame);
+  for (let p = 0; p < cols; p++) {
+    const bottomFrame = document.createElement("div");
+    bottomFrame.className = "floor-plan-header floor-plan-axis-frame";
+    bottomFrame.setAttribute("aria-hidden", "true");
+    grid.appendChild(bottomFrame);
+  }
+  const bottomRightFrame = document.createElement("div");
+  bottomRightFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+  bottomRightFrame.setAttribute("aria-hidden", "true");
+  grid.appendChild(bottomRightFrame);
+
+  const sideCard = document.createElement("div");
+  sideCard.className = "floor-plan-side-card";
+  floorPlanSide.appendChild(sideCard);
+
   const unplacedTitle = document.createElement("div");
-  unplacedTitle.style.cssText = "font-size:12px;font-weight:600;color:var(--text-color-secondary);margin-top:16px;margin-bottom:4px;";
-  unplacedTitle.textContent = "\uBBF8\uBC30\uCE58 \uB799 (" + unplacedRacks.length + ")";
-  wrapper.appendChild(unplacedTitle);
+  unplacedTitle.className = "floor-plan-side-title";
+  unplacedTitle.textContent = `미배치 랙 (${unplacedRacks.length})`;
+  sideCard.appendChild(unplacedTitle);
+  sideCard.appendChild(slotStatus);
+  sideCard.appendChild(slotActions);
 
   const unplacedArea = document.createElement("div");
   unplacedArea.className = "unplaced-racks";
-  wrapper.appendChild(unplacedArea);
-
+  sideCard.appendChild(unplacedArea);
   if (!unplacedRacks.length) {
     const emptyMsg = document.createElement("span");
     emptyMsg.className = "text-muted";
     emptyMsg.style.fontSize = "12px";
-    emptyMsg.textContent = "\uBAA8\uB4E0 \uB799\uC774 \uBC30\uCE58\uB418\uC5C8\uC2B5\uB2C8\uB2E4.";
+    emptyMsg.textContent = "모든 랙이 배치되었습니다.";
     unplacedArea.appendChild(emptyMsg);
   } else {
-    unplacedRacks.forEach(rack => {
+    unplacedRacks.forEach((rack) => {
       const chip = document.createElement("div");
       chip.className = "unplaced-rack-chip";
       chip.draggable = true;
       chip.dataset.rackId = rack.id;
       chip.textContent = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
-
       chip.addEventListener("dragstart", (e) => {
         _draggedRackId = rack.id;
         e.dataTransfer.setData("application/x-rack-id", String(rack.id));
@@ -789,12 +1569,18 @@ async function renderRoomView(container, room) {
         _draggedRackId = null;
         chip.style.opacity = "";
       });
-
       unplacedArea.appendChild(chip);
     });
   }
 
-  // Drop zone for unplacing racks
+  const guide = document.createElement("div");
+  guide.className = "floor-plan-guide";
+  const guideCard = document.createElement("div");
+  guideCard.className = "floor-plan-guide-card";
+  guideCard.innerHTML = '<div class="floor-plan-guide-title">도움말</div><div class="floor-plan-guide-text">라인은 가로/세로 직선으로 생성됩니다. 트리에서 라인 추가를 누른 뒤 시작점과 종료점을 선택하세요. 미배치 랙은 오른쪽에서 원하는 라인 슬롯으로 끌어다 놓을 수 있습니다.</div>';
+  guide.appendChild(guideCard);
+  wrapper.appendChild(guide);
+
   unplacedArea.addEventListener("dragover", (e) => {
     e.preventDefault();
     if (_draggedRackId) {
@@ -817,21 +1603,26 @@ async function renderRoomView(container, room) {
         method: "PATCH",
         body: { rack_line_id: null, line_position: null },
       });
-      showToast("\uB799 \uBC30\uCE58\uB97C \uD574\uC81C\uD588\uC2B5\uB2C8\uB2E4.");
+      showToast("랙 배치를 해제했습니다.");
       await loadTree();
       const content = document.getElementById("layout-content");
       content.textContent = "";
-      const roomData = _findRoomData(room.id) || room;
-      renderRoomView(content, roomData);
+      renderRoomView(content, _findRoomData(room.id) || room);
     } catch (err) {
       showToast(err.message, "error");
     }
   });
 }
 
-function _getRackDisplayCode(rack) {
+function _getRackDisplayCode(rack, context = null) {
   if (_codeDisplay === "project_code") return rack.project_code || rack.rack_code;
-  if (_codeDisplay === "system_id") return rack.system_id || rack.rack_code;
+  if (_codeDisplay === "rack_position" && context) {
+    return getSlotDefaultCode({
+      line: context.line || null,
+      lineName: context.line?.line_name,
+      positionIndex: context.positionIndex,
+    }) || rack.rack_code;
+  }
   return rack.rack_code;
 }
 
@@ -841,6 +1632,34 @@ function _findRoomData(roomId) {
     if (r) return r;
   }
   return null;
+}
+
+async function _createSuggestedLineForColumn(colIndex, room) {
+  const rackLines = await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines");
+  const suggestedName = suggestNextLineName(rackLines.filter((line) => !isUnassignedLine(line)));
+  return await apiFetch("/api/v1/rooms/" + room.id + "/rack-lines", {
+    method: "POST",
+    body: {
+      line_name: suggestedName,
+      col_index: colIndex,
+      slot_count: room.grid_rows || 12,
+      start_col: colIndex,
+      start_row: 0,
+      end_col: colIndex,
+      end_row: Math.max(0, (room.grid_rows || 12) - 1),
+      direction: "vertical",
+      prefix: null,
+    },
+  });
+}
+
+async function _startRackAddFromSelectedCell(room) {
+  const ctx = _selectedSlotContext;
+  if (!ctx?.line) {
+    showToast("라인 슬롯을 먼저 선택하세요.", "warning");
+    return;
+  }
+  openRackModal();
 }
 
 async function _onEmptyColumnClick(colIndex, room) {
@@ -936,14 +1755,6 @@ async function renderRackView(container, rack) {
   h3.textContent = (rack.rack_name || rack.rack_code) + " (" + totalU + "U)";
   header.appendChild(h3);
 
-  const actions = document.createElement("div");
-  actions.className = "gap-sm";
-  const btnEdit = document.createElement("button");
-  btnEdit.className = "btn btn-sm btn-secondary";
-  btnEdit.textContent = "랙 수정";
-  btnEdit.addEventListener("click", () => openRackModal(rack));
-  actions.appendChild(btnEdit);
-  header.appendChild(actions);
   container.appendChild(header);
 
   // Usage summary
@@ -1170,7 +1981,9 @@ function openRackModal(rack) {
   }
   document.getElementById("modal-rack-title").textContent = rack ? "\uB799 \uC218\uC815" : "\uB799 \uB4F1\uB85D";
   document.getElementById("rack-id").value = rack?.id ?? "";
+  _rackCodeSuggestionLocked = !!rack;
   document.getElementById("rack-code").value = rack?.rack_code ?? "";
+  if (!rack) applySuggestedRackCode({ force: true });
   document.getElementById("rack-name").value = rack?.rack_name ?? "";
   document.getElementById("rack-total-units").value = rack?.total_units ?? 42;
   document.getElementById("rack-location-detail").value = rack?.location_detail ?? "";
@@ -1250,12 +2063,23 @@ async function saveRack() {
   const rackId = document.getElementById("rack-id").value;
   const payload = {
     room_id: _selectedRoomId,
+    rack_code: document.getElementById("rack-code").value.trim() || null,
     rack_name: document.getElementById("rack-name").value.trim() || null,
     total_units: Number(document.getElementById("rack-total-units").value || 42),
     location_detail: document.getElementById("rack-location-detail").value.trim() || null,
     is_active: document.getElementById("rack-active").value === "true",
     note: document.getElementById("rack-note").value.trim() || null,
   };
+  if (_selectedSlotContext && !rackId) {
+    if (_selectedSlotContext.isExcluded) {
+      showToast("제외된 칸에는 랙을 등록할 수 없습니다.", "warning");
+      return;
+    }
+    if (_selectedSlotContext.line) {
+      payload.rack_line_id = _selectedSlotContext.line.id;
+      payload.line_position = _selectedSlotContext.position;
+    }
+  }
   if (rackId) {
     await apiFetch("/api/v1/racks/" + rackId, { method: "PATCH", body: payload });
     showToast("\uB799\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.");
@@ -1372,9 +2196,28 @@ async function loadLabelBaseSetting() {
 
 document.addEventListener("DOMContentLoaded", () => {
   initTreeSplitter();
+  updateLayoutAutoCollapseBtn();
+  setLayoutTreeCollapsed(false);
   loadTree()
     .then(() => loadLabelBaseSetting())
     .catch(err => showToast(err.message, "error"));
+});
+
+document.getElementById("btn-toggle-layout-tree")?.addEventListener("click", () => {
+  const shell = document.getElementById("layout-shell");
+  const isCollapsed = shell?.classList.contains("layout-tree-collapsed");
+  setLayoutTreeCollapsed(!isCollapsed);
+});
+
+document.getElementById("btn-layout-auto-collapse")?.addEventListener("click", () => {
+  _layoutAutoCollapse = !_layoutAutoCollapse;
+  localStorage.setItem(LAYOUT_AUTO_COLLAPSE_KEY, _layoutAutoCollapse ? "1" : "0");
+  updateLayoutAutoCollapseBtn();
+  if (_selectedNode && window.innerWidth > 960) setLayoutTreeCollapsed(_layoutAutoCollapse);
+});
+
+document.getElementById("btn-layout-tree-save")?.addEventListener("click", () => {
+  loadTree().catch(err => showToast(err.message, "error"));
 });
 
 document.getElementById("rack-label-base").addEventListener("change", () => {
@@ -1383,6 +2226,10 @@ document.getElementById("rack-label-base").addEventListener("change", () => {
     content.textContent = "";
     renderRackView(content, _selectedNode.data);
   }
+});
+
+window.addEventListener("resize", () => {
+  applyPhysicalLayoutResponsiveSizing();
 });
 
 window.addEventListener("ctx-changed", () => {
@@ -1396,8 +2243,8 @@ window.addEventListener("ctx-changed", () => {
 });
 
 document.getElementById("btn-add-center").addEventListener("click", () => openCenterModal());
-document.getElementById("btn-add-room").addEventListener("click", () => openRoomModal());
-document.getElementById("btn-add-rack").addEventListener("click", () => openRackModal());
+document.getElementById("btn-add-room")?.addEventListener("click", () => openRoomModal());
+document.getElementById("btn-add-rack")?.addEventListener("click", () => openRackModal());
 document.getElementById("btn-cancel-center").addEventListener("click", () => document.getElementById("modal-center").close());
 document.getElementById("btn-save-center").addEventListener("click", () => saveCenter().catch(err => showToast(err.message, "error")));
 document.getElementById("btn-cancel-room").addEventListener("click", () => document.getElementById("modal-room").close());

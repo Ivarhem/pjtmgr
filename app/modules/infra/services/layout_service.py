@@ -268,6 +268,9 @@ def create_rack(db: Session, payload: RackCreate, current_user: User) -> Rack:
     rack = Rack(**payload.model_dump(exclude={"rack_code"}), rack_code=rack_code)
     rack.system_id = build_rack_system_id(room.system_id, rack_code)
     db.add(rack)
+    db.flush()
+    if rack.rack_line_id is not None:
+        _auto_fill_project_code(db, rack, rack.rack_line_id, rack.line_position)
     db.commit()
     db.refresh(rack)
     return rack
@@ -314,7 +317,9 @@ def list_rack_lines(db: Session, room_id: int) -> list[dict]:
     get_room(db, room_id)
     lines = list(
         db.scalars(
-            select(RackLine).where(RackLine.room_id == room_id).order_by(RackLine.col_index.asc(), RackLine.id.asc())
+            select(RackLine)
+            .where(RackLine.room_id == room_id)
+            .order_by(RackLine.sort_order.asc(), RackLine.col_index.asc().nullslast(), RackLine.id.asc())
         )
     )
     result = []
@@ -332,6 +337,11 @@ def list_rack_lines(db: Session, room_id: int) -> list[dict]:
                 "disabled_slots": line.disabled_slots or [],
                 "sort_order": line.sort_order,
                 "prefix": line.prefix,
+                "start_col": line.start_col,
+                "start_row": line.start_row,
+                "end_col": line.end_col,
+                "end_row": line.end_row,
+                "direction": line.direction,
                 "created_at": line.created_at,
                 "updated_at": line.updated_at,
                 "racks": [
@@ -361,12 +371,8 @@ def get_rack_line(db: Session, line_id: int) -> RackLine:
 def create_rack_line(db: Session, room_id: int, payload: RackLineCreate, current_user: User) -> RackLine:
     _require_inventory_edit(current_user)
     room = get_room(db, room_id)
-    if payload.col_index < 0 or payload.col_index >= room.grid_cols:
-        raise BusinessRuleError(
-            f"col_index는 0 이상 {room.grid_cols - 1} 이하여야 합니다.", status_code=422
-        )
-    _ensure_rack_line_col_unique(db, room_id, payload.col_index)
-    line = RackLine(room_id=room_id, **payload.model_dump())
+    data = _normalize_rack_line_payload(db, room, payload.model_dump(), None)
+    line = RackLine(room_id=room_id, **data)
     db.add(line)
     db.commit()
     db.refresh(line)
@@ -376,16 +382,10 @@ def create_rack_line(db: Session, room_id: int, payload: RackLineCreate, current
 def update_rack_line(db: Session, line_id: int, payload: RackLineUpdate, current_user: User) -> RackLine:
     _require_inventory_edit(current_user)
     line = get_rack_line(db, line_id)
+    room = get_room(db, line.room_id)
     changes = payload.model_dump(exclude_unset=True)
-    next_col = changes.get("col_index", line.col_index)
-    if next_col != line.col_index:
-        room = get_room(db, line.room_id)
-        if next_col < 0 or next_col >= room.grid_cols:
-            raise BusinessRuleError(
-                f"col_index는 0 이상 {room.grid_cols - 1} 이하여야 합니다.", status_code=422
-            )
-        _ensure_rack_line_col_unique(db, line.room_id, next_col, line.id)
-    for field, value in changes.items():
+    normalized = _normalize_rack_line_payload(db, room, changes, line)
+    for field, value in normalized.items():
         setattr(line, field, value)
     db.commit()
     db.refresh(line)
@@ -514,6 +514,123 @@ def _ensure_rack_code_unique(db: Session, room_id: int, rack_code: str, rack_id:
         return
     raise DuplicateError("같은 전산실에 이미 등록된 랙 코드입니다.")
 
+
+
+def _is_unassigned_line_payload(data: dict) -> bool:
+    return data.get("col_index") == -1 and not any(
+        data.get(key) is not None for key in ("start_col", "start_row", "end_col", "end_row")
+    )
+
+
+def _build_line_cells(line: RackLine | object) -> list[tuple[int, int]]:
+    start_col = getattr(line, "start_col", None)
+    start_row = getattr(line, "start_row", None)
+    end_col = getattr(line, "end_col", None)
+    end_row = getattr(line, "end_row", None)
+    if None not in (start_col, start_row, end_col, end_row):
+        if start_col == end_col:
+            step = 1 if end_row >= start_row else -1
+            return [(start_col, row) for row in range(start_row, end_row + step, step)]
+        if start_row == end_row:
+            step = 1 if end_col >= start_col else -1
+            return [(col, start_row) for col in range(start_col, end_col + step, step)]
+        return []
+    col_index = getattr(line, "col_index", None)
+    slot_count = int(getattr(line, "slot_count", 0) or 0)
+    if col_index is None or col_index < 0 or slot_count <= 0:
+        return []
+    return [(col_index, row) for row in range(slot_count)]
+
+
+def _normalize_rack_line_payload(db: Session, room: Room, incoming: dict, existing: RackLine | None) -> dict:
+    data = {
+        "line_name": existing.line_name if existing else incoming.get("line_name", ""),
+        "col_index": existing.col_index if existing else incoming.get("col_index"),
+        "slot_count": existing.slot_count if existing else incoming.get("slot_count", room.grid_rows or 1),
+        "disabled_slots": list(existing.disabled_slots or []) if existing else list(incoming.get("disabled_slots") or []),
+        "prefix": existing.prefix if existing else incoming.get("prefix"),
+        "sort_order": existing.sort_order if existing else incoming.get("sort_order", 0),
+        "start_col": existing.start_col if existing else incoming.get("start_col"),
+        "start_row": existing.start_row if existing else incoming.get("start_row"),
+        "end_col": existing.end_col if existing else incoming.get("end_col"),
+        "end_row": existing.end_row if existing else incoming.get("end_row"),
+        "direction": existing.direction if existing else incoming.get("direction"),
+    }
+    for field, value in incoming.items():
+        data[field] = value
+
+    if not str(data.get("line_name") or "").strip():
+        raise BusinessRuleError("라인명을 입력하세요.", status_code=422)
+    data["line_name"] = str(data["line_name"]).trim() if hasattr(str(data["line_name"]), "trim") else str(data["line_name"]).strip()
+    data["disabled_slots"] = sorted({int(v) for v in (data.get("disabled_slots") or []) if v is not None and int(v) >= 0})
+
+    if _is_unassigned_line_payload(data):
+        data["direction"] = None
+        data["start_col"] = None
+        data["start_row"] = None
+        data["end_col"] = None
+        data["end_row"] = None
+        data["slot_count"] = max(1, int(data.get("slot_count") or room.grid_rows or 1))
+        return data
+
+    coord_fields = [data.get("start_col"), data.get("start_row"), data.get("end_col"), data.get("end_row")]
+    has_coords = any(value is not None for value in coord_fields)
+    if has_coords and None in coord_fields:
+        raise BusinessRuleError("라인 시작/종료 좌표를 모두 입력하세요.", status_code=422)
+
+    if has_coords:
+        start_col = int(data["start_col"])
+        start_row = int(data["start_row"])
+        end_col = int(data["end_col"])
+        end_row = int(data["end_row"])
+        if not (0 <= start_col < room.grid_cols and 0 <= end_col < room.grid_cols):
+            raise BusinessRuleError(f"라인 열 좌표는 0 이상 {room.grid_cols - 1} 이하여야 합니다.", status_code=422)
+        if not (0 <= start_row < room.grid_rows and 0 <= end_row < room.grid_rows):
+            raise BusinessRuleError(f"라인 행 좌표는 0 이상 {room.grid_rows - 1} 이하여야 합니다.", status_code=422)
+        if start_col != end_col and start_row != end_row:
+            raise BusinessRuleError("라인은 같은 행 또는 같은 열의 직선으로만 배치할 수 있습니다.", status_code=422)
+        direction = "vertical" if start_col == end_col else "horizontal"
+        data["direction"] = direction
+        data["slot_count"] = abs(end_row - start_row) + 1 if direction == "vertical" else abs(end_col - start_col) + 1
+        data["col_index"] = min(start_col, end_col)
+        data["start_col"] = start_col
+        data["start_row"] = start_row
+        data["end_col"] = end_col
+        data["end_row"] = end_row
+    else:
+        col_index = data.get("col_index")
+        if col_index is None:
+            raise BusinessRuleError("라인 배치 좌표를 지정하세요.", status_code=422)
+        col_index = int(col_index)
+        if col_index < 0 or col_index >= room.grid_cols:
+            raise BusinessRuleError(f"col_index는 0 이상 {room.grid_cols - 1} 이하여야 합니다.", status_code=422)
+        slot_count = max(1, int(data.get("slot_count") or room.grid_rows or 1))
+        data["col_index"] = col_index
+        data["slot_count"] = slot_count
+        data["direction"] = data.get("direction") or "vertical"
+        data["start_col"] = col_index
+        data["end_col"] = col_index
+        data["start_row"] = 0
+        data["end_row"] = min(room.grid_rows - 1, slot_count - 1)
+
+    candidate_cells = set(_build_line_cells(type("LineDraft", (), data)()))
+    if not candidate_cells:
+        raise BusinessRuleError("유효한 라인 좌표를 계산할 수 없습니다.", status_code=422)
+    existing_lines = list(db.scalars(select(RackLine).where(RackLine.room_id == room.id)))
+    for other in existing_lines:
+        if existing is not None and other.id == existing.id:
+            continue
+        if _is_unassigned_line_payload({
+            "col_index": other.col_index,
+            "start_col": other.start_col,
+            "start_row": other.start_row,
+            "end_col": other.end_col,
+            "end_row": other.end_row,
+        }):
+            continue
+        if candidate_cells & set(_build_line_cells(other)):
+            raise DuplicateError(f"라인 '{other.line_name}'과(와) 좌표가 겹칩니다.")
+    return data
 
 def _ensure_rack_line_col_unique(
     db: Session, room_id: int, col_index: int, line_id: int | None = None

@@ -2,34 +2,30 @@
 {% block title %}배치 - 프로젝트관리{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260417q">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1><i data-lucide="layout-grid" class="icon-sm"></i> 배치</h1>
-  <div class="infra-inline-actions infra-inline-actions-spread">
-    <label class="layout-inline-select" title="저장되는 U 번호는 항상 EIA-310 기준이며, 이 설정은 표시 방향만 바꿉니다.">
-      U 기준
-      <select id="rack-label-base">
-        <option value="start">Start</option>
-        <option value="end">End</option>
-      </select>
-    </label>
-    <button class="btn btn-secondary btn-sm" id="btn-add-center">센터 등록</button>
-    <button class="btn btn-secondary btn-sm" id="btn-add-room" disabled>전산실 등록</button>
-    <button class="btn btn-primary btn-sm" id="btn-add-rack" disabled>랙 등록</button>
-  </div>
+<div class="infra-inline-actions mb-md layout-view-toolbar">
+  <span class="layout-inline-help">U 위치는 EIA-310 표준에 따라 랙 하단부터 1U로 번호를 부여합니다. 프로젝트별 라벨링 기준(Start/End)은 표시 방향만 변경하며, 저장되는 U 번호는 항상 EIA-310 기준입니다.</span>
+  <label class="layout-inline-select" title="저장되는 U 번호는 항상 EIA-310 기준이며, 이 설정은 표시 방향만 바꿉니다.">
+    U 기준
+    <select id="rack-label-base">
+      <option value="start">Start</option>
+      <option value="end">End</option>
+    </select>
+  </label>
 </div>
-
-<p class="text-secondary text-sm mb-md data-note">
-  U 위치는 EIA-310 표준에 따라 랙 하단부터 1U로 번호를 부여합니다. 프로젝트별 라벨링 기준(Start/End)은 표시 방향만 변경하며, 저장되는 U 번호는 항상 EIA-310 기준입니다.
-</p>
 <div class="catalog-layout" id="layout-shell">
   <!-- Left: Tree -->
   <section class="catalog-category-panel" id="layout-tree-panel">
     <div class="catalog-category-header">
       <h2>배치 구조</h2>
+      <div class="infra-inline-actions layout-tree-header-actions">
+        <button class="btn btn-secondary btn-sm" id="btn-layout-tree-save">저장</button>
+        <button class="btn btn-primary btn-sm" id="btn-add-center">센터 등록</button>
+        <button type="button" class="btn btn-icon btn-sm" id="btn-layout-auto-collapse" title="선택 시 목록 자동 접기"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M10 2v12M2 8h5M7 5l-3 3 3 3"/></svg></button>
+      </div>
     </div>
     <div id="layout-tree" class="classification-tree">
       <p class="text-muted p-md">고객사를 선택하면 배치 구조를 표시합니다.</p>
@@ -37,6 +33,10 @@
   </section>
 
   <div class="catalog-category-splitter" id="layout-category-splitter"></div>
+
+  <div class="asset-detail-handle-wrap" id="layout-tree-handle-wrap">
+    <button class="asset-detail-minimize" id="btn-toggle-layout-tree" title="배치 구조 열기/닫기">❯</button>
+  </div>
 
   <!-- Right: Content -->
   <div class="catalog-main-panel" id="layout-content">
@@ -114,7 +114,7 @@
     <fieldset class="modal-group">
       <legend class="modal-group-title">랙 정보</legend>
       <div class="form-grid">
-        <label>랙코드 <input type="text" id="rack-code" readonly placeholder="저장 시 자동생성"></label>
+        <label>랙코드 <input type="text" id="rack-code" placeholder="추천값 자동입력, 필요시 수정"></label>
         <label>랙명 <input type="text" id="rack-name"></label>
         <label><span class="label-text">총 U<span class="req">*</span></span> <input type="number" id="rack-total-units" min="1" value="42" required></label>
         <label>상태
@@ -136,5 +136,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260413e"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260417q"></script>
 {% endblock %}
