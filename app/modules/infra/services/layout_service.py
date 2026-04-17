@@ -119,6 +119,8 @@ def list_racks(db: Session, room_id: int) -> list[dict]:
             "note": rack.note,
             "system_id": rack.system_id,
             "project_code": rack.project_code,
+            "rack_line_id": rack.rack_line_id,
+            "line_position": rack.line_position,
             "created_at": rack.created_at,
             "updated_at": rack.updated_at,
         }
