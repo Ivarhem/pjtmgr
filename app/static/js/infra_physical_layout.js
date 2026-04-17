@@ -825,7 +825,7 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "classification-tree-name";
-  nameSpan.textContent = (icon ? icon + " " : "") + label;
+  nameSpan.textContent = label;
 
   const codeSpan = document.createElement("span");
   codeSpan.className = "classification-tree-code";
