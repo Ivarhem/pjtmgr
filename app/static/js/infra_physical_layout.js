@@ -689,11 +689,11 @@ function renderTree() {
     roomChildUl.appendChild(createTreeNode({
       key: "line-unassigned-" + room.id,
       icon: "🗂️",
-      label: "미할당 라인",
+      label: "미할당",
       meta: unassignedRacks.length + " 랙",
       nodeType: "line",
       nodeId: "unassigned-" + room.id,
-      nodeData: { id: "unassigned-" + room.id, room_id: room.id, line_name: "미할당 라인", is_unassigned: true },
+      nodeData: { id: "unassigned-" + room.id, room_id: room.id, line_name: "미할당", is_unassigned: true },
       hasChildren: unassignedRacks.length > 0,
       collapsed: _treeCollapsed.has("line-unassigned-" + room.id),
       childUl: unassignedUl,
