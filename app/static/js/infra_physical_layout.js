@@ -1039,7 +1039,7 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     actionToggle.className = "btn btn-icon btn-sm layout-tree-node-toggle";
     actionToggle.title = actionsOpen ? "노드 작업 닫기" : "노드 작업 열기";
     actionToggle.setAttribute("aria-expanded", actionsOpen ? "true" : "false");
-    actionToggle.textContent = actionsOpen ? "<" : ">";
+    actionToggle.textContent = actionsOpen ? ">" : "<";
     actionToggle.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleTreeActionMenu(key);
