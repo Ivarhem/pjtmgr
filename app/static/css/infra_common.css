@@ -3493,13 +3493,13 @@ body.dark-mode .catalog-management-result {
 }
 .floor-plan-cell.empty { background: var(--bg-primary, #ffffff); border: 1px dashed var(--color-gray-300, #d1d5db); color: var(--color-gray-400, #9ca3af); }
 .floor-plan-cell.empty.coord-empty { font-size: calc(var(--floor-cell-font-size) - 1px); font-weight: 500; }
-.floor-plan-cell.line-slot { background: var(--color-gray-100, #f3f4f6); border: 1px solid transparent; color: var(--color-gray-700, #374151); }
-.floor-plan-cell.line-slot.slot-empty { background: color-mix(in srgb, var(--color-gray-100, #f3f4f6) 92%, var(--bg-primary, #ffffff)); border: 1px dashed var(--color-gray-300, #d1d5db); color: var(--color-gray-500, #6b7280); font-weight: 500; }
-.floor-plan-cell.line-slot.has-rack { background: var(--color-gray-100, #f3f4f6); border: 2px solid var(--color-gray-400, #9ca3af); color: var(--color-gray-800, #1f2937); font-weight: 700; }
+.floor-plan-cell.line-slot { background: var(--bg-primary, #ffffff); border: 1px solid transparent; color: var(--color-gray-700, #374151); }
+.floor-plan-cell.line-slot.slot-empty { background: var(--bg-primary, #ffffff); border: 1px dashed var(--color-gray-300, #d1d5db); color: var(--color-gray-500, #6b7280); font-weight: 500; }
+.floor-plan-cell.line-slot.has-rack { background: var(--bg-primary, #ffffff); border: 2px solid var(--color-gray-400, #9ca3af); color: var(--color-gray-800, #1f2937); font-weight: 700; }
 .floor-plan-cell.line-slot.line-selected.slot-empty { border-color: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #ffffff 28%); }
 .floor-plan-cell.line-slot.line-selected.has-rack { border-color: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #ffffff 28%); }
-.floor-plan-cell.is-excluded { background: var(--color-gray-100, #f3f4f6); border: 1px solid transparent; color: transparent; }
-.floor-plan-cell.line-slot.is-excluded { background: var(--color-gray-100, #f3f4f6) !important; border-color: transparent !important; color: transparent !important; }
+.floor-plan-cell.is-excluded { background: var(--bg-primary, #ffffff); border: 1px solid transparent; color: transparent; }
+.floor-plan-cell.line-slot.is-excluded { background: var(--bg-primary, #ffffff) !important; border-color: transparent !important; color: transparent !important; }
 .floor-plan-cell.drag-over { background: var(--color-green-100, #dcfce7); border: 1px solid var(--color-green-400, #4ade80); }
 .floor-plan-cell.drag-invalid { background: var(--color-red-50, #fef2f2); border: 1px solid var(--color-red-300, #fca5a5); }
 .floor-plan-header { font-size: var(--floor-header-font-size); font-weight: 600; color: var(--color-gray-500, #6b7280); text-align: center; padding: 2px 0; min-width: var(--floor-cell-width); }
