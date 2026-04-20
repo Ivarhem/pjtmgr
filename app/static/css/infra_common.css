@@ -4042,20 +4042,22 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   background: transparent !important;
 }
 
+.layout-tree-node-action-wrap {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .layout-tree-node-toggle {
   flex: 0 0 auto;
   align-self: center;
   width: 26px;
   height: 26px;
   padding: 0;
-  margin-left: auto;
   color: var(--text-color-secondary);
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
-}
-.layout-tree-node-actions.is-visible:not(.is-detail-mode) + .layout-tree-node-toggle {
-  margin-left: 8px;
 }
 .layout-tree-node-toggle[aria-expanded="true"] {
   color: var(--primary-color, #2563eb);
@@ -4064,14 +4066,13 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   display: none;
   align-items: center;
   gap: 6px;
-  margin-left: 8px;
   flex-wrap: wrap;
 }
 .layout-tree-node-actions.is-visible {
   display: inline-flex;
 }
 .layout-tree-node-actions:not(.is-detail-mode) {
-  margin-left: auto;
+  order: -1;
 }
 .classification-tree-item {
   position: relative;

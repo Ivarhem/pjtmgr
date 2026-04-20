@@ -1036,11 +1036,13 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   }
   if (_layoutTreeActionMode === "detail") {
     actions.classList.add("is-visible", "is-detail-mode");
-  } else if (actionsOpen) {
-    actions.classList.add("is-visible");
-  }
-  nodeDiv.appendChild(actions);
-  if (hasInlineActions) {
+    nodeDiv.appendChild(actions);
+  } else if (hasInlineActions) {
+    const actionWrap = document.createElement("div");
+    actionWrap.className = "layout-tree-node-action-wrap";
+    if (actionsOpen) actions.classList.add("is-visible");
+    actionWrap.appendChild(actions);
+
     const actionToggle = document.createElement("button");
     actionToggle.type = "button";
     actionToggle.className = "btn btn-icon btn-sm layout-tree-node-toggle";
@@ -1051,7 +1053,8 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
       e.stopPropagation();
       toggleTreeActionMenu(key);
     });
-    nodeDiv.appendChild(actionToggle);
+    actionWrap.appendChild(actionToggle);
+    nodeDiv.appendChild(actionWrap);
   }
   li.appendChild(nodeDiv);
 
