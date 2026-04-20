@@ -3541,6 +3541,9 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
   --layout-excluded-bg: var(--bg-primary, #ffffff);
   --layout-excluded-border: transparent;
   --layout-excluded-fg: transparent;
+  --layout-axis-bg: var(--bg-primary, #ffffff);
+  --layout-axis-border: var(--color-gray-300, #d1d5db);
+  --layout-axis-fg: var(--color-gray-500, #6b7280);
   display: grid;
   gap: 2px;
   background: var(--layout-grid-bg);
@@ -3600,8 +3603,8 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 }
 .floor-plan-cell.drag-over { background: var(--color-green-100, #dcfce7); border: 1px solid var(--color-green-400, #4ade80); }
 .floor-plan-cell.drag-invalid { background: var(--color-red-50, #fef2f2); border: 1px solid var(--color-red-300, #fca5a5); }
-.floor-plan-header { font-size: var(--floor-header-font-size); font-weight: 600; color: var(--color-gray-500, #6b7280); text-align: center; padding: 2px 0; min-width: var(--floor-cell-width); }
-.floor-plan-row-label { font-size: var(--floor-row-label-font-size); color: var(--color-gray-400, #9ca3af); display: flex; align-items: center; justify-content: center; width: var(--floor-row-label-width); }
+.floor-plan-header { font-size: var(--floor-header-font-size); font-weight: 600; color: var(--layout-axis-fg); text-align: center; padding: 2px 0; min-width: var(--floor-cell-width); background: var(--layout-axis-bg); border: 1px solid var(--layout-axis-border); border-radius: 4px; }
+.floor-plan-row-label { font-size: var(--floor-row-label-font-size); color: var(--layout-axis-fg); display: flex; align-items: center; justify-content: center; width: var(--floor-row-label-width); background: var(--layout-axis-bg); border: 1px solid var(--layout-axis-border); border-radius: 4px; }
 .floor-plan-header.is-empty-header { color: transparent; }
 .floor-plan-row-label.is-placeholder { color: transparent; }
 .unplaced-racks { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; min-height: 48px; background: var(--color-gray-50, #f9fafb); border: 1px dashed var(--color-gray-300, #d1d5db); border-radius: 6px; margin-top: 12px; }
@@ -3697,6 +3700,9 @@ body.dark-mode .floor-plan-grid {
   --layout-excluded-bg: color-mix(in srgb, var(--bg-primary) 80%, var(--text-color) 20%);
   --layout-excluded-border: transparent;
   --layout-excluded-fg: transparent;
+  --layout-axis-bg: transparent;
+  --layout-axis-border: var(--border-color);
+  --layout-axis-fg: var(--text-color-secondary);
 }
 
 body.dark-mode .floor-plan-cell.line-slot.drag-over {
