@@ -33,6 +33,7 @@ let _selectedSlotContext = null;
 let _rackCodeSuggestionLocked = false;
 let _lineCreateMode = null;
 let _lineCreateStart = null;
+let _lineRepositionTarget = null;
 
 function _getLinePositionLabel(lineName, position) {
   return `라인 ${lineName} / 위치 ${Number(position) + 1}`;
@@ -362,9 +363,102 @@ function axisHasAnyUserValue(roomId, axis) {
   return Object.values(bucket || {}).some((value) => String(value || "").trim());
 }
 
+function formatLineCoordinates(line) {
+  const startCol = Number(line?.start_col);
+  const startRow = Number(line?.start_row);
+  const endCol = Number(line?.end_col);
+  const endRow = Number(line?.end_row);
+  if ([startCol, startRow, endCol, endRow].every(Number.isFinite)) {
+    return `(${startCol + 1}, ${startRow + 1}) → (${endCol + 1}, ${endRow + 1})`;
+  }
+  if (line?.col_index != null && Number(line.col_index) >= 0) {
+    return `(${Number(line.col_index) + 1}, 1) → (${Number(line.col_index) + 1}, ${Number(line.slot_count || 1)})`;
+  }
+  return '미배치';
+}
+
+async function applyTwoPointLineToExisting(line, room, startCtx, endCtx) {
+  const startCol = Number(startCtx.colIndex ?? startCtx.lineIndex);
+  const startRow = Number(startCtx.rowIndex ?? startCtx.positionIndex);
+  const endCol = Number(endCtx.colIndex ?? endCtx.lineIndex);
+  const endRow = Number(endCtx.rowIndex ?? endCtx.positionIndex);
+  const sameRow = startRow === endRow;
+  const sameCol = startCol === endCol;
+  if (!sameRow && !sameCol) {
+    showToast('시작셀과 종료셀은 같은 행 또는 같은 열이어야 합니다.', 'warning');
+    return false;
+  }
+  const direction = sameRow ? 'horizontal' : 'vertical';
+  return await apiFetch('/api/v1/rack-lines/' + line.id, {
+    method: 'PATCH',
+    body: {
+      line_name: line.line_name,
+      prefix: line.prefix ?? null,
+      col_index: Math.min(startCol, endCol),
+      slot_count: (sameRow ? Math.abs(endCol - startCol) : Math.abs(endRow - startRow)) + 1,
+      start_col: startCol,
+      start_row: startRow,
+      end_col: endCol,
+      end_row: endRow,
+      direction,
+    },
+  });
+}
+
+function openLineModal(line) {
+  document.getElementById('modal-line-title').textContent = '라인 수정';
+  document.getElementById('line-id').value = line?.id ?? '';
+  document.getElementById('line-room-id').value = line?.room_id ?? '';
+  document.getElementById('line-code').value = line?.prefix ?? '';
+  document.getElementById('line-name').value = line?.line_name ?? '';
+  document.getElementById('line-coordinates').value = formatLineCoordinates(line);
+  document.getElementById('modal-line').showModal();
+}
+
+async function saveLineModal() {
+  const lineId = document.getElementById('line-id').value;
+  if (!lineId) return;
+  const payload = {
+    prefix: document.getElementById('line-code').value.trim() || null,
+    line_name: document.getElementById('line-name').value.trim(),
+  };
+  if (!payload.line_name) {
+    showToast('라인명은 필수입니다.', 'warning');
+    return;
+  }
+  await apiFetch('/api/v1/rack-lines/' + lineId, { method: 'PATCH', body: payload });
+  document.getElementById('modal-line').close();
+  showToast('라인 정보를 저장했습니다.');
+  await loadTree();
+  const roomId = Number(document.getElementById('line-room-id').value || 0);
+  const content = document.getElementById('layout-content');
+  if (content && roomId) {
+    content.textContent = '';
+    const roomData = _findRoomData(roomId);
+    if (roomData) renderRoomView(content, roomData);
+  }
+}
+
+function beginLineReposition(line) {
+  const roomId = Number(line?.room_id || 0);
+  if (!roomId) return;
+  document.getElementById('modal-line').close();
+  _selectedRoomId = roomId;
+  _lineRepositionTarget = line;
+  _lineCreateMode = { roomId, mode: 'reposition', lineId: line.id };
+  _lineCreateStart = null;
+  const content = document.getElementById('layout-content');
+  if (content) {
+    content.textContent = '';
+    const roomData = _findRoomData(roomId);
+    if (roomData) renderRoomView(content, roomData);
+  }
+}
+
 function resetLineCreateMode() {
   _lineCreateMode = null;
   _lineCreateStart = null;
+  _lineRepositionTarget = null;
 }
 
 function beginLineCreate(roomId) {
@@ -898,26 +992,7 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
         _selectedSlotContext = { line: nodeData, position: nextPos, room, rackLines: _rackLines[nodeData.room_id] || [] };
         await openRackModal();
       });
-      addAction("수정", async () => {
-        const nextName = (prompt("새 라인명을 입력하세요.", nodeData.line_name || "") || "").trim();
-        if (!nextName || nextName === nodeData.line_name) return;
-        try {
-          await apiFetch("/api/v1/rack-lines/" + nodeData.id, {
-            method: "PATCH",
-            body: { line_name: nextName },
-          });
-          showToast("라인명을 변경했습니다.");
-          await loadTree();
-          const content = document.getElementById("layout-content");
-          if (content) {
-            content.textContent = "";
-            const roomData = _findRoomData(nodeData.room_id);
-            if (roomData) renderRoomView(content, roomData);
-          }
-        } catch (err) {
-          showToast(err.message, "error");
-        }
-      });
+      addAction("수정", () => openLineModal(nodeData));
       addAction("삭제", async () => {
         if (!confirm(`라인 '${nodeData.line_name}'을(를) 삭제하시겠습니까? 배치된 랙은 미배치 상태로 전환됩니다.`)) return;
         try {
@@ -1286,7 +1361,7 @@ async function renderRoomView(container, room) {
 
   const slotStatus = document.createElement("div");
   slotStatus.className = "floor-plan-slot-status";
-  _setSlotStatus(slotStatus, _lineCreateMode?.roomId === room.id ? "라인 추가 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요." : "라인은 가로/세로 직선으로 배치됩니다. 라인 추가 후 슬롯에 랙을 배치하세요.", "안내");
+  _setSlotStatus(slotStatus, _lineCreateMode?.roomId === room.id ? (_lineCreateMode?.mode === "reposition" ? "좌표재설정 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요." : "라인 추가 모드입니다. 시작셀과 종료셀을 차례로 클릭하세요.") : "라인은 가로/세로 직선으로 배치됩니다. 라인 추가 후 슬롯에 랙을 배치하세요.", "안내");
   const slotActions = document.createElement("div");
   slotActions.className = "infra-inline-actions";
   slotActions.style.marginBottom = "12px";
@@ -1434,10 +1509,13 @@ async function renderRoomView(container, room) {
               return;
             }
             try {
-              const created = await applyTwoPointLine(room, _lineCreateStart, { colIndex: c, rowIndex: r, lineIndex: c, positionIndex: r });
+              const created = _lineCreateMode?.mode === "reposition" && _lineRepositionTarget
+                ? await applyTwoPointLineToExisting(_lineRepositionTarget, room, _lineCreateStart, { colIndex: c, rowIndex: r, lineIndex: c, positionIndex: r })
+                : await applyTwoPointLine(room, _lineCreateStart, { colIndex: c, rowIndex: r, lineIndex: c, positionIndex: r });
               if (created) {
+                const wasReposition = _lineCreateMode?.mode === "reposition";
                 resetLineCreateMode();
-                showToast("라인을 생성했습니다.");
+                showToast(wasReposition ? "라인 좌표를 재설정했습니다." : "라인을 생성했습니다.");
                 await loadTree();
                 const content = document.getElementById("layout-content");
                 content.textContent = "";
@@ -2424,3 +2502,16 @@ document.getElementById("btn-cancel-room").addEventListener("click", () => docum
 document.getElementById("btn-save-room").addEventListener("click", () => saveRoom().catch(err => showToast(err.message, "error")));
 document.getElementById("btn-cancel-rack").addEventListener("click", () => document.getElementById("modal-rack").close());
 document.getElementById("btn-save-rack").addEventListener("click", () => saveRack().catch(err => showToast(err.message, "error")));
+document.getElementById("btn-save-line")?.addEventListener("click", () => saveLineModal().catch(err => showToast(err.message, "error")));
+document.getElementById("btn-cancel-line")?.addEventListener("click", () => document.getElementById("modal-line")?.close());
+document.getElementById("btn-line-reposition")?.addEventListener("click", async () => {
+  const lineId = Number(document.getElementById('line-id')?.value || 0);
+  const roomId = Number(document.getElementById('line-room-id')?.value || 0);
+  if (!lineId || !roomId) return;
+  const line = (_rackLines[roomId] || []).find((item) => Number(item.id) === lineId);
+  if (!line) {
+    showToast('라인 정보를 다시 불러와 주세요.', 'warning');
+    return;
+  }
+  beginLineReposition(line);
+});
