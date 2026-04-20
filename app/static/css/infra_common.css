@@ -3491,11 +3491,11 @@ body.dark-mode .catalog-management-result {
   cursor: pointer;
   transition: background 0.15s;
 }
-.floor-plan-cell.empty { background: var(--bg-primary, #ffffff); border: 1px dashed var(--color-gray-300, #d1d5db); color: var(--color-gray-400, #9ca3af); }
-.floor-plan-cell.empty.coord-empty { font-size: calc(var(--floor-cell-font-size) - 1px); font-weight: 500; }
-.floor-plan-cell.line-slot { background: var(--bg-primary, #ffffff); border: 1px solid transparent; color: var(--color-gray-700, #374151); }
-.floor-plan-cell.line-slot.slot-empty { background: var(--bg-primary, #ffffff); border: 1px dashed var(--color-gray-300, #d1d5db); color: var(--color-gray-500, #6b7280); font-weight: 500; }
-.floor-plan-cell.line-slot.has-rack { background: var(--bg-primary, #ffffff); border: 2px solid var(--color-gray-400, #9ca3af); color: var(--color-gray-800, #1f2937); font-weight: 700; }
+.floor-plan-cell.empty { background: var(--bg-primary, #ffffff); border: 1px solid transparent; color: transparent; }
+.floor-plan-cell.empty.coord-empty { font-size: calc(var(--floor-cell-font-size) - 1px); font-weight: 500; color: transparent; }
+.floor-plan-cell.line-slot { background: var(--bg-primary, #ffffff); border: 1px solid transparent; color: var(--color-gray-600, #4b5563); }
+.floor-plan-cell.line-slot.slot-empty { background: var(--bg-primary, #ffffff); border: 1px dashed var(--color-gray-400, #9ca3af); color: var(--color-gray-500, #6b7280); font-weight: 500; }
+.floor-plan-cell.line-slot.has-rack { background: var(--bg-primary, #ffffff); border: 2px solid var(--color-gray-500, #6b7280); color: var(--color-gray-800, #1f2937); font-weight: 700; }
 .floor-plan-cell.line-slot.line-selected.slot-empty { border-color: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #ffffff 28%); }
 .floor-plan-cell.line-slot.line-selected.has-rack { border-color: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #ffffff 28%); }
 .floor-plan-cell.is-excluded { background: var(--bg-primary, #ffffff); border: 1px solid transparent; color: transparent; }
