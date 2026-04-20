@@ -766,8 +766,9 @@ function isTreeActionExpanded(key) {
 
 function toggleTreeActionMenu(key) {
   if (_layoutTreeActionMode === "detail") return;
-  if (_expandedTreeActions.has(key)) _expandedTreeActions.delete(key);
-  else _expandedTreeActions.add(key);
+  const isOpen = _expandedTreeActions.has(key);
+  _expandedTreeActions.clear();
+  if (!isOpen) _expandedTreeActions.add(key);
   renderTree();
 }
 
