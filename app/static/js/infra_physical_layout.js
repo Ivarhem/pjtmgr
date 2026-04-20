@@ -922,7 +922,7 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   li.className = "classification-tree-item";
 
   const nodeDiv = document.createElement("div");
-  nodeDiv.className = "classification-tree-node";
+  nodeDiv.className = `classification-tree-node classification-tree-node-${nodeType}`;
   nodeDiv.setAttribute("data-node-type", nodeType);
   nodeDiv.setAttribute("data-node-id", String(nodeId));
 
