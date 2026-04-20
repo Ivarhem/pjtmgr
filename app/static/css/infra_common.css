@@ -3078,7 +3078,7 @@ body.dark-mode .catalog-management-result {
   --tree-node-bg: var(--bg-primary);
   --tree-node-border: var(--border-color);
   --tree-node-hover-border: color-mix(in srgb, var(--primary-color, #2563eb) 45%, var(--border-color));
-  --tree-node-selected-bg: color-mix(in srgb, var(--primary-color, #2563eb) 7%, var(--bg-primary));
+  --tree-node-selected-bg: color-mix(in srgb, var(--primary-color, #2563eb) 12%, var(--bg-primary));
   --tree-node-selected-border: var(--primary-color, #2563eb);
   --tree-node-muted-bg: color-mix(in srgb, var(--bg-primary) 94%, var(--text-color) 6%);
   --tree-node-muted-border: color-mix(in srgb, var(--border-color) 88%, transparent);
@@ -3100,6 +3100,18 @@ body.dark-mode .catalog-management-result {
 .classification-tree-node.is-selected {
   border-color: var(--tree-node-selected-border);
   background: var(--tree-node-selected-bg);
+}
+
+.classification-tree-node.is-selected.is-branch-muted {
+  border-color: var(--tree-node-selected-border);
+  background: var(--tree-node-selected-bg);
+}
+
+.classification-tree-node.is-selected .classification-tree-name,
+.classification-tree-node.is-selected .classification-tree-code,
+.classification-tree-node.is-selected .classification-tree-toggle,
+.classification-tree-node.is-selected .layout-tree-node-toggle {
+  color: var(--text-color);
 }
 
 .classification-tree-node.is-inactive {
