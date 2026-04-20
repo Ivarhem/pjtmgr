@@ -1194,11 +1194,7 @@ function selectNode(type, id, data) {
   }
 
   syncButtons();
-
-  // Highlight active tree node
-  document.querySelectorAll(".classification-tree-node").forEach(n => n.classList.remove("is-selected"));
-  const activeNode = document.querySelector('[data-node-type="' + type + '"][data-node-id="' + id + '"]');
-  if (activeNode) activeNode.classList.add("is-selected");
+  renderTree();
 
   // Render right panel
   const content = document.getElementById("layout-content");
