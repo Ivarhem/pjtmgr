@@ -685,13 +685,32 @@ async function loadTree() {
     const found = findNodeData(type, id);
     if (found) {
       selectNode(type, id, found);
-    } else {
-      _selectedNode = null;
-      _selectedCenterId = null;
-      _selectedRoomId = null;
-      renderEmptyContent();
+      return;
     }
+    _selectedNode = null;
+    _selectedCenterId = null;
+    _selectedRoomId = null;
   }
+
+  const preferred = getPreferredDefaultNode();
+  if (preferred) {
+    selectNode(preferred.type, preferred.id, preferred.data);
+  } else {
+    renderEmptyContent();
+  }
+}
+
+function getPreferredDefaultNode() {
+  const mainCenter = _centers.find((center) => center.is_main) || null;
+  const firstCenter = _centers[0] || null;
+  const targetCenter = mainCenter || firstCenter;
+  if (!targetCenter) return null;
+  const rooms = _rooms[targetCenter.id] || [];
+  const mainRoom = rooms.find((room) => room.is_main) || null;
+  const firstRoom = rooms[0] || null;
+  if (mainRoom) return { type: "room", id: mainRoom.id, data: mainRoom };
+  if (firstRoom) return { type: "room", id: firstRoom.id, data: firstRoom };
+  return { type: "center", id: targetCenter.id, data: targetCenter };
 }
 
 function findNodeData(type, id) {
@@ -2189,6 +2208,7 @@ function openCenterModal(center) {
   document.getElementById("center-name").value = center?.center_name ?? "";
   document.getElementById("center-location").value = center?.location ?? "";
   document.getElementById("center-active").value = String(center?.is_active ?? true);
+  document.getElementById("center-main").checked = !!center?.is_main;
   document.getElementById("center-note").value = center?.note ?? "";
   document.getElementById("modal-center").showModal();
 }
@@ -2207,6 +2227,7 @@ function openRoomModal(room) {
   document.getElementById("room-grid-cols").value = room?.grid_cols ?? 10;
   document.getElementById("room-grid-rows").value = room?.grid_rows ?? 12;
   document.getElementById("room-active").value = String(room?.is_active ?? true);
+  document.getElementById("room-main").checked = !!room?.is_main;
   document.getElementById("room-note").value = room?.note ?? "";
   document.getElementById("modal-room").showModal();
 }
@@ -2242,6 +2263,7 @@ async function saveCenter() {
     center_name: document.getElementById("center-name").value.trim(),
     location: document.getElementById("center-location").value.trim() || null,
     is_active: document.getElementById("center-active").value === "true",
+    is_main: document.getElementById("center-main").checked,
     note: document.getElementById("center-note").value.trim() || null,
   };
   if (!payload.center_name) {
@@ -2275,6 +2297,7 @@ async function saveRoom() {
     grid_cols: Number(document.getElementById("room-grid-cols").value) || 10,
     grid_rows: Number(document.getElementById("room-grid-rows").value) || 12,
     is_active: document.getElementById("room-active").value === "true",
+    is_main: document.getElementById("room-main").checked,
     note: document.getElementById("room-note").value.trim() || null,
   };
   if (!payload.room_name) {

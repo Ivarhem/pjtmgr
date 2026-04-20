@@ -48,6 +48,7 @@ def list_centers(db: Session, partner_id: int) -> list[dict]:
             "center_name": center.center_name,
             "location": center.location,
             "is_active": center.is_active,
+            "is_main": center.is_main,
             "note": center.note,
             "system_id": center.system_id,
             "prefix": center.prefix,
@@ -82,6 +83,7 @@ def list_rooms(db: Session, center_id: int) -> list[dict]:
             "room_name": room.room_name,
             "floor": room.floor,
             "is_active": room.is_active,
+            "is_main": room.is_main,
             "note": room.note,
             "system_id": room.system_id,
             "prefix": room.prefix,
@@ -149,6 +151,22 @@ def get_rack(db: Session, rack_id: int) -> Rack:
     return rack
 
 
+def _clear_other_main_centers(db: Session, partner_id: int, keep_center_id: int | None = None) -> None:
+    centers = list(db.scalars(select(Center).where(Center.partner_id == partner_id, Center.is_main.is_(True))))
+    for center in centers:
+        if keep_center_id is not None and center.id == keep_center_id:
+            continue
+        center.is_main = False
+
+
+def _clear_other_main_rooms(db: Session, center_id: int, keep_room_id: int | None = None) -> None:
+    rooms = list(db.scalars(select(Room).where(Room.center_id == center_id, Room.is_main.is_(True))))
+    for room in rooms:
+        if keep_room_id is not None and room.id == keep_room_id:
+            continue
+        room.is_main = False
+
+
 def create_center(db: Session, payload: CenterCreate, current_user: User) -> Center:
     _require_inventory_edit(current_user)
     _ensure_partner_exists(db, payload.partner_id)
@@ -161,6 +179,8 @@ def create_center(db: Session, payload: CenterCreate, current_user: User) -> Cen
     )
     _ensure_center_code_unique(db, payload.partner_id, center_code)
     center = Center(**payload.model_dump(exclude={"center_code"}), center_code=center_code)
+    if payload.is_main:
+        _clear_other_main_centers(db, payload.partner_id)
     db.add(center)
     db.flush()
     partner = db.get(Partner, payload.partner_id)
@@ -170,6 +190,7 @@ def create_center(db: Session, payload: CenterCreate, current_user: User) -> Cen
         room_code="MAIN",
         room_name="기본 전산실",
         is_active=True,
+        is_main=True if payload.is_main else False,
         system_id=build_room_system_id(center.system_id, "MAIN"),
     )
     db.add(default_room)
@@ -188,6 +209,8 @@ def update_center(db: Session, center_id: int, payload: CenterUpdate, current_us
         _ensure_center_code_unique(db, center.partner_id, next_code, center.id)
     for field, value in changes.items():
         setattr(center, field, value)
+    if changes.get("is_main") is True:
+        _clear_other_main_centers(db, center.partner_id, center.id)
     if code_changed:
         partner = db.get(Partner, center.partner_id)
         center.system_id = build_center_system_id(partner.partner_code, center.center_code)
@@ -220,6 +243,8 @@ def create_room(db: Session, payload: RoomCreate, current_user: User) -> Room:
     _ensure_room_code_unique(db, center.id, room_code)
     room = Room(**payload.model_dump(exclude={"room_code"}), room_code=room_code)
     room.system_id = build_room_system_id(center.system_id, room_code)
+    if payload.is_main:
+        _clear_other_main_rooms(db, center.id)
     db.add(room)
     db.commit()
     db.refresh(room)
@@ -236,6 +261,8 @@ def update_room(db: Session, room_id: int, payload: RoomUpdate, current_user: Us
         _ensure_room_code_unique(db, room.center_id, next_code, room.id)
     for field, value in changes.items():
         setattr(room, field, value)
+    if changes.get("is_main") is True:
+        _clear_other_main_rooms(db, room.center_id, room.id)
     if code_changed:
         center = get_center(db, room.center_id)
         room.system_id = build_room_system_id(center.system_id, room.room_code)

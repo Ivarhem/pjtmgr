@@ -19,6 +19,7 @@ class Room(TimestampMixin, Base):
     room_name: Mapped[str] = mapped_column(String(200))
     floor: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_main: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     racks_per_row: Mapped[int] = mapped_column(Integer, default=6)
     system_id: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True, index=True)

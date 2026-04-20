@@ -11,6 +11,7 @@ class RoomCreate(BaseModel):
     room_name: str
     floor: str | None = None
     is_active: bool = True
+    is_main: bool = False
     note: str | None = None
     racks_per_row: int = 6
     prefix: str | None = None
@@ -24,6 +25,7 @@ class RoomUpdate(BaseModel):
     room_name: str | None = None
     floor: str | None = None
     is_active: bool | None = None
+    is_main: bool | None = None
     note: str | None = None
     racks_per_row: int | None = None
     prefix: str | None = None
@@ -44,6 +46,7 @@ class RoomRead(BaseModel):
     room_name: str
     floor: str | None = None
     is_active: bool
+    is_main: bool
     note: str | None = None
     racks_per_row: int = 6
     rack_count: int = 0
