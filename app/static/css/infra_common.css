@@ -3080,10 +3080,10 @@ body.dark-mode .catalog-management-result {
   --tree-node-hover-border: color-mix(in srgb, var(--primary-color, #2563eb) 45%, var(--border-color));
   --tree-node-selected-bg: color-mix(in srgb, var(--primary-color, #2563eb) 12%, var(--bg-primary));
   --tree-node-selected-border: var(--primary-color, #2563eb);
-  --tree-node-muted-bg: color-mix(in srgb, var(--bg-primary) 94%, var(--text-color) 6%);
-  --tree-node-muted-border: color-mix(in srgb, var(--border-color) 88%, transparent);
+  --tree-node-muted-bg: color-mix(in srgb, var(--bg-primary) 97%, var(--text-color) 3%);
+  --tree-node-muted-border: color-mix(in srgb, var(--border-color) 92%, transparent);
   --tree-node-muted-fg: var(--text-color-tertiary);
-  --tree-node-muted-opacity: 0.88;
+  --tree-node-muted-opacity: 0.93;
   display: flex;
   align-items: stretch;
   gap: 8px;
@@ -3653,12 +3653,12 @@ body.dark-mode .classification-tree-node {
   --tree-node-hover-border: color-mix(in srgb, var(--primary-color, #2563eb) 45%, var(--border-color));
   --tree-node-selected-bg: color-mix(in srgb, var(--primary-color, #2563eb) 7%, var(--bg-primary));
   --tree-node-selected-border: var(--primary-color, #2563eb);
-  --tree-node-muted-bg: color-mix(in srgb, var(--bg-primary) 96%, #ffffff 4%);
-  --tree-node-muted-border: color-mix(in srgb, var(--border-color) 88%, transparent);
-  --tree-node-muted-fg: color-mix(in srgb, var(--text-color) 62%, transparent);
-  --tree-subtree-muted-border: color-mix(in srgb, var(--border-color) 55%, transparent);
-  --tree-room-subtree-muted-border: color-mix(in srgb, var(--border-color) 55%, transparent);
-  --tree-center-subtree-muted-border: color-mix(in srgb, var(--border-color) 55%, transparent);
+  --tree-node-muted-bg: color-mix(in srgb, var(--bg-primary) 98%, #ffffff 2%);
+  --tree-node-muted-border: color-mix(in srgb, var(--border-color) 92%, transparent);
+  --tree-node-muted-fg: color-mix(in srgb, var(--text-color) 72%, transparent);
+  --tree-subtree-muted-border: color-mix(in srgb, var(--border-color) 65%, transparent);
+  --tree-room-subtree-muted-border: color-mix(in srgb, var(--border-color) 65%, transparent);
+  --tree-center-subtree-muted-border: color-mix(in srgb, var(--border-color) 65%, transparent);
 }
 body.dark-mode .classification-tree-node-center {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-color) 82%, transparent);
