@@ -3537,7 +3537,7 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
   --layout-line-empty-fg: var(--color-gray-500, #6b7280);
   --layout-line-rack-border: 2px solid var(--color-gray-500, #6b7280);
   --layout-line-rack-fg: var(--color-gray-800, #1f2937);
-  --layout-line-selected-border: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #ffffff 28%);
+  --layout-line-selected-border: color-mix(in srgb, var(--primary-color, #2563eb) 88%, #1d4ed8 12%);
   --layout-excluded-bg: var(--bg-primary, #ffffff);
   --layout-excluded-border: transparent;
   --layout-excluded-fg: transparent;
