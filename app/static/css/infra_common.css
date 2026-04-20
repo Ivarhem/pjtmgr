@@ -4048,10 +4048,14 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   width: 26px;
   height: 26px;
   padding: 0;
+  margin-left: auto;
   color: var(--text-color-secondary);
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
+}
+.layout-tree-node-actions.is-visible:not(.is-detail-mode) + .layout-tree-node-toggle {
+  margin-left: 8px;
 }
 .layout-tree-node-toggle[aria-expanded="true"] {
   color: var(--primary-color, #2563eb);

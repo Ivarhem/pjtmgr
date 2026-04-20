@@ -1034,6 +1034,12 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     addAction("수정", () => openRackModal(nodeData));
     addAction("삭제", () => deleteRack(nodeData));
   }
+  if (_layoutTreeActionMode === "detail") {
+    actions.classList.add("is-visible", "is-detail-mode");
+  } else if (actionsOpen) {
+    actions.classList.add("is-visible");
+  }
+  nodeDiv.appendChild(actions);
   if (hasInlineActions) {
     const actionToggle = document.createElement("button");
     actionToggle.type = "button";
@@ -1047,12 +1053,6 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     });
     nodeDiv.appendChild(actionToggle);
   }
-  if (_layoutTreeActionMode === "detail") {
-    actions.classList.add("is-visible", "is-detail-mode");
-  } else if (actionsOpen) {
-    actions.classList.add("is-visible");
-  }
-  nodeDiv.appendChild(actions);
   li.appendChild(nodeDiv);
 
   if (hasChildren && childUl) {
