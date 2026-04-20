@@ -3786,7 +3786,7 @@ body.dark-mode .floor-plan-slot-status {
 .floor-plan-axis-corner,
 .floor-plan-axis-header,
 .floor-plan-axis-row {
-  background: var(--bg-primary);
+  background: transparent;
   border: 1px solid var(--color-gray-300, #d1d5db);
   border-radius: 6px;
   min-height: var(--floor-cell-height);
@@ -3805,7 +3805,7 @@ body.dark-mode .floor-plan-slot-status {
 body.dark-mode .floor-plan-axis-corner,
 body.dark-mode .floor-plan-axis-header,
 body.dark-mode .floor-plan-axis-row {
-  background: var(--bg-color-secondary);
+  background: transparent;
   border-color: var(--border-color);
 }
 
