@@ -3164,10 +3164,6 @@ body.dark-mode .catalog-management-result {
   border-left: 2px solid color-mix(in srgb, var(--border-color) 75%, transparent);
 }
 
-.classification-tree-node-room {
-  background: color-mix(in srgb, var(--bg-primary) 88%, var(--secondary-color) 12%);
-}
-
 .classification-tree-item:has(> .classification-tree-node-room) {
   margin-top: 6px;
 }
@@ -3563,10 +3559,6 @@ body.dark-mode .classification-tree-node-center {
 
 body.dark-mode .classification-tree-item:has(> .classification-tree-node-center) > .classification-subtree {
   border-left-color: color-mix(in srgb, var(--border-color) 88%, transparent);
-}
-
-body.dark-mode .classification-tree-node-room {
-  background: color-mix(in srgb, var(--bg-primary) 92%, #ffffff 8%);
 }
 
 body.dark-mode .classification-tree-node.is-branch-muted {
