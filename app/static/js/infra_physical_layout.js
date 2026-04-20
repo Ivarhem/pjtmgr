@@ -957,7 +957,7 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   btn.addEventListener("click", () => selectNode(nodeType, nodeId, nodeData));
 
   nodeDiv.appendChild(btn);
-  const hasInlineActions = nodeType === "center" || nodeType === "room" || nodeType === "line";
+  const hasInlineActions = nodeType === "center" || nodeType === "room" || nodeType === "line" || nodeType === "rack";
   const actions = document.createElement("div");
   actions.className = "layout-tree-node-actions";
   const actionsOpen = isTreeActionExpanded(key);
