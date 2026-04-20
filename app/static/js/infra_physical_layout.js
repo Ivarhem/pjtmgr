@@ -987,8 +987,11 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   if (_selectedNode && _selectedNode.type === nodeType && String(_selectedNode.id) === String(nodeId)) {
     nodeDiv.classList.add("is-selected");
   }
-  if (!isNodeWithinSelectedBranch(nodeType, nodeId, nodeData)) {
+  const isInSelectedBranch = isNodeWithinSelectedBranch(nodeType, nodeId, nodeData);
+  if (!isInSelectedBranch) {
+    li.classList.add("is-branch-muted");
     nodeDiv.classList.add("is-branch-muted");
+    if (childUl) childUl.classList.add("is-branch-muted");
   }
 
   const btn = document.createElement("button");
