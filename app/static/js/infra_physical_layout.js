@@ -1020,7 +1020,7 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     actionToggle.className = "btn btn-icon btn-sm layout-tree-node-toggle";
     actionToggle.title = actionsOpen ? "노드 작업 닫기" : "노드 작업 열기";
     actionToggle.setAttribute("aria-expanded", actionsOpen ? "true" : "false");
-    actionToggle.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="3" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="8" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg>';
+    actionToggle.textContent = actionsOpen ? "<" : ">";
     actionToggle.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleTreeActionMenu(key);

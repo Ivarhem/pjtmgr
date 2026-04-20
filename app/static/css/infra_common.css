@@ -3517,6 +3517,12 @@ body.dark-mode .floor-plan-cell.is-excluded {
   color: transparent;
 }
 
+body.dark-mode .floor-plan-cell.line-slot.is-excluded {
+  background: color-mix(in srgb, var(--bg-primary) 80%, var(--text-color) 20%) !important;
+  border-color: transparent !important;
+  color: transparent !important;
+}
+
 body.dark-mode .floor-plan-cell.line-slot {
   background: #0b0b0d;
   border-color: transparent;
@@ -4042,6 +4048,9 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   height: 26px;
   padding: 0;
   color: var(--text-color-secondary);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
 }
 .layout-tree-node-toggle[aria-expanded="true"] {
   color: var(--primary-color, #2563eb);
