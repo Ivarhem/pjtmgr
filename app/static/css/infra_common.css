@@ -3096,6 +3096,23 @@ body.dark-mode .catalog-management-result {
 .classification-tree-node.is-inactive {
   opacity: 0.8;
 }
+.classification-tree-node.is-branch-muted {
+  background: color-mix(in srgb, var(--bg-primary) 78%, var(--text-color) 22%);
+  border-color: color-mix(in srgb, var(--border-color) 70%, transparent);
+}
+
+.classification-tree-node.is-branch-muted .classification-tree-name,
+.classification-tree-node.is-branch-muted .classification-tree-code,
+.classification-tree-node.is-branch-muted .classification-tree-toggle,
+.classification-tree-node.is-branch-muted .layout-tree-node-toggle {
+  color: var(--text-color-tertiary);
+}
+
+.classification-tree-node.is-branch-muted .layout-tree-node-action,
+.classification-tree-node.is-branch-muted .classification-tree-node-main {
+  opacity: 0.72;
+}
+
 
 .classification-tree-node-main {
   flex: 1 1 auto;
@@ -3538,6 +3555,18 @@ body.dark-mode .classification-tree-item:has(> .classification-tree-node-center)
 
 body.dark-mode .classification-tree-node-room {
   background: color-mix(in srgb, var(--bg-primary) 92%, #ffffff 8%);
+}
+
+body.dark-mode .classification-tree-node.is-branch-muted {
+  background: color-mix(in srgb, var(--bg-primary) 88%, #ffffff 12%);
+  border-color: color-mix(in srgb, var(--border-color) 82%, transparent);
+}
+
+body.dark-mode .classification-tree-node.is-branch-muted .classification-tree-name,
+body.dark-mode .classification-tree-node.is-branch-muted .classification-tree-code,
+body.dark-mode .classification-tree-node.is-branch-muted .classification-tree-toggle,
+body.dark-mode .classification-tree-node.is-branch-muted .layout-tree-node-toggle {
+  color: color-mix(in srgb, var(--text-color) 36%, transparent);
 }
 
 

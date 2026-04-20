@@ -713,6 +713,63 @@ function getPreferredDefaultNode() {
   return { type: "center", id: targetCenter.id, data: targetCenter };
 }
 
+function getNodeBranchInfo(nodeType, nodeId, nodeData) {
+  if (nodeType === "center") {
+    return { centerId: Number(nodeId), roomId: null, lineId: null, rackId: null };
+  }
+  if (nodeType === "floor") {
+    return { centerId: Number(nodeData?.center?.id || 0) || null, roomId: null, lineId: null, rackId: null };
+  }
+  if (nodeType === "room") {
+    return { centerId: Number(nodeData?.center_id || 0) || null, roomId: Number(nodeId), lineId: null, rackId: null };
+  }
+  if (nodeType === "line") {
+    const roomId = Number(nodeData?.room_id || 0) || null;
+    let centerId = null;
+    if (roomId) {
+      for (const [cid, rooms] of Object.entries(_rooms)) {
+        if ((rooms || []).some((room) => Number(room.id) === roomId)) {
+          centerId = Number(cid);
+          break;
+        }
+      }
+    }
+    return { centerId, roomId, lineId: nodeData?.is_unassigned ? `unassigned-${roomId}` : String(nodeData?.id ?? nodeId), rackId: null };
+  }
+  if (nodeType === "rack") {
+    const roomId = Number(nodeData?.room_id || 0) || null;
+    let centerId = null;
+    if (roomId) {
+      for (const [cid, rooms] of Object.entries(_rooms)) {
+        if ((rooms || []).some((room) => Number(room.id) === roomId)) {
+          centerId = Number(cid);
+          break;
+        }
+      }
+    }
+    const lineId = nodeData?.rack_line_id != null ? String(nodeData.rack_line_id) : `unassigned-${roomId}`;
+    return { centerId, roomId, lineId, rackId: Number(nodeId) };
+  }
+  return { centerId: null, roomId: null, lineId: null, rackId: null };
+}
+
+function isNodeWithinSelectedBranch(nodeType, nodeId, nodeData) {
+  if (!_selectedNode) return true;
+  const selected = getNodeBranchInfo(_selectedNode.type, _selectedNode.id, _selectedNode.data || _selectedNode);
+  const current = getNodeBranchInfo(nodeType, nodeId, nodeData);
+  if (!selected.centerId || !current.centerId) return true;
+  if (current.centerId !== selected.centerId) return false;
+  if (!selected.roomId) return true;
+  if (!current.roomId) return true;
+  if (current.roomId !== selected.roomId) return false;
+  if (!selected.lineId) return true;
+  if (!current.lineId) return true;
+  if (String(current.lineId) !== String(selected.lineId)) return false;
+  if (!selected.rackId) return true;
+  if (!current.rackId) return true;
+  return Number(current.rackId) === Number(selected.rackId);
+}
+
 function findNodeData(type, id) {
   if (type === "center") return _centers.find(c => c.id === id) || null;
   if (type === "room") {
@@ -926,9 +983,12 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
   nodeDiv.setAttribute("data-node-type", nodeType);
   nodeDiv.setAttribute("data-node-id", String(nodeId));
 
-  // Mark active
+  // Mark active / branch focus
   if (_selectedNode && _selectedNode.type === nodeType && String(_selectedNode.id) === String(nodeId)) {
     nodeDiv.classList.add("is-selected");
+  }
+  if (!isNodeWithinSelectedBranch(nodeType, nodeId, nodeData)) {
+    nodeDiv.classList.add("is-branch-muted");
   }
 
   const btn = document.createElement("button");
