@@ -124,6 +124,24 @@
             <option value="false">비활성</option>
           </select>
         </label>
+        <label>소속 라인
+          <select id="rack-line-id">
+            <option value="">미할당</option>
+          </select>
+        </label>
+        <label>좌표 순번 <input type="number" id="rack-line-position" min="1" placeholder="자동 또는 직접 지정"></label>
+        <label>소속 라인
+          <select id="rack-line-id">
+            <option value="">미할당</option>
+          </select>
+        </label>
+        <label>좌표 순번 <input type="number" id="rack-line-position" min="1" placeholder="자동 또는 직접 지정"></label>
+        <label>소속 라인
+          <select id="rack-line-id">
+            <option value="">미할당</option>
+          </select>
+        </label>
+        <label>좌표 순번 <input type="number" id="rack-line-position" min="1" placeholder="자동 또는 직접 지정"></label>
         <label class="full-width">위치상세 <input type="text" id="rack-location-detail"></label>
         <label class="full-width">비고 <textarea id="rack-note" rows="3"></textarea></label>
       </div>
@@ -137,5 +155,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260417q"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260420a"></script>
 {% endblock %}

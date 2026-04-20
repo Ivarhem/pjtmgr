@@ -889,8 +889,15 @@ function createTreeNode({ key, icon, label, meta, nodeType, nodeId, nodeData, ha
     addAction("삭제", () => deleteRoom(nodeData));
   } else if (nodeType === "line") {
     if (nodeData?.is_unassigned) {
-      addAction("랙 추가", () => { _selectedRoomId = nodeData.room_id; _selectedSlotContext = null; openRackModal(); });
+      addAction("랙 추가", async () => { _selectedRoomId = nodeData.room_id; _selectedSlotContext = null; await openRackModal(); });
     } else {
+      addAction("랙 추가", async () => {
+        _selectedRoomId = nodeData.room_id;
+        const room = _findRoomData(nodeData.room_id);
+        const nextPos = getFirstEmptyLinePosition(nodeData, _racks[nodeData.room_id] || [], room);
+        _selectedSlotContext = { line: nodeData, position: nextPos, room, rackLines: _rackLines[nodeData.room_id] || [] };
+        await openRackModal();
+      });
       addAction("수정", async () => {
         const nextName = (prompt("새 라인명을 입력하세요.", nodeData.line_name || "") || "").trim();
         if (!nextName || nextName === nodeData.line_name) return;
@@ -2002,6 +2009,82 @@ async function renderRackView(container, rack) {
   }
 }
 
+async function getRoomRackLines(roomId) {
+  if (!roomId) return [];
+  try {
+    return await apiFetch("/api/v1/rooms/" + roomId + "/rack-lines");
+  } catch {
+    return [];
+  }
+}
+
+function getLineSlotCount(line, room = null) {
+  return Math.max(1, Number(line?.slot_count || room?.grid_rows || 1));
+}
+
+function getFirstEmptyLinePosition(line, roomRacks = [], room = null, excludeRackId = null) {
+  const used = new Set(
+    (roomRacks || [])
+      .filter((rack) => Number(rack.rack_line_id) === Number(line.id) && rack.line_position != null && Number(rack.id) !== Number(excludeRackId))
+      .map((rack) => Number(rack.line_position))
+      .filter(Number.isFinite)
+  );
+  const slotCount = getLineSlotCount(line, room);
+  for (let pos = 0; pos < slotCount; pos++) {
+    if (!used.has(pos)) return pos;
+  }
+  return slotCount;
+}
+
+async function populateRackPlacementFields(rack = null) {
+  const lineSelect = document.getElementById("rack-line-id");
+  const posInput = document.getElementById("rack-line-position");
+  if (!lineSelect || !posInput || !_selectedRoomId) return;
+  const room = _findRoomData(_selectedRoomId);
+  const roomLines = await getRoomRackLines(_selectedRoomId);
+  const assignableLines = roomLines.filter((line) => !isUnassignedLine(line));
+  lineSelect.innerHTML = '<option value="">미할당</option>';
+  assignableLines.forEach((line) => {
+    const opt = document.createElement("option");
+    opt.value = String(line.id);
+    opt.textContent = line.line_name;
+    lineSelect.appendChild(opt);
+  });
+
+  let selectedLineId = rack?.rack_line_id ?? _selectedSlotContext?.line?.id ?? "";
+  if (selectedLineId && !assignableLines.some((line) => String(line.id) === String(selectedLineId))) selectedLineId = "";
+  lineSelect.value = selectedLineId ? String(selectedLineId) : "";
+
+  const syncPosition = () => {
+    const currentLine = assignableLines.find((line) => String(line.id) === String(lineSelect.value));
+    if (!currentLine) {
+      posInput.value = "";
+      posInput.placeholder = "미할당";
+      return;
+    }
+    if (posInput.dataset.manual === "1") return;
+    const fallback = rack && Number(rack.rack_line_id) === Number(currentLine.id) && rack.line_position != null
+      ? Number(rack.line_position)
+      : (_selectedSlotContext?.line && Number(_selectedSlotContext.line.id) === Number(currentLine.id) && _selectedSlotContext.position != null
+          ? Number(_selectedSlotContext.position)
+          : getFirstEmptyLinePosition(currentLine, _racks[_selectedRoomId] || [], room, rack?.id));
+    posInput.value = String(Number(fallback) + 1);
+    posInput.placeholder = `자동 추천: ${Number(fallback) + 1}`;
+  };
+
+  posInput.dataset.manual = rack?.line_position != null ? "1" : "0";
+  posInput.value = rack?.line_position != null ? String(Number(rack.line_position) + 1) : "";
+  posInput.oninput = () => {
+    posInput.dataset.manual = posInput.value.trim() ? "1" : "0";
+  };
+  lineSelect.onchange = () => {
+    posInput.dataset.manual = "0";
+    posInput.value = "";
+    syncPosition();
+  };
+  syncPosition();
+}
+
 function _canPlaceAt(slotMap, startU, sizeUnit, totalU, excludeAssetId) {
   for (let u = startU; u < startU + sizeUnit; u++) {
     if (u < 1 || u > totalU) return false;
@@ -2050,12 +2133,12 @@ function openRoomModal(room) {
   document.getElementById("modal-room").showModal();
 }
 
-function openRackModal(rack) {
+async function openRackModal(rack) {
   if (!_selectedRoomId) {
-    showToast("\uC804\uC0B0\uC2E4\uC744 \uBA3C\uC800 \uC120\uD0DD\uD558\uC138\uC694.", "warning");
+    showToast("전산실을 먼저 선택하세요.", "warning");
     return;
   }
-  document.getElementById("modal-rack-title").textContent = rack ? "\uB799 \uC218\uC815" : "\uB799 \uB4F1\uB85D";
+  document.getElementById("modal-rack-title").textContent = rack ? "랙 수정" : "랙 등록";
   document.getElementById("rack-id").value = rack?.id ?? "";
   _rackCodeSuggestionLocked = !!rack;
   document.getElementById("rack-code").value = rack?.rack_code ?? "";
@@ -2065,6 +2148,7 @@ function openRackModal(rack) {
   document.getElementById("rack-location-detail").value = rack?.location_detail ?? "";
   document.getElementById("rack-active").value = String(rack?.is_active ?? true);
   document.getElementById("rack-note").value = rack?.note ?? "";
+  await populateRackPlacementFields(rack);
   document.getElementById("modal-rack").showModal();
 }
 
@@ -2137,6 +2221,8 @@ async function saveRack() {
     return;
   }
   const rackId = document.getElementById("rack-id").value;
+  const lineSelectValue = document.getElementById("rack-line-id").value;
+  const linePositionValue = document.getElementById("rack-line-position").value.trim();
   const payload = {
     room_id: _selectedRoomId,
     rack_code: document.getElementById("rack-code").value.trim() || null,
@@ -2145,16 +2231,16 @@ async function saveRack() {
     location_detail: document.getElementById("rack-location-detail").value.trim() || null,
     is_active: document.getElementById("rack-active").value === "true",
     note: document.getElementById("rack-note").value.trim() || null,
+    rack_line_id: lineSelectValue ? Number(lineSelectValue) : null,
+    line_position: lineSelectValue && linePositionValue ? Math.max(0, Number(linePositionValue) - 1) : null,
   };
-  if (_selectedSlotContext && !rackId) {
-    if (_selectedSlotContext.isExcluded) {
-      showToast("제외된 칸에는 랙을 등록할 수 없습니다.", "warning");
-      return;
-    }
-    if (_selectedSlotContext.line) {
-      payload.rack_line_id = _selectedSlotContext.line.id;
-      payload.line_position = _selectedSlotContext.position;
-    }
+  if (lineSelectValue && !linePositionValue) {
+    showToast("좌표 순번을 입력하세요.", "warning");
+    return;
+  }
+  if (_selectedSlotContext && !rackId && !_selectedSlotContext.isExcluded && !lineSelectValue && _selectedSlotContext.line) {
+    payload.rack_line_id = _selectedSlotContext.line.id;
+    payload.line_position = _selectedSlotContext.position;
   }
   if (rackId) {
     await apiFetch("/api/v1/racks/" + rackId, { method: "PATCH", body: payload });
