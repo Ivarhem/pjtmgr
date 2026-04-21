@@ -115,23 +115,26 @@
   <form id="form-rack">
     <input type="hidden" id="rack-id">
     <fieldset class="modal-group">
-      <legend class="modal-group-title">랙 정보</legend>
-      <div class="form-grid">
+      <legend class="modal-group-title">기본 정보</legend>
+      <div class="form-grid form-grid-1-1">
         <label>랙명 <input type="text" id="rack-name" placeholder="미입력 시 소속라인+순번으로 자동 설정"></label>
         <label><span class="label-text">총 U<span class="req">*</span></span> <input type="number" id="rack-total-units" min="1" value="42" required></label>
-        <label>상태
-          <select id="rack-active">
-            <option value="true">활성</option>
-            <option value="false">비활성</option>
-          </select>
-        </label>
+      </div>
+    </fieldset>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">배치 정보</legend>
+      <div class="form-grid form-grid-1-1">
         <label>소속 라인
           <select id="rack-line-id">
             <option value="">미할당</option>
           </select>
         </label>
         <label>좌표 순번 <input type="number" id="rack-line-position" min="1" placeholder="자동 또는 직접 지정"></label>
-        <label class="full-width">위치상세 <input type="text" id="rack-location-detail"></label>
+      </div>
+    </fieldset>
+    <fieldset class="modal-group">
+      <legend class="modal-group-title">메모</legend>
+      <div class="form-grid">
         <label class="full-width">비고 <textarea id="rack-note" rows="3"></textarea></label>
       </div>
     </fieldset>

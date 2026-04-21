@@ -2529,8 +2529,6 @@ async function openRackModal(rack) {
   document.getElementById("rack-id").value = rack?.id ?? "";
   document.getElementById("rack-name").value = rack?.rack_name ?? "";
   document.getElementById("rack-total-units").value = rack?.total_units ?? 42;
-  document.getElementById("rack-location-detail").value = rack?.location_detail ?? "";
-  document.getElementById("rack-active").value = String(rack?.is_active ?? true);
   document.getElementById("rack-note").value = rack?.note ?? "";
   await populateRackPlacementFields(rack);
   if (!rack) applySuggestedRackName({ force: true });
@@ -2614,8 +2612,6 @@ async function saveRack() {
     room_id: _selectedRoomId,
     rack_name: document.getElementById("rack-name").value.trim() || getSuggestedRackNameFromPlacement() || null,
     total_units: Number(document.getElementById("rack-total-units").value || 42),
-    location_detail: document.getElementById("rack-location-detail").value.trim() || null,
-    is_active: document.getElementById("rack-active").value === "true",
     note: document.getElementById("rack-note").value.trim() || null,
     rack_line_id: lineSelectValue ? Number(lineSelectValue) : null,
     line_position: lineSelectValue && linePositionValue ? Math.max(0, Number(linePositionValue) - 1) : null,
