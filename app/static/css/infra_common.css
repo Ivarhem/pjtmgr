@@ -3832,6 +3832,15 @@ body.dark-mode .rack-unplaced-item { background: #050506; border-color: color-mi
   background: transparent;
   border: 1px solid var(--color-gray-300, #d1d5db);
   border-radius: 6px;
+}
+.floor-plan-axis-corner,
+.floor-plan-axis-header {
+  min-height: 28px;
+  height: 28px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.floor-plan-axis-row {
   min-height: var(--floor-cell-height);
 }
 .floor-plan-axis-corner {
@@ -3861,6 +3870,7 @@ body.dark-mode .floor-plan-axis-row {
 .floor-plan-axis-row.is-active-line { border-style: dashed; border-color: var(--color-blue-300, #93c5fd); }
 
 .floor-plan-axis-frame { background: transparent; border: 1px solid var(--color-gray-300, #d1d5db); border-radius: 6px; min-height: var(--floor-cell-height); color: transparent !important; font-size: 0 !important; line-height: 0 !important; overflow: hidden; pointer-events: none; }
+.floor-plan-header.floor-plan-axis-frame { min-height: 12px; height: 12px; padding: 0; }
 .floor-plan-axis-frame * { display: none !important; }
 body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); background: transparent; }
 
