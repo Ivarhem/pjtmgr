@@ -3832,9 +3832,7 @@ body.dark-mode .floor-plan-slot-status {
 .rack-info-detail-header { padding: 10px 12px 6px; margin-bottom: 0; }
 .rack-info-detail-header .detail-title { font-size: 14px; font-weight: 700; line-height: 1.35; }
 .rack-info-detail-header .detail-subtitle { font-size: 12px; line-height: 1.35; }
-.rack-info-tabs { margin-bottom: 0; padding: 0 12px; }
-.rack-info-tabs .tab-btn { padding-left: 0; padding-right: 0; font-size: 12px; }
-.rack-info-body { padding: 10px 12px 6px; }
+.rack-info-body { padding: 8px 12px 6px; }
 .rack-info-grid {
   grid-template-columns: minmax(84px, 98px) minmax(0, 1fr);
   gap: 0 14px;

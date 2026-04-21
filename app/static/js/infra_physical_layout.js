@@ -2290,15 +2290,6 @@ async function renderRackView(container, rack, options = {}) {
     detailHeader.appendChild(titleGroup);
     rackInfoCard.appendChild(detailHeader);
 
-    const detailTabs = document.createElement("div");
-    detailTabs.className = "detail-tabs rack-info-tabs";
-    const basicTab = document.createElement("button");
-    basicTab.type = "button";
-    basicTab.className = "tab-btn active";
-    basicTab.textContent = "기본정보";
-    detailTabs.appendChild(basicTab);
-    rackInfoCard.appendChild(detailTabs);
-
     const detailBody = document.createElement("div");
     detailBody.className = "detail-body rack-info-body";
     const detailGrid = document.createElement("dl");
@@ -2307,17 +2298,10 @@ async function renderRackView(container, rack, options = {}) {
     const selectedLine = _selectedSlotContext?.rack?.id === rack.id ? _selectedSlotContext?.line : null;
     const lineLabel = selectedLine?.line_name || rack.line_name || "미할당";
     const posLabel = rack.line_position != null ? `${Number(rack.line_position) + 1}번` : "-";
-    const freeU = Math.max(0, totalU - usedU);
     const rows = [
-      ["랙코드", rack.rack_code || "-"],
-      ["랙명", rack.rack_name || rack.rack_code || "-"],
-      ["총 U", `${totalU}U`],
       ["소속 라인", lineLabel],
       ["좌표 순번", posLabel],
       ["배치 장비", `${placed.length}대`],
-      ["미배치 장비", `${rackableUnplaced.length}대`],
-      ["사용 U", `${usedU}U`],
-      ["여유 U", `${freeU}U`],
     ];
     rows.forEach(([label, value]) => {
       const dt = document.createElement("dt");
