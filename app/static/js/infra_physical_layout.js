@@ -521,28 +521,49 @@ function suggestLineNameForColumn(colIndex, rackLines = []) {
   return _alphaLabel(colIndex);
 }
 
-function getSuggestedRackName(lineName = "", positionIndex = null) {
+function getRackSequentialDisplayNumber(line, positionIndex) {
+  const target = Number(positionIndex);
+  if (!line || !Number.isFinite(target) || target < 0) return null;
+  const disabled = new Set((line.disabled_slots || []).map((value) => Number(value)).filter(Number.isFinite));
+  let count = 0;
+  for (let idx = 0; idx <= target; idx += 1) {
+    if (disabled.has(idx)) continue;
+    count += 1;
+  }
+  return count > 0 ? count : null;
+}
+
+function getSuggestedRackName(lineName = "", positionIndex = null, options = {}) {
   if (positionIndex == null || Number.isNaN(Number(positionIndex))) return "";
-  return getSlotDefaultCode({ lineName, positionIndex: Number(positionIndex) }) || "";
+  const sequential = !!options.sequential;
+  const line = options.line || null;
+  const displayNumber = sequential
+    ? getRackSequentialDisplayNumber(line, Number(positionIndex))
+    : Number(positionIndex) + 1;
+  if (!Number.isFinite(displayNumber) || displayNumber == null) return "";
+  const effectiveLineName = (line?.line_name || lineName || "").trim();
+  if (!effectiveLineName) return "";
+  return `${effectiveLineName}-${String(displayNumber).padStart(2, "0")}`;
 }
 
 function getSuggestedRackNameFromPlacement() {
   const lineSelect = document.getElementById("rack-line-id");
   const posInput = document.getElementById("rack-line-position");
+  const sequentialInput = document.getElementById("rack-name-sequential");
   if (!lineSelect || !posInput) return "";
   const selectedLineId = String(lineSelect.value || "");
   const selectedLine = (_rackLines[_selectedRoomId] || []).find((line) => String(line.id) === selectedLineId);
   const positionValue = Number(posInput.value || 0);
   if (!selectedLine || !Number.isFinite(positionValue) || positionValue <= 0) return "";
-  return getSuggestedRackName(selectedLine.line_name, positionValue - 1);
+  return getSuggestedRackName(selectedLine.line_name, positionValue - 1, { line: selectedLine, sequential: !!sequentialInput?.checked });
 }
 
 function applySuggestedRackName({ force = false } = {}) {
   const input = document.getElementById("rack-name");
   if (!input) return;
-  if (!force && input.value.trim()) return;
+  if (!force && input.dataset.manual === "1") return;
   const suggested = getSuggestedRackNameFromPlacement();
-  if (suggested) input.value = suggested;
+  input.value = suggested || input.value;
 }
 
 function clampLayoutZoom(value) {
@@ -2436,6 +2457,8 @@ async function populateRackPlacementFields(rack = null) {
   let selectedLineId = rack?.rack_line_id ?? _selectedSlotContext?.line?.id ?? "";
   if (selectedLineId && !assignableLines.some((line) => String(line.id) === String(selectedLineId))) selectedLineId = "";
   lineSelect.value = selectedLineId ? String(selectedLineId) : "";
+  const sequentialInput = document.getElementById("rack-name-sequential");
+  if (sequentialInput) sequentialInput.checked = false;
 
   const syncPosition = () => {
     const currentLine = assignableLines.find((line) => String(line.id) === String(lineSelect.value));
@@ -2454,10 +2477,18 @@ async function populateRackPlacementFields(rack = null) {
     posInput.placeholder = `자동 추천: ${Number(fallback) + 1}`;
   };
 
+  const nameInput = document.getElementById("rack-name");
+  if (nameInput) {
+    nameInput.dataset.manual = rack?.rack_name ? "1" : "0";
+    nameInput.oninput = () => {
+      nameInput.dataset.manual = nameInput.value.trim() ? "1" : "0";
+    };
+  }
   posInput.dataset.manual = rack?.line_position != null ? "1" : "0";
   posInput.value = rack?.line_position != null ? String(Number(rack.line_position) + 1) : "";
   posInput.oninput = () => {
     posInput.dataset.manual = posInput.value.trim() ? "1" : "0";
+    applySuggestedRackName();
   };
   lineSelect.onchange = () => {
     posInput.dataset.manual = "0";
@@ -2465,8 +2496,10 @@ async function populateRackPlacementFields(rack = null) {
     syncPosition();
     applySuggestedRackName();
   };
+  if (sequentialInput) {
+    sequentialInput.onchange = () => applySuggestedRackName({ force: true });
+  }
   syncPosition();
-  posInput.addEventListener("input", () => applySuggestedRackName());
   applySuggestedRackName();
 }
 
