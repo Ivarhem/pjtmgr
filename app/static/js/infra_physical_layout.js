@@ -2252,6 +2252,7 @@ async function renderRackView(container, rack, options = {}) {
         await apiFetch("/api/v1/assets/" + assetId, {
           method: "PATCH",
           body: {
+            rack_id: rack.id,
             rack_start_unit: targetU,
             rack_end_unit: targetU + sizeUnit - 1,
           },
@@ -2363,7 +2364,7 @@ async function renderRackView(container, rack, options = {}) {
       try {
         await apiFetch("/api/v1/assets/" + assetId, {
           method: "PATCH",
-          body: { rack_start_unit: null, rack_end_unit: null },
+          body: { rack_id: null, rack_start_unit: null, rack_end_unit: null },
         });
         showToast("장비 배치 해제");
         if (onRefresh) {

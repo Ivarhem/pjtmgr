@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.auth.authorization import can_edit_inventory
@@ -442,19 +442,38 @@ def delete_rack_line(db: Session, line_id: int, current_user: User) -> None:
 
 
 def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
-    """해당 랙에 배치된 자산 목록 (rack_start_unit 순 정렬)."""
+    """해당 랙에 배치된 자산 + 같은 고객의 미배치 랙 후보 자산 목록."""
     from app.modules.infra.models.asset import Asset
+    from app.modules.infra.models.hardware_spec import HardwareSpec
     from app.modules.infra.models.product_catalog import ProductCatalog
 
     rack = db.get(Rack, rack_id)
     if rack is None:
         raise NotFoundError("Rack not found")
 
+    room = db.get(Room, rack.room_id)
+    center = db.get(Center, room.center_id) if room else None
+    partner_id = center.partner_id if center else None
+
     rows = db.execute(
-        select(Asset, ProductCatalog.product_type)
+        select(Asset, ProductCatalog.product_type, HardwareSpec.size_unit.label("catalog_size_unit"))
         .join(ProductCatalog, ProductCatalog.id == Asset.model_id, isouter=True)
-        .where(Asset.rack_id == rack_id)
-        .order_by(Asset.rack_start_unit.asc().nullslast(), Asset.id.asc())
+        .join(HardwareSpec, HardwareSpec.product_id == Asset.model_id, isouter=True)
+        .where(
+            or_(
+                Asset.rack_id == rack_id,
+                and_(
+                    Asset.rack_id.is_(None),
+                    Asset.rack_start_unit.is_(None),
+                    Asset.partner_id == partner_id if partner_id is not None else Asset.partner_id.is_not(None),
+                ),
+            )
+        )
+        .order_by(
+            Asset.rack_id.is_(None).asc(),
+            Asset.rack_start_unit.asc().nullslast(),
+            Asset.id.asc(),
+        )
     ).all()
     return [
         {
@@ -463,15 +482,16 @@ def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
             "hostname": a.hostname,
             "rack_start_unit": a.rack_start_unit,
             "rack_end_unit": a.rack_end_unit,
-            "size_unit": a.size_unit,
+            "size_unit": a.size_unit or catalog_size_unit,
             "status": a.status,
             "environment": a.environment,
             "rack_unit": a.rack_unit,
             "category": a.category,
             "asset_class": a.asset_class,
             "product_type": product_type or "hardware",
+            "rack_id": a.rack_id,
         }
-        for a, product_type in rows
+        for a, product_type, catalog_size_unit in rows
     ]
 
 
