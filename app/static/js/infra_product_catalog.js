@@ -32,6 +32,7 @@ const CATALOG_DETAIL_OPEN_KEY = "catalog_detail_open";
 const CATALOG_DETAIL_LAST_ID_KEY = "catalog_detail_last_id";
 const CATALOG_LAYOUT_PRESET_KEY = "catalog_layout_preset_id";
 const CATALOG_CLASSIFICATION_SEARCH_KEY = "catalog_classification_search_query";
+const CATALOG_TREE_ACTION_MODE_KEY = "catalog.classification.treeActionMode";
 let _catalogClassificationScheme = null;
 let _catalogClassificationEditMode = false;
 let _catalogLayoutDetail = null;
@@ -40,6 +41,8 @@ let _catalogAttributeDefs = [];
 let _catalogClassificationSearchQuery = "";
 const _catalogAttributeOptionCache = new Map();
 let _catalogClassificationSchemeEditing = false;
+let _catalogTreeActionMode = localStorage.getItem(CATALOG_TREE_ACTION_MODE_KEY) || "compact";
+const _catalogExpandedTreeActions = new Set();
 
 const CATALOG_LABEL_LANG_PREF_KEY = "catalog.label_lang";
 let _catalogLabelLang = "ko";
@@ -607,6 +610,45 @@ function renderCatalogClassificationSummary() {
   container.innerHTML = `
     <div class="classification-stat"><span class="classification-stat-label">노드 수</span><span class="classification-stat-value">${_catalogClassificationScheme.node_count ?? _catalogClassificationNodes.length}</span></div>
   `;
+}
+
+function updateCatalogTreeModeBtn() {
+  const btn = document.getElementById("btn-catalog-tree-mode");
+  if (!btn) return;
+  const detail = _catalogTreeActionMode === "detail";
+  btn.textContent = detail ? "간단히" : "자세히";
+  btn.className = "btn btn-secondary btn-sm" + (detail ? " is-active" : "");
+  btn.title = detail ? "모든 분류 노드 액션 항상 표시" : "노드별 작은 토글로 액션 표시";
+}
+
+function isCatalogTreeActionExpanded(nodeId) {
+  return _catalogTreeActionMode === "detail" || _catalogExpandedTreeActions.has(nodeId);
+}
+
+function toggleCatalogTreeActionMenu(nodeId) {
+  if (_catalogTreeActionMode === "detail") return;
+  const isOpen = _catalogExpandedTreeActions.has(nodeId);
+  _catalogExpandedTreeActions.clear();
+  if (!isOpen) _catalogExpandedTreeActions.add(nodeId);
+  renderCatalogClassificationTree();
+}
+
+function isCatalogNodeWithinSelectedBranch(node) {
+  if (!_selectedCatalogClassificationCode) return true;
+  const target = String(_selectedCatalogClassificationCode || "");
+  const current = String(node?.node_code || "");
+  if (!target || !current) return true;
+  return current === target || current.startsWith(`${target}>`) || target.startsWith(`${current}>`);
+}
+
+function getCatalogNodeLevelClass(node) {
+  const level = Number(node?.level || 0);
+  return level > 0 ? ` classification-tree-node-level-${level}` : "";
+}
+
+function canCatalogNodeAddChild(node) {
+  const maxDepth = Number(_catalogLayoutDetail?.depth_count || 3);
+  return Number(node?.level || 0) < maxDepth;
 }
 
 function initCatalogGrid() {
@@ -1261,6 +1303,7 @@ async function populateCatalogClassificationNodeDomainSelect(selectedDomainOptio
 function renderCatalogClassificationTree() {
   const container = document.getElementById("catalog-classification-tree");
   if (!container) return;
+  updateCatalogTreeModeBtn();
   if (!_catalogClassificationNodes.length) {
     container.innerHTML = '<div class="catalog-classification-empty">선택 가능한 leaf 분류가 없습니다.</div>';
     return;
@@ -1343,22 +1386,34 @@ function renderCatalogClassificationTreeNode(node) {
   const forceExpanded = !!(_catalogClassificationSearchQuery || "").trim();
   const collapsed = hasChildren && !forceExpanded && _catalogClassificationCollapsed.has(node.id);
   const selectedClass = node.node_code === _selectedCatalogClassificationCode ? " is-selected" : "";
+  const branchMutedClass = isCatalogNodeWithinSelectedBranch(node) ? "" : " is-branch-muted";
+  const levelClass = getCatalogNodeLevelClass(node);
   const toggleMarkup = hasChildren
     ? `<span class="classification-tree-toggle" data-catalog-toggle-node="${node.id}">${collapsed ? "▸" : "▾"}</span>`
     : '<span class="classification-tree-toggle is-placeholder">•</span>';
   const actionAttrs = `data-catalog-classification-code="${escapeHtml(node.node_code)}"`;
-  const actionButtons = _catalogClassificationEditMode && _catalogPermissions.canManageCatalogTaxonomy
-    ? `<span class="classification-tree-meta">
-        <button type="button" class="btn btn-secondary btn-xs" data-catalog-edit-node="${node.id}">수정</button>
-        <button type="button" class="btn btn-danger btn-xs" data-catalog-delete-node="${node.id}">삭제</button>
-      </span>`
+  const canManage = _catalogClassificationEditMode && _catalogPermissions.canManageCatalogTaxonomy;
+  const canAddChild = canManage && canCatalogNodeAddChild(node);
+  const actionsOpen = canManage && isCatalogTreeActionExpanded(node.id);
+  const actionsMarkup = canManage
+    ? `<div class="layout-tree-node-actions${actionsOpen ? " is-visible" : ""}${_catalogTreeActionMode === "detail" ? " is-detail-mode" : ""}">
+        ${canAddChild ? `<button type="button" class="btn btn-secondary btn-sm layout-tree-node-action" data-catalog-add-child-node="${node.id}">하위 추가</button>` : ""}
+        <button type="button" class="btn btn-secondary btn-sm layout-tree-node-action" data-catalog-edit-node="${node.id}">수정</button>
+        <button type="button" class="btn btn-secondary btn-sm layout-tree-node-action is-delete-action" data-catalog-delete-node="${node.id}">삭제</button>
+      </div>`
+    : "";
+  const actionToggleMarkup = canManage && _catalogTreeActionMode !== "detail"
+    ? `<button type="button" class="btn btn-icon btn-sm layout-tree-node-toggle" data-catalog-node-action-toggle="${node.id}" aria-expanded="${actionsOpen ? "true" : "false"}" title="${actionsOpen ? "노드 작업 닫기" : "노드 작업 열기"}">${actionsOpen ? ">" : "<"}</button>`
+    : "";
+  const actionWrapMarkup = canManage
+    ? `<div class="layout-tree-node-action-wrap">${actionsMarkup}${actionToggleMarkup}</div>`
     : "";
   const childMarkup = hasChildren && !collapsed
-    ? `<ul>${children.map(renderCatalogClassificationTreeNode).join("")}</ul>`
+    ? `<ul class="classification-subtree${branchMutedClass}">${children.map(renderCatalogClassificationTreeNode).join("")}</ul>`
     : "";
   return `
-    <li class="classification-tree-item">
-      <div class="classification-tree-node${selectedClass}">
+    <li class="classification-tree-item${branchMutedClass}">
+      <div class="classification-tree-node${levelClass}${selectedClass}${branchMutedClass}">
         <button type="button" class="classification-tree-node-main" ${actionAttrs}>
           ${toggleMarkup}
           <span class="classification-tree-main">
@@ -1368,7 +1423,7 @@ function renderCatalogClassificationTreeNode(node) {
             </span>
           </span>
         </button>
-        ${actionButtons}
+        ${actionWrapMarkup}
       </div>
       ${childMarkup}
     </li>
@@ -2742,6 +2797,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("catalog-search").addEventListener("input", applyFilter);
   document.getElementById("catalog-kind-filter").addEventListener("change", applyFilter);
+  document.getElementById("btn-catalog-tree-mode")?.addEventListener("click", () => {
+    _catalogTreeActionMode = _catalogTreeActionMode === "detail" ? "compact" : "detail";
+    localStorage.setItem(CATALOG_TREE_ACTION_MODE_KEY, _catalogTreeActionMode);
+    _catalogExpandedTreeActions.clear();
+    updateCatalogTreeModeBtn();
+    renderCatalogClassificationTree();
+  });
+  updateCatalogTreeModeBtn();
   document.getElementById("catalog-classification-search").addEventListener("input", (event) => {
     _catalogClassificationSearchQuery = event.target.value || "";
     localStorage.setItem(CATALOG_CLASSIFICATION_SEARCH_KEY, _catalogClassificationSearchQuery);
@@ -2755,6 +2818,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       else _catalogClassificationCollapsed.add(nodeId);
       saveCatalogClassificationCollapsedState();
       renderCatalogClassificationTree();
+      return;
+    }
+    const actionToggle = event.target.closest("[data-catalog-node-action-toggle]");
+    if (actionToggle) {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleCatalogTreeActionMenu(actionToggle.dataset.catalogNodeActionToggle || "");
+      return;
+    }
+    const addChildBtn = event.target.closest("[data-catalog-add-child-node]");
+    if (addChildBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+      const node = _catalogClassificationNodes.find((item) => item.id === (addChildBtn.dataset.catalogAddChildNode || ""));
+      if (node) {
+        _selectedCatalogClassificationCode = node.node_code;
+        renderCatalogClassificationTree();
+        applyFilter();
+        openCatalogClassificationNodeModal("add_child").catch((err) => showToast(err.message, "error"));
+      }
       return;
     }
     const editBtn = event.target.closest("[data-catalog-edit-node]");

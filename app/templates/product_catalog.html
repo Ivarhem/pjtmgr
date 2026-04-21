@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}제품 카탈로그{% endblock %}
-{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260421c">{% endblock %}
 {% block content %}
 <div class="tab-nav">
   <a href="{{ request.scope.root_path or "" }}/product-catalog" class="tab-btn active">제품 카탈로그</a>
@@ -17,7 +17,8 @@
   <section class="catalog-category-panel">
     <div class="catalog-category-header">
       <h2 id="catalog-classification-title">최종 분류</h2>
-      <div class="infra-inline-actions">
+      <div class="infra-inline-actions layout-tree-header-actions">
+        <button class="btn btn-secondary btn-sm" id="btn-catalog-tree-mode">자세히</button>
         <button class="btn btn-secondary btn-sm" id="btn-clear-classification-filter">전체 보기</button>
       </div>
     </div>
@@ -488,5 +489,5 @@
 
 {% block scripts %}
 <script src="{{ request.scope.root_path or "" }}/static/js/modal_combobox.js?v=20260413e"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260413e"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260421c"></script>
 {% endblock %}

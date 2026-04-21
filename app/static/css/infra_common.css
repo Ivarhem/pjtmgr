@@ -848,6 +848,12 @@ body.dark-mode .asset-detail-value-rawtext {
   justify-content: space-between;
   gap: 8px;
 }
+.catalog-category-header .layout-tree-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .catalog-category-header h2 {
   margin: 0;
   font-size: 16px;
@@ -3213,7 +3219,20 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tree-node-current-border) 55%, transparent);
 }
 
-.classification-tree-item:has(> .classification-tree-node-center) > .classification-subtree {
+.classification-tree-node-level-1 {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tree-node-current-border) 55%, transparent);
+}
+
+.classification-tree-item:has(> .classification-tree-node-level-1) {
+  margin-top: 10px;
+}
+
+.classification-tree-item:has(> .classification-tree-node-level-1):first-child {
+  margin-top: 0;
+}
+
+.classification-tree-item:has(> .classification-tree-node-center) > .classification-subtree,
+.classification-tree-item:has(> .classification-tree-node-level-1) > .classification-subtree {
   margin: 8px 0 2px 8px;
   padding: 8px 0 0 14px;
   border-left: 2px solid color-mix(in srgb, var(--border-color) 75%, transparent);
@@ -3223,11 +3242,16 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tree-node-current-border) 55%, transparent);
 }
 
+.classification-tree-node-level-2 {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tree-node-current-border) 35%, transparent);
+}
+
 .classification-tree-item:has(> .classification-tree-node-room) {
   margin-top: 6px;
 }
 
-.classification-tree-item:has(> .classification-tree-node-room) > .classification-subtree {
+.classification-tree-item:has(> .classification-tree-node-room) > .classification-subtree,
+.classification-tree-item:has(> .classification-tree-node-level-2) > .classification-subtree {
   margin: 6px 0 0 8px;
   padding-left: 14px;
   border-left: 1px dashed color-mix(in srgb, var(--border-color) 70%, transparent);
@@ -3690,11 +3714,17 @@ body.dark-mode .classification-tree-node {
   --tree-room-subtree-muted-border: color-mix(in srgb, var(--border-color) 65%, transparent);
   --tree-center-subtree-muted-border: color-mix(in srgb, var(--border-color) 65%, transparent);
 }
-body.dark-mode .classification-tree-node-center {
+body.dark-mode .classification-tree-node-center,
+body.dark-mode .classification-tree-node-level-1 {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-color) 82%, transparent);
 }
 
-body.dark-mode .classification-tree-item:has(> .classification-tree-node-center) > .classification-subtree {
+body.dark-mode .classification-tree-node-level-2 {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+body.dark-mode .classification-tree-item:has(> .classification-tree-node-center) > .classification-subtree,
+body.dark-mode .classification-tree-item:has(> .classification-tree-node-level-1) > .classification-subtree {
   border-left-color: color-mix(in srgb, var(--border-color) 88%, transparent);
 }
 
