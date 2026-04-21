@@ -3430,11 +3430,15 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 /* ── Physical Layout: Rack View (U Diagram) ── */
 .u-diagram {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
+  border-radius: 10px;
+  overflow: auto;
   max-height: 70vh;
-  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
 }
+.u-diagram::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .u-slot {
   display: flex;
   align-items: stretch;
@@ -3485,10 +3489,11 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 .equipment-block.env-dr { border-color: #9333ea; background: rgba(147, 51, 234, 0.08); }
 
 .unplaced-section {
-  border: 2px dashed var(--border-color);
-  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
   padding: 12px;
   margin-top: 12px;
+  background: color-mix(in srgb, var(--bg-primary) 94%, var(--bg-color) 6%);
 }
 .unplaced-section.drop-target { border-color: var(--primary-color); background: rgba(37, 99, 235, 0.04); }
 .unplaced-title {
@@ -3524,9 +3529,10 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 .floor-plan-viewport { position: relative; width: 100%; min-height: 320px; max-width: 100%; max-height: min(70vh, 720px); overflow: auto; border: 1px solid var(--color-gray-300, #d1d5db); border-radius: 8px; background: var(--color-gray-50, #f9fafb); cursor: grab; }
 .floor-plan-viewport.is-panning { cursor: grabbing; }
 .floor-plan-canvas { min-width: max-content; min-height: max-content; padding: 10px; display: inline-block; }
-.floor-plan-side-card { border: 1px solid var(--color-gray-200, #e5e7eb); border-radius: 10px; background: var(--bg-primary); padding: 12px; max-height: min(70vh, 720px); overflow: auto; }
-.rack-mount-card-header { margin-bottom: 8px; }
-.floor-plan-side-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.floor-plan-side-card { border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-primary); padding: 14px; max-height: min(70vh, 720px); overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; -ms-overflow-style: none; }
+.floor-plan-side-card::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.rack-mount-card-header { margin-bottom: 2px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-primary); }
+.floor-plan-side-title { font-size: 14px; font-weight: 700; margin: 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-primary); }
 @media (max-width: 960px) { .floor-plan-shell { grid-template-columns: 1fr; } .floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: 1fr; } .floor-plan-side-splitter, .floor-plan-side-handle-wrap { display: none !important; } .floor-plan-side { position: static; padding-left: 0; margin-top: 12px; } .floor-plan-main { padding-right: 0; } }
 /* === Floor Plan Grid === */
 .floor-plan-grid {
@@ -3617,14 +3623,15 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 .floor-plan-row-label { font-size: var(--floor-row-label-font-size); color: var(--layout-axis-fg); display: flex; align-items: center; justify-content: center; width: var(--floor-row-label-width); background: var(--layout-axis-bg); border: 1px solid var(--layout-axis-border); border-radius: 6px; }
 .floor-plan-header.is-empty-header { color: transparent; }
 .floor-plan-row-label.is-placeholder { color: transparent; }
-.unplaced-racks { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; min-height: 48px; background: var(--color-gray-50, #f9fafb); border: 1px dashed var(--color-gray-300, #d1d5db); border-radius: 6px; margin-top: 12px; }
-.unplaced-rack-chip { padding: 4px 10px; background: var(--color-gray-200, #e5e7eb); border-radius: 4px; font-size: 12px; cursor: grab; }
+.unplaced-racks { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; min-height: 48px; background: color-mix(in srgb, var(--bg-primary) 94%, var(--bg-color) 6%); border: 1px dashed var(--border-color); border-radius: 10px; margin-top: 0; scrollbar-width: none; -ms-overflow-style: none; }
+.unplaced-racks::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.unplaced-rack-chip { padding: 6px 10px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; cursor: grab; }
 .unplaced-rack-chip:active { cursor: grabbing; }
 .floor-plan-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .floor-plan-toolbar .select-sm { font-size: 12px; }
 .floor-plan-zoom-group { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--color-gray-200, #e5e7eb); border-radius: 999px; background: var(--color-gray-50, #f9fafb); }
 .floor-plan-zoom-label { font-size: 12px; color: var(--color-gray-600, #4b5563); min-width: 44px; text-align: center; }
-.floor-plan-slot-status { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px dashed var(--color-gray-300, #d1d5db); border-radius: 8px; background: var(--color-gray-50, #f9fafb); font-size: 12px; color: var(--color-gray-600, #4b5563); margin-bottom: 10px; }
+.floor-plan-slot-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px dashed var(--border-color); border-radius: 10px; background: color-mix(in srgb, var(--bg-primary) 94%, var(--bg-color) 6%); font-size: 12px; color: var(--text-color-secondary); margin-bottom: 0; }
 .floor-plan-slot-status strong { color: var(--color-gray-800, #1f2937); }
 .floor-plan-cell.slot-selected { box-shadow: inset 0 0 0 2px var(--primary-color, #2563eb), 0 0 0 1px color-mix(in srgb, var(--primary-color, #2563eb) 28%, transparent); position: relative; z-index: 1; }
 .floor-plan-cell.slot-hover:not(.slot-selected) { transform: translateY(-1px); filter: brightness(1.02); }
@@ -3776,6 +3783,12 @@ body.dark-mode .floor-plan-slot-status {
 .layout-view-toolbar { align-items: center; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .layout-view-toolbar .layout-inline-help { flex: 0 1 auto; text-align: right; }
 .layout-view-toolbar .layout-inline-select { margin-left: 0; }
+
+.rack-mount-side-card .layout-view-info { margin: 0; padding: 10px 12px; border: 1px dashed var(--border-color); border-radius: 10px; background: color-mix(in srgb, var(--bg-primary) 94%, var(--bg-color) 6%); }
+.rack-mount-side-card .u-diagram,
+.rack-mount-side-card .unplaced-section { margin: 0; }
+.rack-mount-side-card .unplaced-title { margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--text-color); }
+.rack-mount-side-card .unplaced-item { padding: 6px 10px; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); }
 
 
 
