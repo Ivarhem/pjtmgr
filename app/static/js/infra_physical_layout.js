@@ -32,7 +32,6 @@ let _draggedRackId = null;
 let _layoutZoom = Number(localStorage.getItem(LAYOUT_ZOOM_KEY) || 1);
 let _selectedSlotKey = null;
 let _selectedSlotContext = null;
-let _rackCodeSuggestionLocked = false;
 let _lineCreateMode = null;
 let _lineCreateStart = null;
 let _lineRepositionTarget = null;
@@ -522,19 +521,28 @@ function suggestLineNameForColumn(colIndex, rackLines = []) {
   return _alphaLabel(colIndex);
 }
 
-function suggestRackCode(lineName, position, rowLabel = null) {
-  const cleanLine = (lineName || "").trim().toUpperCase();
-  const pos = String(rowLabel || Number(position) + 1).padStart(2, "0");
-  return cleanLine ? `${cleanLine}-${pos}` : `RACK-${pos}`;
+function getSuggestedRackName(lineName = "", positionIndex = null) {
+  if (positionIndex == null || Number.isNaN(Number(positionIndex))) return "";
+  return getSlotDefaultCode({ lineName, positionIndex: Number(positionIndex) }) || "";
 }
 
-function applySuggestedRackCode({ force = false } = {}) {
-  const input = document.getElementById("rack-code");
+function getSuggestedRackNameFromPlacement() {
+  const lineSelect = document.getElementById("rack-line-id");
+  const posInput = document.getElementById("rack-line-position");
+  if (!lineSelect || !posInput) return "";
+  const selectedLineId = String(lineSelect.value || "");
+  const selectedLine = (_rackLines[_selectedRoomId] || []).find((line) => String(line.id) === selectedLineId);
+  const positionValue = Number(posInput.value || 0);
+  if (!selectedLine || !Number.isFinite(positionValue) || positionValue <= 0) return "";
+  return getSuggestedRackName(selectedLine.line_name, positionValue - 1);
+}
+
+function applySuggestedRackName({ force = false } = {}) {
+  const input = document.getElementById("rack-name");
   if (!input) return;
-  if (_rackCodeSuggestionLocked && !force) return;
-  const ctx = _selectedSlotContext;
-  if (!ctx?.line) return;
-  input.value = getSlotDefaultCode({ line: ctx.line, lineName: ctx.line?.line_name, positionIndex: ctx.position }) || suggestRackCode(ctx.line.line_name, ctx.position);
+  if (!force && input.value.trim()) return;
+  const suggested = getSuggestedRackNameFromPlacement();
+  if (suggested) input.value = suggested;
 }
 
 function clampLayoutZoom(value) {
@@ -2455,8 +2463,11 @@ async function populateRackPlacementFields(rack = null) {
     posInput.dataset.manual = "0";
     posInput.value = "";
     syncPosition();
+    applySuggestedRackName();
   };
   syncPosition();
+  posInput.addEventListener("input", () => applySuggestedRackName());
+  applySuggestedRackName();
 }
 
 function _canPlaceAt(slotMap, startU, sizeUnit, totalU, excludeAssetId) {
@@ -2516,15 +2527,13 @@ async function openRackModal(rack) {
   }
   document.getElementById("modal-rack-title").textContent = rack ? "랙 수정" : "랙 등록";
   document.getElementById("rack-id").value = rack?.id ?? "";
-  _rackCodeSuggestionLocked = !!rack;
-  document.getElementById("rack-code").value = rack?.rack_code ?? "";
-  if (!rack) applySuggestedRackCode({ force: true });
   document.getElementById("rack-name").value = rack?.rack_name ?? "";
   document.getElementById("rack-total-units").value = rack?.total_units ?? 42;
   document.getElementById("rack-location-detail").value = rack?.location_detail ?? "";
   document.getElementById("rack-active").value = String(rack?.is_active ?? true);
   document.getElementById("rack-note").value = rack?.note ?? "";
   await populateRackPlacementFields(rack);
+  if (!rack) applySuggestedRackName({ force: true });
   document.getElementById("modal-rack").showModal();
 }
 
@@ -2603,8 +2612,7 @@ async function saveRack() {
   const linePositionValue = document.getElementById("rack-line-position").value.trim();
   const payload = {
     room_id: _selectedRoomId,
-    rack_code: document.getElementById("rack-code").value.trim() || null,
-    rack_name: document.getElementById("rack-name").value.trim() || null,
+    rack_name: document.getElementById("rack-name").value.trim() || getSuggestedRackNameFromPlacement() || null,
     total_units: Number(document.getElementById("rack-total-units").value || 42),
     location_detail: document.getElementById("rack-location-detail").value.trim() || null,
     is_active: document.getElementById("rack-active").value === "true",
