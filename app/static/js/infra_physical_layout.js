@@ -2,6 +2,8 @@
 
 const LAYOUT_TREE_WIDTH_KEY = "physicalLayout.treeWidth";
 const LAYOUT_TREE_COLLAPSED_KEY = "physicalLayout.treeCollapsed";
+const LAYOUT_SIDE_WIDTH_KEY = "physicalLayout.sideWidth";
+const LAYOUT_SIDE_COLLAPSED_KEY = "physicalLayout.sideCollapsed";
 const LAYOUT_AUTO_COLLAPSE_KEY = "physicalLayout.autoCollapse";
 const LAYOUT_TREE_ACTION_MODE_KEY = "physicalLayout.treeActionMode";
 const LAYOUT_ZOOM_KEY = "physicalLayout.zoom";
@@ -1153,6 +1155,66 @@ function restoreLayoutTreeCollapsed() {
   setLayoutTreeCollapsed(collapsed);
 }
 
+function setFloorPlanSideCollapsed(shell, collapsed) {
+  if (!shell) return;
+  const isCollapsed = !!collapsed;
+  const splitter = shell.querySelector(".floor-plan-side-splitter");
+  const side = shell.querySelector(".floor-plan-side");
+  const toggleBtn = shell.querySelector(".btn-toggle-floor-plan-side");
+  shell.classList.toggle("floor-plan-side-collapsed", isCollapsed);
+  if (splitter) splitter.style.display = isCollapsed ? "none" : "block";
+  if (side) side.style.display = isCollapsed ? "none" : "block";
+  if (toggleBtn) {
+    toggleBtn.textContent = isCollapsed ? "❮" : "❯";
+    toggleBtn.title = isCollapsed ? "오른쪽 패널 열기" : "오른쪽 패널 닫기";
+    toggleBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+  }
+  localStorage.setItem(LAYOUT_SIDE_COLLAPSED_KEY, isCollapsed ? "1" : "0");
+}
+
+function initFloorPlanSideControls(shell) {
+  if (!shell) return;
+  const splitter = shell.querySelector(".floor-plan-side-splitter");
+  const toggleBtn = shell.querySelector(".btn-toggle-floor-plan-side");
+  const storedWidth = Number(localStorage.getItem(LAYOUT_SIDE_WIDTH_KEY) || 0);
+  if (storedWidth >= 260 && storedWidth <= 640) {
+    shell.style.setProperty("--floor-plan-side-width", storedWidth + "px");
+  }
+  const collapsed = localStorage.getItem(LAYOUT_SIDE_COLLAPSED_KEY) === "1";
+  setFloorPlanSideCollapsed(shell, collapsed);
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      const nextCollapsed = !shell.classList.contains("floor-plan-side-collapsed");
+      setFloorPlanSideCollapsed(shell, nextCollapsed);
+    };
+  }
+  if (!splitter || shell.dataset.sideResizeBound === "1") return;
+  shell.dataset.sideResizeBound = "1";
+  let dragging = false;
+  splitter.addEventListener("mousedown", (event) => {
+    dragging = true;
+    splitter.classList.add("is-dragging");
+    document.body.style.cursor = "col-resize";
+    event.preventDefault();
+  });
+  document.addEventListener("mousemove", (event) => {
+    if (!dragging) return;
+    const rect = shell.getBoundingClientRect();
+    const width = Math.min(640, Math.max(260, rect.right - event.clientX - 18));
+    shell.style.setProperty("--floor-plan-side-width", width + "px");
+  });
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove("is-dragging");
+    document.body.style.cursor = "";
+    const current = parseInt(getComputedStyle(shell).getPropertyValue("--floor-plan-side-width"), 10);
+    if (!Number.isNaN(current)) {
+      localStorage.setItem(LAYOUT_SIDE_WIDTH_KEY, String(current));
+    }
+  });
+}
+
 function updateLayoutAutoCollapseBtn() {
   const btn = document.getElementById("btn-layout-auto-collapse");
   if (!btn) return;
@@ -1513,6 +1575,20 @@ async function renderRoomView(container, room) {
   floorPlanMain.className = "floor-plan-main";
   floorPlanShell.appendChild(floorPlanMain);
 
+  const floorPlanSideSplitter = document.createElement("div");
+  floorPlanSideSplitter.className = "floor-plan-side-splitter";
+  floorPlanShell.appendChild(floorPlanSideSplitter);
+
+  const floorPlanSideHandleWrap = document.createElement("div");
+  floorPlanSideHandleWrap.className = "floor-plan-side-handle-wrap";
+  const floorPlanSideToggle = document.createElement("button");
+  floorPlanSideToggle.type = "button";
+  floorPlanSideToggle.className = "asset-detail-minimize btn-toggle-floor-plan-side";
+  floorPlanSideToggle.title = "오른쪽 패널 닫기";
+  floorPlanSideToggle.textContent = "❯";
+  floorPlanSideHandleWrap.appendChild(floorPlanSideToggle);
+  floorPlanShell.appendChild(floorPlanSideHandleWrap);
+
   const floorPlanSide = document.createElement("aside");
   floorPlanSide.className = "floor-plan-side";
   floorPlanShell.appendChild(floorPlanSide);
@@ -1791,6 +1867,7 @@ async function renderRoomView(container, room) {
   const sideCard = document.createElement("div");
   sideCard.className = "floor-plan-side-card";
   floorPlanSide.appendChild(sideCard);
+  initFloorPlanSideControls(floorPlanShell);
 
   if (selectedRack) {
     sideCard.classList.add("rack-mount-side-card");
@@ -1893,14 +1970,6 @@ async function renderRoomView(container, room) {
       }
     });
   }
-
-  const guide = document.createElement("div");
-  guide.className = "floor-plan-guide";
-  const guideCard = document.createElement("div");
-  guideCard.className = "floor-plan-guide-card";
-  guideCard.innerHTML = '<div class="floor-plan-guide-title">도움말</div><div class="floor-plan-guide-text">라인은 가로/세로 직선으로 생성됩니다. 트리에서 라인 추가를 누른 뒤 시작점과 종료점을 선택하세요. 미배치 랙은 오른쪽에서 원하는 라인 슬롯으로 끌어다 놓을 수 있습니다.</div>';
-  guide.appendChild(guideCard);
-  wrapper.appendChild(guide);
 
 
 }
@@ -2043,7 +2112,7 @@ async function renderRackView(container, rack, options = {}) {
 
   // Header
   const header = document.createElement("div");
-  header.className = "layout-view-header";
+  header.className = "layout-view-header" + (embedded ? " rack-mount-card-header" : "");
   const h3 = document.createElement("h3");
   h3.textContent = (rack.rack_name || rack.rack_code) + " (" + totalU + "U)";
   header.appendChild(h3);

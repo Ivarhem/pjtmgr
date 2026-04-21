@@ -3509,15 +3509,25 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 }
 .unplaced-item.is-dragging { opacity: 0.4; }
 
-.floor-plan-shell { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start; }
-.floor-plan-main { min-width: 0; display:flex; flex-direction:column; gap:8px; }
-.floor-plan-side { min-width: 0; position: sticky; top: 0; }
+.floor-plan-shell { --floor-plan-side-width: 320px; display: grid; grid-template-columns: minmax(0, 1fr) 8px 18px minmax(260px, var(--floor-plan-side-width)); gap: 0; align-items: start; }
+.floor-plan-main { min-width: 0; display:flex; flex-direction:column; gap:8px; padding-right: 12px; }
+.floor-plan-side-splitter { width: 8px; cursor: col-resize; position: relative; border-radius: 999px; margin: 0 8px; }
+.floor-plan-side-splitter::after { content: ""; position: absolute; top: 50%; left: 50%; width: 3px; height: 48px; transform: translate(-50%, -50%); border-radius: 999px; background: var(--border-color); }
+.floor-plan-side-splitter:hover::after,
+.floor-plan-side-splitter.is-dragging::after { background: var(--text-color-secondary); height: 72px; }
+.floor-plan-side-handle-wrap { width: 18px; display: flex; align-items: center; justify-content: center; }
+.floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: minmax(0, 1fr) 18px; }
+.floor-plan-shell.floor-plan-side-collapsed .floor-plan-side-splitter,
+.floor-plan-shell.floor-plan-side-collapsed .floor-plan-side { display: none; }
+.floor-plan-shell:not(.floor-plan-side-collapsed) .btn-toggle-floor-plan-side { transform: rotate(0deg); }
+.floor-plan-side { min-width: 0; position: sticky; top: 0; padding-left: 12px; }
 .floor-plan-viewport { position: relative; width: 100%; min-height: 320px; max-width: 100%; max-height: min(70vh, 720px); overflow: auto; border: 1px solid var(--color-gray-300, #d1d5db); border-radius: 8px; background: var(--color-gray-50, #f9fafb); cursor: grab; }
 .floor-plan-viewport.is-panning { cursor: grabbing; }
 .floor-plan-canvas { min-width: max-content; min-height: max-content; padding: 10px; display: inline-block; }
-.floor-plan-side-card { border: 1px solid var(--color-gray-200, #e5e7eb); border-radius: 10px; background: var(--bg-primary); padding: 12px; }
+.floor-plan-side-card { border: 1px solid var(--color-gray-200, #e5e7eb); border-radius: 10px; background: var(--bg-primary); padding: 12px; max-height: min(70vh, 720px); overflow: auto; }
+.rack-mount-card-header { margin-bottom: 8px; }
 .floor-plan-side-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-@media (max-width: 960px) { .floor-plan-shell { grid-template-columns: 1fr; } .floor-plan-side { position: static; } }
+@media (max-width: 960px) { .floor-plan-shell { grid-template-columns: 1fr; } .floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: 1fr; } .floor-plan-side-splitter, .floor-plan-side-handle-wrap { display: none !important; } .floor-plan-side { position: static; padding-left: 0; margin-top: 12px; } .floor-plan-main { padding-right: 0; } }
 /* === Floor Plan Grid === */
 .floor-plan-grid {
   --floor-cell-width: 64px;
@@ -3614,10 +3624,6 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 .floor-plan-toolbar .select-sm { font-size: 12px; }
 .floor-plan-zoom-group { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--color-gray-200, #e5e7eb); border-radius: 999px; background: var(--color-gray-50, #f9fafb); }
 .floor-plan-zoom-label { font-size: 12px; color: var(--color-gray-600, #4b5563); min-width: 44px; text-align: center; }
-.floor-plan-guide { display: grid; gap: 8px; margin-bottom: 12px; }
-.floor-plan-guide-card { padding: 10px 12px; border: 1px solid var(--color-gray-200, #e5e7eb); border-radius: 8px; background: var(--color-gray-50, #f9fafb); }
-.floor-plan-guide-title { font-size: 12px; font-weight: 700; color: var(--color-gray-700, #374151); margin-bottom: 4px; }
-.floor-plan-guide-text { font-size: 12px; color: var(--color-gray-500, #6b7280); line-height: 1.45; }
 .floor-plan-slot-status { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px dashed var(--color-gray-300, #d1d5db); border-radius: 8px; background: var(--color-gray-50, #f9fafb); font-size: 12px; color: var(--color-gray-600, #4b5563); margin-bottom: 10px; }
 .floor-plan-slot-status strong { color: var(--color-gray-800, #1f2937); }
 .floor-plan-cell.slot-selected { box-shadow: inset 0 0 0 2px var(--primary-color, #2563eb), 0 0 0 1px color-mix(in srgb, var(--primary-color, #2563eb) 28%, transparent); position: relative; z-index: 1; }
@@ -3753,18 +3759,15 @@ body.dark-mode .floor-plan-zoom-label {
   color: var(--text-color-secondary);
 }
 
-body.dark-mode .floor-plan-guide-card,
 body.dark-mode .floor-plan-slot-status {
   background: var(--bg-color-secondary);
   border-color: var(--border-color);
 }
 
-body.dark-mode .floor-plan-guide-title,
 body.dark-mode .floor-plan-slot-status strong {
   color: var(--text-color);
 }
 
-body.dark-mode .floor-plan-guide-text,
 body.dark-mode .unplaced-racks-guide,
 body.dark-mode .floor-plan-slot-status {
   color: var(--text-color-secondary);
