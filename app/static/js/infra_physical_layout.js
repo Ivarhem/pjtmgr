@@ -1782,10 +1782,10 @@ async function renderRoomView(container, room) {
         cell.classList.add("has-rack");
         cell.draggable = true;
         cell.dataset.rackId = rack.id;
-        cell.textContent = getSlotDefaultCode({ line, positionIndex }) || `${line.line_name}-${positionIndex + 1}`;
+        const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
+        cell.textContent = _getRackDisplayCode(fullRack, { line, positionIndex }) || getSlotDefaultCode({ line, positionIndex }) || `${line.line_name}-${positionIndex + 1}`;
         cell.title = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
         cell.addEventListener("click", () => {
-          const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
           selectSlot(`${_getLinePositionLabel(cell.dataset.lineName, positionIndex)}에 ${rack.rack_name || rack.rack_code} 랙이 배치되어 있습니다.`, { rack });
           selectNode("rack", rack.id, fullRack);
         });
