@@ -413,6 +413,8 @@ function openLineModal(line) {
   document.getElementById('line-code').value = line?.prefix ?? '';
   document.getElementById('line-name').value = line?.line_name ?? '';
   document.getElementById('line-coordinates').value = formatLineCoordinates(line);
+  const sequentialInput = document.getElementById('line-sequential-naming');
+  if (sequentialInput) sequentialInput.checked = !!line?.sequential_naming;
   document.getElementById('modal-line').showModal();
 }
 
@@ -422,6 +424,7 @@ async function saveLineModal() {
   const payload = {
     prefix: document.getElementById('line-code').value.trim() || null,
     line_name: document.getElementById('line-name').value.trim(),
+    sequential_naming: !!document.getElementById('line-sequential-naming')?.checked,
   };
   if (!payload.line_name) {
     showToast('라인명은 필수입니다.', 'warning');
@@ -549,13 +552,12 @@ function getSuggestedRackName(lineName = "", positionIndex = null, options = {})
 function getSuggestedRackNameFromPlacement() {
   const lineSelect = document.getElementById("rack-line-id");
   const posInput = document.getElementById("rack-line-position");
-  const sequentialInput = document.getElementById("rack-name-sequential");
   if (!lineSelect || !posInput) return "";
   const selectedLineId = String(lineSelect.value || "");
   const selectedLine = (_rackLines[_selectedRoomId] || []).find((line) => String(line.id) === selectedLineId);
   const positionValue = Number(posInput.value || 0);
   if (!selectedLine || !Number.isFinite(positionValue) || positionValue <= 0) return "";
-  return getSuggestedRackName(selectedLine.line_name, positionValue - 1, { line: selectedLine, sequential: !!sequentialInput?.checked });
+  return getSuggestedRackName(selectedLine.line_name, positionValue - 1, { line: selectedLine, sequential: !!selectedLine?.sequential_naming });
 }
 
 function applySuggestedRackName({ force = false } = {}) {
@@ -2457,8 +2459,6 @@ async function populateRackPlacementFields(rack = null) {
   let selectedLineId = rack?.rack_line_id ?? _selectedSlotContext?.line?.id ?? "";
   if (selectedLineId && !assignableLines.some((line) => String(line.id) === String(selectedLineId))) selectedLineId = "";
   lineSelect.value = selectedLineId ? String(selectedLineId) : "";
-  const sequentialInput = document.getElementById("rack-name-sequential");
-  if (sequentialInput) sequentialInput.checked = false;
 
   const syncPosition = () => {
     const currentLine = assignableLines.find((line) => String(line.id) === String(lineSelect.value));
@@ -2496,9 +2496,6 @@ async function populateRackPlacementFields(rack = null) {
     syncPosition();
     applySuggestedRackName();
   };
-  if (sequentialInput) {
-    sequentialInput.onchange = () => applySuggestedRackName({ force: true });
-  }
   syncPosition();
   applySuggestedRackName();
 }

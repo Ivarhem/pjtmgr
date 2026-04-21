@@ -131,7 +131,6 @@
         </label>
         <label>좌표 순번 <input type="number" id="rack-line-position" min="1" placeholder="자동 또는 직접 지정"></label>
       </div>
-      <label class="modal-inline-check"><input type="checkbox" id="rack-name-sequential"> 제외 슬롯 번호를 건너뛰고 연속 번호 사용</label>
     </fieldset>
     <fieldset class="modal-group">
       <legend class="modal-group-title">메모</legend>
@@ -158,6 +157,7 @@
       <div class="form-grid">
         <label>라인코드 <input type="text" id="line-code" placeholder="예: A"></label>
         <label><span class="label-text">라인명<span class="req">*</span></span> <input type="text" id="line-name" required></label>
+        <label class="full-width modal-inline-check"><input type="checkbox" id="line-sequential-naming"> 제외 슬롯 번호를 건너뛰고 랙명 연속 번호 사용</label>
         <label class="full-width">현재 좌표 <input type="text" id="line-coordinates" readonly></label>
       </div>
     </fieldset>
@@ -173,5 +173,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260421h"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260421i"></script>
 {% endblock %}

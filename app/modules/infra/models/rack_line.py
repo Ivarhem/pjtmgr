@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,3 +26,4 @@ class RackLine(TimestampMixin, Base):
     end_col: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_row: Mapped[int | None] = mapped_column(Integer, nullable=True)
     direction: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    sequential_naming: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

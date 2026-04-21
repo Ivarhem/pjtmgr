@@ -16,6 +16,8 @@ class RackLineCreate(BaseModel):
     end_col: int | None = None
     end_row: int | None = None
     direction: str | None = None
+    sequential_naming: bool | None = None
+    sequential_naming: bool = False
 
 
 class RackLineUpdate(BaseModel):
@@ -48,6 +50,7 @@ class RackLineRead(BaseModel):
     end_col: int | None = None
     end_row: int | None = None
     direction: str | None = None
+    sequential_naming: bool = False
     racks: list[dict] = []
     created_at: datetime
     updated_at: datetime
