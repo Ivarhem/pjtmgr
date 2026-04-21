@@ -27,7 +27,7 @@ let _expandedTreeActions = new Set();
 let _layoutTreeRetryTimer = null;
 let _layoutTreeRetryCount = 0;
 let _editMode = false;
-let _codeDisplay = "rack_code"; // "rack_code" | "project_code" | "rack_position"
+let _codeDisplay = "rack_name"; // "rack_name" | "rack_code" | "project_code" | "rack_position"
 let _draggedRackId = null;
 let _layoutZoom = Number(localStorage.getItem(LAYOUT_ZOOM_KEY) || 1);
 let _selectedSlotKey = null;
@@ -1471,6 +1471,7 @@ async function renderRoomView(container, room) {
   codeLabel.textContent = "명칭";
   const codeSelect = document.createElement("select");
   [
+    { value: "rack_name", label: "랙명" },
     { value: "rack_code", label: "랙코드" },
     { value: "project_code", label: "프로젝트코드" },
     { value: "rack_position", label: "랙좌표" },
@@ -1992,6 +1993,7 @@ async function renderRoomView(container, room) {
 }
 
 function _getRackDisplayCode(rack, context = null) {
+  if (_codeDisplay === "rack_name") return rack.rack_name || rack.rack_code;
   if (_codeDisplay === "project_code") return rack.project_code || rack.rack_code;
   if (_codeDisplay === "rack_position" && context) {
     return getSlotDefaultCode({
