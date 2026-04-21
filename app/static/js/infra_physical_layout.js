@@ -2134,8 +2134,6 @@ async function renderRackView(container, rack, options = {}) {
   h3.textContent = (rack.rack_name || rack.rack_code) + " (" + totalU + "U)";
   header.appendChild(h3);
 
-  container.appendChild(header);
-
   // Usage summary
   const placed = assets.filter(a => a.rack_start_unit != null);
   const unplaced = assets.filter(a => a.rack_start_unit == null);
@@ -2144,7 +2142,11 @@ async function renderRackView(container, rack, options = {}) {
   const info = document.createElement("div");
   info.className = "layout-view-info";
   info.textContent = "사용 " + usedU + "U / " + totalU + "U (" + Math.round(usedU / totalU * 100) + "%) | 장비 " + assets.length + "대 (미배치 " + rackableUnplaced.length + ")";
-  container.appendChild(info);
+
+  if (!embedded) {
+    container.appendChild(header);
+    container.appendChild(info);
+  }
 
   const rackMountLayout = embedded ? document.createElement("div") : null;
   const rackMountMain = embedded ? document.createElement("div") : null;
@@ -2286,6 +2288,11 @@ async function renderRackView(container, rack, options = {}) {
     rackInfoCode.className = "rack-info-code";
     rackInfoCode.textContent = `${rack.rack_code || "-"} / ${totalU}U`;
     rackInfoCard.appendChild(rackInfoCode);
+
+    const rackInfoSummary = document.createElement("div");
+    rackInfoSummary.className = "rack-info-summary";
+    rackInfoSummary.textContent = `사용 ${usedU}U / ${totalU}U (${Math.round(usedU / totalU * 100)}%) · 장비 ${assets.length}대 · 미배치 ${rackableUnplaced.length}`;
+    rackInfoCard.appendChild(rackInfoSummary);
 
     const selectedLine = _selectedSlotContext?.rack?.id === rack.id ? _selectedSlotContext?.line : null;
     if (selectedLine || rack.line_position != null) {
