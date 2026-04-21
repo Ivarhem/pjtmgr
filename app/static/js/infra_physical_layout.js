@@ -1368,7 +1368,7 @@ async function renderRoomView(container, room) {
   container.appendChild(wrapper);
 
   const header = document.createElement("div");
-  header.className = "layout-view-header";
+  header.className = "layout-view-header" + (embedded ? " rack-mount-card-header" : "");
   const h3 = document.createElement("h3");
   h3.textContent = room.room_name + (room.floor ? " (" + room.floor + ")" : "");
   header.appendChild(h3);
@@ -1470,6 +1470,7 @@ async function renderRoomView(container, room) {
   placedLines.forEach((line) => (line.racks || []).forEach((rack) => placedRackIds.add(rack.id)));
   const unplacedRacks = allRacks.filter((rack) => !placedRackIds.has(rack.id));
   const selectedRackId = _selectedNode?.type === "rack" ? Number(_selectedNode.id) : null;
+  const selectedRack = selectedRackId ? (allRacks.find((rack) => Number(rack.id) === selectedRackId) || null) : null;
   let selectedRackHandled = false;
 
   const renderSlotActions = () => {
@@ -1791,60 +1792,105 @@ async function renderRoomView(container, room) {
   sideCard.className = "floor-plan-side-card";
   floorPlanSide.appendChild(sideCard);
 
-  const unplacedTitle = document.createElement("div");
-  unplacedTitle.className = "floor-plan-side-title";
-  unplacedTitle.textContent = `미배치 랙 (${unplacedRacks.length})`;
-  sideCard.appendChild(unplacedTitle);
-  sideCard.appendChild(slotStatus);
-  sideCard.appendChild(slotActions);
-
-  const unplacedArea = document.createElement("div");
-  unplacedArea.className = "unplaced-racks";
-  sideCard.appendChild(unplacedArea);
-  if (!unplacedRacks.length) {
-    const emptyMsg = document.createElement("span");
-    emptyMsg.className = "text-muted";
-    emptyMsg.style.fontSize = "12px";
-    emptyMsg.textContent = "모든 랙이 배치되었습니다.";
-    unplacedArea.appendChild(emptyMsg);
+  if (selectedRack) {
+    sideCard.classList.add("rack-mount-side-card");
+    await renderRackView(sideCard, selectedRack, {
+      embedded: true,
+      onRefresh: () => {
+        const content = document.getElementById("layout-content");
+        if (!content) return;
+        content.textContent = "";
+        renderRoomView(content, _findRoomData(room.id) || room);
+      },
+    });
   } else {
-    unplacedRacks.forEach((rack) => {
-      const chip = document.createElement("div");
-      chip.className = "unplaced-rack-chip";
-      chip.draggable = true;
-      chip.dataset.rackId = rack.id;
-      chip.textContent = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
-      chip.addEventListener("click", () => {
-        const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
-        _selectedSlotKey = null;
-        _selectedSlotContext = { line: null, rack: fullRack, room, rackLines, isUnplacedRack: true };
-        _setSlotStatus(slotStatus, `${rack.rack_name || rack.rack_code} 랙은 현재 미할당 상태입니다.`, "선택된 랙");
-        renderSlotActions();
-        selectNode("rack", rack.id, fullRack);
-      });
-      if (selectedRackId && Number(rack.id) == selectedRackId) {
-        selectedRackHandled = true;
-        chip.classList.add("is-selected");
-        _selectedSlotKey = null;
-        _selectedSlotContext = { line: null, rack, room, rackLines, isUnplacedRack: true };
-        _setSlotStatus(slotStatus, `${rack.rack_name || rack.rack_code} 랙은 현재 미할당 상태입니다.`, "선택된 랙");
-        requestAnimationFrame(() => {
-          try {
-            chip.scrollIntoView({ block: "nearest", inline: "nearest" });
-          } catch {}
+    const unplacedTitle = document.createElement("div");
+    unplacedTitle.className = "floor-plan-side-title";
+    unplacedTitle.textContent = `미배치 랙 (${unplacedRacks.length})`;
+    sideCard.appendChild(unplacedTitle);
+    sideCard.appendChild(slotStatus);
+    sideCard.appendChild(slotActions);
+
+    const unplacedArea = document.createElement("div");
+    unplacedArea.className = "unplaced-racks";
+    sideCard.appendChild(unplacedArea);
+    if (!unplacedRacks.length) {
+      const emptyMsg = document.createElement("span");
+      emptyMsg.className = "text-muted";
+      emptyMsg.style.fontSize = "12px";
+      emptyMsg.textContent = "모든 랙이 배치되었습니다.";
+      unplacedArea.appendChild(emptyMsg);
+    } else {
+      unplacedRacks.forEach((rack) => {
+        const chip = document.createElement("div");
+        chip.className = "unplaced-rack-chip";
+        chip.draggable = true;
+        chip.dataset.rackId = rack.id;
+        chip.textContent = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
+        chip.addEventListener("click", () => {
+          const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
+          _selectedSlotKey = null;
+          _selectedSlotContext = { line: null, rack: fullRack, room, rackLines, isUnplacedRack: true };
+          _setSlotStatus(slotStatus, `${rack.rack_name || rack.rack_code} 랙은 현재 미할당 상태입니다.`, "선택된 랙");
+          renderSlotActions();
+          selectNode("rack", rack.id, fullRack);
         });
+        if (selectedRackId && Number(rack.id) == selectedRackId) {
+          selectedRackHandled = true;
+          chip.classList.add("is-selected");
+          _selectedSlotKey = null;
+          _selectedSlotContext = { line: null, rack, room, rackLines, isUnplacedRack: true };
+          _setSlotStatus(slotStatus, `${rack.rack_name || rack.rack_code} 랙은 현재 미할당 상태입니다.`, "선택된 랙");
+          requestAnimationFrame(() => {
+            try {
+              chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+            } catch {}
+          });
+        }
+        chip.addEventListener("dragstart", (e) => {
+          _draggedRackId = rack.id;
+          e.dataTransfer.setData("application/x-rack-id", String(rack.id));
+          e.dataTransfer.effectAllowed = "move";
+          chip.style.opacity = "0.4";
+        });
+        chip.addEventListener("dragend", () => {
+          _draggedRackId = null;
+          chip.style.opacity = "";
+        });
+        unplacedArea.appendChild(chip);
+      });
+    }
+
+    unplacedArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (_draggedRackId) {
+        unplacedArea.style.borderColor = "var(--primary-color, #2563eb)";
+        unplacedArea.style.background = "rgba(37, 99, 235, 0.04)";
       }
-      chip.addEventListener("dragstart", (e) => {
-        _draggedRackId = rack.id;
-        e.dataTransfer.setData("application/x-rack-id", String(rack.id));
-        e.dataTransfer.effectAllowed = "move";
-        chip.style.opacity = "0.4";
-      });
-      chip.addEventListener("dragend", () => {
-        _draggedRackId = null;
-        chip.style.opacity = "";
-      });
-      unplacedArea.appendChild(chip);
+    });
+    unplacedArea.addEventListener("dragleave", () => {
+      unplacedArea.style.borderColor = "";
+      unplacedArea.style.background = "";
+    });
+    unplacedArea.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      unplacedArea.style.borderColor = "";
+      unplacedArea.style.background = "";
+      const rackId = Number(e.dataTransfer.getData("application/x-rack-id"));
+      if (!rackId) return;
+      try {
+        await apiFetch("/api/v1/racks/" + rackId, {
+          method: "PATCH",
+          body: { rack_line_id: null, line_position: null },
+        });
+        showToast("랙 배치를 해제했습니다.");
+        await loadTree();
+        const content = document.getElementById("layout-content");
+        content.textContent = "";
+        renderRoomView(content, _findRoomData(room.id) || room);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
     });
   }
 
@@ -1856,37 +1902,7 @@ async function renderRoomView(container, room) {
   guide.appendChild(guideCard);
   wrapper.appendChild(guide);
 
-  unplacedArea.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    if (_draggedRackId) {
-      unplacedArea.style.borderColor = "var(--primary-color, #2563eb)";
-      unplacedArea.style.background = "rgba(37, 99, 235, 0.04)";
-    }
-  });
-  unplacedArea.addEventListener("dragleave", () => {
-    unplacedArea.style.borderColor = "";
-    unplacedArea.style.background = "";
-  });
-  unplacedArea.addEventListener("drop", async (e) => {
-    e.preventDefault();
-    unplacedArea.style.borderColor = "";
-    unplacedArea.style.background = "";
-    const rackId = Number(e.dataTransfer.getData("application/x-rack-id"));
-    if (!rackId) return;
-    try {
-      await apiFetch("/api/v1/racks/" + rackId, {
-        method: "PATCH",
-        body: { rack_line_id: null, line_position: null },
-      });
-      showToast("랙 배치를 해제했습니다.");
-      await loadTree();
-      const content = document.getElementById("layout-content");
-      content.textContent = "";
-      renderRoomView(content, _findRoomData(room.id) || room);
-    } catch (err) {
-      showToast(err.message, "error");
-    }
-  });
+
 }
 
 function _getRackDisplayCode(rack, context = null) {
@@ -2013,7 +2029,9 @@ async function _toggleDisabledSlot(line, position, room) {
   }
 }
 
-async function renderRackView(container, rack) {
+async function renderRackView(container, rack, options = {}) {
+  const { onRefresh = null, embedded = false } = options || {};
+
   // Fetch assets for this rack
   let assets = [];
   try {
@@ -2138,10 +2156,13 @@ async function renderRackView(container, rack) {
           },
         });
         showToast("장비 배치 완료");
-        // Re-render
-        const content = document.getElementById("layout-content");
-        content.textContent = "";
-        renderRackView(content, rack);
+        if (onRefresh) {
+          onRefresh();
+        } else {
+          const content = document.getElementById("layout-content");
+          content.textContent = "";
+          renderRackView(content, rack);
+        }
       } catch (err) { showToast(err.message, "error"); }
     });
 
@@ -2191,9 +2212,13 @@ async function renderRackView(container, rack) {
           body: { rack_start_unit: null, rack_end_unit: null },
         });
         showToast("장비 배치 해제");
-        const content = document.getElementById("layout-content");
-        content.textContent = "";
-        renderRackView(content, rack);
+        if (onRefresh) {
+          onRefresh();
+        } else {
+          const content = document.getElementById("layout-content");
+          content.textContent = "";
+          renderRackView(content, rack);
+        }
       } catch (err) { showToast(err.message, "error"); }
     });
 
