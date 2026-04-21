@@ -1647,7 +1647,7 @@ async function renderRoomView(container, room) {
     grid.appendChild(headerCell);
   }
   const topRightFrame = document.createElement("div");
-  topRightFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+  topRightFrame.className = "floor-plan-row-label floor-plan-axis-frame floor-plan-axis-frame-top";
   topRightFrame.setAttribute("aria-hidden", "true");
   grid.appendChild(topRightFrame);
 
@@ -1867,17 +1867,17 @@ async function renderRoomView(container, room) {
   }
 
   const bottomLeftFrame = document.createElement("div");
-  bottomLeftFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+  bottomLeftFrame.className = "floor-plan-row-label floor-plan-axis-frame floor-plan-axis-frame-bottom";
   bottomLeftFrame.setAttribute("aria-hidden", "true");
   grid.appendChild(bottomLeftFrame);
   for (let p = 0; p < cols; p++) {
     const bottomFrame = document.createElement("div");
-    bottomFrame.className = "floor-plan-header floor-plan-axis-frame";
+    bottomFrame.className = "floor-plan-header floor-plan-axis-frame floor-plan-axis-frame-bottom";
     bottomFrame.setAttribute("aria-hidden", "true");
     grid.appendChild(bottomFrame);
   }
   const bottomRightFrame = document.createElement("div");
-  bottomRightFrame.className = "floor-plan-row-label floor-plan-axis-frame";
+  bottomRightFrame.className = "floor-plan-row-label floor-plan-axis-frame floor-plan-axis-frame-bottom";
   bottomRightFrame.setAttribute("aria-hidden", "true");
   grid.appendChild(bottomRightFrame);
 
