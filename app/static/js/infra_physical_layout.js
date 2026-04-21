@@ -1208,7 +1208,7 @@ function selectNode(type, id, data) {
   else if (type === "floor") renderFloorView(content, data);
   else if (type === "room") renderRoomView(content, data);
   else if (type === "line") renderRoomView(content, _findRoomData(data.room_id) || data);
-  else if (type === "rack") renderRackView(content, data);
+  else if (type === "rack") renderRoomView(content, _findRoomData(data.room_id) || data);
   focusLayoutDetailPanel();
 }
 
@@ -1468,7 +1468,8 @@ async function renderRoomView(container, room) {
   });
   const placedRackIds = new Set();
   placedLines.forEach((line) => (line.racks || []).forEach((rack) => placedRackIds.add(rack.id)));
-  const unplacedRacks = allRacks.filter((rack) => !placedRackIds.has(rack.id));
+  const selectedRackId = _selectedNode?.type === "rack" ? Number(_selectedNode.id) : null;
+  let selectedRackHandled = false;
 
   const renderSlotActions = () => {
     slotActions.textContent = "";
@@ -1692,6 +1693,16 @@ async function renderRoomView(container, room) {
           selectSlot(`${_getLinePositionLabel(cell.dataset.lineName, positionIndex)}에 ${rack.rack_name || rack.rack_code} 랙이 배치되어 있습니다.`, { rack });
           selectNode("rack", rack.id, fullRack);
         });
+        if (selectedRackId && Number(rack.id) == selectedRackId) {
+          const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
+          selectedRackHandled = true;
+          selectSlot(`${_getLinePositionLabel(cell.dataset.lineName, positionIndex)}에 ${rack.rack_name || rack.rack_code} 랙이 배치되어 있습니다.`, { rack: fullRack });
+          requestAnimationFrame(() => {
+            try {
+              cell.scrollIntoView({ block: "nearest", inline: "nearest" });
+            } catch {}
+          });
+        }
         cell.addEventListener("dragstart", (e) => {
           _draggedRackId = rack.id;
           e.dataTransfer.setData("application/x-rack-id", String(rack.id));
@@ -1802,6 +1813,26 @@ async function renderRoomView(container, room) {
       chip.draggable = true;
       chip.dataset.rackId = rack.id;
       chip.textContent = (rack.rack_name || rack.rack_code) + " (" + rack.total_units + "U)";
+      chip.addEventListener("click", () => {
+        const fullRack = allRacks.find((ar) => ar.id === rack.id) || rack;
+        _selectedSlotKey = null;
+        _selectedSlotContext = { line: null, rack: fullRack, room, rackLines, isUnplacedRack: true };
+        _setSlotStatus(slotStatus, `${rack.rack_name || rack.rack_code} 랙은 현재 미할당 상태입니다.`, "선택된 랙");
+        renderSlotActions();
+        selectNode("rack", rack.id, fullRack);
+      });
+      if (selectedRackId && Number(rack.id) == selectedRackId) {
+        selectedRackHandled = true;
+        chip.classList.add("is-selected");
+        _selectedSlotKey = null;
+        _selectedSlotContext = { line: null, rack, room, rackLines, isUnplacedRack: true };
+        _setSlotStatus(slotStatus, `${rack.rack_name || rack.rack_code} 랙은 현재 미할당 상태입니다.`, "선택된 랙");
+        requestAnimationFrame(() => {
+          try {
+            chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+          } catch {}
+        });
+      }
       chip.addEventListener("dragstart", (e) => {
         _draggedRackId = rack.id;
         e.dataTransfer.setData("application/x-rack-id", String(rack.id));
@@ -2559,7 +2590,7 @@ document.getElementById("rack-label-base").addEventListener("change", () => {
   if (_selectedNode && _selectedNode.type === "rack") {
     const content = document.getElementById("layout-content");
     content.textContent = "";
-    renderRackView(content, _selectedNode.data);
+    renderRoomView(content, _findRoomData(_selectedNode.data?.room_id) || _selectedNode.data);
   }
 });
 
