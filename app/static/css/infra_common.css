@@ -3671,29 +3671,59 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 /* ── Infra utility classes (replacing inline styles) ── */
 .form-grid-1-2 { grid-template-columns: 1fr 2fr; }
 .form-grid-1-1 { grid-template-columns: 1fr 1fr; }
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.modal-title-row h2 {
+  margin: 0;
+}
+
+.modal-title-check,
 .modal-check,
 .modal-inline-check {
   display: flex !important;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   white-space: normal;
   line-height: 1.45;
   cursor: pointer;
 }
 
+.modal-title-check {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.modal-title-check input[type="checkbox"],
 .modal-check input[type="checkbox"],
 .modal-inline-check input[type="checkbox"] {
   width: 16px;
   height: 16px;
   min-width: 16px;
-  margin: 1px 0 0;
+  margin: 0;
   flex: 0 0 16px;
   cursor: pointer;
 }
 
+.modal-title-check span,
 .modal-check span,
 .modal-inline-check span {
-  display: inline-block;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .modal-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 .flex-col-gap-sm { display: flex; flex-direction: column; gap: 6px; }
 .m-0 { margin: 0; }

@@ -49,7 +49,10 @@
 
 <!-- Modal: Center -->
 <dialog id="modal-center" class="modal modal-md">
-  <h2 id="modal-center-title">센터 등록</h2>
+  <div class="modal-title-row">
+    <h2 id="modal-center-title">센터 등록</h2>
+    <label class="modal-title-check"><input type="checkbox" id="center-main"><span>메인 센터</span></label>
+  </div>
   <p class="modal-desc">센터 저장 후 기본 전산실 `MAIN`이 함께 생성됩니다.</p>
   <form id="form-center">
     <input type="hidden" id="center-id">
@@ -65,7 +68,6 @@
             <option value="false">비활성</option>
           </select>
         </label>
-        <label class="full-width modal-check"><input type="checkbox" id="center-main"> 메인 센터로 지정</label>
         <label class="full-width">비고 <textarea id="center-note" rows="3"></textarea></label>
       </div>
     </fieldset>
@@ -78,7 +80,10 @@
 
 <!-- Modal: Room -->
 <dialog id="modal-room" class="modal modal-md">
-  <h2 id="modal-room-title">전산실 등록</h2>
+  <div class="modal-title-row">
+    <h2 id="modal-room-title">전산실 등록</h2>
+    <label class="modal-title-check"><input type="checkbox" id="room-main"><span>메인 전산실</span></label>
+  </div>
   <p class="modal-desc">선택한 센터 아래에 전산실 정보를 등록합니다.</p>
   <form id="form-room">
     <input type="hidden" id="room-id">
@@ -97,7 +102,6 @@
             <option value="false">비활성</option>
           </select>
         </label>
-        <label class="full-width modal-check"><input type="checkbox" id="room-main"> 메인 전산실로 지정</label>
         <label class="full-width">비고 <textarea id="room-note" rows="3"></textarea></label>
       </div>
     </fieldset>
@@ -157,7 +161,7 @@
       <div class="form-grid">
         <label>라인코드 <input type="text" id="line-code" placeholder="예: A"></label>
         <label><span class="label-text">라인명<span class="req">*</span></span> <input type="text" id="line-name" required></label>
-        <label class="full-width modal-inline-check"><input type="checkbox" id="line-sequential-naming"> 제외 슬롯 번호를 건너뛰고 랙명 연속 번호 사용</label>
+        <label class="full-width modal-inline-check"><input type="checkbox" id="line-sequential-naming"><span>제외 슬롯 번호를 건너뛰고 랙명 연속 번호 사용</span></label>
         <label class="full-width">현재 좌표 <input type="text" id="line-coordinates" readonly></label>
       </div>
     </fieldset>
@@ -173,5 +177,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260421i"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260421j"></script>
 {% endblock %}
