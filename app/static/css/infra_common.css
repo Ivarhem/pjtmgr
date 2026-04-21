@@ -3671,6 +3671,30 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 /* ── Infra utility classes (replacing inline styles) ── */
 .form-grid-1-2 { grid-template-columns: 1fr 2fr; }
 .form-grid-1-1 { grid-template-columns: 1fr 1fr; }
+.modal-check,
+.modal-inline-check {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  white-space: normal;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.modal-check input[type="checkbox"],
+.modal-inline-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 1px 0 0;
+  flex: 0 0 16px;
+  cursor: pointer;
+}
+
+.modal-check span,
+.modal-inline-check span {
+  display: inline-block;
+}
 .flex-col-gap-sm { display: flex; flex-direction: column; gap: 6px; }
 .m-0 { margin: 0; }
 .form-divider { border-top: 1px solid var(--border-color-light); margin: 8px 0; }
