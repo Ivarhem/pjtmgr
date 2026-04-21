@@ -413,9 +413,17 @@ def update_rack_line(db: Session, line_id: int, payload: RackLineUpdate, current
     line = get_rack_line(db, line_id)
     room = get_room(db, line.room_id)
     changes = payload.model_dump(exclude_unset=True)
+    before_cells = tuple(_build_line_cells(line))
     normalized = _normalize_rack_line_payload(db, room, changes, line)
+    after_cells = tuple(_build_line_cells(type("LineDraft", (), normalized)()))
+    line_reassigned = before_cells != after_cells
     for field, value in normalized.items():
         setattr(line, field, value)
+    if line_reassigned:
+        racks = list(db.scalars(select(Rack).where(Rack.rack_line_id == line.id)))
+        for rack in racks:
+            rack.rack_line_id = None
+            rack.line_position = None
     db.commit()
     db.refresh(line)
     return line
