@@ -3432,11 +3432,11 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
   border: 1px solid var(--border-color);
   border-radius: 10px;
   overflow: auto;
-  max-height: 70vh;
   scrollbar-width: none;
   -ms-overflow-style: none;
   scroll-behavior: smooth;
   overscroll-behavior: contain;
+  min-height: 180px;
 }
 .u-diagram::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .u-slot {
@@ -3514,26 +3514,27 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 }
 .unplaced-item.is-dragging { opacity: 0.4; }
 
-.floor-plan-shell { --floor-plan-side-width: 320px; display: grid; grid-template-columns: minmax(0, 1fr) 8px 18px minmax(260px, var(--floor-plan-side-width)); gap: 0; align-items: start; }
-.floor-plan-main { min-width: 0; display:flex; flex-direction:column; gap:8px; padding-right: 12px; }
-.floor-plan-side-splitter { width: 8px; cursor: col-resize; position: relative; border-radius: 999px; margin: 0 8px; }
-.floor-plan-side-splitter::after { content: ""; position: absolute; top: 50%; left: 50%; width: 3px; height: 48px; transform: translate(-50%, -50%); border-radius: 999px; background: var(--border-color); }
+.floor-plan-shell { --floor-plan-side-width: 320px; display: grid; grid-template-columns: minmax(0, 1fr) 18px 8px minmax(260px, var(--floor-plan-side-width)); gap: 8px; align-items: stretch; min-height: 0; }
+.floor-plan-main { min-width: 0; min-height: 0; display:flex; flex-direction:column; gap:8px; }
+.floor-plan-side-handle-wrap { width: 18px; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.floor-plan-side-splitter { width: 8px; cursor: col-resize; position: relative; border-radius: 999px; margin: 0; min-height: 0; }
+.floor-plan-side-splitter::after { content: ""; position: absolute; top: 50%; left: 50%; width: 3px; height: 72px; transform: translate(-50%, -50%); border-radius: 999px; background: var(--border-color); }
 .floor-plan-side-splitter:hover::after,
-.floor-plan-side-splitter.is-dragging::after { background: var(--text-color-secondary); height: 72px; }
-.floor-plan-side-handle-wrap { width: 18px; display: flex; align-items: center; justify-content: center; }
-.floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: minmax(0, 1fr) 18px; }
+.floor-plan-side-splitter.is-dragging::after { background: var(--text-color-secondary); height: 96px; }
+.floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: minmax(0, 1fr) 18px; gap: 8px; }
 .floor-plan-shell.floor-plan-side-collapsed .floor-plan-side-splitter,
 .floor-plan-shell.floor-plan-side-collapsed .floor-plan-side { display: none; }
 .floor-plan-shell:not(.floor-plan-side-collapsed) .btn-toggle-floor-plan-side { transform: rotate(0deg); }
-.floor-plan-side { min-width: 0; position: sticky; top: 0; padding-left: 12px; }
-.floor-plan-viewport { position: relative; width: 100%; min-height: 320px; max-width: 100%; max-height: min(70vh, 720px); overflow: auto; border: 1px solid var(--color-gray-300, #d1d5db); border-radius: 8px; background: var(--color-gray-50, #f9fafb); cursor: grab; }
+.floor-plan-side { min-width: 0; min-height: 0; position: sticky; top: 0; align-self: start; }
+.floor-plan-viewport { position: relative; width: 100%; min-height: 320px; max-width: 100%; overflow: auto; border: 1px solid var(--color-gray-300, #d1d5db); border-radius: 8px; background: var(--color-gray-50, #f9fafb); cursor: grab; scrollbar-width: none; -ms-overflow-style: none; }
+.floor-plan-viewport::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .floor-plan-viewport.is-panning { cursor: grabbing; }
 .floor-plan-canvas { min-width: max-content; min-height: max-content; padding: 10px; display: inline-block; }
-.floor-plan-side-card { border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-primary); padding: 14px; max-height: min(70vh, 720px); overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; -ms-overflow-style: none; }
+.floor-plan-side-card { border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-primary); padding: 14px; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; -ms-overflow-style: none; }
 .floor-plan-side-card::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .rack-mount-card-header { margin-bottom: 2px; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-primary); }
 .floor-plan-side-title { font-size: 14px; font-weight: 700; margin: 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-primary); }
-@media (max-width: 960px) { .floor-plan-shell { grid-template-columns: 1fr; } .floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: 1fr; } .floor-plan-side-splitter, .floor-plan-side-handle-wrap { display: none !important; } .floor-plan-side { position: static; padding-left: 0; margin-top: 12px; } .floor-plan-main { padding-right: 0; } }
+@media (max-width: 960px) { .floor-plan-shell { grid-template-columns: 1fr; gap: 12px; } .floor-plan-shell.floor-plan-side-collapsed { grid-template-columns: 1fr; } .floor-plan-side-splitter, .floor-plan-side-handle-wrap { display: none !important; } .floor-plan-side { position: static; margin-top: 12px; } }
 /* === Floor Plan Grid === */
 .floor-plan-grid {
   --floor-cell-width: 64px;
@@ -3785,6 +3786,9 @@ body.dark-mode .floor-plan-slot-status {
 .layout-view-toolbar .layout-inline-select { margin-left: 0; }
 
 .rack-mount-side-card .layout-view-info { margin: 0; padding: 10px 12px; border: 1px dashed var(--border-color); border-radius: 10px; background: color-mix(in srgb, var(--bg-primary) 94%, var(--bg-color) 6%); }
+.rack-mount-side-card { min-height: 0; }
+.rack-mount-side-card .u-diagram { flex: 1 1 auto; min-height: 180px; }
+.rack-mount-side-card .unplaced-section { flex: 0 0 auto; }
 .rack-mount-side-card .u-diagram,
 .rack-mount-side-card .unplaced-section { margin: 0; }
 .rack-mount-side-card .unplaced-title { margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--text-color); }

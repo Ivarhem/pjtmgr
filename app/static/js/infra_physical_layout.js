@@ -557,10 +557,27 @@ function applyPhysicalLayoutResponsiveSizing() {
     const availableShellHeight = Math.max(360, window.innerHeight - shellTop - 16);
     shell.style.height = `${availableShellHeight}px`;
   }
-  document.querySelectorAll(".floor-plan-viewport").forEach((viewport) => {
-    const viewportTop = viewport.getBoundingClientRect().top;
-    const availableViewportHeight = Math.max(240, window.innerHeight - viewportTop - 20);
-    viewport.style.maxHeight = `${availableViewportHeight}px`;
+  document.querySelectorAll(".floor-plan-shell").forEach((floorShell) => {
+    const shellRect = floorShell.getBoundingClientRect();
+    const shellBottom = Math.min(window.innerHeight - 12, shellRect.bottom || window.innerHeight);
+    floorShell.querySelectorAll(".floor-plan-viewport").forEach((viewport) => {
+      const viewportTop = viewport.getBoundingClientRect().top;
+      const availableViewportHeight = Math.max(240, shellBottom - viewportTop);
+      viewport.style.height = `${availableViewportHeight}px`;
+      viewport.style.maxHeight = `${availableViewportHeight}px`;
+    });
+    floorShell.querySelectorAll(".floor-plan-side-card").forEach((card) => {
+      const cardTop = card.getBoundingClientRect().top;
+      const availableCardHeight = Math.max(240, shellBottom - cardTop);
+      card.style.height = `${availableCardHeight}px`;
+      card.style.maxHeight = `${availableCardHeight}px`;
+    });
+    floorShell.querySelectorAll(".u-diagram").forEach((diagram) => {
+      const diagramRect = diagram.getBoundingClientRect();
+      const availableDiagramHeight = Math.max(180, shellBottom - diagramRect.top - 8);
+      diagram.style.height = `${availableDiagramHeight}px`;
+      diagram.style.maxHeight = `${availableDiagramHeight}px`;
+    });
   });
 }
 
@@ -1575,10 +1592,6 @@ async function renderRoomView(container, room) {
   floorPlanMain.className = "floor-plan-main";
   floorPlanShell.appendChild(floorPlanMain);
 
-  const floorPlanSideSplitter = document.createElement("div");
-  floorPlanSideSplitter.className = "floor-plan-side-splitter";
-  floorPlanShell.appendChild(floorPlanSideSplitter);
-
   const floorPlanSideHandleWrap = document.createElement("div");
   floorPlanSideHandleWrap.className = "floor-plan-side-handle-wrap";
   const floorPlanSideToggle = document.createElement("button");
@@ -1588,6 +1601,10 @@ async function renderRoomView(container, room) {
   floorPlanSideToggle.textContent = "❯";
   floorPlanSideHandleWrap.appendChild(floorPlanSideToggle);
   floorPlanShell.appendChild(floorPlanSideHandleWrap);
+
+  const floorPlanSideSplitter = document.createElement("div");
+  floorPlanSideSplitter.className = "floor-plan-side-splitter";
+  floorPlanShell.appendChild(floorPlanSideSplitter);
 
   const floorPlanSide = document.createElement("aside");
   floorPlanSide.className = "floor-plan-side";
