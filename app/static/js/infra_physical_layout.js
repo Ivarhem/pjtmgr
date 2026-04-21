@@ -2274,35 +2274,62 @@ async function renderRackView(container, rack, options = {}) {
   if (embedded && rackMountSide) {
     const rackInfoCard = document.createElement("div");
     rackInfoCard.className = "rack-info-card";
-    const rackInfoTitle = document.createElement("div");
-    rackInfoTitle.className = "rack-info-title";
-    rackInfoTitle.textContent = "랙정보";
-    rackInfoCard.appendChild(rackInfoTitle);
 
-    const rackInfoName = document.createElement("div");
-    rackInfoName.className = "rack-info-name";
-    rackInfoName.textContent = rack.rack_name || rack.rack_code;
-    rackInfoCard.appendChild(rackInfoName);
+    const detailHeader = document.createElement("div");
+    detailHeader.className = "detail-header rack-info-detail-header";
+    const titleGroup = document.createElement("div");
+    titleGroup.className = "detail-title-group";
+    const detailTitle = document.createElement("div");
+    detailTitle.className = "detail-title";
+    detailTitle.textContent = rack.rack_name || rack.rack_code;
+    titleGroup.appendChild(detailTitle);
+    const detailSubtitle = document.createElement("div");
+    detailSubtitle.className = "detail-subtitle";
+    detailSubtitle.textContent = `${rack.rack_code || "-"} · ${totalU}U`;
+    titleGroup.appendChild(detailSubtitle);
+    detailHeader.appendChild(titleGroup);
+    rackInfoCard.appendChild(detailHeader);
 
-    const rackInfoCode = document.createElement("div");
-    rackInfoCode.className = "rack-info-code";
-    rackInfoCode.textContent = `${rack.rack_code || "-"} / ${totalU}U`;
-    rackInfoCard.appendChild(rackInfoCode);
+    const detailTabs = document.createElement("div");
+    detailTabs.className = "detail-tabs rack-info-tabs";
+    const basicTab = document.createElement("button");
+    basicTab.type = "button";
+    basicTab.className = "tab-btn active";
+    basicTab.textContent = "기본정보";
+    detailTabs.appendChild(basicTab);
+    rackInfoCard.appendChild(detailTabs);
 
-    const rackInfoSummary = document.createElement("div");
-    rackInfoSummary.className = "rack-info-summary";
-    rackInfoSummary.textContent = `사용 ${usedU}U / ${totalU}U (${Math.round(usedU / totalU * 100)}%) · 장비 ${assets.length}대 · 미배치 ${rackableUnplaced.length}`;
-    rackInfoCard.appendChild(rackInfoSummary);
+    const detailBody = document.createElement("div");
+    detailBody.className = "detail-body rack-info-body";
+    const detailGrid = document.createElement("dl");
+    detailGrid.className = "detail-grid rack-info-grid";
 
     const selectedLine = _selectedSlotContext?.rack?.id === rack.id ? _selectedSlotContext?.line : null;
-    if (selectedLine || rack.line_position != null) {
-      const rackInfoMeta = document.createElement("div");
-      rackInfoMeta.className = "rack-info-meta";
-      const lineLabel = selectedLine?.line_name || rack.line_name || "미할당";
-      const posLabel = rack.line_position != null ? ` / ${Number(rack.line_position) + 1}번` : "";
-      rackInfoMeta.textContent = `${lineLabel}${posLabel}`;
-      rackInfoCard.appendChild(rackInfoMeta);
-    }
+    const lineLabel = selectedLine?.line_name || rack.line_name || "미할당";
+    const posLabel = rack.line_position != null ? `${Number(rack.line_position) + 1}번` : "-";
+    const freeU = Math.max(0, totalU - usedU);
+    const rows = [
+      ["랙코드", rack.rack_code || "-"],
+      ["랙명", rack.rack_name || rack.rack_code || "-"],
+      ["총 U", `${totalU}U`],
+      ["소속 라인", lineLabel],
+      ["좌표 순번", posLabel],
+      ["배치 장비", `${placed.length}대`],
+      ["미배치 장비", `${rackableUnplaced.length}대`],
+      ["사용 U", `${usedU}U`],
+      ["여유 U", `${freeU}U`],
+    ];
+    rows.forEach(([label, value]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = label;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      detailGrid.appendChild(dt);
+      detailGrid.appendChild(dd);
+    });
+
+    detailBody.appendChild(detailGrid);
+    rackInfoCard.appendChild(detailBody);
     rackMountSide.appendChild(rackInfoCard);
   }
 
