@@ -1468,6 +1468,7 @@ async function renderRoomView(container, room) {
   });
   const placedRackIds = new Set();
   placedLines.forEach((line) => (line.racks || []).forEach((rack) => placedRackIds.add(rack.id)));
+  const unplacedRacks = allRacks.filter((rack) => !placedRackIds.has(rack.id));
   const selectedRackId = _selectedNode?.type === "rack" ? Number(_selectedNode.id) : null;
   let selectedRackHandled = false;
 
