@@ -1442,8 +1442,8 @@ function renderFloorView(container, data) {
 }
 
 async function renderRoomView(container, room) {
-  const wrapper = document.createElement("div");
-  wrapper.style.cssText = "padding:20px;overflow:auto;width:100%;";
+  const wrapper = createContentWrapper();
+  wrapper.classList.add("layout-content-wrapper-fill");
   container.appendChild(wrapper);
 
   const header = document.createElement("div");
@@ -2458,7 +2458,7 @@ function _canPlaceAt(slotMap, startU, sizeUnit, totalU, excludeAssetId) {
 
 function createContentWrapper() {
   const div = document.createElement("div");
-  div.style.cssText = "padding:20px;overflow:auto;width:100%;";
+  div.className = "layout-content-wrapper";
   return div;
 }
 
