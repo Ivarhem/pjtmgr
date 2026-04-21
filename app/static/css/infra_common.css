@@ -3789,10 +3789,26 @@ body.dark-mode .floor-plan-slot-status {
 .rack-mount-side-card { min-height: 0; }
 .rack-mount-side-card .u-diagram { flex: 1 1 auto; min-height: 180px; }
 .rack-mount-side-card .unplaced-section { flex: 0 0 auto; }
+.rack-mount-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 34%); gap: 12px; min-height: 0; flex: 1 1 auto; }
+.rack-mount-main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.rack-mount-side-meta { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.rack-info-card { border: 1px solid var(--border-color); border-radius: 10px; background: color-mix(in srgb, var(--bg-primary) 96%, var(--bg-color) 4%); overflow: hidden; }
+.rack-info-title { font-size: 12px; font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--border-color); }
+.rack-info-name { font-size: 18px; font-weight: 700; text-align: center; padding: 10px 12px 6px; }
+.rack-info-code { font-size: 14px; font-weight: 700; text-align: center; padding: 8px 12px; background: color-mix(in srgb, var(--primary-color, #2563eb) 68%, white 32%); color: white; }
+.rack-info-meta { font-size: 12px; text-align: center; color: var(--text-color-secondary); padding: 8px 10px 10px; }
+.rack-unplaced-section { min-height: 0; overflow: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.rack-unplaced-section::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.rack-unplaced-item { display: block; width: 100%; margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; text-align: center; font-weight: 700; background: #0b0b0d; color: #fff; border-color: #0b0b0d; }
+.rack-unplaced-empty { padding: 12px 4px 2px; font-size: 12px; }
+@media (max-width: 1100px) { .rack-mount-layout { grid-template-columns: 1fr; } }
 .rack-mount-side-card .u-diagram,
 .rack-mount-side-card .unplaced-section { margin: 0; }
 .rack-mount-side-card .unplaced-title { margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--text-color); }
 .rack-mount-side-card .unplaced-item { padding: 6px 10px; border-radius: 8px; background: var(--bg-primary); border: 1px solid var(--border-color); }
+body.dark-mode .rack-info-card { background: color-mix(in srgb, var(--bg-primary) 90%, var(--text-color) 10%); }
+body.dark-mode .rack-info-code { background: color-mix(in srgb, var(--primary-color, #2563eb) 72%, #1d4ed8 28%); color: #fff; }
+body.dark-mode .rack-unplaced-item { background: #050506; border-color: color-mix(in srgb, var(--border-color) 65%, #ffffff 35%); color: #fff; }
 
 
 

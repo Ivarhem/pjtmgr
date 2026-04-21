@@ -444,16 +444,18 @@ def delete_rack_line(db: Session, line_id: int, current_user: User) -> None:
 def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
     """해당 랙에 배치된 자산 목록 (rack_start_unit 순 정렬)."""
     from app.modules.infra.models.asset import Asset
+    from app.modules.infra.models.product_catalog import ProductCatalog
 
     rack = db.get(Rack, rack_id)
     if rack is None:
         raise NotFoundError("Rack not found")
 
-    assets = list(db.scalars(
-        select(Asset)
+    rows = db.execute(
+        select(Asset, ProductCatalog.product_type)
+        .join(ProductCatalog, ProductCatalog.id == Asset.model_id, isouter=True)
         .where(Asset.rack_id == rack_id)
         .order_by(Asset.rack_start_unit.asc().nullslast(), Asset.id.asc())
-    ))
+    ).all()
     return [
         {
             "id": a.id,
@@ -465,8 +467,11 @@ def list_rack_assets(db: Session, rack_id: int) -> list[dict]:
             "status": a.status,
             "environment": a.environment,
             "rack_unit": a.rack_unit,
+            "category": a.category,
+            "asset_class": a.asset_class,
+            "product_type": product_type or "hardware",
         }
-        for a in assets
+        for a, product_type in rows
     ]
 
 

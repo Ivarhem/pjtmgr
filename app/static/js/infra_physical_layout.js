@@ -2139,11 +2139,24 @@ async function renderRackView(container, rack, options = {}) {
   // Usage summary
   const placed = assets.filter(a => a.rack_start_unit != null);
   const unplaced = assets.filter(a => a.rack_start_unit == null);
+  const rackableUnplaced = unplaced.filter((a) => (String(a.product_type || "hardware").toLowerCase() === "hardware") && Number(a.size_unit) > 0);
   const usedU = placed.reduce((sum, a) => sum + ((a.rack_end_unit || a.rack_start_unit) - a.rack_start_unit + 1), 0);
   const info = document.createElement("div");
   info.className = "layout-view-info";
-  info.textContent = "사용 " + usedU + "U / " + totalU + "U (" + Math.round(usedU / totalU * 100) + "%) | 장비 " + assets.length + "대 (미배치 " + unplaced.length + ")";
+  info.textContent = "사용 " + usedU + "U / " + totalU + "U (" + Math.round(usedU / totalU * 100) + "%) | 장비 " + assets.length + "대 (미배치 " + rackableUnplaced.length + ")";
   container.appendChild(info);
+
+  const rackMountLayout = embedded ? document.createElement("div") : null;
+  const rackMountMain = embedded ? document.createElement("div") : null;
+  const rackMountSide = embedded ? document.createElement("div") : null;
+  if (rackMountLayout && rackMountMain && rackMountSide) {
+    rackMountLayout.className = "rack-mount-layout";
+    rackMountMain.className = "rack-mount-main";
+    rackMountSide.className = "rack-mount-side-meta";
+    rackMountLayout.appendChild(rackMountMain);
+    rackMountLayout.appendChild(rackMountSide);
+    container.appendChild(rackMountLayout);
+  }
 
   // Build slot map
   const slotMap = {}; // u -> asset or null
@@ -2157,7 +2170,7 @@ async function renderRackView(container, rack, options = {}) {
   // U diagram
   const diagram = document.createElement("div");
   diagram.className = "u-diagram";
-  container.appendChild(diagram);
+  (rackMountMain || container).appendChild(diagram);
 
   // Determine display order
   const uOrder = [];
@@ -2256,22 +2269,59 @@ async function renderRackView(container, rack, options = {}) {
     diagram.appendChild(slot);
   });
 
+  if (embedded && rackMountSide) {
+    const rackInfoCard = document.createElement("div");
+    rackInfoCard.className = "rack-info-card";
+    const rackInfoTitle = document.createElement("div");
+    rackInfoTitle.className = "rack-info-title";
+    rackInfoTitle.textContent = "랙정보";
+    rackInfoCard.appendChild(rackInfoTitle);
+
+    const rackInfoName = document.createElement("div");
+    rackInfoName.className = "rack-info-name";
+    rackInfoName.textContent = rack.rack_name || rack.rack_code;
+    rackInfoCard.appendChild(rackInfoName);
+
+    const rackInfoCode = document.createElement("div");
+    rackInfoCode.className = "rack-info-code";
+    rackInfoCode.textContent = `${rack.rack_code || "-"} / ${totalU}U`;
+    rackInfoCard.appendChild(rackInfoCode);
+
+    const selectedLine = _selectedSlotContext?.rack?.id === rack.id ? _selectedSlotContext?.line : null;
+    if (selectedLine || rack.line_position != null) {
+      const rackInfoMeta = document.createElement("div");
+      rackInfoMeta.className = "rack-info-meta";
+      const lineLabel = selectedLine?.line_name || rack.line_name || "미할당";
+      const posLabel = rack.line_position != null ? ` / ${Number(rack.line_position) + 1}번` : "";
+      rackInfoMeta.textContent = `${lineLabel}${posLabel}`;
+      rackInfoCard.appendChild(rackInfoMeta);
+    }
+    rackMountSide.appendChild(rackInfoCard);
+  }
+
   // Unplaced section
-  if (unplaced.length) {
+  {
     const section = document.createElement("div");
-    section.className = "unplaced-section";
+    section.className = "unplaced-section" + (embedded ? " rack-unplaced-section" : "");
     const title = document.createElement("div");
     title.className = "unplaced-title";
-    title.textContent = "미배치 장비 (" + unplaced.length + ")";
+    title.textContent = "미배치 장비 (" + rackableUnplaced.length + ")";
     section.appendChild(title);
 
-    unplaced.forEach(a => {
+    if (!rackableUnplaced.length) {
+      const empty = document.createElement("div");
+      empty.className = "rack-unplaced-empty text-muted";
+      empty.textContent = "랙 배치 가능한 하드웨어 장비가 없습니다.";
+      section.appendChild(empty);
+    }
+
+    rackableUnplaced.forEach(a => {
       const item = document.createElement("div");
-      item.className = "unplaced-item";
+      item.className = "unplaced-item rack-unplaced-item";
       item.draggable = true;
       item.dataset.assetId = a.id;
       item.dataset.sizeUnit = a.size_unit || 1;
-      item.textContent = a.asset_name + (a.size_unit ? " (" + a.size_unit + "U)" : "");
+      item.textContent = a.asset_name + " · " + a.size_unit + "U";
 
       item.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("application/x-asset-id", String(a.id));
@@ -2308,7 +2358,7 @@ async function renderRackView(container, rack, options = {}) {
       } catch (err) { showToast(err.message, "error"); }
     });
 
-    container.appendChild(section);
+    (rackMountSide || container).appendChild(section);
   }
 }
 
