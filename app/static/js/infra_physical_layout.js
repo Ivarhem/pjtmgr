@@ -1368,7 +1368,7 @@ async function renderRoomView(container, room) {
   container.appendChild(wrapper);
 
   const header = document.createElement("div");
-  header.className = "layout-view-header" + (embedded ? " rack-mount-card-header" : "");
+  header.className = "layout-view-header";
   const h3 = document.createElement("h3");
   h3.textContent = room.room_name + (room.floor ? " (" + room.floor + ")" : "");
   header.appendChild(h3);
