@@ -1194,7 +1194,7 @@ function initFloorPlanSideControls(shell) {
   const splitter = shell.querySelector(".floor-plan-side-splitter");
   const toggleBtn = shell.querySelector(".btn-toggle-floor-plan-side");
   const storedWidth = Number(localStorage.getItem(LAYOUT_SIDE_WIDTH_KEY) || 0);
-  if (storedWidth >= 260 && storedWidth <= 640) {
+  if (storedWidth >= 420 && storedWidth <= 760) {
     shell.style.setProperty("--floor-plan-side-width", storedWidth + "px");
   }
   const collapsed = localStorage.getItem(LAYOUT_SIDE_COLLAPSED_KEY) === "1";
@@ -1217,7 +1217,7 @@ function initFloorPlanSideControls(shell) {
   document.addEventListener("mousemove", (event) => {
     if (!dragging) return;
     const rect = shell.getBoundingClientRect();
-    const width = Math.min(640, Math.max(260, rect.right - event.clientX - 18));
+    const width = Math.min(760, Math.max(420, rect.right - event.clientX - 18));
     shell.style.setProperty("--floor-plan-side-width", width + "px");
   });
   document.addEventListener("mouseup", () => {
