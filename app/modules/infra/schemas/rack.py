@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class RackCreate(BaseModel):
     room_id: int
+    center_id: int | None = None
     rack_code: str | None = None
     rack_name: str | None = None
     total_units: int = 42
@@ -33,6 +34,7 @@ class RackRead(BaseModel):
 
     id: int
     room_id: int
+    center_id: int | None = None
     system_id: str | None = None
     room_code: str | None = None
     room_name: str | None = None

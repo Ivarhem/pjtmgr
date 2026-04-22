@@ -751,6 +751,7 @@ let _layoutCentersCache = [];
 let _periodsCache = [];
 const _layoutRoomsCache = new Map();
 const _layoutRacksCache = new Map();
+const _layoutAllRacksCache = new Map();
 let _requestedAssetId = null;
 
 let _hasNewRows = false;
@@ -998,6 +999,26 @@ async function loadLayoutRacks(roomId) {
   const rows = await apiFetch(`/api/v1/rooms/${roomId}/racks`);
   _layoutRacksCache.set(roomId, rows);
   return rows;
+}
+
+async function loadAllLayoutRacks(partnerId) {
+  if (!partnerId) return [];
+  if (_layoutAllRacksCache.has(partnerId)) return _layoutAllRacksCache.get(partnerId);
+  const centers = await loadLayoutCenters(partnerId);
+  const roomGroups = await Promise.all(centers.map((center) => loadLayoutRooms(center.id)));
+  const rooms = roomGroups.flat();
+  const rackGroups = await Promise.all(rooms.map((room) => loadLayoutRacks(room.id)));
+  const racks = rackGroups.flat();
+  _layoutAllRacksCache.set(partnerId, racks);
+  return racks;
+}
+
+function buildRackOptionLabel(rack) {
+  return [
+    rack.center_name,
+    rack.room_name,
+    rack.rack_code ? `${rack.rack_code}${rack.rack_name ? " · " + rack.rack_name : ""}` : rack.rack_name,
+  ].filter(Boolean).join(" · ");
 }
 
 function fillSelectOptions(select, items, valueKey, labelBuilder, placeholderText, selectedValue = null, disabled = false) {
@@ -1599,9 +1620,9 @@ const DETAIL_TAB_FIELDS = {
         {
           title: "공간 배치",
           fields: [
+            ["랙", "rack_id"],
             ["센터", "center_id"],
             ["전산실", "room_id"],
-            ["랙", "rack_id"],
             ["위치", "location"],
           ],
         },
@@ -3052,6 +3073,62 @@ async function buildDetailEditFields(target, container = document.getElementById
   }
   if (!groups?.length) return;
 
+  const rackDrivenPlacementMode = groups.some((group) =>
+    (group.fields || []).some(([, key]) => key === "rack_id")
+  );
+
+  const getField = (key) => container.querySelector(`[data-field="${key}"]`);
+
+  const autoFillRackEndUnit = () => {
+    const startInput = getField("rack_start_unit");
+    const endInput = getField("rack_end_unit");
+    if (!startInput || !endInput) return;
+    const startVal = Number(startInput.value);
+    if (!Number.isFinite(startVal)) {
+      if (!startInput.value) endInput.value = "";
+      return;
+    }
+    const sizeUnit = Math.max(Number(_selectedAsset?.size_unit || 1) || 1, 1);
+    endInput.value = String(startVal + sizeUnit - 1);
+  };
+
+  const syncRackPlacementFields = async (rack) => {
+    if (!rack) return;
+    const centerSelect = getField("center_id");
+    const roomSelect = getField("room_id");
+    const rackField = getField("rack_id");
+
+    if (centerSelect) {
+      const centers = await loadLayoutCenters(_selectedAsset.partner_id);
+      fillSelectOptions(
+        centerSelect,
+        centers,
+        "id",
+        (center) => `${center.center_code} · ${center.center_name}`,
+        "-- 선택 안함 --",
+        rack.center_id,
+        true,
+      );
+    }
+
+    if (roomSelect) {
+      const rooms = rack.center_id ? await loadLayoutRooms(rack.center_id) : [];
+      fillSelectOptions(
+        roomSelect,
+        rooms,
+        "id",
+        (room) => `${room.room_code} · ${room.room_name}`,
+        rack.center_id ? "-- 선택 안함 --" : "-- 센터 선택 --",
+        rack.room_id,
+        true,
+      );
+    }
+
+    if (rackField && String(rackField.value || "") !== String(rack.id)) {
+      rackField.value = String(rack.id);
+    }
+  };
+
   async function appendField(fieldHost, label, key) {
     const fieldWrap = document.createElement("label");
     fieldWrap.className = "asset-detail-edit-field full-width";
@@ -3163,6 +3240,7 @@ async function buildDetailEditFields(target, container = document.getElementById
         (center) => `${center.center_code} · ${center.center_name}`,
         "-- 선택 안함 --",
         currentVal,
+        rackDrivenPlacementMode,
       );
     } else if (key === "room_id") {
       input = document.createElement("select");
@@ -3175,23 +3253,73 @@ async function buildDetailEditFields(target, container = document.getElementById
         (room) => `${room.room_code} · ${room.room_name}`,
         centerId ? "-- 선택 안함 --" : "-- 센터 선택 --",
         currentVal,
-        !centerId,
+        !centerId || rackDrivenPlacementMode,
       );
       input.dataset.parentField = "center_id";
     } else if (key === "rack_id") {
-      input = document.createElement("select");
-      const roomId = _selectedAsset.room_id;
-      const racks = roomId ? await loadLayoutRacks(roomId) : [];
-      fillSelectOptions(
-        input,
-        racks,
-        "id",
-        (rack) => `${rack.rack_code}${rack.rack_name ? " · " + rack.rack_name : ""}`,
-        roomId ? "-- 선택 안함 --" : "-- 전산실 선택 --",
-        currentVal,
-        !roomId,
-      );
-      input.dataset.parentField = "room_id";
+      const wrap = document.createElement("div");
+      wrap.className = "catalog-search-wrap";
+
+      input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "센터, 전산실, 랙명으로 검색";
+      input.autocomplete = "off";
+      wrap.appendChild(input);
+
+      const hiddenId = document.createElement("input");
+      hiddenId.type = "hidden";
+      hiddenId.value = currentVal || "";
+      hiddenId.dataset.field = "rack_id";
+      wrap.appendChild(hiddenId);
+
+      const dd = document.createElement("div");
+      dd.className = "catalog-dropdown is-hidden";
+      wrap.appendChild(dd);
+
+      const allRacks = await loadAllLayoutRacks(_selectedAsset.partner_id);
+      const currentRack = allRacks.find((rack) => String(rack.id) === String(currentVal));
+      input.value = currentRack ? buildRackOptionLabel(currentRack) : "";
+
+      let searchTimer = null;
+      input.addEventListener("input", () => {
+        const q = input.value.trim().toLowerCase();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          const filtered = !q
+            ? allRacks.slice(0, 30)
+            : allRacks.filter((rack) => buildRackOptionLabel(rack).toLowerCase().includes(q)).slice(0, 30);
+          dd.textContent = "";
+          filtered.forEach((rack) => {
+            const div = document.createElement("div");
+            div.className = "catalog-dropdown-item";
+            div.textContent = buildRackOptionLabel(rack);
+            div.addEventListener("click", async () => {
+              hiddenId.value = rack.id;
+              input.value = buildRackOptionLabel(rack);
+              dd.classList.add("is-hidden");
+              await syncRackPlacementFields(rack);
+            });
+            dd.appendChild(div);
+          });
+          if (!filtered.length) {
+            const empty = document.createElement("div");
+            empty.className = "catalog-dropdown-item disabled";
+            empty.textContent = "검색 결과가 없습니다.";
+            dd.appendChild(empty);
+          }
+          dd.classList.remove("is-hidden");
+        }, 120);
+      });
+      input.addEventListener("focus", () => {
+        input.dispatchEvent(new Event("input"));
+      });
+      input.addEventListener("blur", () => {
+        setTimeout(() => dd.classList.add("is-hidden"), 150);
+      });
+
+      fieldWrap.appendChild(wrap);
+      fieldHost.appendChild(fieldWrap);
+      return;
     } else if (key === "status") {
       input = document.createElement("select");
       Object.entries(ASSET_STATUS_MAP).forEach(([val, lbl]) => {
@@ -3226,7 +3354,7 @@ async function buildDetailEditFields(target, container = document.getElementById
 
     input.dataset.field = key;
     input.className = "edit-input";
-    if (key === "center_id") {
+    if (!rackDrivenPlacementMode && key === "center_id") {
       input.addEventListener("change", async () => {
         const roomSelect = container.querySelector('[data-field="room_id"]');
         const rackSelect = container.querySelector('[data-field="rack_id"]');
@@ -3252,7 +3380,7 @@ async function buildDetailEditFields(target, container = document.getElementById
         );
       });
     }
-    if (key === "room_id") {
+    if (!rackDrivenPlacementMode && key === "room_id") {
       input.addEventListener("change", async () => {
         const rackSelect = container.querySelector('[data-field="rack_id"]');
         const roomId = input.value ? Number(input.value) : null;
@@ -3267,6 +3395,10 @@ async function buildDetailEditFields(target, container = document.getElementById
           !roomId,
         );
       });
+    }
+    if (key === "rack_start_unit") {
+      input.addEventListener("input", autoFillRackEndUnit);
+      input.addEventListener("change", autoFillRackEndUnit);
     }
     fieldWrap.appendChild(input);
     fieldHost.appendChild(fieldWrap);
@@ -3289,6 +3421,16 @@ async function buildDetailEditFields(target, container = document.getElementById
       await appendField(grid, label, key);
     }
   }
+
+  if (rackDrivenPlacementMode) {
+    const rackId = getField("rack_id")?.value;
+    if (rackId) {
+      const racks = await loadAllLayoutRacks(_selectedAsset.partner_id);
+      const rack = racks.find((item) => String(item.id) === String(rackId));
+      if (rack) await syncRackPlacementFields(rack);
+    }
+  }
+  autoFillRackEndUnit();
 }
 
 async function openDetailEditModal(target) {

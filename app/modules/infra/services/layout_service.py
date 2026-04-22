@@ -109,6 +109,7 @@ def list_racks(db: Session, room_id: int) -> list[dict]:
         {
             "id": rack.id,
             "room_id": rack.room_id,
+            "center_id": center.id,
             "room_code": room.room_code,
             "room_name": room.room_name,
             "center_code": center.center_code,
