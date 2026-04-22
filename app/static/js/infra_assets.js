@@ -85,6 +85,15 @@ const ASSET_EVENT_TEMPLATES = {
 };
 
 function formatDateTime(value) {
+function formatRackUnitRange(asset) {
+  if (!asset) return "";
+  const start = Number(asset.rack_start_unit);
+  const end = Number(asset.rack_end_unit ?? asset.rack_start_unit);
+  if (!Number.isFinite(start) || start <= 0) return "";
+  if (!Number.isFinite(end) || end <= 0 || end === start) return `${start}U`;
+  return `${start}U ~ ${end}U`;
+}
+
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
@@ -649,6 +658,7 @@ const ASSET_CODE_COLS = [
   },
   { field: "category", headerName: "분류", width: 130, valueFormatter: (p) => p.value || "", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
   { field: "operation_type", headerName: "운영구분", width: 120, valueFormatter: (p) => p.value || "", editable: false, cellClass: (p) => getGridCellClass(p.colDef.field), hide: true },
+  { field: "rack_unit_range", headerName: "랙 U", width: 120, valueGetter: (p) => formatRackUnitRange(p.data), editable: false, cellClass: (p) => getGridCellClass("rack_unit_range", p.data) },
 ];
 
 /** 분류체계 깊이에 따라 동적 컬럼을 생성한다. */
@@ -1464,7 +1474,7 @@ const DETAIL_TAB_FIELDS = {
         ["센터", "center_label", (v) => v || _selectedAsset?.center || ""],
         ["전산실", "room_label"],
         ["랙", "rack_label", (v) => v || _selectedAsset?.rack_no || ""],
-        ["랙 유닛", "rack_unit"],
+        ["랙 위치", "rack_unit_range", () => formatRackUnitRange(_selectedAsset)],
         ["위치", "location"],
         ["부서", "dept"],
         ["유지보수 업체", "maintenance_vendor"],
@@ -1498,7 +1508,7 @@ const DETAIL_EDIT_FIELDS = {
     ["센터", "center_id"],
     ["전산실", "room_id"],
     ["랙", "rack_id"],
-    ["랙 유닛", "rack_unit"],
+    ["랙 위치", "rack_unit_range", () => formatRackUnitRange(_selectedAsset)],
     ["위치", "location"],
     ["입고일", "received_date"],
     ["도입 연도", "year_acquired"],

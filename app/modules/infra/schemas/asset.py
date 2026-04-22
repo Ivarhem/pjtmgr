@@ -106,6 +106,8 @@ class AssetRead(BaseModel):
     equipment_id: str | None = None
     rack_no: str | None = None
     rack_unit: str | None = None
+    rack_start_unit: int | None = None
+    rack_end_unit: int | None = None
     phase: str | None = None
     received_date: date | None = None
     category: str | None = None

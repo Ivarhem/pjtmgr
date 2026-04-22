@@ -2246,8 +2246,7 @@ async function renderRackView(container, rack, options = {}) {
       block.dataset.startUnit = startUnit;
       block.dataset.endUnit = endUnit;
       if (isStart) {
-        const unitLabel = startUnit === endUnit ? `${startUnit}U` : `${startUnit}U ~ ${endUnit}U`;
-        block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "") + " · " + unitLabel;
+        block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "");
       } else if (isMulti) {
         const filler = document.createElement("span");
         filler.className = "equipment-block-filler";
