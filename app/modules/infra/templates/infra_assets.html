@@ -24,15 +24,11 @@
   현재 고객사와 프로젝트 범위를 기준으로 자산 원장, 역할, 연결 정보를 관리합니다.
 </p>
 
-<div class="filter-bar">
-  <label>검색
-    <input type="text" id="filter-search" placeholder="자산명, 호스트명, IP, 장비ID">
-  </label>
-  <label>상태
-    <select id="filter-status">
-      <option value="">전체</option>
-    </select>
-  </label>
+<div class="catalog-toolbar asset-filter-toolbar">
+  <input type="text" id="filter-search" class="input-search" placeholder="자산명, 호스트명, IP, 장비ID">
+  <select id="filter-status" class="input-select">
+    <option value="">전체 상태</option>
+  </select>
   <div class="filter-bar-end">
     <div class="col-chooser-wrapper">
       <button type="button" class="btn btn-compact" id="btn-asset-col-chooser">열 설정</button>
