@@ -1981,7 +1981,7 @@ async function renderOverviewSubSections(container) {
   const groups = [
     {
       title: "제품 정보",
-      description: "제조사와 모델, 분류 경로를 확인합니다.",
+      description: "제조사, 모델, 분류 경로를 함께 확인합니다.",
       renderer: renderProductInfoTab,
       actions: [{
         label: "편집",
@@ -1994,7 +1994,7 @@ async function renderOverviewSubSections(container) {
     },
     {
       title: "별칭",
-      description: "고객사명, 레거시명, 내부명을 함께 관리합니다.",
+      description: "고객사명, 레거시명, 내부 별칭을 함께 관리합니다.",
       renderer: renderAliasesTab,
       actions: [{
         label: isDetailSectionEditing("aliases") ? "편집 종료" : "편집",
@@ -2015,7 +2015,7 @@ async function renderOperationsSubSections(container) {
   const groups = [
     {
       title: "설치 소프트웨어",
-      description: "이 자산에 설치된 소프트웨어를 관리합니다.",
+      description: "운영 중인 설치 소프트웨어를 확인하고 관리합니다.",
       renderer: renderSoftwareTab,
       actions: [{
         label: "+ 추가",
@@ -2025,7 +2025,7 @@ async function renderOperationsSubSections(container) {
     },
     {
       title: "라이선스",
-      description: "이 자산의 라이선스 정보를 관리합니다.",
+      description: "운영에 연결된 라이선스 정보를 확인하고 관리합니다.",
       renderer: renderLicensesTab,
       actions: [{
         label: isDetailSectionEditing("licenses") ? "편집 종료" : "편집",
@@ -2035,7 +2035,7 @@ async function renderOperationsSubSections(container) {
     },
     {
       title: "자산 관계",
-      description: "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.",
+      description: "호스팅, 보호, 의존 관계를 확인하고 관리합니다.",
       renderer: renderRelationsTab,
       actions: [{
         label: "+ 추가",
@@ -2084,7 +2084,7 @@ async function renderNetworkTab(container) {
     handler: () => openInterfaceModal(),
   });
 
-  const interfaceSection = createDetailSectionCard("인터페이스 & IP", "인터페이스 구조와 IP 할당 상태를 함께 관리합니다.", interfaceActions);
+  const interfaceSection = createDetailSectionCard("인터페이스 & IP", "인터페이스 구조와 IP 할당 상태를 함께 확인합니다.", interfaceActions);
   container.appendChild(interfaceSection);
 
   // Grid container — explicit height, same pattern as other grids
@@ -2384,7 +2384,7 @@ async function renderContactsGroupTab(container) {
   const groups = [
     {
       title: "운영 담당 정보",
-      description: "자산의 운영 부서와 대표 유지보수 업체를 확인합니다.",
+      description: "운영 부서와 대표 유지보수 업체를 함께 확인합니다.",
       renderer: renderContactsOwnerSection,
       actions: [{
         label: "편집",
@@ -2397,7 +2397,7 @@ async function renderContactsGroupTab(container) {
     },
     {
       title: "담당자",
-      description: "운영과 보안, 시스템 담당자를 연결합니다.",
+      description: "운영, 보안, 시스템 담당자를 확인하고 관리합니다.",
       renderer: renderContactsTab,
       actions: [{
         label: "+ 추가",
@@ -2407,7 +2407,7 @@ async function renderContactsGroupTab(container) {
     },
     {
       title: "관련업체",
-      description: "유지보수사, 공급사, 운영사 등 연관 업체를 관리합니다.",
+      description: "유지보수사, 공급사, 운영사 등 연관 업체를 확인하고 관리합니다.",
       renderer: renderRelatedPartnersTab,
       actions: [{
         label: "+ 추가",
@@ -2433,7 +2433,7 @@ function _subTabHeader(container, title, onAdd) {
   h.textContent = title;
   hdr.appendChild(h);
   const btn = document.createElement("button");
-  btn.className = "btn btn-sm btn-primary";
+  btn.className = "btn btn-xs btn-secondary";
   btn.textContent = "+ 추가";
   btn.addEventListener("click", onAdd);
   hdr.appendChild(btn);
@@ -2482,7 +2482,7 @@ function _subTable(container, columns, rows, actions) {
       td.className = "asset-subtable-cell asset-subtable-cell-actions";
       actions.forEach(a => {
         const b = document.createElement("button");
-        b.className = "btn btn-sm asset-subtable-action" + (a.danger ? " btn-danger" : "");
+        b.className = "btn btn-xs asset-subtable-action" + (a.danger ? " btn-danger" : " btn-secondary");
         b.textContent = a.label;
         b.addEventListener("click", () => a.handler(row));
         td.appendChild(b);
@@ -3870,7 +3870,7 @@ async function populateContactSelect(selectedId) {
 /* ── 변경 이력 탭 ── */
 
 async function renderHistoryTab(container) {
-  const section = createDetailSectionCard("변경 이력", "자산의 주요 변경과 작업 내역을 시간순으로 확인합니다.", [{
+  const section = createDetailSectionCard("변경 이력", "주요 변경과 작업 내역을 시간순으로 확인합니다.", [{
     label: "+ 추가",
     variant: "secondary",
     handler: () => openEventModal(),
