@@ -1680,10 +1680,6 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   gap: 14px;
 }
 
-#detail-content > .asset-detail-sections + .asset-detail-sections {
-  padding-top: 16px;
-  border-top: 1px solid var(--border-color);
-}
 
 .asset-detail-section {
   padding: 0;

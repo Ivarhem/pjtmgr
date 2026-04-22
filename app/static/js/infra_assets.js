@@ -1767,10 +1767,22 @@ function renderDetailTab(tab) {
   if (tab === "contacts") { renderContactsGroupTab(container); return; }
   if (tab === "history") { renderHistoryTab(container); return; }
 
-  renderStructuredDetailTab(tab, container);
+  const renderedStructured = renderStructuredDetailTab(tab, container);
 
-  if (tab === "overview") renderOverviewSubSections(container);
-  if (tab === "operations") renderOperationsSubSections(container);
+  if (tab === "overview") {
+    renderOverviewSubSections(container);
+    return;
+  }
+  if (tab === "operations") {
+    renderOperationsSubSections(container);
+    return;
+  }
+  if (!renderedStructured) {
+    const empty = document.createElement("p");
+    empty.className = "text-muted asset-subtable-empty";
+    empty.textContent = "표시할 상세 정보가 없습니다.";
+    container.appendChild(empty);
+  }
 }
 
 function getDetailFieldValue(key, fmt) {
@@ -1808,11 +1820,21 @@ function createDetailSectionCard(title, description) {
   return section;
 }
 
+function getOrCreateDetailSections(container) {
+  let wrap = container.querySelector(":scope > .asset-detail-sections");
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.className = "asset-detail-sections";
+    container.appendChild(wrap);
+  }
+  return wrap;
+}
+
 function renderStructuredDetailTab(tab, container) {
   const sections = DETAIL_TAB_FIELDS[tab];
-  if (!sections) return;
-  const wrap = document.createElement("div");
-  wrap.className = "asset-detail-sections";
+  if (!sections) return false;
+  const wrap = getOrCreateDetailSections(container);
+  let rendered = false;
 
   sections.forEach((sectionConfig) => {
     if (sectionConfig.onlyKinds && !sectionConfig.onlyKinds.includes(_selectedAsset.catalog_kind)) {
@@ -1836,22 +1858,14 @@ function renderStructuredDetailTab(tab, container) {
     });
     section.appendChild(grid);
     wrap.appendChild(section);
+    rendered = true;
   });
 
-  if (!wrap.children.length) {
-    const empty = document.createElement("p");
-    empty.className = "text-muted asset-subtable-empty";
-    empty.textContent = "표시할 상세 정보가 없습니다.";
-    container.appendChild(empty);
-    return;
-  }
-  container.appendChild(wrap);
+  return rendered;
 }
 
 async function renderOverviewSubSections(container) {
-  const wrap = document.createElement("div");
-  wrap.className = "asset-detail-sections";
-  container.appendChild(wrap);
+  const wrap = getOrCreateDetailSections(container);
   const groups = [
     ["제품 정보", "제조사와 모델, 분류 경로를 확인합니다.", renderProductInfoTab],
     ["라이선스", "이 자산의 라이선스 정보를 관리합니다.", renderLicensesTab],
@@ -1865,9 +1879,7 @@ async function renderOverviewSubSections(container) {
 }
 
 async function renderOperationsSubSections(container) {
-  const wrap = document.createElement("div");
-  wrap.className = "asset-detail-sections";
-  container.appendChild(wrap);
+  const wrap = getOrCreateDetailSections(container);
   const groups = [
     ["설치 소프트웨어", "이 자산에 설치된 소프트웨어를 관리합니다.", renderSoftwareTab],
     ["자산 관계", "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.", renderRelationsTab],
