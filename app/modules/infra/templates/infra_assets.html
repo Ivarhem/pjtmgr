@@ -24,19 +24,6 @@
   현재 고객사와 프로젝트 범위를 기준으로 자산 원장, 역할, 연결 정보를 관리합니다.
 </p>
 
-<div class="catalog-toolbar asset-filter-toolbar">
-  <input type="text" id="filter-search" class="input-search" placeholder="자산명, 호스트명, IP, 장비ID">
-  <select id="filter-status" class="input-select">
-    <option value="">전체 상태</option>
-  </select>
-  <div class="filter-bar-end">
-    <div class="col-chooser-wrapper">
-      <button type="button" class="btn btn-compact" id="btn-asset-col-chooser">열 설정</button>
-      <div class="col-chooser-menu is-hidden" id="asset-col-chooser-menu"></div>
-    </div>
-  </div>
-</div>
-
 <div id="edit-mode-bar" class="edit-mode-bar is-hidden">
   <span class="edit-mode-label">편집 모드</span>
   <span class="edit-mode-count" id="edit-mode-count">변경 0건</span>
@@ -47,6 +34,18 @@
 
 <div id="asset-layout" class="asset-layout">
   <div class="asset-list-panel">
+    <div class="catalog-toolbar asset-filter-toolbar">
+      <input type="text" id="filter-search" class="input-search" placeholder="자산명, 호스트명, IP, 장비ID">
+      <select id="filter-status" class="input-select">
+        <option value="">전체 상태</option>
+      </select>
+      <div class="filter-bar-end">
+        <div class="col-chooser-wrapper">
+          <button type="button" class="btn btn-compact" id="btn-asset-col-chooser">열 설정</button>
+          <div class="col-chooser-menu is-hidden" id="asset-col-chooser-menu"></div>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div id="grid-assets" class="ag-theme-quartz infra-grid"></div>
       <div class="grid-add-row-bar">

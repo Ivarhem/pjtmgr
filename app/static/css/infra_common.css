@@ -647,10 +647,14 @@ body.dark-mode .asset-detail-value-rawtext {
   min-width: 0;
   flex: 1 1 auto;
   width: calc(100% - 18px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .asset-list-panel .card {
-  height: var(--asset-layout-height);
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
