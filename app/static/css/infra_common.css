@@ -636,7 +636,7 @@ body.dark-mode .asset-detail-value-rawtext {
 
 .asset-layout {
   --asset-list-width: 66%;
-  --asset-layout-height: clamp(560px, calc(100dvh - 180px), 980px);
+  --asset-layout-height: clamp(620px, calc(100dvh - 145px), 1040px);
   display: flex;
   gap: 8px;
   align-items: stretch;
