@@ -1511,6 +1511,7 @@ const DETAIL_TAB_FIELDS = {
       editTitle: "식별 및 기준 정보 수정",
       editDescription: "식별 정보와 기준값만 수정합니다.",
       editFields: [
+        ["시스템명", "asset_name"],
         ["프로젝트코드", "project_asset_number"],
         ["고객자산코드", "customer_asset_number"],
         ["귀속사업", "period_id"],
@@ -1565,7 +1566,6 @@ const DETAIL_TAB_FIELDS = {
 
 const DETAIL_EDIT_FIELDS = {
   product_info: [
-    ["자산명", "asset_name"],
     ["카탈로그 제품", "model_id"],
   ],
 };
@@ -1930,7 +1930,7 @@ async function renderOverviewSubSections(container) {
         label: "편집",
         handler: () => openDetailEditModal({
           title: "제품 정보 수정",
-          description: "자산명과 연결된 카탈로그 제품만 수정합니다.",
+          description: "연결된 카탈로그 제품 정보만 수정합니다.",
           fields: DETAIL_EDIT_FIELDS.product_info,
         }),
       }],
