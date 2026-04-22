@@ -1620,10 +1620,9 @@ const DETAIL_TAB_FIELDS = {
         {
           title: "공간 배치",
           fields: [
-            ["랙", "rack_id"],
             ["센터", "center_id"],
             ["전산실", "room_id"],
-            ["위치", "location"],
+            ["랙", "rack_id", { fullWidth: true }],
           ],
         },
         {
@@ -1631,6 +1630,12 @@ const DETAIL_TAB_FIELDS = {
           fields: [
             ["시작U", "rack_start_unit"],
             ["종료U", "rack_end_unit"],
+          ],
+        },
+        {
+          title: "메모",
+          fields: [
+            ["메모", "location", { fullWidth: true }],
           ],
         },
       ],
@@ -3129,11 +3134,14 @@ async function buildDetailEditFields(target, container = document.getElementById
     }
   };
 
-  async function appendField(fieldHost, label, key) {
+  async function appendField(fieldHost, label, key, options = null) {
     const fieldWrap = document.createElement("label");
     fieldWrap.className = "asset-detail-edit-field full-width";
     if (!["note", "location", "service_name"].includes(key)) {
       fieldWrap.classList.remove("full-width");
+    }
+    if (options?.fullWidth) {
+      fieldWrap.classList.add("full-width");
     }
     const labelText = document.createElement("span");
     labelText.className = "label-text";
@@ -3407,6 +3415,7 @@ async function buildDetailEditFields(target, container = document.getElementById
   for (const group of groups) {
     const host = document.createElement("div");
     host.className = "asset-detail-edit-group";
+    if (group.title === "메모") host.classList.add("is-note-card");
     if (group.title) {
       const title = document.createElement("h3");
       title.className = "asset-detail-edit-group-title";
@@ -3417,8 +3426,9 @@ async function buildDetailEditFields(target, container = document.getElementById
     grid.className = "asset-detail-edit-group-grid";
     host.appendChild(grid);
     container.appendChild(host);
-    for (const [label, key] of (group.fields || [])) {
-      await appendField(grid, label, key);
+    for (const field of (group.fields || [])) {
+      const [label, key, options] = field;
+      await appendField(grid, label, key, options);
     }
   }
 
