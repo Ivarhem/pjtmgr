@@ -736,6 +736,7 @@ let gridApi;
 let _selectedAsset = null;
 let _detailEditMode = false;
 let _currentTab = "overview";
+let _detailSectionEditModes = { licenses: false, aliases: false };
 let _partnerContactsCache = [];
 let _partnerAssetsCache = [];
 let _allPartnersCache = [];
@@ -1574,6 +1575,7 @@ function showAssetDetail(asset) {
   if (!asset?.id) return;  // 새 행(_isNew)은 상세 패널 열지 않음
   _selectedAsset = asset;
   _detailEscArmedAt = 0;
+  _detailSectionEditModes = { licenses: false, aliases: false };
   rememberSelectedAssetState(asset);
   syncAssetDetailTabs(asset.catalog_kind || "hardware");
   syncAssetRoleActionButtons();
@@ -1752,7 +1754,6 @@ function toggleDetailPanel() {
 
 async function renderDetailTab(tab) {
   _currentTab = tab;
-  if (_detailEditMode && !canEditDetailTab(tab)) _detailEditMode = false;
 
   const container = document.getElementById("detail-content");
   while (container.firstChild) container.removeChild(container.firstChild);
@@ -1761,13 +1762,7 @@ async function renderDetailTab(tab) {
     b.classList.toggle("active", b.dataset.dtab === tab);
   });
 
-  syncDetailHeaderActions();
   if (!_selectedAsset) return;
-
-  if (_detailEditMode && canEditDetailTab(tab)) {
-    await renderInlineDetailEditTab(tab, container);
-    return;
-  }
 
   if (tab === "network") { renderNetworkTab(container); return; }
   if (tab === "contacts") { renderContactsGroupTab(container); return; }
@@ -1811,19 +1806,64 @@ function hasVisibleFieldValue(key, fmt) {
   return value !== "";
 }
 
-function createDetailSectionCard(title, description) {
+function createDetailSectionAction(label, onClick, variant = "secondary") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `btn btn-xs btn-${variant} asset-detail-section-action`;
+  button.textContent = label;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
+}
+
+function createDetailSectionCard(title, description, actions = []) {
   const section = document.createElement("section");
   section.className = "asset-detail-section";
   if (title) {
     const header = document.createElement("div");
     header.className = "asset-detail-section-header";
-    header.innerHTML = `
-      <h3 class="asset-detail-section-title">${escapeHtml(title)}</h3>
-      ${description ? `<p class="asset-detail-section-desc">${escapeHtml(description)}</p>` : ""}
-    `;
+
+    const heading = document.createElement("div");
+    heading.className = "asset-detail-section-head";
+
+    const titleEl = document.createElement("h3");
+    titleEl.className = "asset-detail-section-title";
+    titleEl.textContent = title;
+    heading.appendChild(titleEl);
+
+    if (description) {
+      const descEl = document.createElement("p");
+      descEl.className = "asset-detail-section-desc";
+      descEl.textContent = description;
+      heading.appendChild(descEl);
+    }
+
+    header.appendChild(heading);
+
+    if (actions.length) {
+      const actionWrap = document.createElement("div");
+      actionWrap.className = "asset-detail-section-actions";
+      actions.forEach((action) => {
+        actionWrap.appendChild(createDetailSectionAction(action.label, action.handler, action.variant));
+      });
+      header.appendChild(actionWrap);
+    }
+
     section.appendChild(header);
   }
   return section;
+}
+
+function isDetailSectionEditing(sectionKey) {
+  return Boolean(_detailSectionEditModes[sectionKey]);
+}
+
+async function toggleDetailSectionEditing(sectionKey, nextValue = !isDetailSectionEditing(sectionKey)) {
+  _detailSectionEditModes[sectionKey] = nextValue;
+  await renderDetailTab(_currentTab);
 }
 
 function getOrCreateDetailSections(container) {
@@ -1849,7 +1889,17 @@ function renderStructuredDetailTab(tab, container) {
     const visibleFields = sectionConfig.fields.filter(([, key, fmt]) => hasVisibleFieldValue(key, fmt));
     if (!visibleFields.length) return;
 
-    const section = createDetailSectionCard(sectionConfig.title, sectionConfig.description);
+    const sectionActions = DETAIL_EDIT_FIELDS[tab]
+      ? [{
+          label: "편집",
+          handler: () => openDetailEditModal({
+            title: `${sectionConfig.title} 수정`,
+            description: sectionConfig.description || "선택한 섹션 정보를 수정합니다.",
+            fields: DETAIL_EDIT_FIELDS[tab],
+          }),
+        }]
+      : [];
+    const section = createDetailSectionCard(sectionConfig.title, sectionConfig.description, sectionActions);
     const grid = document.createElement("div");
     grid.className = "detail-grid asset-detail-grid";
     visibleFields.forEach(([label, key, fmt]) => {
@@ -1873,14 +1923,47 @@ function renderStructuredDetailTab(tab, container) {
 async function renderOverviewSubSections(container) {
   const wrap = getOrCreateDetailSections(container);
   const groups = [
-    ["제품 정보", "제조사와 모델, 분류 경로를 확인합니다.", renderProductInfoTab],
-    ["라이선스", "이 자산의 라이선스 정보를 관리합니다.", renderLicensesTab],
-    ["별칭", "고객사명, 레거시명, 내부명을 함께 관리합니다.", renderAliasesTab],
+    {
+      title: "제품 정보",
+      description: "제조사와 모델, 분류 경로를 확인합니다.",
+      renderer: renderProductInfoTab,
+      actions: [{
+        label: "편집",
+        handler: () => openDetailEditModal({
+          title: "제품 정보 수정",
+          description: "자산명과 연결된 카탈로그 제품을 수정합니다.",
+          fields: [
+            ["자산명", "asset_name"],
+            ["카탈로그 제품", "model_id"],
+          ],
+        }),
+      }],
+    },
+    {
+      title: "라이선스",
+      description: "이 자산의 라이선스 정보를 관리합니다.",
+      renderer: renderLicensesTab,
+      actions: [{
+        label: isDetailSectionEditing("licenses") ? "편집 종료" : "편집",
+        variant: isDetailSectionEditing("licenses") ? "primary" : "secondary",
+        handler: () => toggleDetailSectionEditing("licenses"),
+      }],
+    },
+    {
+      title: "별칭",
+      description: "고객사명, 레거시명, 내부명을 함께 관리합니다.",
+      renderer: renderAliasesTab,
+      actions: [{
+        label: isDetailSectionEditing("aliases") ? "편집 종료" : "편집",
+        variant: isDetailSectionEditing("aliases") ? "primary" : "secondary",
+        handler: () => toggleDetailSectionEditing("aliases"),
+      }],
+    },
   ];
-  for (const [title, description, renderer] of groups) {
-    const section = createDetailSectionCard(title, description);
+  for (const group of groups) {
+    const section = createDetailSectionCard(group.title, group.description, group.actions || []);
     wrap.appendChild(section);
-    await renderer(section);
+    await group.renderer(section);
   }
 }
 
@@ -2379,24 +2462,25 @@ let _licenseGridApi = null;
 const LICENSE_COL_DEFS = [
   {
     field: "license_type", headerName: "유형", width: 90,
-    editable: true, cellEditor: "agSelectCellEditor",
+    editable: () => isDetailSectionEditing("licenses"), cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: Object.keys(LICENSE_TYPE_MAP) },
     valueFormatter: (p) => LICENSE_TYPE_MAP[p.value] || p.value || "",
   },
   {
     field: "license_unit", headerName: "기준", width: 110,
-    editable: true, cellEditor: "agSelectCellEditor",
+    editable: () => isDetailSectionEditing("licenses"), cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: ["", ...Object.keys(LICENSE_UNIT_MAP)] },
     valueFormatter: (p) => LICENSE_UNIT_MAP[p.value] || p.value || "",
   },
-  { field: "license_quantity", headerName: "기준값", width: 120, editable: true },
-  { field: "license_key", headerName: "라이선스 키", width: 160, editable: true },
-  { field: "start_date", headerName: "시작", width: 110, editable: true },
-  { field: "end_date", headerName: "종료", width: 110, editable: true },
-  { field: "note", headerName: "메모", flex: 1, minWidth: 100, editable: true },
+  { field: "license_quantity", headerName: "기준값", width: 120, editable: () => isDetailSectionEditing("licenses") },
+  { field: "license_key", headerName: "라이선스 키", width: 160, editable: () => isDetailSectionEditing("licenses") },
+  { field: "start_date", headerName: "시작", width: 110, editable: () => isDetailSectionEditing("licenses") },
+  { field: "end_date", headerName: "종료", width: 110, editable: () => isDetailSectionEditing("licenses") },
+  { field: "note", headerName: "메모", flex: 1, minWidth: 100, editable: () => isDetailSectionEditing("licenses") },
   {
     headerName: "", width: 40, sortable: false, filter: false,
     cellRenderer: (params) => {
+      if (!isDetailSectionEditing("licenses")) return "";
       if (!params.data?.id && !params.data?._isNew) return "";
       const btn = document.createElement("button");
       btn.className = "btn-icon btn-icon-danger";
@@ -2454,7 +2538,11 @@ async function handleLicenseCellChanged(event) {
   }
 }
 
-function addLicenseRow() {
+async function addLicenseRow() {
+  if (!isDetailSectionEditing("licenses")) {
+    _detailSectionEditModes.licenses = true;
+    await renderDetailTab(_currentTab);
+  }
   if (!_licenseGridApi) return;
   const today = new Date().toISOString().slice(0, 10);
   const catType = _selectedAsset?.catalog_license_type || "perpetual";
@@ -2802,11 +2890,12 @@ const ALIAS_TYPE_MAP = { INTERNAL: "내부", CUSTOMER: "고객사", VENDOR: "벤
 let _aliasGridApi = null;
 
 const ALIAS_COL_DEFS = [
-  { field: "alias_name", headerName: "명칭", flex: 1, minWidth: 150, editable: true },
-  { field: "note", headerName: "메모", flex: 1, minWidth: 150, editable: true },
+  { field: "alias_name", headerName: "명칭", flex: 1, minWidth: 150, editable: () => isDetailSectionEditing("aliases") },
+  { field: "note", headerName: "메모", flex: 1, minWidth: 150, editable: () => isDetailSectionEditing("aliases") },
   {
     headerName: "", width: 40, sortable: false, filter: false,
     cellRenderer: (params) => {
+      if (!isDetailSectionEditing("aliases")) return "";
       if (!params.data?.id && !params.data?._isNew) return "";
       const btn = document.createElement("button");
       btn.className = "btn-icon btn-icon-danger";
@@ -2862,7 +2951,11 @@ async function handleAliasCellChanged(event) {
   }
 }
 
-function addAliasRow() {
+async function addAliasRow() {
+  if (!isDetailSectionEditing("aliases")) {
+    _detailSectionEditModes.aliases = true;
+    await renderDetailTab(_currentTab);
+  }
   if (!_aliasGridApi) return;
   _aliasGridApi.applyTransaction({ add: [{ _isNew: true, alias_name: "", note: "" }] });
   const lastIdx = _aliasGridApi.getDisplayedRowCount() - 1;
@@ -2894,9 +2987,9 @@ async function deleteAlias(alias, gridApi) {
 
 /* ── Detail edit modal ── */
 
-async function buildDetailEditFields(tab, container = document.getElementById("asset-detail-edit-fields")) {
+async function buildDetailEditFields(target, container = document.getElementById("asset-detail-edit-fields")) {
   container.textContent = "";
-  const fields = DETAIL_EDIT_FIELDS[tab];
+  const fields = Array.isArray(target) ? target : DETAIL_EDIT_FIELDS[target];
   if (!fields) return;
 
   for (const [label, key] of fields) {
@@ -3118,44 +3211,35 @@ async function buildDetailEditFields(tab, container = document.getElementById("a
   }
 }
 
-async function openDetailEditModal(tab) {
+async function openDetailEditModal(target) {
   _detailEditMode = true;
   const title = document.getElementById("asset-detail-edit-title");
   const desc = document.getElementById("asset-detail-edit-desc");
-  const tabBtn = document.querySelector(`.detail-tabs .tab-btn[data-dtab="${tab}"]`);
-  title.textContent = `${tabBtn ? tabBtn.textContent.trim() : "자산"} 수정`;
-  desc.textContent = "현재 탭의 자산 정보를 수정합니다.";
-  await buildDetailEditFields(tab);
+
+  let modalTitle = "자산 정보 수정";
+  let modalDesc = "선택한 항목 정보를 수정합니다.";
+  let fields = null;
+
+  if (typeof target === "string") {
+    const tabBtn = document.querySelector(`.detail-tabs .tab-btn[data-dtab="${target}"]`);
+    modalTitle = `${tabBtn ? tabBtn.textContent.trim() : "자산"} 수정`;
+    modalDesc = "현재 탭의 자산 정보를 수정합니다.";
+    fields = DETAIL_EDIT_FIELDS[target];
+  } else if (target && typeof target === "object") {
+    modalTitle = target.title || modalTitle;
+    modalDesc = target.description || modalDesc;
+    fields = target.fields || null;
+  }
+
+  title.textContent = modalTitle;
+  desc.textContent = modalDesc;
+  await buildDetailEditFields(fields || []);
   document.getElementById("modal-asset-detail-edit").showModal();
 }
 
 function closeDetailEditModal() {
   _detailEditMode = false;
   document.getElementById("modal-asset-detail-edit").close();
-}
-
-function canEditDetailTab(tab = _currentTab) {
-  return ["overview", "operations"].includes(tab);
-}
-
-function syncDetailHeaderActions() {
-  const editBtn = document.getElementById("btn-detail-edit-toggle");
-  const saveBtn = document.getElementById("btn-detail-save");
-  const cancelBtn = document.getElementById("btn-detail-cancel");
-  const deleteBtn = document.getElementById("btn-delete-asset");
-  const canEdit = Boolean(_selectedAsset && canEditDetailTab(_currentTab));
-  editBtn.classList.toggle("is-hidden", !canEdit || _detailEditMode);
-  saveBtn.classList.toggle("is-hidden", !_detailEditMode || !canEdit);
-  cancelBtn.classList.toggle("is-hidden", !_detailEditMode || !canEdit);
-  deleteBtn.classList.toggle("is-hidden", _detailEditMode);
-}
-
-async function renderInlineDetailEditTab(tab, container) {
-  const form = document.createElement("div");
-  form.id = "asset-detail-inline-edit";
-  form.className = "asset-detail-inline-edit form-grid";
-  await buildDetailEditFields(tab, form);
-  container.appendChild(form);
 }
 
 async function saveDetailEdit(form = document.getElementById("form-asset-detail-edit")) {
@@ -4288,24 +4372,6 @@ document.getElementById("btn-save-asset").addEventListener("click", saveAsset);
 document.getElementById("btn-clear-catalog").addEventListener("click", () => {
   clearSelectedCatalog();
   document.getElementById("catalog-search").focus();
-});
-document.getElementById("btn-detail-edit-toggle").addEventListener("click", async () => {
-  if (!_selectedAsset || !canEditDetailTab(_currentTab)) return;
-  _detailEditMode = true;
-  await renderDetailTab(_currentTab);
-  const firstInput = document.querySelector('#asset-detail-inline-edit [data-field]');
-  if (firstInput) {
-    firstInput.focus();
-    if (typeof firstInput.select === "function") firstInput.select();
-  }
-});
-document.getElementById("btn-detail-save").addEventListener("click", async () => {
-  const form = document.getElementById("asset-detail-inline-edit");
-  await saveDetailEdit(form);
-});
-document.getElementById("btn-detail-cancel").addEventListener("click", async () => {
-  _detailEditMode = false;
-  await renderDetailTab(_currentTab);
 });
 document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
 
