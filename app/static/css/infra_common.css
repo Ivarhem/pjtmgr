@@ -4614,11 +4614,67 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
 .asset-detail-edit-field input,
 .asset-detail-edit-field textarea,
 .asset-detail-edit-field .catalog-search-wrap input {
-  min-height: 36px;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, var(--primary-color) 8%);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-color) 86%, var(--surface-color));
+  color: var(--text-color);
+  font-size: 13px;
+  line-height: 1.45;
+  box-sizing: border-box;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.asset-detail-edit-field select,
+.asset-detail-edit-field .catalog-search-wrap input {
+  background-color: color-mix(in srgb, var(--bg-color) 88%, var(--surface-color));
+}
+
+.asset-detail-edit-field .edit-input:hover,
+.asset-detail-edit-field select:hover,
+.asset-detail-edit-field input:hover,
+.asset-detail-edit-field textarea:hover,
+.asset-detail-edit-field .catalog-search-wrap input:hover {
+  border-color: color-mix(in srgb, var(--border-color) 55%, var(--primary-color) 24%);
+  background: color-mix(in srgb, var(--bg-color) 82%, var(--surface-color));
+}
+
+.asset-detail-edit-field .edit-input:focus,
+.asset-detail-edit-field select:focus,
+.asset-detail-edit-field input:focus,
+.asset-detail-edit-field textarea:focus,
+.asset-detail-edit-field .catalog-search-wrap input:focus,
+.asset-detail-edit-field .catalog-search-wrap:focus-within input {
+  outline: none;
+  border-color: color-mix(in srgb, var(--primary-color) 78%, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 18%, transparent);
+  background: color-mix(in srgb, var(--bg-color) 92%, var(--surface-color));
 }
 
 .asset-detail-edit-field textarea {
-  min-height: 92px;
+  min-height: 96px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  resize: vertical;
+}
+
+.asset-detail-edit-field .catalog-search-wrap {
+  position: relative;
+}
+
+.asset-detail-edit-field .catalog-dropdown {
+  margin-top: 6px;
+  border-radius: 10px;
+  border-color: color-mix(in srgb, var(--border-color) 78%, var(--primary-color) 10%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+.asset-detail-edit-field .catalog-dropdown-item,
+.asset-detail-edit-field .catalog-dropdown-add {
+  padding-top: 9px;
+  padding-bottom: 9px;
 }
 
 #modal-asset-detail-edit .modal-desc {
