@@ -3500,6 +3500,7 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
 .equipment-block {
   display: flex;
   align-items: center;
+  min-height: 100%;
   padding: 2px 8px;
   border-radius: 3px;
   font-size: 11px;
@@ -3509,8 +3510,29 @@ body.dark-mode .classification-tree-node.is-branch-muted:not(.is-selected) {
   text-overflow: ellipsis;
   border: 1px solid var(--primary-color);
   background: var(--primary-bg, rgba(37, 99, 235, 0.08));
-  height: 100%;
   box-sizing: border-box;
+}
+.equipment-block.is-multi {
+  border-radius: 0;
+}
+.equipment-block.is-multi.is-start {
+  border-bottom: 0;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+}
+.equipment-block.is-multi.is-middle {
+  border-top: 0;
+  border-bottom: 0;
+}
+.equipment-block.is-multi.is-end {
+  border-top: 0;
+  border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+.equipment-block-filler {
+  display: block;
+  width: 100%;
+  min-height: 1px;
 }
 .equipment-block.is-dragging { opacity: 0.4; }
 .equipment-block.env-prod { border-color: #2563eb; background: rgba(37, 99, 235, 0.08); }

@@ -2215,8 +2215,6 @@ async function renderRackView(container, rack, options = {}) {
     for (let u = 1; u <= totalU; u++) uOrder.push(u); // top=1, bottom=42
   }
 
-  const renderedAssets = new Set(); // track which assets already have a block rendered
-
   uOrder.forEach(u => {
     const slot = document.createElement("div");
     slot.className = "u-slot";
@@ -2231,20 +2229,32 @@ async function renderRackView(container, rack, options = {}) {
     contentEl.className = "u-slot-content";
 
     const asset = slotMap[u];
-    if (asset && !renderedAssets.has(asset.id)) {
-      renderedAssets.add(asset.id);
-      const sizeU = (asset.rack_end_unit || asset.rack_start_unit) - asset.rack_start_unit + 1;
+    if (asset) {
+      const startUnit = Number(asset.rack_start_unit);
+      const endUnit = Number(asset.rack_end_unit || asset.rack_start_unit);
+      const sizeU = endUnit - startUnit + 1;
+      const isMulti = sizeU > 1;
+      const isStart = u === startUnit;
+      const isEnd = u === endUnit;
       const block = document.createElement("div");
       block.className = "equipment-block";
       if (asset.environment) block.classList.add("env-" + asset.environment);
+      if (isMulti) block.classList.add("is-multi");
+      if (isStart) block.classList.add("is-start");
+      if (isEnd) block.classList.add("is-end");
+      if (!isStart && !isEnd) block.classList.add("is-middle");
       block.draggable = true;
       block.dataset.assetId = asset.id;
       block.dataset.sizeUnit = sizeU;
-      block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "");
-      if (sizeU > 1) {
-        block.style.height = (sizeU * 24 - 2) + "px"; // each slot is 24px
-        block.style.position = "relative";
-        block.style.zIndex = "1";
+      block.dataset.startUnit = startUnit;
+      block.dataset.endUnit = endUnit;
+      if (isStart) {
+        block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "") + (isMulti ? " · " + sizeU + "U" : "");
+      } else if (isMulti) {
+        const filler = document.createElement("span");
+        filler.className = "equipment-block-filler";
+        filler.textContent = "";
+        block.appendChild(filler);
       }
 
       // Drag start
@@ -2256,10 +2266,8 @@ async function renderRackView(container, rack, options = {}) {
       });
       block.addEventListener("dragend", () => block.classList.remove("is-dragging"));
 
-      contentEl.appendChild(block);
-    } else if (asset && renderedAssets.has(asset.id)) {
-      // This slot is part of a multi-U equipment — leave content empty (the block spans visually)
       contentEl.classList.add("u-slot-occupied");
+      contentEl.appendChild(block);
     }
 
     // Drop zone handlers
