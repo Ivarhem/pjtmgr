@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class ProductCatalogResearchRequest(BaseModel):
     fill_only: bool = True
+    force: bool = False
 
 
 class ProductCatalogResearchResponse(BaseModel):
@@ -27,3 +28,5 @@ class ProductCatalogResearchResponse(BaseModel):
     eosl_date: date | None = None
     spec_url: str | None = None
     message: str
+    skipped: bool = False
+    skip_reason: str | None = None

@@ -253,6 +253,40 @@ def _count_non_null(mapping: dict, fields: list[str]) -> int:
     return sum(1 for field in fields if mapping.get(field) is not None)
 
 
+
+
+def _spec_field_count(spec: HardwareSpec | None) -> int:
+    if spec is None:
+        return 0
+    return sum(1 for field in SPEC_FIELDS if getattr(spec, field, None) not in (None, ""))
+
+
+def _eosl_field_count(product) -> int:
+    return sum(1 for value in [product.eos_date, product.eosl_date, product.eosl_note] if value not in (None, ""))
+
+
+def should_skip_catalog_research(product, spec: HardwareSpec | None, interface_count: int, *, force: bool = False) -> tuple[bool, str | None]:
+    if force:
+        return False, None
+    if getattr(product, "is_placeholder", False) or (product.vendor or "").strip() in {"—", "-"}:
+        return True, "placeholder_product"
+
+    spec_count = _spec_field_count(spec)
+    eosl_count = _eosl_field_count(product)
+    verification_status = (product.verification_status or "").strip().lower()
+    source_name = (product.source_name or "").strip().lower()
+
+    if verification_status in {"verified", "completed", "reviewed"} and spec_count >= 6 and (eosl_count >= 2 or interface_count > 0):
+        return True, "already_verified"
+
+    if source_name in {"catalog_research", "spec_import", "manual"} and spec_count >= 9 and eosl_count >= 2 and interface_count > 0:
+        return True, "already_enriched"
+
+    if source_name == "catalog_research" and verification_status == "review_needed" and spec_count >= 9 and interface_count > 0:
+        return True, "awaiting_review"
+
+    return False, None
+
 def _classification_label(product) -> str:
     parts = []
     for attr in [
@@ -267,12 +301,37 @@ def _classification_label(product) -> str:
     return " > ".join(parts) if parts else "unclassified"
 
 
-def research_catalog_product(db: Session, product_id: int, current_user: User, fill_only: bool = True) -> dict:
+def research_catalog_product(db: Session, product_id: int, current_user: User, fill_only: bool = True, force: bool = False) -> dict:
     product = get_product(db, product_id)
     if product.product_type != "hardware":
         raise BusinessRuleError("현재 카탈로그 조사는 하드웨어 제품만 지원합니다.", status_code=409)
 
     existing_spec = db.scalar(select(HardwareSpec).where(HardwareSpec.product_id == product_id))
+    existing_interfaces = list(db.scalars(select(HardwareInterface).where(HardwareInterface.product_id == product_id).order_by(HardwareInterface.id.asc())))
+    skip, skip_reason = should_skip_catalog_research(product, existing_spec, len(existing_interfaces), force=force)
+    if skip:
+        return {
+            "product_id": product.id,
+            "vendor": product.vendor,
+            "name": product.name,
+            "mode": "fill_empty" if fill_only else "replace_all",
+            "confidence": product.source_confidence,
+            "spec_candidates": 0,
+            "spec_applied": 0,
+            "eosl_candidates": 0,
+            "eosl_applied": 0,
+            "interfaces_created": 0,
+            "interface_candidates": 0,
+            "interfaces_skipped": 0,
+            "uncertain_fields": [],
+            "eos_date": product.eos_date,
+            "eosl_date": product.eosl_date,
+            "spec_url": getattr(existing_spec, "spec_url", None),
+            "message": "재조사를 건너뛰었습니다.",
+            "skipped": True,
+            "skip_reason": skip_reason,
+        }
+
     payload = _call_anthropic_json(PROMPT_TEMPLATE.format(
         vendor=product.vendor,
         name=product.name,
@@ -334,7 +393,6 @@ def research_catalog_product(db: Session, product_id: int, current_user: User, f
     )
     update_product(db, product_id, product_update, current_user)
 
-    existing_interfaces = list(db.scalars(select(HardwareInterface).where(HardwareInterface.product_id == product_id).order_by(HardwareInterface.id.asc())))
     interfaces_created = 0
     interfaces_skipped = invalid_interfaces
     should_create_interfaces = bool(normalized_interfaces) and (not fill_only or not existing_interfaces)
@@ -380,4 +438,6 @@ def research_catalog_product(db: Session, product_id: int, current_user: User, f
         "eosl_date": product_update.eosl_date,
         "spec_url": spec_payload.get("spec_url"),
         "message": "카탈로그 조사 결과를 반영했습니다.",
+        "skipped": False,
+        "skip_reason": None,
     }

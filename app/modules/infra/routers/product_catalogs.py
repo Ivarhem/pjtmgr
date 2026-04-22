@@ -179,6 +179,7 @@ def research_product_endpoint(
         product_id=product_id,
         current_user=current_user,
         fill_only=payload.fill_only,
+        force=payload.force,
     ))
 
 
