@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}제품 카탈로그{% endblock %}
-{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260421c">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260422e">{% endblock %}
 {% block content %}
 <div class="tab-nav">
   <a href="{{ request.scope.root_path or "" }}/product-catalog" class="tab-btn active">제품 카탈로그</a>
@@ -108,6 +108,7 @@
         <!-- 유형별 세부 탭 -->
         <div class="catalog-tab-panel" id="tab-spec">
           <div class="catalog-section-header catalog-kind-panel" id="catalog-hardware-actions" data-kind-scope="hardware">
+            <button class="btn btn-secondary btn-sm" id="btn-research-spec">스펙 조사</button>
             <button class="btn btn-primary btn-sm" id="btn-save-spec">스펙 저장</button>
           </div>
           <div class="catalog-kind-panel" id="catalog-panel-hardware" data-kind-scope="hardware">
@@ -489,5 +490,5 @@
 
 {% block scripts %}
 <script src="{{ request.scope.root_path or "" }}/static/js/modal_combobox.js?v=20260413e"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260421c"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260422e"></script>
 {% endblock %}

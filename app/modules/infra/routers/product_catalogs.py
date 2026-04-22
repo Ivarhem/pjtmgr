@@ -22,11 +22,16 @@ from app.modules.infra.schemas.catalog_similarity import (
     ProductDismissRequest,
     ProductRestoreRequest,
 )
+from app.modules.infra.schemas.product_catalog_research import (
+    ProductCatalogResearchRequest,
+    ProductCatalogResearchResponse,
+)
 from app.modules.infra.services.catalog_merge_service import (
     merge_products,
     dismiss_similarity,
     restore_similarity,
 )
+from app.modules.infra.services.catalog_research_service import research_catalog_product
 from app.modules.infra.schemas.hardware_spec import (
     HardwareSpecCreate,
     HardwareSpecRead,
@@ -161,6 +166,20 @@ def get_product_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> ProductCatalogDetail:
     return get_product_detail(db, product_id)
+
+@router.post("/{product_id}/research", response_model=ProductCatalogResearchResponse)
+def research_product_endpoint(
+    product_id: int,
+    payload: ProductCatalogResearchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogResearchResponse:
+    return ProductCatalogResearchResponse(**research_catalog_product(
+        db,
+        product_id=product_id,
+        current_user=current_user,
+        fill_only=payload.fill_only,
+    ))
 
 
 @router.patch("/{product_id}", response_model=ProductCatalogRead)

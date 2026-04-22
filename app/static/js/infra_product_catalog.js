@@ -2420,6 +2420,29 @@ async function deleteProduct() {
 
 /* ── 스펙 저장 ── */
 
+async function runCatalogResearch(fillOnly = true) {
+  if (!_catalogPermissions.canManageCatalogProducts) {
+    showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
+    return;
+  }
+  if (!currentProductId) return;
+  if (currentProductType !== "hardware") {
+    showToast("현재 카탈로그 조사는 하드웨어 제품만 지원합니다.", "warning");
+    return;
+  }
+  try {
+    const result = await apiFetch(`/api/v1/product-catalog/${currentProductId}/research`, {
+      method: "POST",
+      body: { fill_only: fillOnly },
+    });
+    showToast(`조사 반영 완료 · 신뢰도 ${result.confidence || "-"} · 인터페이스 ${result.interfaces_created}건 생성`);
+    await loadCatalog();
+    await selectProduct({ id: currentProductId });
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
 async function saveSpec() {
   if (!_catalogPermissions.canManageCatalogProducts) {
     showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
@@ -2718,6 +2741,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 이벤트 바인딩
   document.getElementById("btn-open-import").addEventListener("click", openCatalogImport);
+  document.getElementById("btn-research-spec")?.addEventListener("click", () => runCatalogResearch(true));
   document.getElementById("btn-catalog-classification-edit-toggle").addEventListener("click", () => {
     if (!_catalogPermissions.canManageCatalogTaxonomy) {
       showToast("카탈로그 기준 관리 권한이 없습니다.", "warning");
