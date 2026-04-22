@@ -1,8 +1,8 @@
-# Sales UI/UX Shared Patterns v1
+# Pjtmgr UI/UX Shared Patterns v1
 
 ## Purpose
 
-This document defines a shared UI/UX baseline for `sales` menus that use similar tree, work-area, and detail-panel patterns.
+This document defines a shared UI/UX baseline for `pjtmgr` menus that use similar tree, work-area, and detail-panel patterns.
 
 The goal is not a full product-wide redesign in one pass. The goal is to stop menu drift, preserve the good improvements made in `배치`, and apply a stable common grammar across similar screens.
 
