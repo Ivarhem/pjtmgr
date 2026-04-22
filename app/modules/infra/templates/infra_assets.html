@@ -33,6 +33,12 @@
       <option value="">전체</option>
     </select>
   </label>
+  <div class="filter-bar-end">
+    <div class="col-chooser-wrapper">
+      <button type="button" class="btn btn-compact" id="btn-asset-col-chooser">열 설정</button>
+      <div class="col-chooser-menu is-hidden" id="asset-col-chooser-menu"></div>
+    </div>
+  </div>
 </div>
 
 <div id="edit-mode-bar" class="edit-mode-bar is-hidden">
@@ -45,12 +51,6 @@
 
 <div id="asset-layout" class="asset-layout">
   <div class="asset-list-panel">
-    <div class="asset-grid-toolbar">
-      <div class="col-chooser-wrapper">
-        <button type="button" class="btn btn-compact" id="btn-asset-col-chooser">열 설정</button>
-        <div class="col-chooser-menu is-hidden" id="asset-col-chooser-menu"></div>
-      </div>
-    </div>
     <div class="card">
       <div id="grid-assets" class="ag-theme-quartz infra-grid"></div>
       <div class="grid-add-row-bar">

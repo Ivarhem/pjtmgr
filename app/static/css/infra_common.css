@@ -649,13 +649,6 @@ body.dark-mode .asset-detail-value-rawtext {
   width: calc(100% - 18px);
 }
 
-.asset-grid-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
 .asset-list-panel .card {
   height: var(--asset-layout-height);
   display: flex;
