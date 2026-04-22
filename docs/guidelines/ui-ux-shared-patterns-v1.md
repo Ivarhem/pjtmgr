@@ -200,6 +200,49 @@ All right-side panels should share:
 - collapse handle position
 - splitter thickness and hover treatment
 
+## Modal toggle placement rules
+
+Use modal toggle placement according to the semantic level of the option.
+
+### Global / modal-defining flags
+
+If a checkbox defines the identity or primary status of the object being edited, place it in the modal title row on the right.
+
+Current approved examples:
+
+- `센터` modal: `메인 센터`
+- `전산실` modal: `메인 전산실`
+
+Why:
+
+- these are object-level state flags, not ordinary field details
+- they should be visible immediately without competing with the form body
+- title-row placement makes the modal meaning easier to scan
+
+### Local / detail settings
+
+If a checkbox controls a detail rule or subordinate behavior, keep it inside the relevant form group, near the fields it affects.
+
+Current approved example:
+
+- `라인` modal: `제외 슬롯 번호를 건너뛰고 랙명 연속 번호 사용`
+
+Why:
+
+- this is a line-level naming rule
+- it affects suggestion behavior, not the object identity itself
+- keeping it near line fields preserves the mental model
+
+### Checkbox alignment rule
+
+For modal checkboxes used in this pattern:
+
+- checkbox stays on the left
+- label text stays on the right
+- checkbox and text should align on the same row/baseline as one readable unit
+- avoid layouts where checkbox and text break onto visually separate lines unless the viewport is genuinely narrow
+
+
 ## Shared component grammar
 
 ## D. Detail header
