@@ -890,6 +890,48 @@ function fitGridColumnsIfNeeded() {
   setTimeout(() => gridApi.sizeColumnsToFit(), 0);
 }
 
+function initAssetColChooser() {
+  const btn = document.getElementById("btn-asset-col-chooser");
+  const menu = document.getElementById("asset-col-chooser-menu");
+  if (!btn || !menu) return;
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu.classList.contains("is-hidden")) {
+      renderAssetColChooserMenu();
+      menu.classList.remove("is-hidden");
+    } else {
+      menu.classList.add("is-hidden");
+    }
+  });
+  menu.addEventListener("change", (e) => {
+    if (e.target.type !== "checkbox") return;
+    gridApi.setColumnVisible(e.target.dataset.field, e.target.checked);
+    saveGridColumnState();
+  });
+  menu.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => menu.classList.add("is-hidden"));
+}
+
+function renderAssetColChooserMenu() {
+  const menu = document.getElementById("asset-col-chooser-menu");
+  if (!menu || !gridApi?.getColumnState) return;
+  const stateMap = Object.fromEntries(gridApi.getColumnState().map((s) => [s.colId, s]));
+  const toggleable = columnDefs.filter((c) => c.field && c.field !== "_selected" && c.field !== "asset_name");
+  menu.replaceChildren();
+  toggleable.forEach((col) => {
+    const visible = !stateMap[col.field]?.hide;
+    const label = document.createElement("label");
+    label.className = "col-chooser-item";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.field = col.field;
+    checkbox.checked = visible;
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode(` ${col.headerName}`));
+    menu.appendChild(label);
+  });
+}
+
 function getGridTooltipValue(params) {
   const value = params?.valueFormatted ?? params?.value;
   if (value == null || value === "") return "";
@@ -1080,6 +1122,7 @@ async function initGrid() {
       if (event.finished) saveGridColumnState();
     },
   });
+  initAssetColChooser();
 
   // ── GridEditMode 인스턴스 생성 ──
   editMode = new GridEditMode({
