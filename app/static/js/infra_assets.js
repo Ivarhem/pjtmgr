@@ -1508,6 +1508,17 @@ const DETAIL_TAB_FIELDS = {
         ["자산 번호", "asset_number"],
         ["자산 등급", "asset_class"],
       ],
+      editTitle: "식별 및 기준 정보 수정",
+      editDescription: "식별 정보와 기준값만 수정합니다.",
+      editFields: [
+        ["프로젝트코드", "project_asset_number"],
+        ["고객자산코드", "customer_asset_number"],
+        ["귀속사업", "period_id"],
+        ["시리얼", "serial_no"],
+        ["장비 ID", "equipment_id"],
+        ["자산 번호", "asset_number"],
+        ["자산 등급", "asset_class"],
+      ],
     },
   ],
   operations: [
@@ -1528,46 +1539,34 @@ const DETAIL_TAB_FIELDS = {
         ["입고일", "received_date"],
         ["도입 연도", "year_acquired"],
       ],
+      editTitle: "운영 속성 수정",
+      editDescription: "운영 배치와 상태 정보만 수정합니다.",
+      editFields: [
+        ["센터", "center_id"],
+        ["전산실", "room_id"],
+        ["랙", "rack_id"],
+        ["시작U", "rack_start_unit"],
+        ["종료U", "rack_end_unit"],
+        ["위치", "location"],
+        ["입고일", "received_date"],
+        ["도입 연도", "year_acquired"],
+        ["환경", "environment"],
+        ["상태", "status"],
+        ["부서", "dept"],
+        ["유지보수 업체", "maintenance_vendor"],
+        ["호스트명", "hostname"],
+        ["클러스터", "cluster"],
+        ["서비스명", "service_name"],
+        ["존", "zone"],
+      ],
     },
   ],
 };
 
 const DETAIL_EDIT_FIELDS = {
-  overview: [
-    ["프로젝트코드", "project_asset_number"],
-    ["고객자산코드", "customer_asset_number"],
+  product_info: [
     ["자산명", "asset_name"],
-    ["귀속사업", "period_id"],
     ["카탈로그 제품", "model_id"],
-    ["시리얼", "serial_no"],
-    ["장비 ID", "equipment_id"],
-    ["자산 번호", "asset_number"],
-    ["자산 등급", "asset_class"],
-    ["크기(U)", "size_unit"],
-    ["LC", "lc_count"],
-    ["HA", "ha_count"],
-    ["UTP", "utp_count"],
-    ["전원", "power_count"],
-    ["전원 유형", "power_type"],
-    ["펌웨어", "firmware_version"],
-  ],
-  operations: [
-    ["센터", "center_id"],
-    ["전산실", "room_id"],
-    ["랙", "rack_id"],
-    ["시작U", "rack_start_unit", () => formatRackStartUnit(_selectedAsset)],
-        ["종료U", "rack_end_unit", () => formatRackEndUnit(_selectedAsset)],
-    ["위치", "location"],
-    ["입고일", "received_date"],
-    ["도입 연도", "year_acquired"],
-    ["환경", "environment"],
-    ["상태", "status"],
-    ["부서", "dept"],
-    ["유지보수 업체", "maintenance_vendor"],
-    ["호스트명", "hostname"],
-    ["클러스터", "cluster"],
-    ["서비스명", "service_name"],
-    ["존", "zone"],
   ],
 };
 
@@ -1889,13 +1888,13 @@ function renderStructuredDetailTab(tab, container) {
     const visibleFields = sectionConfig.fields.filter(([, key, fmt]) => hasVisibleFieldValue(key, fmt));
     if (!visibleFields.length) return;
 
-    const sectionActions = DETAIL_EDIT_FIELDS[tab]
+    const sectionActions = sectionConfig.editFields?.length
       ? [{
           label: "편집",
           handler: () => openDetailEditModal({
-            title: `${sectionConfig.title} 수정`,
-            description: sectionConfig.description || "선택한 섹션 정보를 수정합니다.",
-            fields: DETAIL_EDIT_FIELDS[tab],
+            title: sectionConfig.editTitle || `${sectionConfig.title} 수정`,
+            description: sectionConfig.editDescription || sectionConfig.description || "선택한 섹션 정보를 수정합니다.",
+            fields: sectionConfig.editFields,
           }),
         }]
       : [];
@@ -1931,11 +1930,8 @@ async function renderOverviewSubSections(container) {
         label: "편집",
         handler: () => openDetailEditModal({
           title: "제품 정보 수정",
-          description: "자산명과 연결된 카탈로그 제품을 수정합니다.",
-          fields: [
-            ["자산명", "asset_name"],
-            ["카탈로그 제품", "model_id"],
-          ],
+          description: "자산명과 연결된 카탈로그 제품만 수정합니다.",
+          fields: DETAIL_EDIT_FIELDS.product_info,
         }),
       }],
     },
