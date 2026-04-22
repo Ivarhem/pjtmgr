@@ -4536,3 +4536,17 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   border-color: var(--primary-color, #2563eb);
   color: var(--primary-color, #2563eb);
 }
+
+
+.asset-detail-edit-group + .asset-detail-edit-group {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.asset-detail-edit-group-title {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-color-secondary);
+}

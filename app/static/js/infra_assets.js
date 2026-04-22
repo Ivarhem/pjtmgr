@@ -1509,16 +1509,30 @@ const DETAIL_TAB_FIELDS = {
         ["자산 등급", "asset_class"],
       ],
       editTitle: "식별 및 기준 정보 수정",
-      editDescription: "식별 정보와 기준값만 수정합니다.",
-      editFields: [
-        ["시스템명", "asset_name"],
-        ["프로젝트코드", "project_asset_number"],
-        ["고객자산코드", "customer_asset_number"],
-        ["귀속사업", "period_id"],
-        ["시리얼", "serial_no"],
-        ["장비 ID", "equipment_id"],
-        ["자산 번호", "asset_number"],
-        ["자산 등급", "asset_class"],
+      editDescription: "식별 정보와 기준값을 성격별로 나누어 수정합니다.",
+      editGroups: [
+        {
+          title: "시스템 식별",
+          fields: [
+            ["시스템명", "asset_name"],
+            ["시리얼", "serial_no"],
+          ],
+        },
+        {
+          title: "자산 식별 코드",
+          fields: [
+            ["고객자산코드", "customer_asset_number"],
+            ["자산번호", "asset_number"],
+            ["자산등급", "asset_class"],
+          ],
+        },
+        {
+          title: "운영 기준",
+          fields: [
+            ["프로젝트코드", "project_asset_number"],
+            ["귀속사업", "period_id"],
+          ],
+        },
       ],
     },
   ],
@@ -1888,13 +1902,14 @@ function renderStructuredDetailTab(tab, container) {
     const visibleFields = sectionConfig.fields.filter(([, key, fmt]) => hasVisibleFieldValue(key, fmt));
     if (!visibleFields.length) return;
 
-    const sectionActions = sectionConfig.editFields?.length
+    const sectionActions = (sectionConfig.editFields?.length || sectionConfig.editGroups?.length)
       ? [{
           label: "편집",
           handler: () => openDetailEditModal({
             title: sectionConfig.editTitle || `${sectionConfig.title} 수정`,
             description: sectionConfig.editDescription || sectionConfig.description || "선택한 섹션 정보를 수정합니다.",
             fields: sectionConfig.editFields,
+            groups: sectionConfig.editGroups,
           }),
         }]
       : [];
@@ -2985,10 +3000,20 @@ async function deleteAlias(alias, gridApi) {
 
 async function buildDetailEditFields(target, container = document.getElementById("asset-detail-edit-fields")) {
   container.textContent = "";
-  const fields = Array.isArray(target) ? target : DETAIL_EDIT_FIELDS[target];
-  if (!fields) return;
 
-  for (const [label, key] of fields) {
+  let groups = null;
+  if (Array.isArray(target)) {
+    groups = [{ fields: target }];
+  } else if (target?.groups?.length) {
+    groups = target.groups;
+  } else if (target?.fields?.length) {
+    groups = [{ fields: target.fields }];
+  } else if (DETAIL_EDIT_FIELDS[target]) {
+    groups = [{ fields: DETAIL_EDIT_FIELDS[target] }];
+  }
+  if (!groups?.length) return;
+
+  async function appendField(fieldHost, label, key) {
     const fieldWrap = document.createElement("label");
     fieldWrap.className = "full-width";
     if (!["note", "location", "service_name"].includes(key)) {
@@ -3022,7 +3047,6 @@ async function buildDetailEditFields(target, container = document.getElementById
         input.appendChild(opt);
       }
     } else if (key === "model_id") {
-      // 카탈로그 검색 위젯
       const wrap = document.createElement("div");
       wrap.className = "catalog-search-wrap";
 
@@ -3085,8 +3109,8 @@ async function buildDetailEditFields(target, container = document.getElementById
       });
 
       fieldWrap.appendChild(wrap);
-      container.appendChild(fieldWrap);
-      continue;
+      fieldHost.appendChild(fieldWrap);
+      return;
     } else if (key === "center_id") {
       input = document.createElement("select");
       const centers = await loadLayoutCenters(_selectedAsset.partner_id);
@@ -3203,7 +3227,25 @@ async function buildDetailEditFields(target, container = document.getElementById
       });
     }
     fieldWrap.appendChild(input);
-    container.appendChild(fieldWrap);
+    fieldHost.appendChild(fieldWrap);
+  }
+
+  for (const group of groups) {
+    const host = document.createElement("div");
+    host.className = "asset-detail-edit-group";
+    if (group.title) {
+      const title = document.createElement("h3");
+      title.className = "asset-detail-edit-group-title";
+      title.textContent = group.title;
+      host.appendChild(title);
+    }
+    const grid = document.createElement("div");
+    grid.className = "form-grid asset-detail-edit-group-grid";
+    host.appendChild(grid);
+    container.appendChild(host);
+    for (const [label, key] of (group.fields || [])) {
+      await appendField(grid, label, key);
+    }
   }
 }
 
@@ -3229,7 +3271,7 @@ async function openDetailEditModal(target) {
 
   title.textContent = modalTitle;
   desc.textContent = modalDesc;
-  await buildDetailEditFields(fields || []);
+  await buildDetailEditFields({ fields, groups: target?.groups });
   document.getElementById("modal-asset-detail-edit").showModal();
 }
 
