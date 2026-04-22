@@ -3015,11 +3015,14 @@ async function buildDetailEditFields(target, container = document.getElementById
 
   async function appendField(fieldHost, label, key) {
     const fieldWrap = document.createElement("label");
-    fieldWrap.className = "full-width";
+    fieldWrap.className = "asset-detail-edit-field full-width";
     if (!["note", "location", "service_name"].includes(key)) {
       fieldWrap.classList.remove("full-width");
     }
-    fieldWrap.textContent = label;
+    const labelText = document.createElement("span");
+    labelText.className = "label-text";
+    labelText.textContent = label;
+    fieldWrap.appendChild(labelText);
 
     const currentVal = _selectedAsset[key];
     let input;
@@ -3240,7 +3243,7 @@ async function buildDetailEditFields(target, container = document.getElementById
       host.appendChild(title);
     }
     const grid = document.createElement("div");
-    grid.className = "form-grid asset-detail-edit-group-grid";
+    grid.className = "asset-detail-edit-group-grid";
     host.appendChild(grid);
     container.appendChild(host);
     for (const [label, key] of (group.fields || [])) {

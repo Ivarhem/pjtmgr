@@ -4550,3 +4550,84 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   font-weight: 700;
   color: var(--text-color-secondary);
 }
+
+
+.asset-detail-edit-form {
+  margin-top: 14px;
+}
+
+.asset-detail-edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.asset-detail-edit-group {
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-color) 84%, var(--bg-secondary));
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.asset-detail-edit-group + .asset-detail-edit-group {
+  margin-top: 0;
+  padding-top: 14px;
+}
+
+.asset-detail-edit-group-title {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-color-secondary);
+  letter-spacing: 0.02em;
+}
+
+.asset-detail-edit-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  align-items: start;
+}
+
+.asset-detail-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.asset-detail-edit-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.asset-detail-edit-field > .label-text {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  line-height: 1.3;
+}
+
+.asset-detail-edit-field .edit-input,
+.asset-detail-edit-field select,
+.asset-detail-edit-field input,
+.asset-detail-edit-field textarea,
+.asset-detail-edit-field .catalog-search-wrap input {
+  min-height: 36px;
+}
+
+.asset-detail-edit-field textarea {
+  min-height: 92px;
+}
+
+#modal-asset-detail-edit .modal-desc {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+@media (max-width: 860px) {
+  .asset-detail-edit-group-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
