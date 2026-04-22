@@ -1668,6 +1668,16 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
   flex-shrink: 0;
 }
 
+.asset-detail-inline-edit {
+  align-items: start;
+}
+
+.asset-detail-inline-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 #detail-content {
   display: flex;
   flex-direction: column;

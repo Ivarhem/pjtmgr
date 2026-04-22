@@ -1750,9 +1750,9 @@ function toggleDetailPanel() {
   }
 }
 
-function renderDetailTab(tab) {
+async function renderDetailTab(tab) {
   _currentTab = tab;
-  if (_detailEditMode) _detailEditMode = false;
+  if (_detailEditMode && !canEditDetailTab(tab)) _detailEditMode = false;
 
   const container = document.getElementById("detail-content");
   while (container.firstChild) container.removeChild(container.firstChild);
@@ -1761,7 +1761,13 @@ function renderDetailTab(tab) {
     b.classList.toggle("active", b.dataset.dtab === tab);
   });
 
+  syncDetailHeaderActions();
   if (!_selectedAsset) return;
+
+  if (_detailEditMode && canEditDetailTab(tab)) {
+    await renderInlineDetailEditTab(tab, container);
+    return;
+  }
 
   if (tab === "network") { renderNetworkTab(container); return; }
   if (tab === "contacts") { renderContactsGroupTab(container); return; }
@@ -1770,11 +1776,11 @@ function renderDetailTab(tab) {
   const renderedStructured = renderStructuredDetailTab(tab, container);
 
   if (tab === "overview") {
-    renderOverviewSubSections(container);
+    await renderOverviewSubSections(container);
     return;
   }
   if (tab === "operations") {
-    renderOperationsSubSections(container);
+    await renderOperationsSubSections(container);
     return;
   }
   if (!renderedStructured) {
@@ -2888,8 +2894,7 @@ async function deleteAlias(alias, gridApi) {
 
 /* ── Detail edit modal ── */
 
-async function buildDetailEditFields(tab) {
-  const container = document.getElementById("asset-detail-edit-fields");
+async function buildDetailEditFields(tab, container = document.getElementById("asset-detail-edit-fields")) {
   container.textContent = "";
   const fields = DETAIL_EDIT_FIELDS[tab];
   if (!fields) return;
@@ -3129,8 +3134,31 @@ function closeDetailEditModal() {
   document.getElementById("modal-asset-detail-edit").close();
 }
 
-async function saveDetailEdit() {
-  const form = document.getElementById("form-asset-detail-edit");
+function canEditDetailTab(tab = _currentTab) {
+  return ["overview", "operations"].includes(tab);
+}
+
+function syncDetailHeaderActions() {
+  const editBtn = document.getElementById("btn-detail-edit-toggle");
+  const saveBtn = document.getElementById("btn-detail-save");
+  const cancelBtn = document.getElementById("btn-detail-cancel");
+  const deleteBtn = document.getElementById("btn-delete-asset");
+  const canEdit = Boolean(_selectedAsset && canEditDetailTab(_currentTab));
+  editBtn.classList.toggle("is-hidden", !canEdit || _detailEditMode);
+  saveBtn.classList.toggle("is-hidden", !_detailEditMode || !canEdit);
+  cancelBtn.classList.toggle("is-hidden", !_detailEditMode || !canEdit);
+  deleteBtn.classList.toggle("is-hidden", _detailEditMode);
+}
+
+async function renderInlineDetailEditTab(tab, container) {
+  const form = document.createElement("div");
+  form.id = "asset-detail-inline-edit";
+  form.className = "asset-detail-inline-edit form-grid";
+  await buildDetailEditFields(tab, form);
+  container.appendChild(form);
+}
+
+async function saveDetailEdit(form = document.getElementById("form-asset-detail-edit")) {
   if (!form) return;
   const changes = {};
   form.querySelectorAll("[data-field]").forEach((input) => {
@@ -3160,7 +3188,11 @@ async function saveDetailEdit() {
     const updated = await apiFetch("/api/v1/assets/" + _selectedAsset.id, { method: "PATCH", body: changes });
     Object.assign(_selectedAsset, updated);
     showToast("수정되었습니다.");
-    closeDetailEditModal();
+    if (form.id === "form-asset-detail-edit") {
+      closeDetailEditModal();
+    } else {
+      _detailEditMode = false;
+    }
     renderDetailTab(_currentTab);
     await loadAssets();
   } catch (err) {
@@ -4257,36 +4289,23 @@ document.getElementById("btn-clear-catalog").addEventListener("click", () => {
   clearSelectedCatalog();
   document.getElementById("catalog-search").focus();
 });
-document.getElementById("btn-edit-asset").addEventListener("click", async () => {
-  if (!_selectedAsset) return;
-  if (_detailEditMode) { closeDetailEditModal(); return; }
+document.getElementById("btn-detail-edit-toggle").addEventListener("click", async () => {
+  if (!_selectedAsset || !canEditDetailTab(_currentTab)) return;
   _detailEditMode = true;
-  const title = document.getElementById("asset-detail-edit-title");
-  const desc = document.getElementById("asset-detail-edit-desc");
-  title.textContent = "자산 기본 정보 수정";
-  desc.textContent = "자산명과 호스트명을 변경합니다.";
-  const container = document.getElementById("asset-detail-edit-fields");
-  container.textContent = "";
-  const fields = [
-    ["자산명", "asset_name", _selectedAsset.asset_name || ""],
-    ["호스트명", "hostname", _selectedAsset.hostname || ""],
-  ];
-  let firstInput = null;
-  for (const [label, field, value] of fields) {
-    const wrap = document.createElement("label");
-    wrap.className = "full-width";
-    wrap.textContent = label;
-    const input = document.createElement("input");
-    input.type = "text";
-    input.dataset.field = field;
-    input.className = "edit-input";
-    input.value = value;
-    wrap.appendChild(input);
-    container.appendChild(wrap);
-    if (!firstInput) firstInput = input;
+  await renderDetailTab(_currentTab);
+  const firstInput = document.querySelector('#asset-detail-inline-edit [data-field]');
+  if (firstInput) {
+    firstInput.focus();
+    if (typeof firstInput.select === "function") firstInput.select();
   }
-  document.getElementById("modal-asset-detail-edit").showModal();
-  if (firstInput) { firstInput.focus(); firstInput.select(); }
+});
+document.getElementById("btn-detail-save").addEventListener("click", async () => {
+  const form = document.getElementById("asset-detail-inline-edit");
+  await saveDetailEdit(form);
+});
+document.getElementById("btn-detail-cancel").addEventListener("click", async () => {
+  _detailEditMode = false;
+  await renderDetailTab(_currentTab);
 });
 document.getElementById("btn-delete-asset").addEventListener("click", deleteAssetAction);
 
