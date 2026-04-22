@@ -1524,6 +1524,8 @@ const DETAIL_TAB_FIELDS = {
         ["고객자산코드", "customer_asset_number"],
         ["역할명", "current_role_names", (v) => v && v.length ? v.join(", ") : ""],
         ["귀속사업", "period_id", () => _selectedAsset?.period_label || ""],
+        ["입고일", "received_date"],
+        ["도입 연도", "year_acquired"],
         ["시리얼", "serial_no"],
         ["장비 ID", "equipment_id"],
         ["자산 번호", "asset_number"],
@@ -1552,6 +1554,7 @@ const DETAIL_TAB_FIELDS = {
           fields: [
             ["프로젝트코드", "project_asset_number"],
             ["귀속사업", "period_id"],
+            ["입고일", "received_date"],
           ],
         },
       ],
@@ -1566,8 +1569,6 @@ const DETAIL_TAB_FIELDS = {
         ["상태", "status", (v) => ASSET_STATUS_MAP[v] || v],
         ["부서", "dept"],
         ["유지보수 업체", "maintenance_vendor"],
-        ["입고일", "received_date"],
-        ["도입 연도", "year_acquired"],
         ["호스트명", "hostname"],
         ["클러스터", "cluster"],
         ["서비스명", "service_name"],
@@ -1581,8 +1582,6 @@ const DETAIL_TAB_FIELDS = {
           fields: [
             ["환경", "environment"],
             ["상태", "status"],
-            ["입고일", "received_date"],
-            ["도입 연도", "year_acquired"],
           ],
         },
         {
@@ -3496,6 +3495,13 @@ async function saveDetailEdit(form = document.getElementById("form-asset-detail-
       if (strVal !== original) changes[key] = strVal;
     }
   });
+  if (Object.prototype.hasOwnProperty.call(changes, "received_date")) {
+    const receivedDate = changes.received_date || _selectedAsset.received_date;
+    const derivedYear = receivedDate ? Number(String(receivedDate).slice(0, 4)) : null;
+    if (derivedYear !== _selectedAsset.year_acquired) {
+      changes.year_acquired = derivedYear;
+    }
+  }
   if (Object.keys(changes).length === 0) {
     closeDetailEditModal();
     return;
