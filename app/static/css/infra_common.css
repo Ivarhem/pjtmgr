@@ -4677,5 +4677,45 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
 
 
 #modal-asset-detail-edit .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
   margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+}
+
+#modal-asset-detail-edit .modal-actions .btn {
+  min-width: 92px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+#modal-asset-detail-edit .modal-actions .btn-secondary {
+  background: color-mix(in srgb, var(--surface-color) 90%, var(--bg-secondary));
+  border-color: color-mix(in srgb, var(--border-color) 72%, var(--primary-color) 10%);
+}
+
+#modal-asset-detail-edit .modal-actions .btn-secondary:hover {
+  border-color: color-mix(in srgb, var(--border-color) 46%, var(--primary-color) 28%);
+  background: color-mix(in srgb, var(--surface-color) 84%, var(--bg-secondary));
+}
+
+#modal-asset-detail-edit .modal-actions .btn-primary {
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+
+@media (max-width: 640px) {
+  #modal-asset-detail-edit .modal-actions {
+    justify-content: stretch;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  #modal-asset-detail-edit .modal-actions .btn {
+    width: 100%;
+  }
 }
