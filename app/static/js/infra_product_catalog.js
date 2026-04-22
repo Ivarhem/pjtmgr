@@ -2435,7 +2435,7 @@ async function runCatalogResearch(fillOnly = true) {
       method: "POST",
       body: { fill_only: fillOnly },
     });
-    showToast(`조사 반영 완료 · 신뢰도 ${result.confidence || "-"} · 인터페이스 ${result.interfaces_created}건 생성`);
+    showToast(`조사 반영 완료 · spec ${result.spec_applied}/${result.spec_candidates} · eosl ${result.eosl_applied}/${result.eosl_candidates} · 인터페이스 ${result.interfaces_created}/${result.interface_candidates}`);
     await loadCatalog();
     await selectProduct({ id: currentProductId });
   } catch (err) {

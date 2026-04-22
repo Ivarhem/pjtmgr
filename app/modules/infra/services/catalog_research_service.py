@@ -27,19 +27,33 @@ from app.modules.infra.services.product_catalog_service import (
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = os.getenv("CATALOG_RESEARCH_MODEL") or os.getenv("CLAUDE_MODEL") or "claude-sonnet-4-5"
-UNCERTAIN_MARKERS = {"", "unknown", "n/a", "none", "null", "확인 필요", "미확인", "모름"}
+UNCERTAIN_MARKERS = {"", "unknown", "n/a", "none", "null", "확인 필요", "미확인", "모름", "tbd", "na"}
+VALID_CAPACITY_TYPES = {"fixed", "base", "max"}
+VALID_CONFIDENCE = {"high", "medium", "low"}
+SPEC_FIELDS = [
+    "size_unit", "width_mm", "height_mm", "depth_mm", "weight_kg",
+    "power_count", "power_type", "power_watt", "cpu_summary", "memory_summary",
+    "throughput_summary", "os_firmware", "spec_url",
+]
+EOSL_FIELDS = ["eos_date", "eosl_date", "eosl_note"]
 
 SYSTEM_PROMPT = (
     "You are a careful IT hardware catalog researcher. "
-    "Return strict JSON only. Use vendor documentation or well-known official lifecycle pages when possible. "
+    "Return strict JSON only. Prefer vendor datasheets, product pages, and official lifecycle notices. "
     "If uncertain, return null instead of guessing."
 )
 
-PROMPT_TEMPLATE = """Research the following catalog product and return normalized JSON only.
+PROMPT_TEMPLATE = """Research the following hardware catalog product and return normalized JSON only.
 
 Vendor: {vendor}
 Model: {name}
 Existing reference URL: {reference_url}
+Classification: {classification}
+Existing known hardware spec summary:
+- size_unit: {size_unit}
+- power_count: {power_count}
+- power_type: {power_type}
+- power_watt: {power_watt}
 
 Return this exact JSON shape:
 {{
@@ -74,15 +88,17 @@ Return this exact JSON shape:
       "capacity_type": "fixed",
       "note": null
     }}
-  ]
+  ],
+  "uncertain_fields": ["field names that still need verification"]
 }}
 
 Rules:
 - Use null when unknown.
 - size_unit must be integer rack unit if known.
-- interfaces should describe base/default onboard or appliance ports, not every optional add-on card unless clearly default.
+- interfaces should describe base/default onboard or appliance ports, not optional add-on cards unless clearly default.
 - capacity_type must be one of fixed, base, max.
 - eos/eosl dates must be ISO format only.
+- uncertain_fields should contain names like size_unit, power_count, eosl_date, interfaces.
 - Never wrap in markdown.
 """
 
@@ -97,7 +113,7 @@ def _api_key() -> str:
 def _call_anthropic_json(prompt: str) -> dict:
     payload = {
         "model": DEFAULT_MODEL,
-        "max_tokens": 1600,
+        "max_tokens": 1800,
         "system": SYSTEM_PROMPT,
         "messages": [{"role": "user", "content": prompt}],
     }
@@ -195,23 +211,88 @@ def _merge_value(current, new, *, fill_only: bool):
     return new
 
 
+def _normalize_confidence(value) -> str:
+    text = (_clean_text(value, 20) or "low").lower()
+    return text if text in VALID_CONFIDENCE else "low"
+
+
+def _normalize_capacity_type(value) -> str:
+    text = (_clean_text(value, 10) or "fixed").lower()
+    aliases = {"default": "base", "onboard": "fixed", "built-in": "fixed", "optional": "max"}
+    text = aliases.get(text, text)
+    return text if text in VALID_CAPACITY_TYPES else "fixed"
+
+
+def _normalize_interfaces(items: list[dict]) -> tuple[list[dict], int]:
+    merged: dict[tuple, dict] = {}
+    skipped = 0
+    for item in items or []:
+        interface_type = _clean_text(item.get("interface_type"), 30)
+        count = _clean_int(item.get("count"))
+        if not interface_type or not count or count <= 0:
+            skipped += 1
+            continue
+        row = {
+            "interface_type": interface_type,
+            "speed": _clean_text(item.get("speed"), 20),
+            "count": count,
+            "connector_type": _clean_text(item.get("connector_type"), 30),
+            "capacity_type": _normalize_capacity_type(item.get("capacity_type")),
+            "note": _clean_text(item.get("note"), 255),
+        }
+        key = (row["interface_type"], row["speed"], row["connector_type"], row["capacity_type"], row["note"])
+        if key in merged:
+            merged[key]["count"] += row["count"]
+        else:
+            merged[key] = row
+    normalized = sorted(merged.values(), key=lambda x: (x["capacity_type"], x["interface_type"], x.get("speed") or "", x.get("connector_type") or ""))
+    return normalized, skipped
+
+
+def _count_non_null(mapping: dict, fields: list[str]) -> int:
+    return sum(1 for field in fields if mapping.get(field) is not None)
+
+
+def _classification_label(product) -> str:
+    parts = []
+    for attr in [
+        getattr(product, "classification_level_1_name", None),
+        getattr(product, "classification_level_2_name", None),
+        getattr(product, "classification_level_3_name", None),
+        getattr(product, "classification_level_4_name", None),
+        getattr(product, "classification_level_5_name", None),
+    ]:
+        if attr:
+            parts.append(attr)
+    return " > ".join(parts) if parts else "unclassified"
+
+
 def research_catalog_product(db: Session, product_id: int, current_user: User, fill_only: bool = True) -> dict:
     product = get_product(db, product_id)
     if product.product_type != "hardware":
         raise BusinessRuleError("현재 카탈로그 조사는 하드웨어 제품만 지원합니다.", status_code=409)
 
+    existing_spec = db.scalar(select(HardwareSpec).where(HardwareSpec.product_id == product_id))
     payload = _call_anthropic_json(PROMPT_TEMPLATE.format(
         vendor=product.vendor,
         name=product.name,
         reference_url=product.reference_url or "none",
+        classification=_classification_label(product),
+        size_unit=getattr(existing_spec, "size_unit", None),
+        power_count=getattr(existing_spec, "power_count", None),
+        power_type=getattr(existing_spec, "power_type", None),
+        power_watt=getattr(existing_spec, "power_watt", None),
     ))
 
     spec_data = payload.get("hardware_spec") or {}
     eosl_data = payload.get("eosl") or {}
-    interfaces_data = payload.get("interfaces") or []
-    confidence = _clean_text(payload.get("confidence"), 30) or "low"
+    normalized_interfaces, invalid_interfaces = _normalize_interfaces(payload.get("interfaces") or [])
+    confidence = _normalize_confidence(payload.get("confidence"))
+    uncertain_fields = [
+        _clean_text(item, 40) for item in (payload.get("uncertain_fields") or [])
+        if _clean_text(item, 40)
+    ]
 
-    existing_spec = db.scalar(select(HardwareSpec).where(HardwareSpec.product_id == product_id))
     spec_payload = {
         "size_unit": _merge_value(existing_spec.size_unit if existing_spec else None, _clean_int(spec_data.get("size_unit")), fill_only=fill_only),
         "width_mm": _merge_value(existing_spec.width_mm if existing_spec else None, _clean_int(spec_data.get("width_mm")), fill_only=fill_only),
@@ -227,47 +308,48 @@ def research_catalog_product(db: Session, product_id: int, current_user: User, f
         "os_firmware": _merge_value(existing_spec.os_firmware if existing_spec else None, _clean_text(spec_data.get("os_firmware")), fill_only=fill_only),
         "spec_url": _merge_value(existing_spec.spec_url if existing_spec else None, _clean_text(spec_data.get("spec_url"), 500), fill_only=fill_only),
     }
+    spec_candidates = _count_non_null({field: spec_payload.get(field) if spec_payload.get(field) != getattr(existing_spec, field, None) or not fill_only else _clean_text(spec_data.get(field), 500) if field in {"power_type", "cpu_summary", "memory_summary", "throughput_summary", "os_firmware", "spec_url"} else None for field in SPEC_FIELDS}, SPEC_FIELDS)
+    spec_applied = sum(1 for field in SPEC_FIELDS if spec_payload.get(field) != getattr(existing_spec, field, None))
     upsert_spec(db, product_id, HardwareSpecCreate(**spec_payload), current_user)
 
+    new_eos = _clean_date(eosl_data.get("eos_date"))
+    new_eosl = _clean_date(eosl_data.get("eosl_date"))
+    new_note = _clean_text(eosl_data.get("eosl_note"))
+    new_source_url = _clean_text(eosl_data.get("source_url"), 500) or _clean_text(spec_data.get("spec_url"), 500)
     product_update = ProductCatalogUpdate(
-        eos_date=_merge_value(product.eos_date, _clean_date(eosl_data.get("eos_date")), fill_only=fill_only),
-        eosl_date=_merge_value(product.eosl_date, _clean_date(eosl_data.get("eosl_date")), fill_only=fill_only),
-        eosl_note=_merge_value(product.eosl_note, _clean_text(eosl_data.get("eosl_note")), fill_only=fill_only),
+        eos_date=_merge_value(product.eos_date, new_eos, fill_only=fill_only),
+        eosl_date=_merge_value(product.eosl_date, new_eosl, fill_only=fill_only),
+        eosl_note=_merge_value(product.eosl_note, new_note, fill_only=fill_only),
         reference_url=_merge_value(product.reference_url, _clean_text(spec_data.get("spec_url"), 500), fill_only=fill_only),
         source_name="catalog_research",
-        source_url=_clean_text(eosl_data.get("source_url"), 500) or _clean_text(spec_data.get("spec_url"), 500),
+        source_url=new_source_url,
         source_confidence=confidence,
         verification_status="review_needed",
         last_verified_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    eosl_candidates = sum(1 for value in [new_eos, new_eosl, new_note] if value is not None)
+    eosl_applied = sum(
+        1 for old, new in [(product.eos_date, product_update.eos_date), (product.eosl_date, product_update.eosl_date), (product.eosl_note, product_update.eosl_note)]
+        if new != old
     )
     update_product(db, product_id, product_update, current_user)
 
     existing_interfaces = list(db.scalars(select(HardwareInterface).where(HardwareInterface.product_id == product_id).order_by(HardwareInterface.id.asc())))
     interfaces_created = 0
-    should_create_interfaces = bool(interfaces_data) and (not fill_only or not existing_interfaces)
+    interfaces_skipped = invalid_interfaces
+    should_create_interfaces = bool(normalized_interfaces) and (not fill_only or not existing_interfaces)
     if should_create_interfaces:
         if not fill_only and existing_interfaces:
             db.execute(delete(HardwareInterface).where(HardwareInterface.product_id == product_id))
-            db.commit()
-        for item in interfaces_data:
-            interface_type = _clean_text(item.get("interface_type"), 30)
-            count = _clean_int(item.get("count"))
-            if not interface_type or not count or count <= 0:
-                continue
-            create_interface(
-                db,
-                product_id,
-                HardwareInterfaceCreate(
-                    interface_type=interface_type,
-                    speed=_clean_text(item.get("speed"), 20),
-                    count=count,
-                    connector_type=_clean_text(item.get("connector_type"), 30),
-                    capacity_type=_clean_text(item.get("capacity_type"), 10) or "fixed",
-                    note=_clean_text(item.get("note"), 255),
-                ),
-                current_user,
-            )
+            existing_interfaces = []
+        for item in normalized_interfaces:
+            create_interface(db, product_id, HardwareInterfaceCreate(**item), current_user)
             interfaces_created += 1
+    elif normalized_interfaces and existing_interfaces:
+        interfaces_skipped += len(normalized_interfaces)
+
+    if spec_applied == 0 and eosl_applied == 0 and interfaces_created == 0 and not uncertain_fields:
+        uncertain_fields.append("review_needed")
 
     audit.log(
         db,
@@ -286,8 +368,14 @@ def research_catalog_product(db: Session, product_id: int, current_user: User, f
         "name": product.name,
         "mode": "fill_empty" if fill_only else "replace_all",
         "confidence": confidence,
+        "spec_candidates": spec_candidates,
+        "spec_applied": spec_applied,
+        "eosl_candidates": eosl_candidates,
+        "eosl_applied": eosl_applied,
         "interfaces_created": interfaces_created,
-        "interface_candidates": len([item for item in interfaces_data if _clean_text(item.get("interface_type"), 30)]),
+        "interface_candidates": len(normalized_interfaces),
+        "interfaces_skipped": interfaces_skipped,
+        "uncertain_fields": uncertain_fields,
         "eos_date": product_update.eos_date,
         "eosl_date": product_update.eosl_date,
         "spec_url": spec_payload.get("spec_url"),
