@@ -1993,16 +1993,6 @@ async function renderOverviewSubSections(container) {
       }],
     },
     {
-      title: "라이선스",
-      description: "이 자산의 라이선스 정보를 관리합니다.",
-      renderer: renderLicensesTab,
-      actions: [{
-        label: isDetailSectionEditing("licenses") ? "편집 종료" : "편집",
-        variant: isDetailSectionEditing("licenses") ? "primary" : "secondary",
-        handler: () => toggleDetailSectionEditing("licenses"),
-      }],
-    },
-    {
       title: "별칭",
       description: "고객사명, 레거시명, 내부명을 함께 관리합니다.",
       renderer: renderAliasesTab,
@@ -2023,13 +2013,31 @@ async function renderOverviewSubSections(container) {
 async function renderOperationsSubSections(container) {
   const wrap = getOrCreateDetailSections(container);
   const groups = [
-    ["설치 소프트웨어", "이 자산에 설치된 소프트웨어를 관리합니다.", renderSoftwareTab],
-    ["자산 관계", "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.", renderRelationsTab],
+    {
+      title: "설치 소프트웨어",
+      description: "이 자산에 설치된 소프트웨어를 관리합니다.",
+      renderer: renderSoftwareTab,
+    },
+    {
+      title: "라이선스",
+      description: "이 자산의 라이선스 정보를 관리합니다.",
+      renderer: renderLicensesTab,
+      actions: [{
+        label: isDetailSectionEditing("licenses") ? "편집 종료" : "편집",
+        variant: isDetailSectionEditing("licenses") ? "primary" : "secondary",
+        handler: () => toggleDetailSectionEditing("licenses"),
+      }],
+    },
+    {
+      title: "자산 관계",
+      description: "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.",
+      renderer: renderRelationsTab,
+    },
   ];
-  for (const [title, description, renderer] of groups) {
-    const section = createDetailSectionCard(title, description);
+  for (const group of groups) {
+    const section = createDetailSectionCard(group.title, group.description, group.actions || []);
     wrap.appendChild(section);
-    await renderer(section);
+    await group.renderer(section);
   }
 }
 
