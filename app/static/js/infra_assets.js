@@ -1526,6 +1526,7 @@ const DETAIL_TAB_FIELDS = {
         ["귀속사업", "period_id", () => _selectedAsset?.period_label || ""],
         ["입고일", "received_date"],
         ["도입 연도", "year_acquired"],
+        ["호스트명", "hostname"],
         ["시리얼", "serial_no"],
         ["장비 ID", "equipment_id"],
         ["자산 번호", "asset_number"],
@@ -1538,6 +1539,7 @@ const DETAIL_TAB_FIELDS = {
           title: "시스템 식별",
           fields: [
             ["시스템명", "asset_name"],
+            ["호스트명", "hostname"],
             ["시리얼", "serial_no"],
           ],
         },
@@ -1567,12 +1569,6 @@ const DETAIL_TAB_FIELDS = {
       fields: [
         ["환경", "environment", (v) => ENV_MAP[v] || v],
         ["상태", "status", (v) => ASSET_STATUS_MAP[v] || v],
-        ["부서", "dept"],
-        ["유지보수 업체", "maintenance_vendor"],
-        ["호스트명", "hostname"],
-        ["클러스터", "cluster"],
-        ["서비스명", "service_name"],
-        ["존", "zone"],
       ],
       editTitle: "운영 속성 수정",
       editDescription: "운영 상태와 운영 기준 정보를 성격별로 나누어 수정합니다.",
@@ -1582,22 +1578,6 @@ const DETAIL_TAB_FIELDS = {
           fields: [
             ["환경", "environment"],
             ["상태", "status"],
-          ],
-        },
-        {
-          title: "운영 담당",
-          fields: [
-            ["부서", "dept"],
-            ["유지보수 업체", "maintenance_vendor"],
-          ],
-        },
-        {
-          title: "시스템 운영 정보",
-          fields: [
-            ["호스트명", "hostname"],
-            ["클러스터", "cluster"],
-            ["서비스명", "service_name"],
-            ["존", "zone"],
           ],
         },
       ],
@@ -2063,6 +2043,17 @@ async function renderNetworkTab(container) {
     _networkGridApi = null;
   }
 
+  const zoneSection = createDetailSectionCard("네트워크 존", "네트워크 귀속 영역을 확인합니다.", [{
+    label: "편집",
+    handler: () => openDetailEditModal({
+      title: "네트워크 존 수정",
+      description: "네트워크 존 정보만 수정합니다.",
+      fields: [["존", "zone"]],
+    }),
+  }]);
+  container.appendChild(zoneSection);
+  await renderNetworkZoneSection(zoneSection);
+
   // Header with buttons
   const hdr = document.createElement("div");
   hdr.className = "asset-subtab-header";
@@ -2350,18 +2341,70 @@ async function generateInterfacesFromCatalog() {
   } catch (e) { showToast(e.message, "error"); }
 }
 
+
+function renderSimpleDetailGrid(container, fields) {
+  const visibleFields = fields.filter(([, key, fmt]) => hasVisibleFieldValue(key, fmt));
+  if (!visibleFields.length) {
+    const p = document.createElement("p");
+    p.className = "text-muted asset-subtable-empty";
+    p.textContent = "데이터가 없습니다.";
+    container.appendChild(p);
+    return;
+  }
+  const grid = document.createElement("div");
+  grid.className = "detail-grid asset-detail-grid";
+  visibleFields.forEach(([label, key, fmt]) => {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = getDetailFieldValue(key, fmt);
+    grid.appendChild(dt);
+    grid.appendChild(dd);
+  });
+  container.appendChild(grid);
+}
+
+async function renderNetworkZoneSection(container) {
+  renderSimpleDetailGrid(container, [["존", "zone"]]);
+}
+
+async function renderContactsOwnerSection(container) {
+  renderSimpleDetailGrid(container, [["부서", "dept"], ["유지보수 업체", "maintenance_vendor"]]);
+}
+
 async function renderContactsGroupTab(container) {
   const wrap = document.createElement("div");
   wrap.className = "asset-detail-sections";
   container.appendChild(wrap);
   const groups = [
-    ["담당자", "운영과 보안, 시스템 담당자를 연결합니다.", renderContactsTab],
-    ["관련업체", "유지보수사, 공급사, 운영사 등 연관 업체를 관리합니다.", renderRelatedPartnersTab],
+    {
+      title: "운영 담당 정보",
+      description: "자산의 운영 부서와 대표 유지보수 업체를 확인합니다.",
+      renderer: renderContactsOwnerSection,
+      actions: [{
+        label: "편집",
+        handler: () => openDetailEditModal({
+          title: "운영 담당 정보 수정",
+          description: "운영 부서와 유지보수 업체 정보만 수정합니다.",
+          fields: [["부서", "dept"], ["유지보수 업체", "maintenance_vendor"]],
+        }),
+      }],
+    },
+    {
+      title: "담당자",
+      description: "운영과 보안, 시스템 담당자를 연결합니다.",
+      renderer: renderContactsTab,
+    },
+    {
+      title: "관련업체",
+      description: "유지보수사, 공급사, 운영사 등 연관 업체를 관리합니다.",
+      renderer: renderRelatedPartnersTab,
+    },
   ];
-  for (const [title, description, renderer] of groups) {
-    const section = createDetailSectionCard(title, description);
+  for (const group of groups) {
+    const section = createDetailSectionCard(group.title, group.description, group.actions || []);
     wrap.appendChild(section);
-    await renderer(section);
+    await group.renderer(section);
   }
 }
 
