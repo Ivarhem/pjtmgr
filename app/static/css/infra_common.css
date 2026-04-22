@@ -4538,22 +4538,9 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
 }
 
 
-.asset-detail-edit-group + .asset-detail-edit-group {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-color);
-}
-
-.asset-detail-edit-group-title {
-  margin: 0 0 10px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-color-secondary);
-}
-
-
 .asset-detail-edit-form {
   margin-top: 14px;
+  margin-bottom: 18px;
 }
 
 .asset-detail-edit-fields {
@@ -4686,4 +4673,9 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
   .asset-detail-edit-group-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+
+#modal-asset-detail-edit .modal-actions {
+  margin-top: 10px;
 }
