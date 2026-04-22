@@ -2234,8 +2234,10 @@ async function renderRackView(container, rack, options = {}) {
       const endUnit = Number(asset.rack_end_unit || asset.rack_start_unit);
       const sizeU = endUnit - startUnit + 1;
       const isMulti = sizeU > 1;
-      const isStart = u === startUnit;
-      const isEnd = u === endUnit;
+      const visualTopUnit = labelBase === "start" ? endUnit : startUnit;
+      const visualBottomUnit = labelBase === "start" ? startUnit : endUnit;
+      const isStart = u === visualTopUnit;
+      const isEnd = u === visualBottomUnit;
       const block = document.createElement("div");
       block.className = "equipment-block";
       if (asset.environment) block.classList.add("env-" + asset.environment);
