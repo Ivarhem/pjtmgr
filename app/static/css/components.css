@@ -182,6 +182,43 @@ body.dark-mode .chk-drop-btn {
 .col-chooser-item:hover { background: var(--secondary-color); }
 .col-chooser-item input { cursor: pointer; }
 
+.filter-bar .btn-compact,
+.catalog-toolbar .btn-compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--control-radius);
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.filter-bar .btn-compact:hover,
+.catalog-toolbar .btn-compact:hover {
+  border-color: color-mix(in srgb, var(--primary-color) 30%, var(--border-color));
+  background: color-mix(in srgb, var(--bg-color) 88%, var(--primary-color) 12%);
+}
+
+.filter-bar .btn-compact:focus-visible,
+.catalog-toolbar .btn-compact:focus-visible {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+body.dark-mode .filter-bar .btn-compact,
+body.dark-mode .catalog-toolbar .btn-compact {
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
 /* Import 모달 */
 /* .modal-import → base.css .modal-lg 사용 */
 .import-section { border: 1px solid var(--border-color); border-radius: var(--card-radius); margin-bottom: 16px; overflow: hidden; }
