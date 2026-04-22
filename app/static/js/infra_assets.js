@@ -1553,18 +1553,33 @@ const DETAIL_TAB_FIELDS = {
         ["존", "zone"],
       ],
       editTitle: "운영 속성 수정",
-      editDescription: "운영 상태와 운영 기준 정보만 수정합니다.",
-      editFields: [
-        ["입고일", "received_date"],
-        ["도입 연도", "year_acquired"],
-        ["환경", "environment"],
-        ["상태", "status"],
-        ["부서", "dept"],
-        ["유지보수 업체", "maintenance_vendor"],
-        ["호스트명", "hostname"],
-        ["클러스터", "cluster"],
-        ["서비스명", "service_name"],
-        ["존", "zone"],
+      editDescription: "운영 상태와 운영 기준 정보를 성격별로 나누어 수정합니다.",
+      editGroups: [
+        {
+          title: "운영 상태",
+          fields: [
+            ["환경", "environment"],
+            ["상태", "status"],
+            ["입고일", "received_date"],
+            ["도입 연도", "year_acquired"],
+          ],
+        },
+        {
+          title: "운영 담당",
+          fields: [
+            ["부서", "dept"],
+            ["유지보수 업체", "maintenance_vendor"],
+          ],
+        },
+        {
+          title: "시스템 운영 정보",
+          fields: [
+            ["호스트명", "hostname"],
+            ["클러스터", "cluster"],
+            ["서비스명", "service_name"],
+            ["존", "zone"],
+          ],
+        },
       ],
     },
     {
@@ -1579,14 +1594,24 @@ const DETAIL_TAB_FIELDS = {
         ["위치", "location"],
       ],
       editTitle: "배치 정보 수정",
-      editDescription: "물리 배치와 랙 위치 정보만 수정합니다.",
-      editFields: [
-        ["센터", "center_id"],
-        ["전산실", "room_id"],
-        ["랙", "rack_id"],
-        ["시작U", "rack_start_unit"],
-        ["종료U", "rack_end_unit"],
-        ["위치", "location"],
+      editDescription: "물리 배치와 랙 위치 정보를 성격별로 나누어 수정합니다.",
+      editGroups: [
+        {
+          title: "공간 배치",
+          fields: [
+            ["센터", "center_id"],
+            ["전산실", "room_id"],
+            ["랙", "rack_id"],
+            ["위치", "location"],
+          ],
+        },
+        {
+          title: "랙 점유 위치",
+          fields: [
+            ["시작U", "rack_start_unit"],
+            ["종료U", "rack_end_unit"],
+          ],
+        },
       ],
     },
   ],
