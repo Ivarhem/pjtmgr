@@ -7,14 +7,7 @@
 
 {% block content %}
 <div class="infra-inline-actions mb-md layout-view-toolbar">
-  <span class="layout-inline-help">U 위치는 EIA-310 표준에 따라 랙 하단부터 1U로 번호를 부여합니다. 프로젝트별 라벨링 기준(Start/End)은 표시 방향만 변경하며, 저장되는 U 번호는 항상 EIA-310 기준입니다.</span>
-  <label class="layout-inline-select" title="저장되는 U 번호는 항상 EIA-310 기준이며, 이 설정은 표시 방향만 바꿉니다.">
-    U 기준
-    <select id="rack-label-base">
-      <option value="start">Start</option>
-      <option value="end">End</option>
-    </select>
-  </label>
+  <span class="layout-inline-help">랙 마운트는 EIA-310 기준으로 하단 1U부터 표기합니다. 장비 위치는 시작U와 종료U를 함께 표시합니다.</span>
 </div>
 <div class="catalog-layout" id="layout-shell">
   <!-- Left: Tree -->

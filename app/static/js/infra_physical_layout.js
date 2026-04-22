@@ -2158,7 +2158,6 @@ async function renderRackView(container, rack, options = {}) {
   } catch { /* empty */ }
 
   const totalU = rack.total_units || 42;
-  const labelBase = document.getElementById("rack-label-base")?.value || "start";
 
   // Header
   const header = document.createElement("div");
@@ -2207,13 +2206,9 @@ async function renderRackView(container, rack, options = {}) {
   diagram.className = "u-diagram";
   (rackMountMain || container).appendChild(diagram);
 
-  // Determine display order
+  // Determine display order (EIA-310, top=highest U / bottom=1U)
   const uOrder = [];
-  if (labelBase === "start") {
-    for (let u = totalU; u >= 1; u--) uOrder.push(u); // top=42, bottom=1
-  } else {
-    for (let u = 1; u <= totalU; u++) uOrder.push(u); // top=1, bottom=42
-  }
+  for (let u = totalU; u >= 1; u--) uOrder.push(u);
 
   uOrder.forEach(u => {
     const slot = document.createElement("div");
@@ -2234,8 +2229,8 @@ async function renderRackView(container, rack, options = {}) {
       const endUnit = Number(asset.rack_end_unit || asset.rack_start_unit);
       const sizeU = endUnit - startUnit + 1;
       const isMulti = sizeU > 1;
-      const visualTopUnit = labelBase === "start" ? endUnit : startUnit;
-      const visualBottomUnit = labelBase === "start" ? startUnit : endUnit;
+      const visualTopUnit = endUnit;
+      const visualBottomUnit = startUnit;
       const isStart = u === visualTopUnit;
       const isEnd = u === visualBottomUnit;
       const block = document.createElement("div");
@@ -2251,7 +2246,8 @@ async function renderRackView(container, rack, options = {}) {
       block.dataset.startUnit = startUnit;
       block.dataset.endUnit = endUnit;
       if (isStart) {
-        block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "") + (isMulti ? " · " + sizeU + "U" : "");
+        const unitLabel = startUnit === endUnit ? `${startUnit}U` : `${startUnit}U ~ ${endUnit}U`;
+        block.textContent = asset.asset_name + (asset.hostname ? " (" + asset.hostname + ")" : "") + " · " + unitLabel;
       } else if (isMulti) {
         const filler = document.createElement("span");
         filler.className = "equipment-block-filler";
@@ -2763,19 +2759,6 @@ function initTreeSplitter() {
   });
 }
 
-/* ── Label Base Setting ── */
-
-async function loadLabelBaseSetting() {
-  const pid = getCtxProjectId();
-  if (!pid) return;
-  try {
-    const period = await apiFetch("/api/v1/contract-periods/" + pid);
-    if (period.rack_label_base) {
-      document.getElementById("rack-label-base").value = period.rack_label_base;
-    }
-  } catch { /* default */ }
-}
-
 /* ── Event Listeners ── */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -2784,7 +2767,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateLayoutTreeModeBtn();
   setLayoutTreeCollapsed(false);
   loadTree()
-    .then(() => loadLabelBaseSetting())
     .catch(err => showToast(err.message, "error"));
 });
 
@@ -2813,14 +2795,6 @@ document.getElementById("btn-layout-tree-save")?.addEventListener("click", () =>
   loadTree().catch(err => showToast(err.message, "error"));
 });
 
-document.getElementById("rack-label-base").addEventListener("change", () => {
-  if (_selectedNode && _selectedNode.type === "rack") {
-    const content = document.getElementById("layout-content");
-    content.textContent = "";
-    renderRoomView(content, _findRoomData(_selectedNode.data?.room_id) || _selectedNode.data);
-  }
-});
-
 window.addEventListener("resize", () => {
   applyPhysicalLayoutResponsiveSizing();
 });
@@ -2833,7 +2807,6 @@ window.addEventListener("ctx-changed", () => {
   _expandedTreeActions.clear();
   updateLayoutTreeModeBtn();
   loadTree()
-    .then(() => loadLabelBaseSetting())
     .catch(err => showToast(err.message, "error"));
 });
 
