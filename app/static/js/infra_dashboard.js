@@ -8,7 +8,16 @@ const PHASE_LABELS = {
 const projectColDefs = [
   { field: "project_code", headerName: "코드", width: 110, sort: "asc" },
   { field: "project_name", headerName: "프로젝트명", flex: 1, minWidth: 180 },
-  { field: "status", headerName: "상태", width: 90 },
+  {
+    field: "status", headerName: "상태", width: 90,
+    valueFormatter: p => p.value || "-",
+    cellClass: p => {
+      if (p.value === "completed") return "grid-status-completed";
+      if (p.value === "in_progress" || p.value === "active") return "grid-status-active";
+      if (p.value === "planned") return "grid-status-planned";
+      return "grid-status-decommissioned";
+    },
+  },
   { field: "current_phase", headerName: "현재 단계", width: 100,
     valueFormatter: p => PHASE_LABELS[p.value] || p.value || "-" },
   { field: "asset_count", headerName: "자산", width: 80, type: "numericColumn" },
@@ -96,11 +105,13 @@ function initGrids() {
     columnDefs: projectColDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true, enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
   });
   ncGridApi = agGrid.createGrid(document.getElementById("grid-non-compliant"), {
     columnDefs: ncColDefs, rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
     animateRows: true, enableCellTextSelection: true,
+    ...buildStandardGridBehavior({ type: 'readonly' }),
   });
   loadDashboard();
 }

@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}자산 검색 - 인벤토리{% endblock %}
 
+{% block styles %}
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260422d">
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h1>자산 검색</h1>
@@ -53,10 +57,10 @@
 </div>
 
 <div class="card">
-  <div id="grid-inventory-assets" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
+  <div id="grid-inventory-assets" class="ag-theme-quartz infra-grid infra-grid-tall audit-grid-surface"></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_inventory_assets.js?v=20260413e"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_inventory_assets.js?v=20260422d"></script>
 {% endblock %}

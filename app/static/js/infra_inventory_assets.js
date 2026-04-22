@@ -24,7 +24,8 @@ const columnDefs = [
     field: "environment",
     headerName: "환경",
     width: 90,
-    valueFormatter: (p) => ENV_MAP[p.value] || p.value,
+    valueFormatter: (p) => ENV_MAP[p.value] || p.value || "",
+    cellClass: (p) => "grid-env-" + (p.data?.environment || "unknown"),
   },
   { field: "location", headerName: "위치", width: 120 },
   { field: "center", headerName: "센터", width: 100 },
@@ -34,13 +35,8 @@ const columnDefs = [
     field: "status",
     headerName: "상태",
     width: 100,
-    cellRenderer: (params) => {
-      const label = ASSET_STATUS_MAP[params.value] || params.value;
-      const span = document.createElement("span");
-      span.className = "badge badge-" + params.value;
-      span.textContent = label;
-      return span;
-    },
+    valueFormatter: (params) => ASSET_STATUS_MAP[params.value] || params.value || "",
+    cellClass: (params) => "grid-status-" + (params.data?.status || "unknown"),
   },
 ];
 
