@@ -1529,7 +1529,6 @@ const DETAIL_TAB_FIELDS = {
         ["호스트명", "hostname"],
         ["시리얼", "serial_no"],
         ["장비 ID", "equipment_id"],
-        ["자산 번호", "asset_number"],
         ["자산 등급", "asset_class"],
       ],
       editTitle: "식별 및 기준 정보 수정",
@@ -1547,7 +1546,6 @@ const DETAIL_TAB_FIELDS = {
           title: "자산 식별 코드",
           fields: [
             ["고객자산코드", "customer_asset_number"],
-            ["자산번호", "asset_number"],
             ["자산등급", "asset_class"],
           ],
         },
