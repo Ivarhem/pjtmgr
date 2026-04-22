@@ -589,14 +589,12 @@ const ASSET_INFO_COLS = [
     cellEditorParams: { values: Object.keys(ENV_MAP) },
     valueFormatter: (p) => ENV_MAP[p.value] || p.value || "",
     filterValueGetter: (p) => ENV_MAP[p.data?.environment] || p.data?.environment || "",
-    cellRenderer: (params) => {
-      const label = ENV_MAP[params.value] || params.value || "";
-      const span = document.createElement("span");
-      span.className = "badge badge-env-" + (params.value || "unknown");
-      span.textContent = label;
-      return span;
+    valueFormatter: (p) => ENV_MAP[p.value] || p.value || "",
+    cellClass: (p) => {
+      const base = getGridCellClass(p.colDef.field);
+      const env = p.data?.environment || "unknown";
+      return base + " grid-env-" + env;
     },
-    cellClass: (p) => getGridCellClass(p.colDef.field),
   },
   {
     field: "status",
@@ -606,14 +604,12 @@ const ASSET_INFO_COLS = [
     cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: Object.keys(ASSET_STATUS_MAP) },
     filterValueGetter: (p) => ASSET_STATUS_MAP[p.data?.status] || p.data?.status || "",
-    cellRenderer: (params) => {
-      const label = ASSET_STATUS_MAP[params.value] || params.value;
-      const span = document.createElement("span");
-      span.className = "badge badge-" + params.value;
-      span.textContent = label;
-      return span;
+    valueFormatter: (p) => ASSET_STATUS_MAP[p.value] || p.value || "",
+    cellClass: (p) => {
+      const base = getGridCellClass(p.colDef.field);
+      const status = p.data?.status || "unknown";
+      return base + " grid-status-" + status;
     },
-    cellClass: (p) => getGridCellClass(p.colDef.field),
   },
 ];
 
@@ -1112,6 +1108,7 @@ async function initGrid() {
   gridApi = agGrid.createGrid(gridDiv, {
     columnDefs,
     rowData: [],
+    getRowId: (params) => String(params.data.id),
     defaultColDef: {
       resizable: true,
       sortable: true,
