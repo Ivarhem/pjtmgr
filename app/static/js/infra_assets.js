@@ -2017,6 +2017,11 @@ async function renderOperationsSubSections(container) {
       title: "설치 소프트웨어",
       description: "이 자산에 설치된 소프트웨어를 관리합니다.",
       renderer: renderSoftwareTab,
+      actions: [{
+        label: "+ 추가",
+        variant: "secondary",
+        handler: () => openSoftwareModal(),
+      }],
     },
     {
       title: "라이선스",
@@ -2032,6 +2037,11 @@ async function renderOperationsSubSections(container) {
       title: "자산 관계",
       description: "호스팅, 보호, 의존 같은 자산 간 관계를 관리합니다.",
       renderer: renderRelationsTab,
+      actions: [{
+        label: "+ 추가",
+        variant: "secondary",
+        handler: () => openRelationModal(),
+      }],
     },
   ];
   for (const group of groups) {
@@ -2060,38 +2070,27 @@ async function renderNetworkTab(container) {
   container.appendChild(zoneSection);
   await renderNetworkZoneSection(zoneSection);
 
-  // Header with buttons
-  const hdr = document.createElement("div");
-  hdr.className = "asset-subtab-header";
-  const title = document.createElement("span");
-  title.className = "asset-subtab-title";
-  title.textContent = "인터페이스 & IP";
-  hdr.appendChild(title);
-
-  const btnGroup = document.createElement("span");
-  btnGroup.className = "gap-sm";
-
+  const interfaceActions = [];
   if (_selectedAsset.hardware_model_id) {
-    const btnGen = document.createElement("button");
-    btnGen.className = "btn btn-sm btn-secondary";
-    btnGen.textContent = "카탈로그에서 생성";
-    btnGen.addEventListener("click", generateInterfacesFromCatalog);
-    btnGroup.appendChild(btnGen);
+    interfaceActions.push({
+      label: "카탈로그에서 생성",
+      variant: "secondary",
+      handler: () => generateInterfacesFromCatalog(),
+    });
   }
+  interfaceActions.push({
+    label: "+ 인터페이스",
+    variant: "secondary",
+    handler: () => openInterfaceModal(),
+  });
 
-  const btnAdd = document.createElement("button");
-  btnAdd.className = "btn btn-sm btn-primary";
-  btnAdd.textContent = "+ 인터페이스";
-  btnAdd.addEventListener("click", () => openInterfaceModal());
-  btnGroup.appendChild(btnAdd);
-
-  hdr.appendChild(btnGroup);
-  container.appendChild(hdr);
+  const interfaceSection = createDetailSectionCard("인터페이스 & IP", "인터페이스 구조와 IP 할당 상태를 함께 관리합니다.", interfaceActions);
+  container.appendChild(interfaceSection);
 
   // Grid container — explicit height, same pattern as other grids
   const gridEl = document.createElement("div");
   gridEl.className = "ag-theme-quartz infra-grid-mid";
-  container.appendChild(gridEl);
+  interfaceSection.appendChild(gridEl);
 
   try {
     const [ifaces, ips] = await Promise.all([
@@ -2400,11 +2399,21 @@ async function renderContactsGroupTab(container) {
       title: "담당자",
       description: "운영과 보안, 시스템 담당자를 연결합니다.",
       renderer: renderContactsTab,
+      actions: [{
+        label: "+ 추가",
+        variant: "secondary",
+        handler: () => openContactModal(),
+      }],
     },
     {
       title: "관련업체",
       description: "유지보수사, 공급사, 운영사 등 연관 업체를 관리합니다.",
       renderer: renderRelatedPartnersTab,
+      actions: [{
+        label: "+ 추가",
+        variant: "secondary",
+        handler: () => openRelatedPartnerModal(),
+      }],
     },
   ];
   for (const group of groups) {
@@ -2489,7 +2498,6 @@ function _subTable(container, columns, rows, actions) {
 /* ── 소프트웨어 탭 ── */
 
 async function renderSoftwareTab(container) {
-  _subTabHeader(container, "설치 소프트웨어", () => openSoftwareModal());
   try {
     const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/software");
     _subTable(container, [
@@ -2722,7 +2730,6 @@ async function deleteLicense(lic, gridApi) {
 /* ── 담당자 탭 ── */
 
 async function renderContactsTab(container) {
-  _subTabHeader(container, "담당자", () => openContactModal());
   try {
     const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/contacts");
     _subTable(container, [
@@ -2819,7 +2826,6 @@ async function deleteContact(ct) {
 /* ── 관련업체 탭 ── */
 
 async function renderRelatedPartnersTab(container) {
-  _subTabHeader(container, "관련업체", () => openRelatedPartnerModal());
   try {
     const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/related-partners");
     _subTable(container, [
@@ -2938,7 +2944,6 @@ async function deleteRelatedPartner(rel) {
 /* ── 관계 탭 ── */
 
 async function renderRelationsTab(container) {
-  _subTabHeader(container, "자산 관계", () => openRelationModal());
   try {
     const data = await apiFetch("/api/v1/asset-relations?asset_id=" + _selectedAsset.id);
     _subTable(container, [
@@ -3865,7 +3870,12 @@ async function populateContactSelect(selectedId) {
 /* ── 변경 이력 탭 ── */
 
 async function renderHistoryTab(container) {
-  _subTabHeader(container, "변경 이력", () => openEventModal());
+  const section = createDetailSectionCard("변경 이력", "자산의 주요 변경과 작업 내역을 시간순으로 확인합니다.", [{
+    label: "+ 추가",
+    variant: "secondary",
+    handler: () => openEventModal(),
+  }]);
+  container.appendChild(section);
   try {
     const data = await apiFetch("/api/v1/assets/" + _selectedAsset.id + "/events");
     const summary = document.createElement("div");
@@ -3891,13 +3901,13 @@ async function renderHistoryTab(container) {
         <strong class="asset-history-stat-value">${topType ? `${ASSET_EVENT_LABELS[topType[0]] || topType[0]} ${topType[1]}건` : ""}</strong>
       </div>
     `;
-    container.appendChild(summary);
+    section.appendChild(summary);
 
     if (!rows.length) {
       const empty = document.createElement("p");
       empty.className = "text-muted asset-subtable-empty";
       empty.textContent = "아직 기록된 변경 이력이 없습니다.";
-      container.appendChild(empty);
+      section.appendChild(empty);
       return;
     }
 
@@ -3922,7 +3932,7 @@ async function renderHistoryTab(container) {
       `;
       timeline.appendChild(item);
     });
-    container.appendChild(timeline);
+    section.appendChild(timeline);
   } catch (e) { showToast(e.message, "error"); }
 }
 

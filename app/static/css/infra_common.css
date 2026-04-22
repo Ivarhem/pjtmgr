@@ -1787,8 +1787,17 @@ body.dark-mode .alias-tag { background: #312e81; color: #c7d2fe; }
 .asset-detail-section-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.asset-detail-section .asset-subtable,
+.asset-detail-section .asset-subtable-empty,
+.asset-detail-section .asset-history-summary,
+.asset-detail-section .asset-timeline {
+  margin-top: 2px;
 }
 
 .asset-detail-section-title {
