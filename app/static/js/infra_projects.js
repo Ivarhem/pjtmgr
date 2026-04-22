@@ -35,12 +35,8 @@ const columnDefs = [
   { field: "contract_name", headerName: "사업명", flex: 1, minWidth: 200 },
   {
     field: "is_completed", headerName: "완료", width: 80,
-    cellRenderer: (params) => {
-      const span = document.createElement("span");
-      span.className = params.value ? "badge badge-completed" : "badge badge-active";
-      span.textContent = params.value ? "완료" : "진행중";
-      return span;
-    },
+    valueFormatter: (params) => params.value ? "완료" : "진행중",
+    cellClass: (params) => params.value ? "grid-status-completed" : "grid-status-active",
   },
   { field: "start_month", headerName: "시작월", width: 110, valueFormatter: (p) => p.value ? p.value.slice(0, 7) : '' },
   { field: "end_month", headerName: "종료월", width: 110, valueFormatter: (p) => p.value ? p.value.slice(0, 7) : '' },
@@ -75,12 +71,11 @@ const phaseColDefs = [
     editable: true,
     cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: ["not_started", "in_progress", "completed"] },
-    cellRenderer: (params) => {
-      const label = PHASE_STATUS_MAP[params.value] || params.value;
-      const span = document.createElement("span");
-      span.className = "badge badge-" + params.value;
-      span.textContent = label;
-      return span;
+    valueFormatter: (params) => PHASE_STATUS_MAP[params.value] || params.value,
+    cellClass: (params) => {
+      if (params.value === "completed") return "grid-status-completed";
+      if (params.value === "in_progress") return "grid-status-planned";
+      return "grid-status-decommissioned";
     },
   },
   { field: "task_scope", headerName: "업무 범위", flex: 1, minWidth: 200 },
@@ -117,12 +112,8 @@ const deliverableColDefs = [
     editable: true,
     cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: [true, false] },
-    cellRenderer: (params) => {
-      const span = document.createElement("span");
-      span.className = "badge " + (params.value ? "badge-active" : "badge-planned");
-      span.textContent = params.value ? "제출" : "미제출";
-      return span;
-    },
+    valueFormatter: (params) => params.value ? "제출" : "미제출",
+    cellClass: (params) => params.value ? "grid-status-active" : "grid-status-planned",
   },
   { field: "submitted_at", headerName: "제출일", width: 120, valueFormatter: (p) => fmtDate(p.value) },
   { field: "description", headerName: "설명", width: 200 },
