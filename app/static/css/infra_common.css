@@ -636,17 +636,20 @@ body.dark-mode .asset-detail-value-rawtext {
 
 .asset-layout {
   --asset-list-width: 66%;
-  --asset-layout-height: clamp(520px, calc(100vh - 212px), 920px);
+  --asset-layout-height: clamp(560px, calc(100dvh - 180px), 980px);
   display: flex;
   gap: 8px;
   align-items: stretch;
   height: var(--asset-layout-height);
+  min-height: var(--asset-layout-height);
 }
 
 .asset-list-panel {
   min-width: 0;
   flex: 1 1 auto;
   width: calc(100% - 18px);
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -654,6 +657,7 @@ body.dark-mode .asset-detail-value-rawtext {
 
 .asset-list-panel .card {
   flex: 1 1 auto;
+  height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -662,6 +666,14 @@ body.dark-mode .asset-detail-value-rawtext {
 
 .asset-list-panel .infra-grid {
   flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.asset-list-panel .infra-grid .ag-root-wrapper,
+.asset-list-panel .infra-grid .ag-root-wrapper-body,
+.asset-list-panel .infra-grid .ag-root,
+.asset-list-panel .infra-grid .ag-body-viewport {
   min-height: 0;
 }
 
