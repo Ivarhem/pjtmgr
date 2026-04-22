@@ -1634,7 +1634,7 @@ const DETAIL_TAB_FIELDS = {
         {
           title: "메모",
           fields: [
-            ["메모", "location", { fullWidth: true }],
+            ["메모", "location", { fullWidth: true, hideLabel: true, placeholder: "메모를 입력하세요" }],
           ],
         },
       ],
@@ -3142,10 +3142,14 @@ async function buildDetailEditFields(target, container = document.getElementById
     if (options?.fullWidth) {
       fieldWrap.classList.add("full-width");
     }
-    const labelText = document.createElement("span");
-    labelText.className = "label-text";
-    labelText.textContent = label;
-    fieldWrap.appendChild(labelText);
+    if (!options?.hideLabel) {
+      const labelText = document.createElement("span");
+      labelText.className = "label-text";
+      labelText.textContent = label;
+      fieldWrap.appendChild(labelText);
+    } else {
+      fieldWrap.classList.add("is-label-hidden");
+    }
 
     const currentVal = _selectedAsset[key];
     let input;
@@ -3353,6 +3357,7 @@ async function buildDetailEditFields(target, container = document.getElementById
       input = document.createElement("textarea");
       input.rows = 4;
       input.value = currentVal != null ? String(currentVal) : "";
+      if (options?.placeholder) input.placeholder = options.placeholder;
     } else {
       input = document.createElement("input");
       input.type = NUMERIC_FIELDS.includes(key) ? "number" : "text";

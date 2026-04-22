@@ -4723,3 +4723,7 @@ body.dark-mode .floor-plan-axis-frame { border-color: var(--border-color); backg
 .asset-detail-edit-group.is-note-card .asset-detail-edit-group-grid {
   grid-template-columns: minmax(0, 1fr);
 }
+
+.asset-detail-edit-field.is-label-hidden {
+  gap: 0;
+}
