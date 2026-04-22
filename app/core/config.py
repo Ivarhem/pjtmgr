@@ -2,7 +2,7 @@ import os
 import secrets
 
 DATABASE_URL: str = os.getenv(
-    "DATABASE_URL", "postgresql://projmgr:projmgr@localhost:5432/projmgr"
+    "DATABASE_URL", "postgresql://pjtmgr:pjtmgr@localhost:5432/pjtmgr"
 )
 APP_PORT: int = int(os.getenv("APP_PORT", "9000"))
 ENABLED_MODULES: str = os.getenv("ENABLED_MODULES", "common,accounting,infra")

@@ -1009,7 +1009,7 @@ git commit -m "refactor: asset grid uses GridEditMode — inline edit code remov
 - [ ] **Step 1: pytest 실행**
 
 ```bash
-cd /c/Users/JBM/Desktop/projmgr && python -m pytest tests/ -x -q
+cd /c/Users/JBM/Desktop/pjtmgr && python -m pytest tests/ -x -q
 ```
 
 백엔드 변경 없으므로 기존 테스트 통과 확인.

@@ -35,7 +35,7 @@ from app.modules.infra.schemas.product_catalog_attribute_value import ProductCat
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://projmgr:projmgr@localhost:5432/projmgr_test",
+    "postgresql://pjtmgr:pjtmgr@localhost:5432/pjtmgr_test",
 )
 
 

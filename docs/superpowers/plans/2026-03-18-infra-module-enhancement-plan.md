@@ -286,7 +286,7 @@ function activateTab(tabId) {
 
 - [ ] **Step 4: CSS 탭 스타일 추가**
 
-projmgr의 기존 CSS 패턴(pill-tabs 등)을 참고하여 `infra_common.css`에 탭 스타일 추가.
+pjtmgr의 기존 CSS 패턴(pill-tabs 등)을 참고하여 `infra_common.css`에 탭 스타일 추가.
 
 - [ ] **Step 5: 커밋**
 

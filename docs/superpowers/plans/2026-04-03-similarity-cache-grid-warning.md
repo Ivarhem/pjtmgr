@@ -80,7 +80,7 @@ def downgrade() -> None:
 
 - [ ] **Step 3: Run migration**
 
-Run: `docker exec projmgr-app alembic upgrade head`
+Run: `docker exec pjtmgr-app alembic upgrade head`
 
 - [ ] **Step 4: Commit**
 
@@ -481,8 +481,8 @@ git commit -m "feat: add similar_count to API responses and include_dismissed su
 - [ ] **Step 1: Run migration and recalc**
 
 ```bash
-docker exec projmgr-app alembic upgrade head
-docker exec projmgr-app python -c "
+docker exec pjtmgr-app alembic upgrade head
+docker exec pjtmgr-app python -c "
 from app.core.database import SessionLocal
 from app.modules.infra.services.catalog_similarity_service import recalc_all_similar_counts
 db = SessionLocal()
@@ -495,7 +495,7 @@ db.close()
 - [ ] **Step 2: Restart and verify**
 
 ```bash
-docker restart projmgr-app
+docker restart pjtmgr-app
 ```
 
 - [ ] **Step 3: Commit**
@@ -736,7 +736,7 @@ git commit -m "feat: add grid warning columns and dismiss rollback UI"
 - [ ] **Step 1: Restart app**
 
 ```bash
-docker restart projmgr-app && sleep 4 && docker logs projmgr-app --tail 10
+docker restart pjtmgr-app && sleep 4 && docker logs pjtmgr-app --tail 10
 ```
 
 - [ ] **Step 2: Verify vendor grid warning**

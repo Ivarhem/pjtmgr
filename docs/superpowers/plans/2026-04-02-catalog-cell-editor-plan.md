@@ -123,7 +123,7 @@ def downgrade() -> None:
 
 - [ ] **Step 2: 마이그레이션 적용 확인**
 
-Run: `docker exec projmgr-app alembic upgrade head`
+Run: `docker exec pjtmgr-app alembic upgrade head`
 Expected: 성공, `0057` 적용
 
 - [ ] **Step 3: 커밋**
@@ -342,7 +342,7 @@ def test_update_model_id_syncs_vendor_model_category(db_session, admin_role_id) 
 
 - [ ] **Step 4: 테스트 실행**
 
-Run: `docker exec projmgr-app pytest tests/infra/test_asset_service.py -v`
+Run: `docker exec pjtmgr-app pytest tests/infra/test_asset_service.py -v`
 Expected: 모든 테스트 PASS
 
 - [ ] **Step 5: 커밋**
@@ -773,7 +773,7 @@ git commit -m "style: add CatalogCellEditor dropdown styles"
 
 - [ ] **Step 1: 서버 재시작 및 마이그레이션 확인**
 
-Run: `docker restart projmgr-app`
+Run: `docker restart pjtmgr-app`
 확인: 로그에서 `alembic upgrade head` → `0057` 적용 확인
 
 - [ ] **Step 2: 브라우저 E2E 검증**
@@ -786,7 +786,7 @@ Run: `docker restart projmgr-app`
 
 - [ ] **Step 3: 테스트 스위트 실행**
 
-Run: `docker exec projmgr-app pytest tests/infra/ -v`
+Run: `docker exec pjtmgr-app pytest tests/infra/ -v`
 Expected: 전체 PASS
 
 - [ ] **Step 4: 문서 갱신 확인**

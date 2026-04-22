@@ -140,7 +140,7 @@
 
 ### 이유
 
-- projmgr(회계)와 inframgr(인프라) 두 프로젝트가 기술 스택, 아키텍처 패턴, 코드 규칙이 거의 동일
+- pjtmgr(회계)와 inframgr(인프라) 두 프로젝트가 기술 스택, 아키텍처 패턴, 코드 규칙이 거의 동일
 - 공통 도메인(사용자, 업체, 인증) 중복 제거 필요
 - 마이크로서비스 대신 단일 코드베이스 선택: 오프라인 배포 단순성, 개발 효율, 리포 하나/테스트 한 번
 - 모듈 격리는 코드 규칙 + lint로 충분한 규모
@@ -209,7 +209,7 @@
 
 ### 이유
 
-- ~~inframgr의 Partner/Contact와 projmgr의 Customer/CustomerContact가 동일 개념~~
+- ~~inframgr의 Partner/Contact와 pjtmgr의 Customer/CustomerContact가 동일 개념~~
 - ~~공통모듈에서 통합 관리하여 중복 제거~~
 
 ### 영향
@@ -264,7 +264,7 @@
 
 ### 영향
 
-- 기존 projmgr/inframgr migration 모두 폐기, 통합 후 새 initial migration 생성
+- 기존 pjtmgr/inframgr migration 모두 폐기, 통합 후 새 initial migration 생성
 - standalone 배포 시에도 모든 테이블(accounting 포함)이 생성됨 (스키마 수준 결합이지만 운영상 무해)
 - 단일 `alembic/versions/` 디렉토리에서 전체 스키마 관리
 

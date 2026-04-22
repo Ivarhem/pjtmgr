@@ -111,7 +111,7 @@ def downgrade() -> None:
 
 - [ ] **Step 4: Run migration**
 
-Run: `docker exec projmgr-app alembic upgrade head`
+Run: `docker exec pjtmgr-app alembic upgrade head`
 Expected: "Running upgrade 0058 -> 0059"
 
 - [ ] **Step 5: Commit**
@@ -936,14 +936,14 @@ git commit -m "feat: add similar product panel logic with merge and dismiss"
 
 - [ ] **Step 1: Restart app and verify migration**
 
-Run: `docker restart projmgr-app && sleep 3 && docker logs projmgr-app --tail 20`
+Run: `docker restart pjtmgr-app && sleep 3 && docker logs pjtmgr-app --tail 20`
 Expected: "Running upgrade 0058 -> 0059" in logs, app started successfully
 
 - [ ] **Step 2: Test dismissal table**
 
 Run:
 ```bash
-docker exec projmgr-app python -c "
+docker exec pjtmgr-app python -c "
 from app.core.database import SessionLocal
 from app.modules.infra.models.product_similarity_dismissal import ProductSimilarityDismissal
 db = SessionLocal()

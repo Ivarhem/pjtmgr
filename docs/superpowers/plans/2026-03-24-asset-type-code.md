@@ -868,7 +868,7 @@ if (document.getElementById('btn-add-asset-type')) {
 
 ## Task 10: 브라우저 E2E 검증
 
-- [ ] Docker 앱 재시작 (`docker restart projmgr-app`)
+- [ ] Docker 앱 재시작 (`docker restart pjtmgr-app`)
 - [ ] `/system#infra` 페이지 접속 → 3개 탭 확인
 - [ ] 프로젝트관리 탭 → 자산유형 7개 시드 데이터 표시 확인
 - [ ] 자산유형 추가/수정 테스트

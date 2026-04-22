@@ -4,11 +4,11 @@ services:
     container_name: sales-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: projmgr
-      POSTGRES_USER: projmgr
-      POSTGRES_PASSWORD: projmgr
+      POSTGRES_DB: pjtmgr
+      POSTGRES_USER: pjtmgr
+      POSTGRES_PASSWORD: pjtmgr
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U projmgr -d projmgr"]
+      test: ["CMD-SHELL", "pg_isready -U pjtmgr -d pjtmgr"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,7 +26,7 @@ services:
       - /service/services/sales/.env
     environment:
       ENV: production
-      DATABASE_URL: postgresql://projmgr:projmgr@sales-db:5432/projmgr
+      DATABASE_URL: postgresql://pjtmgr:pjtmgr@sales-db:5432/pjtmgr
       SESSION_SECRET_KEY: ray-sales-session-secret-change-this
       BOOTSTRAP_ADMIN_LOGIN_ID: admin
       BOOTSTRAP_ADMIN_PASSWORD: change-this-admin-password

@@ -620,11 +620,11 @@ Expected: `alembic upgrade head` 성공, 0011 적용
 - [ ] **Step 3: DB에서 코드 형식 확인**
 
 ```bash
-docker compose exec db psql -U projmgr -d projmgr -c \
+docker compose exec db psql -U pjtmgr -d pjtmgr -c \
   "SELECT customer_code FROM customers LIMIT 5;"
-docker compose exec db psql -U projmgr -d projmgr -c \
+docker compose exec db psql -U pjtmgr -d pjtmgr -c \
   "SELECT contract_code FROM contracts LIMIT 5;"
-docker compose exec db psql -U projmgr -d projmgr -c \
+docker compose exec db psql -U pjtmgr -d pjtmgr -c \
   "SELECT period_code, period_label FROM contract_periods LIMIT 5;"
 ```
 

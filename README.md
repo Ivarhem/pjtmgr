@@ -120,7 +120,7 @@ docker compose up --build
 python -m pip install -r requirements.txt
 
 # 2. 환경변수 설정 (.env 파일 생성)
-# DATABASE_URL=postgresql://projmgr:projmgr@localhost:5432/projmgr
+# DATABASE_URL=postgresql://pjtmgr:pjtmgr@localhost:5432/pjtmgr
 # SESSION_SECRET_KEY=<운영 환경 필수, 충분히 긴 랜덤 세션 비밀키>
 # BOOTSTRAP_ADMIN_LOGIN_ID=admin
 # BOOTSTRAP_ADMIN_PASSWORD=<초기 관리자 비밀번호>

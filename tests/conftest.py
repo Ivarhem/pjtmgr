@@ -60,7 +60,7 @@ from app.modules.common.services.contract_type_config import seed_defaults as se
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
-    "postgresql://projmgr:projmgr@localhost:5432/projmgr_test",
+    "postgresql://pjtmgr:pjtmgr@localhost:5432/pjtmgr_test",
 )
 
 

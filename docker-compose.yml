@@ -1,11 +1,11 @@
 services:
   db:
     image: postgres:16
-    container_name: projmgr-postgres
+    container_name: pjtmgr-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-projmgr}
-      POSTGRES_USER: ${POSTGRES_USER:-projmgr}
+      POSTGRES_DB: ${POSTGRES_DB:-pjtmgr}
+      POSTGRES_USER: ${POSTGRES_USER:-pjtmgr}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -15,10 +15,10 @@ services:
     ports:
       - "${DB_HOST_PORT:-5432}:5432"
     volumes:
-      - projmgr_postgres_data:/var/lib/postgresql/data
+      - pjtmgr_postgres_data:/var/lib/postgresql/data
 
   app:
-    container_name: projmgr-app
+    container_name: pjtmgr-app
     build:
       context: .
     depends_on:
@@ -28,7 +28,7 @@ services:
       - .env
     environment:
       ENV: ${ENV:-production}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://projmgr:${POSTGRES_PASSWORD}@db:5432/projmgr}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://pjtmgr:${POSTGRES_PASSWORD}@db:5432/pjtmgr}
       SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY is required}
       BOOTSTRAP_ADMIN_LOGIN_ID: ${BOOTSTRAP_ADMIN_LOGIN_ID:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
@@ -51,5 +51,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  projmgr_postgres_data:
-    name: projmgr_postgres_data
+  pjtmgr_postgres_data:
+    name: pjtmgr_postgres_data
