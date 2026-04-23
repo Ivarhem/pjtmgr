@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import json
-import os
 import re
-import urllib.error
-import urllib.request
 from datetime import date, datetime, timezone
 
 from sqlalchemy import delete, select
@@ -18,137 +14,13 @@ from app.modules.infra.models.hardware_spec import HardwareSpec
 from app.modules.infra.schemas.hardware_interface import HardwareInterfaceCreate
 from app.modules.infra.schemas.hardware_spec import HardwareSpecCreate
 from app.modules.infra.schemas.product_catalog import ProductCatalogUpdate
+from app.modules.infra.services.catalog_research_backend import run_catalog_research
 from app.modules.infra.services.product_catalog_service import (
     create_interface,
     get_product,
     update_product,
     upsert_spec,
 )
-
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-DEFAULT_MODEL = os.getenv("CATALOG_RESEARCH_MODEL") or os.getenv("CLAUDE_MODEL") or "claude-sonnet-4-5"
-UNCERTAIN_MARKERS = {"", "unknown", "n/a", "none", "null", "확인 필요", "미확인", "모름", "tbd", "na"}
-VALID_CAPACITY_TYPES = {"fixed", "base", "max"}
-VALID_CONFIDENCE = {"high", "medium", "low"}
-SPEC_FIELDS = [
-    "size_unit", "width_mm", "height_mm", "depth_mm", "weight_kg",
-    "power_count", "power_type", "power_watt", "cpu_summary", "memory_summary",
-    "throughput_summary", "os_firmware", "spec_url",
-]
-EOSL_FIELDS = ["eos_date", "eosl_date", "eosl_note"]
-
-SYSTEM_PROMPT = (
-    "You are a careful IT hardware catalog researcher. "
-    "Return strict JSON only. Prefer vendor datasheets, product pages, and official lifecycle notices. "
-    "If uncertain, return null instead of guessing."
-)
-
-PROMPT_TEMPLATE = """Research the following hardware catalog product and return normalized JSON only.
-
-Vendor: {vendor}
-Model: {name}
-Existing reference URL: {reference_url}
-Classification: {classification}
-Existing known hardware spec summary:
-- size_unit: {size_unit}
-- power_count: {power_count}
-- power_type: {power_type}
-- power_watt: {power_watt}
-
-Return this exact JSON shape:
-{{
-  "confidence": "high|medium|low",
-  "hardware_spec": {{
-    "size_unit": 1,
-    "width_mm": null,
-    "height_mm": null,
-    "depth_mm": null,
-    "weight_kg": null,
-    "power_count": null,
-    "power_type": null,
-    "power_watt": null,
-    "cpu_summary": null,
-    "memory_summary": null,
-    "throughput_summary": null,
-    "os_firmware": null,
-    "spec_url": null
-  }},
-  "eosl": {{
-    "eos_date": "YYYY-MM-DD or null",
-    "eosl_date": "YYYY-MM-DD or null",
-    "eosl_note": null,
-    "source_url": null
-  }},
-  "interfaces": [
-    {{
-      "interface_type": "GE RJ45",
-      "speed": "1G",
-      "count": 8,
-      "connector_type": "RJ-45",
-      "capacity_type": "fixed",
-      "note": null
-    }}
-  ],
-  "uncertain_fields": ["field names that still need verification"]
-}}
-
-Rules:
-- Use null when unknown.
-- size_unit must be integer rack unit if known.
-- interfaces should describe base/default onboard or appliance ports, not optional add-on cards unless clearly default.
-- capacity_type must be one of fixed, base, max.
-- eos/eosl dates must be ISO format only.
-- uncertain_fields should contain names like size_unit, power_count, eosl_date, interfaces.
-- Never wrap in markdown.
-"""
-
-
-def _api_key() -> str:
-    key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
-    if not key:
-        raise BusinessRuleError("카탈로그 조사용 ANTHROPIC_API_KEY 환경변수가 설정되어 있지 않습니다.", status_code=503)
-    return key
-
-
-def _call_anthropic_json(prompt: str) -> dict:
-    payload = {
-        "model": DEFAULT_MODEL,
-        "max_tokens": 1800,
-        "system": SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    req = urllib.request.Request(
-        ANTHROPIC_API_URL,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "content-type": "application/json",
-            "x-api-key": _api_key(),
-            "anthropic-version": "2023-06-01",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="ignore")
-        raise BusinessRuleError(f"카탈로그 조사 API 호출 실패: {detail or exc.reason}", status_code=502)
-    except urllib.error.URLError as exc:
-        raise BusinessRuleError(f"카탈로그 조사 API 연결 실패: {exc.reason}", status_code=502)
-
-    content = body.get("content") or []
-    text = "".join(part.get("text", "") for part in content if isinstance(part, dict))
-    if not text:
-        raise BusinessRuleError("카탈로그 조사 응답이 비어 있습니다.", status_code=502)
-    cleaned = re.sub(r"```(?:json)?\s*", "", text)
-    cleaned = re.sub(r"```\s*$", "", cleaned, flags=re.MULTILINE).strip()
-    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-    raw = match.group(0) if match else cleaned
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise BusinessRuleError(f"카탈로그 조사 응답 JSON 파싱 실패: {exc}", status_code=502)
-
 
 def _clean_text(value, max_len: int | None = None):
     if value is None:
@@ -332,16 +204,16 @@ def research_catalog_product(db: Session, product_id: int, current_user: User, f
             "skip_reason": skip_reason,
         }
 
-    payload = _call_anthropic_json(PROMPT_TEMPLATE.format(
-        vendor=product.vendor,
-        name=product.name,
-        reference_url=product.reference_url or "none",
-        classification=_classification_label(product),
-        size_unit=getattr(existing_spec, "size_unit", None),
-        power_count=getattr(existing_spec, "power_count", None),
-        power_type=getattr(existing_spec, "power_type", None),
-        power_watt=getattr(existing_spec, "power_watt", None),
-    ))
+    payload = run_catalog_research({
+        "vendor": product.vendor,
+        "name": product.name,
+        "reference_url": product.reference_url or "none",
+        "classification": _classification_label(product),
+        "size_unit": getattr(existing_spec, "size_unit", None),
+        "power_count": getattr(existing_spec, "power_count", None),
+        "power_type": getattr(existing_spec, "power_type", None),
+        "power_watt": getattr(existing_spec, "power_watt", None),
+    })
 
     spec_data = payload.get("hardware_spec") or {}
     eosl_data = payload.get("eosl") or {}
