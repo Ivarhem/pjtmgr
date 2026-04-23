@@ -15,6 +15,7 @@ DEFAULT_MODEL = os.getenv("CATALOG_RESEARCH_MODEL") or os.getenv("CLAUDE_MODEL")
 DEFAULT_BACKEND = (os.getenv("CATALOG_RESEARCH_BACKEND") or "http").strip().lower()
 MCP_TOOL = os.getenv("CATALOG_RESEARCH_MCP_TOOL") or "catalog_research.lookup_hardware"
 MCP_SERVER = os.getenv("CATALOG_RESEARCH_MCP_SERVER") or ""
+MCPORTER_BIN = os.getenv("CATALOG_RESEARCH_MCPORTER_BIN") or "mcporter"
 
 SYSTEM_PROMPT = (
     "You are a careful IT hardware catalog researcher. "
@@ -134,9 +135,9 @@ def _run_http_research(prompt: str) -> dict:
 
 
 def _run_mcp_research(args: dict) -> dict:
-    mcporter = shutil.which("mcporter")
+    mcporter = shutil.which(MCPORTER_BIN) if os.path.sep not in MCPORTER_BIN else (MCPORTER_BIN if os.path.exists(MCPORTER_BIN) else None)
     if not mcporter:
-        raise BusinessRuleError("MCP research backend를 쓰려면 mcporter가 설치되어 있어야 합니다.", status_code=503)
+        raise BusinessRuleError("MCP research backend를 쓰려면 mcporter가 설치되어 있어야 합니다. CATALOG_RESEARCH_MCPORTER_BIN도 확인하세요.", status_code=503)
 
     selector = MCP_TOOL
     if MCP_SERVER:
