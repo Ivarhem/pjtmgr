@@ -151,6 +151,21 @@ def _run_http_research(prompt: str) -> dict:
     return _extract_json_payload(text)
 
 
+def _extract_mcp_error(parsed: dict) -> str | None:
+    if not isinstance(parsed, dict):
+        return None
+    if parsed.get("error"):
+        detail = parsed.get("error")
+        issue = parsed.get("issue") or {}
+        raw = issue.get("rawMessage") if isinstance(issue, dict) else None
+        return str(raw or detail)
+    if parsed.get("isError"):
+        content = parsed.get("content") or []
+        texts = [part.get("text") for part in content if isinstance(part, dict) and part.get("type") == "text" and part.get("text")]
+        return texts[0] if texts else "unknown MCP tool error"
+    return None
+
+
 def _run_mcp_research(args: dict) -> dict:
     mcporter = shutil.which(MCPORTER_BIN) if os.path.sep not in MCPORTER_BIN else (MCPORTER_BIN if os.path.exists(MCPORTER_BIN) else None)
     if not mcporter:
@@ -175,15 +190,16 @@ def _run_mcp_research(args: dict) -> dict:
         parsed = json.loads(text)
     except json.JSONDecodeError:
         parsed = _extract_json_payload(text)
-    if isinstance(parsed, dict) and parsed.get("error"):
-        detail = parsed.get("error")
-        issue = parsed.get("issue") or {}
-        raw = issue.get("rawMessage") if isinstance(issue, dict) else None
-        raise BusinessRuleError(f"MCP catalog research 호출 실패: {raw or detail}", status_code=502)
+
+    top_error = _extract_mcp_error(parsed)
+    if top_error:
+        raise BusinessRuleError(f"MCP catalog research 호출 실패: {top_error}", status_code=502)
+
     if isinstance(parsed, dict) and "result" in parsed and isinstance(parsed["result"], dict):
         result = parsed["result"]
-        if isinstance(result, dict) and result.get("error"):
-            raise BusinessRuleError(f"MCP catalog research 호출 실패: {result.get('error')}", status_code=502)
+        nested_error = _extract_mcp_error(result)
+        if nested_error:
+            raise BusinessRuleError(f"MCP catalog research 호출 실패: {nested_error}", status_code=502)
         return result
     return parsed
 

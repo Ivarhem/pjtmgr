@@ -13,7 +13,9 @@ ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 MODEL = os.getenv("CATALOG_RESEARCH_MODEL") or os.getenv("CLAUDE_MODEL") or "claude-sonnet-4-5"
 SERVER_NAME = "catalog-research"
 SERVER_VERSION = "0.1.0"
-PROTOCOL_VERSION = "2024-11-05"
+PROTOCOL_VERSION = "2025-11-25"
+DEBUG_LOG = os.getenv("CATALOG_RESEARCH_MCP_DEBUG_LOG") or "/tmp/catalog-mcp.log"
+_WIRE_MODE = "content-length"
 
 SYSTEM_PROMPT = (
     "You are a careful IT hardware catalog researcher. "
@@ -79,8 +81,6 @@ Rules:
 - uncertain_fields should contain names like size_unit, power_count, eosl_date, interfaces.
 - Never wrap in markdown.
 """
-
-DEBUG_LOG = os.getenv("CATALOG_RESEARCH_MCP_DEBUG_LOG") or "/tmp/catalog-mcp.log"
 
 
 def _debug(message: str) -> None:
@@ -172,16 +172,23 @@ def lookup_hardware(arguments: dict[str, Any]) -> dict[str, Any]:
     return _call_anthropic(prompt)
 
 
-def read_message() -> dict[str, Any] | None:
+def _read_message_jsonl(first_line: bytes) -> dict[str, Any]:
+    global _WIRE_MODE
+    _WIRE_MODE = "jsonl"
+    return json.loads(first_line.decode("utf-8"))
+
+
+def _read_message_content_length(first_line: bytes) -> dict[str, Any] | None:
     headers: dict[str, str] = {}
+    line = first_line
     while True:
-        line = sys.stdin.buffer.readline()
         if not line:
             return None
         if line in (b"\r\n", b"\n"):
             break
         key, _, value = line.decode("utf-8").partition(":")
         headers[key.strip().lower()] = value.strip()
+        line = sys.stdin.buffer.readline()
     length = int(headers.get("content-length", "0"))
     if length <= 0:
         return None
@@ -191,11 +198,27 @@ def read_message() -> dict[str, Any] | None:
     return json.loads(payload.decode("utf-8"))
 
 
+def read_message() -> dict[str, Any] | None:
+    while True:
+        first_line = sys.stdin.buffer.readline()
+        if not first_line:
+            return None
+        stripped = first_line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(b"{"):
+            return _read_message_jsonl(first_line)
+        return _read_message_content_length(first_line)
+
+
 def send_message(message: dict[str, Any]) -> None:
-    _debug(f"RESPONSE keys={list(message.keys())!r} id={message.get('id')!r} error={message.get('error')!r}")
+    _debug(f"RESPONSE mode={_WIRE_MODE!r} keys={list(message.keys())!r} id={message.get('id')!r} error={message.get('error')!r}")
     body = json.dumps(message, ensure_ascii=False).encode("utf-8")
-    sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
-    sys.stdout.buffer.write(body)
+    if _WIRE_MODE == "jsonl":
+        sys.stdout.buffer.write(body + b"\n")
+    else:
+        sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
+        sys.stdout.buffer.write(body)
     sys.stdout.buffer.flush()
 
 
@@ -209,13 +232,14 @@ def error(msg_id: Any, message: str, code: int = -32000) -> None:
 
 def handle_request(request: dict[str, Any]) -> None:
     method = request.get("method")
-    _debug(f"REQUEST method={method!r} id={request.get('id')!r}")
+    _debug(f"REQUEST mode={_WIRE_MODE!r} method={method!r} id={request.get('id')!r}")
     msg_id = request.get("id")
     params = request.get("params") or {}
 
     if method == "initialize":
+        requested_protocol = params.get("protocolVersion") if isinstance(params, dict) else None
         success(msg_id, {
-            "protocolVersion": PROTOCOL_VERSION,
+            "protocolVersion": requested_protocol or PROTOCOL_VERSION,
             "capabilities": {"tools": {"listChanged": False}},
             "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         })
