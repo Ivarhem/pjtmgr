@@ -1116,6 +1116,7 @@ async function initGrid() {
       tooltipValueGetter: getGridTooltipValue,
     },
     rowSelection: "multiple",
+    suppressRowClickSelection: true,
     animateRows: true,
     enableCellTextSelection: true,
     getRowClass: (params) => params.data?._isNew ? "infra-grid-row-new" : "",
