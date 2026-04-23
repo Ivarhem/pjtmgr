@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "catalog-research": {
-      "command": "python",
+      "command": "/usr/local/bin/python",
       "args": [
         "/app/scripts/catalog_research_mcp_server.py"
       ],
