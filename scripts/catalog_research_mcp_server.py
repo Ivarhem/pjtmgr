@@ -80,6 +80,16 @@ Rules:
 - Never wrap in markdown.
 """
 
+DEBUG_LOG = os.getenv("CATALOG_RESEARCH_MCP_DEBUG_LOG") or "/tmp/catalog-mcp.log"
+
+
+def _debug(message: str) -> None:
+    if not DEBUG_LOG:
+        return
+    with open(DEBUG_LOG, "a", encoding="utf-8") as fh:
+        fh.write(message + "\n")
+
+
 INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
@@ -182,6 +192,7 @@ def read_message() -> dict[str, Any] | None:
 
 
 def send_message(message: dict[str, Any]) -> None:
+    _debug(f"RESPONSE keys={list(message.keys())!r} id={message.get('id')!r} error={message.get('error')!r}")
     body = json.dumps(message, ensure_ascii=False).encode("utf-8")
     sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
     sys.stdout.buffer.write(body)
@@ -198,6 +209,7 @@ def error(msg_id: Any, message: str, code: int = -32000) -> None:
 
 def handle_request(request: dict[str, Any]) -> None:
     method = request.get("method")
+    _debug(f"REQUEST method={method!r} id={request.get('id')!r}")
     msg_id = request.get("id")
     params = request.get("params") or {}
 
