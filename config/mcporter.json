@@ -6,8 +6,8 @@
         "/app/scripts/catalog_research_mcp_server.py"
       ],
       "env": {
-        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
-        "CATALOG_RESEARCH_MODEL": "${CATALOG_RESEARCH_MODEL}"
+        "CATALOG_RESEARCH_MCP_DEBUG_LOG": "/tmp/catalog-mcp.log",
+        "PYTHONUNBUFFERED": "1"
       }
     }
   },
