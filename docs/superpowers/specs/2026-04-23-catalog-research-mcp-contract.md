@@ -66,3 +66,29 @@ Let `pjtmgr` keep the catalog-research protocol while delegating actual lookup e
 - `pjtmgr` owns skip logic, normalization, and apply logic.
 - MCP tool should only research and return structured data.
 - If MCP returns wrapper JSON like `{ "result": { ... } }`, current backend unwraps it.
+
+
+## Recommended pjtmgr wiring
+
+### Backend env
+```bash
+CATALOG_RESEARCH_BACKEND=mcp
+CATALOG_RESEARCH_MCP_SERVER=catalog-research
+CATALOG_RESEARCH_MCP_TOOL=lookup_hardware
+CATALOG_RESEARCH_MCP_CONFIG=/app/config/mcporter.json
+# optional if PATH differs
+CATALOG_RESEARCH_MCPORTER_BIN=mcporter
+```
+
+### Project config template
+Start from: `config/mcporter.catalog-research.example.json`
+
+Recommended live path inside container: `/app/config/mcporter.json`
+
+### Selector rule
+- If `CATALOG_RESEARCH_MCP_TOOL` already contains a dot, use it as-is.
+- Otherwise compose `CATALOG_RESEARCH_MCP_SERVER.CATALOG_RESEARCH_MCP_TOOL`.
+- Recommended selector: `catalog-research.lookup_hardware`
+
+### Current gap
+This repo now has a clean registration path, but it still needs a real MCP server implementation or remote MCP endpoint behind the `catalog-research` server entry.

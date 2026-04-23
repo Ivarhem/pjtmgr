@@ -13,8 +13,9 @@ from app.core.exceptions import BusinessRuleError
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = os.getenv("CATALOG_RESEARCH_MODEL") or os.getenv("CLAUDE_MODEL") or "claude-sonnet-4-5"
 DEFAULT_BACKEND = (os.getenv("CATALOG_RESEARCH_BACKEND") or "http").strip().lower()
-MCP_TOOL = os.getenv("CATALOG_RESEARCH_MCP_TOOL") or "catalog_research.lookup_hardware"
-MCP_SERVER = os.getenv("CATALOG_RESEARCH_MCP_SERVER") or ""
+MCP_TOOL = os.getenv("CATALOG_RESEARCH_MCP_TOOL") or "lookup_hardware"
+MCP_SERVER = os.getenv("CATALOG_RESEARCH_MCP_SERVER") or "catalog-research"
+MCP_CONFIG = os.getenv("CATALOG_RESEARCH_MCP_CONFIG") or ""
 MCPORTER_BIN = os.getenv("CATALOG_RESEARCH_MCPORTER_BIN") or "mcporter"
 
 SYSTEM_PROMPT = (
@@ -101,6 +102,22 @@ def _extract_json_payload(text: str) -> dict:
         raise BusinessRuleError(f"카탈로그 조사 응답 JSON 파싱 실패: {exc}", status_code=502)
 
 
+def _build_mcp_selector() -> str:
+    if "." in MCP_TOOL:
+        return MCP_TOOL
+    if MCP_SERVER:
+        return f"{MCP_SERVER}.{MCP_TOOL}"
+    return MCP_TOOL
+
+
+def _mcporter_command(mcporter_bin: str, selector: str, args: dict) -> list[str]:
+    cmd = [mcporter_bin, "call"]
+    if MCP_CONFIG:
+        cmd.extend(["--config", MCP_CONFIG])
+    cmd.extend([selector, "--args", json.dumps(args, ensure_ascii=False), "--output", "json"])
+    return cmd
+
+
 def _run_http_research(prompt: str) -> dict:
     payload = {
         "model": DEFAULT_MODEL,
@@ -139,10 +156,11 @@ def _run_mcp_research(args: dict) -> dict:
     if not mcporter:
         raise BusinessRuleError("MCP research backend를 쓰려면 mcporter가 설치되어 있어야 합니다. CATALOG_RESEARCH_MCPORTER_BIN도 확인하세요.", status_code=503)
 
-    selector = MCP_TOOL
-    if MCP_SERVER:
-        selector = f"{MCP_SERVER}.{MCP_TOOL.split('.')[-1]}" if "." not in MCP_SERVER else MCP_SERVER
-    cmd = [mcporter, "call", selector, "--args", json.dumps(args, ensure_ascii=False), "--output", "json"]
+    if MCP_CONFIG and not os.path.exists(MCP_CONFIG):
+        raise BusinessRuleError(f"MCP config 파일을 찾을 수 없습니다: {MCP_CONFIG}", status_code=503)
+
+    selector = _build_mcp_selector()
+    cmd = _mcporter_command(mcporter, selector, args)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False)
     except subprocess.TimeoutExpired:
