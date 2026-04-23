@@ -34,6 +34,12 @@ services:
       ENABLED_MODULES: common,accounting,infra
       APP_ROOT_PATH: /pjtmgr
       SKIP_LIFESPAN_ALEMBIC: "1"
+      CATALOG_RESEARCH_BACKEND: ${CATALOG_RESEARCH_BACKEND:-mcp}
+      CATALOG_RESEARCH_MCP_SERVER: ${CATALOG_RESEARCH_MCP_SERVER:-catalog-research}
+      CATALOG_RESEARCH_MCP_TOOL: ${CATALOG_RESEARCH_MCP_TOOL:-lookup_hardware}
+      CATALOG_RESEARCH_MCP_CONFIG: ${CATALOG_RESEARCH_MCP_CONFIG:-/app/config/mcporter.json}
+      CATALOG_RESEARCH_MCPORTER_BIN: ${CATALOG_RESEARCH_MCPORTER_BIN:-mcporter}
+      CATALOG_RESEARCH_MODEL: ${CATALOG_RESEARCH_MODEL:-claude-sonnet-4-5}
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 9000"]
     ports:
       - "127.0.0.1:9000:9000"
