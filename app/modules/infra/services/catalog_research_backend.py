@@ -157,8 +157,16 @@ def _run_mcp_research(args: dict) -> dict:
         parsed = json.loads(text)
     except json.JSONDecodeError:
         parsed = _extract_json_payload(text)
+    if isinstance(parsed, dict) and parsed.get("error"):
+        detail = parsed.get("error")
+        issue = parsed.get("issue") or {}
+        raw = issue.get("rawMessage") if isinstance(issue, dict) else None
+        raise BusinessRuleError(f"MCP catalog research 호출 실패: {raw or detail}", status_code=502)
     if isinstance(parsed, dict) and "result" in parsed and isinstance(parsed["result"], dict):
-        return parsed["result"]
+        result = parsed["result"]
+        if isinstance(result, dict) and result.get("error"):
+            raise BusinessRuleError(f"MCP catalog research 호출 실패: {result.get('error')}", status_code=502)
+        return result
     return parsed
 
 
