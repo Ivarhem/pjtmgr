@@ -12,7 +12,9 @@ from app.core.exceptions import BusinessRuleError
 
 ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 DEFAULT_MODEL = os.getenv("CATALOG_RESEARCH_MODEL") or os.getenv("CLAUDE_MODEL") or "claude-sonnet-4-5"
-DEFAULT_BACKEND = (os.getenv("CATALOG_RESEARCH_BACKEND") or "http").strip().lower()
+DEFAULT_BACKEND = (os.getenv("CATALOG_RESEARCH_BACKEND") or "service").strip().lower()
+SERVICE_URL = (os.getenv("CATALOG_RESEARCH_SERVICE_URL") or "").strip().rstrip("/")
+SERVICE_TOKEN = (os.getenv("CATALOG_RESEARCH_SERVICE_TOKEN") or "").strip()
 MCP_TOOL = os.getenv("CATALOG_RESEARCH_MCP_TOOL") or "lookup_hardware"
 MCP_SERVER = os.getenv("CATALOG_RESEARCH_MCP_SERVER") or "catalog-research"
 MCP_CONFIG = os.getenv("CATALOG_RESEARCH_MCP_CONFIG") or ""
@@ -151,6 +153,29 @@ def _run_http_research(prompt: str) -> dict:
     return _extract_json_payload(text)
 
 
+def _run_service_research(args: dict) -> dict:
+    if not SERVICE_URL:
+        raise BusinessRuleError("CATALOG_RESEARCH_SERVICE_URL 환경변수가 설정되어 있지 않습니다.", status_code=503)
+
+    req = urllib.request.Request(
+        f"{SERVICE_URL}/lookup-hardware",
+        data=json.dumps(args).encode("utf-8"),
+        headers={
+            "content-type": "application/json",
+            **({"authorization": f"Bearer {SERVICE_TOKEN}"} if SERVICE_TOKEN else {}),
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise BusinessRuleError(f"Catalog research service 호출 실패: {detail or exc.reason}", status_code=502)
+    except urllib.error.URLError as exc:
+        raise BusinessRuleError(f"Catalog research service 연결 실패: {exc.reason}", status_code=502)
+
+
 def _extract_mcp_error(parsed: dict) -> str | None:
     if not isinstance(parsed, dict):
         return None
@@ -206,6 +231,8 @@ def _run_mcp_research(args: dict) -> dict:
 
 def run_catalog_research(args: dict) -> dict:
     backend = DEFAULT_BACKEND
+    if backend == "service":
+        return _run_service_research(args)
     if backend == "mcp":
         return _run_mcp_research(args)
     if backend == "http":

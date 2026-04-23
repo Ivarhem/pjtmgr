@@ -15,12 +15,44 @@ services:
     volumes:
       - pjtmgr_postgres_data:/var/lib/postgresql/data
 
+  catalog-research-service:
+    container_name: pjtmgr-catalog-research-service
+    build:
+      context: /service/services/pjtmgr
+    env_file:
+      - /service/services/pjtmgr/.env
+    environment:
+      CATALOG_RESEARCH_SERVICE_HOST: 0.0.0.0
+      CATALOG_RESEARCH_SERVICE_PORT: 8765
+      CATALOG_RESEARCH_MODEL: ${CATALOG_RESEARCH_MODEL:-claude-sonnet-4-5}
+      CATALOG_RESEARCH_PROVIDER: ${CATALOG_RESEARCH_PROVIDER:-anthropic}
+      CATALOG_RESEARCH_CODEX_BIN: ${CATALOG_RESEARCH_CODEX_BIN:-codex}
+      CATALOG_RESEARCH_CODEX_MODEL: ${CATALOG_RESEARCH_CODEX_MODEL:-gpt-5.4}
+      CATALOG_RESEARCH_CODEX_WORKDIR: ${CATALOG_RESEARCH_CODEX_WORKDIR:-/tmp}
+      CATALOG_RESEARCH_CODEX_TIMEOUT: ${CATALOG_RESEARCH_CODEX_TIMEOUT:-90}
+      CATALOG_RESEARCH_CODEX_AUTH_SRC: ${CATALOG_RESEARCH_CODEX_AUTH_SRC:-/run/catalog-research-secrets/codex-auth.json}
+      CATALOG_RESEARCH_SERVICE_TOKEN: ${CATALOG_RESEARCH_SERVICE_TOKEN:-}
+    command: ["python", "/app/scripts/catalog_research_service.py"]
+    ports:
+      - "127.0.0.1:8765:8765"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    restart: unless-stopped
+    volumes:
+      - /home/ivarhem/.codex/auth.json:/run/catalog-research-secrets/codex-auth.json:ro
+
   pjtmgr-app:
     container_name: pjtmgr-app
     build:
       context: /service/services/pjtmgr
     depends_on:
       pjtmgr-db:
+        condition: service_healthy
+      catalog-research-service:
         condition: service_healthy
     env_file:
       - /service/services/pjtmgr/.env
@@ -34,7 +66,9 @@ services:
       ENABLED_MODULES: common,accounting,infra
       APP_ROOT_PATH: /pjtmgr
       SKIP_LIFESPAN_ALEMBIC: "1"
-      CATALOG_RESEARCH_BACKEND: ${CATALOG_RESEARCH_BACKEND:-mcp}
+      CATALOG_RESEARCH_BACKEND: ${CATALOG_RESEARCH_BACKEND:-service}
+      CATALOG_RESEARCH_SERVICE_URL: ${CATALOG_RESEARCH_SERVICE_URL:-http://catalog-research-service:8765}
+      CATALOG_RESEARCH_SERVICE_TOKEN: ${CATALOG_RESEARCH_SERVICE_TOKEN:-}
       CATALOG_RESEARCH_MCP_SERVER: ${CATALOG_RESEARCH_MCP_SERVER:-catalog-research}
       CATALOG_RESEARCH_MCP_TOOL: ${CATALOG_RESEARCH_MCP_TOOL:-lookup_hardware}
       CATALOG_RESEARCH_MCP_CONFIG: ${CATALOG_RESEARCH_MCP_CONFIG:-/app/config/mcporter.json}
