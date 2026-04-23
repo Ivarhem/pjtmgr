@@ -2,9 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 시스템 의존성 (PostgreSQL 클라이언트)
+# 시스템 의존성 (PostgreSQL 클라이언트 + MCP runtime)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
+    nodejs \
+    npm \
+    && npm install -g mcporter \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 설치 (캐시 활용을 위해 먼저 복사)
