@@ -212,6 +212,12 @@ def handle_request(request: dict[str, Any]) -> None:
     if method == "notifications/initialized":
         return
 
+    if msg_id is None and isinstance(method, str) and method.startswith("notifications/"):
+        return
+
+    if msg_id is None and isinstance(method, str) and method.startswith("$/"):
+        return
+
     if method == "ping":
         success(msg_id, {})
         return
@@ -246,6 +252,8 @@ def handle_request(request: dict[str, Any]) -> None:
         })
         return
 
+    if msg_id is None:
+        return
     error(msg_id, f"Method not found: {method}", -32601)
 
 
