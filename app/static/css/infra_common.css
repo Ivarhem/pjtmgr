@@ -5164,3 +5164,71 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     transform: translateY(-50%);
   }
 }
+
+
+/* Physical layout mobile workspace/detail behavior (2026-04-28) */
+.floor-plan-side-handle-wrap.workspace-panel-handle { width: 18px; }
+.btn-toggle-floor-plan-side.workspace-panel-toggle { width: 20px; height: 28px; padding: 0; }
+@media (max-width: 760px) {
+  #layout-shell.catalog-layout {
+    height: calc(100dvh - 150px);
+    max-height: calc(100dvh - 150px);
+  }
+  #layout-shell:not(.layout-tree-collapsed) #layout-tree-panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: min(86vw, 360px);
+    min-width: 0;
+    max-width: min(86vw, 360px);
+    box-shadow: var(--modal-shadow);
+  }
+  #layout-shell:not(.layout-tree-collapsed) #layout-category-splitter { display: none; }
+  #layout-shell:not(.layout-tree-collapsed) #layout-tree-handle-wrap {
+    position: absolute;
+    left: min(86vw, 360px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 31;
+  }
+  #layout-shell #layout-content {
+    width: calc(100% - 18px);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .floor-plan-shell {
+    position: relative;
+    overflow: hidden;
+    min-height: calc(100dvh - 250px);
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-main {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-splitter { display: none !important; }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-handle-wrap {
+    display: flex !important;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 41;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin-top: 0;
+    overflow: auto;
+    background: var(--bg-color);
+    box-shadow: none;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-card {
+    min-height: 100%;
+    border-radius: var(--ui-radius-lg, 12px);
+  }
+}

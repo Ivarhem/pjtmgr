@@ -2,16 +2,16 @@
 {% block title %}배치 - 프로젝트관리{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260421m">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428physicalmobile">
 {% endblock %}
 
 {% block content %}
 <div class="infra-inline-actions mb-md layout-view-toolbar">
   <span class="layout-inline-help">랙 마운트는 EIA-310 기준으로 하단 1U부터 표기합니다. 장비 위치는 시작U와 종료U를 함께 표시합니다.</span>
 </div>
-<div class="catalog-layout" id="layout-shell">
+<div class="catalog-layout workspace-layout" id="layout-shell">
   <!-- Left: Tree -->
-  <section class="catalog-category-panel" id="layout-tree-panel">
+  <section class="catalog-category-panel workspace-panel" id="layout-tree-panel">
     <div class="catalog-category-header">
       <h2>배치 구조</h2>
       <div class="infra-inline-actions layout-tree-header-actions">
@@ -26,14 +26,14 @@
     </div>
   </section>
 
-  <div class="catalog-category-splitter" id="layout-category-splitter"></div>
+  <div class="catalog-category-splitter workspace-splitter" id="layout-category-splitter"></div>
 
-  <div class="asset-detail-handle-wrap" id="layout-tree-handle-wrap">
-    <button class="asset-detail-minimize" id="btn-toggle-layout-tree" title="배치 구조 열기/닫기">❯</button>
+  <div class="asset-detail-handle-wrap workspace-panel-handle" id="layout-tree-handle-wrap">
+    <button class="asset-detail-minimize workspace-panel-toggle" id="btn-toggle-layout-tree" title="배치 구조 열기/닫기">❯</button>
   </div>
 
   <!-- Right: Content -->
-  <div class="catalog-main-panel" id="layout-content">
+  <div class="catalog-main-panel workspace-panel-main" id="layout-content">
     <div class="placeholder-message mx-auto">
       <p>왼쪽 트리에서 센터, 전산실 또는 랙을 선택하세요.</p>
     </div>
@@ -170,5 +170,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260421j"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_physical_layout.js?v=20260428physicalmobile"></script>
 {% endblock %}

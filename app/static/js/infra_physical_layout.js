@@ -1618,6 +1618,7 @@ async function renderRoomView(container, room) {
 
   const floorPlanShell = document.createElement("div");
   floorPlanShell.className = "floor-plan-shell";
+  floorPlanShell.classList.toggle("has-selected-rack", !!selectedRack);
   wrapper.appendChild(floorPlanShell);
 
   const floorPlanMain = document.createElement("div");
@@ -1919,6 +1920,7 @@ async function renderRoomView(container, room) {
   initFloorPlanSideControls(floorPlanShell);
 
   if (selectedRack) {
+    setFloorPlanSideCollapsed(floorPlanShell, false);
     sideCard.classList.add("rack-mount-side-card");
     await renderRackView(sideCard, selectedRack, {
       embedded: true,
