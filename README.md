@@ -107,11 +107,30 @@ docker compose up --build
 ```
 
 - `app` 컨테이너는 PostgreSQL 준비 상태를 기다린 뒤 `alembic upgrade head`를 실행하고 서버를 시작한다.
-- 기본 compose 구성은 PostgreSQL 서비스와 FastAPI 앱 서비스로 동작한다.
-- `app`, `db` 서비스 모두 `restart: unless-stopped`로 설정되어 자동 재기동된다.
-- 운영형 값은 `docker-compose.yml`에 하드코딩하지 않고 루트 `.env`에서 주입한다.
-- 운영 환경에서는 `APP_ENV`, `SESSION_SECRET_KEY`, DB 계정, bootstrap 관리자 비밀번호를 안전한 값으로 변경해야 한다.
-- 호스트 공개 포트는 앱 `9000`, DB `5432` 기준이다.
+- 기본 compose 구성은 `db`, `app`, `worker`, `catalog-research-service` 역할로 동작한다.
+  - `app`: FastAPI 웹/API 전용, 앱 포트 `9000`
+  - `worker`: 자동 카탈로그 리서치 스케줄링/DB 반영 전용
+  - `catalog-research-service`: 외부/모델 기반 카탈로그 조회 엔진, 서비스 포트 `8765`
+- `app`, `worker`, `db`, `catalog-research-service`는 `restart: unless-stopped`로 설정되어 자동 재기동된다.
+- 운영형 값은 compose 파일에 하드코딩하지 않고 루트 `.env`에서 주입한다.
+- 운영 환경에서는 `ENV`, `SESSION_SECRET_KEY`, DB 계정, bootstrap 관리자 비밀번호를 안전한 값으로 변경해야 한다.
+- 호스트 공개 포트는 앱 `9000`, DB `5432` 기준이다. pjtmgr health check는 `http://127.0.0.1:9000/api/v1/health`를 사용한다.
+
+### 운영 compose 검증
+
+```bash
+# 운영 compose 문법/환경변수 확인
+docker compose -f docker-compose.prod.yml config --quiet
+
+# 배포 후 기본 smoke check (앱 컨테이너 안에서 실행)
+docker compose exec app python /app/scripts/smoke_check.py --base-url http://127.0.0.1:9000
+
+# 프론트엔드 vendor/static 안전 검사 (호스트 또는 앱 컨테이너)
+python scripts/check_frontend_assets.py
+```
+
+- UI 성능/정적 리소스 변경 후에는 서버 health뿐 아니라 실제 브라우저 콘솔, 네트워크, grid 렌더링까지 확인한다.
+- minified vendor 파일은 line 단위 삭제/수정 금지. sourcemap 주석 제거가 필요하면 targeted string replace 후 파일 크기와 global symbol을 확인한다.
 
 ### 로컬 Python 실행
 

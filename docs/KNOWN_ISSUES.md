@@ -5,6 +5,16 @@
 
 ---
 
+
+## 운영 배포/검증 안전망
+
+- 운영 compose는 `app`, `worker`, `catalog-research-service`, `db` 역할을 기준으로 유지한다.
+- 배포 전 `docker compose -f docker-compose.prod.yml config --quiet`로 환경변수/문법을 확인한다.
+- 배포 후 앱 컨테이너 안에서 `python /app/scripts/smoke_check.py`를 실행해 app import, Alembic head/current, health endpoint를 확인한다.
+- 프론트엔드 성능/정적 리소스 변경 후 `scripts/check_frontend_assets.py`와 브라우저 console/network/grid 렌더링 확인을 함께 수행한다.
+- `pjtmgr` 기준 health endpoint는 `http://127.0.0.1:9000/api/v1/health`이다. 포트 8000은 다른 앱일 수 있으므로 검증에 사용하지 않는다.
+- Minified vendor 파일은 line 단위 삭제/수정하지 않는다. 특히 single-line minified JS는 sourcemap 줄 제거로 전체 파일이 삭제될 수 있다.
+
 ## 모듈화 마이그레이션 — 코드 구조 완료, 런타임 E2E 검증 미완
 
 - 코드 구조 마이그레이션 완료: `app/core/`, `app/modules/{common,accounting,infra}/` 구조로 전환됨

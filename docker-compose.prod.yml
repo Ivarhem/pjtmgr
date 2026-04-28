@@ -1,14 +1,14 @@
 services:
-  pjtmgr-db:
+  db:
     image: postgres:16
     container_name: pjtmgr-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: pjtmgr
-      POSTGRES_USER: pjtmgr
-      POSTGRES_PASSWORD: pjtmgr
+      POSTGRES_DB: ${POSTGRES_DB:-pjtmgr}
+      POSTGRES_USER: ${POSTGRES_USER:-pjtmgr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pjtmgr -d pjtmgr"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -43,29 +43,30 @@ services:
       retries: 3
     restart: unless-stopped
     volumes:
-      - /home/ivarhem/.codex/auth.json:/run/catalog-research-secrets/codex-auth.json:ro
+      - ${CATALOG_RESEARCH_CODEX_AUTH_HOST_PATH:-/home/ivarhem/.codex/auth.json}:/run/catalog-research-secrets/codex-auth.json:ro
 
-  pjtmgr-app:
+  app:
     container_name: pjtmgr-app
     build:
       context: /service/services/pjtmgr
     depends_on:
-      pjtmgr-db:
+      db:
         condition: service_healthy
       catalog-research-service:
         condition: service_healthy
     env_file:
       - /service/services/pjtmgr/.env
     environment:
-      ENV: production
-      DATABASE_URL: postgresql://pjtmgr:pjtmgr@pjtmgr-db:5432/pjtmgr
-      SESSION_SECRET_KEY: ray-pjtmgr-session-secret-change-this
-      BOOTSTRAP_ADMIN_LOGIN_ID: admin
-      BOOTSTRAP_ADMIN_PASSWORD: change-this-admin-password
-      BOOTSTRAP_ADMIN_NAME: 관리자
-      ENABLED_MODULES: common,accounting,infra
-      APP_ROOT_PATH: /pjtmgr
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://pjtmgr:${POSTGRES_PASSWORD}@db:5432/pjtmgr}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY is required}
+      BOOTSTRAP_ADMIN_LOGIN_ID: ${BOOTSTRAP_ADMIN_LOGIN_ID:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-관리자}
+      ENABLED_MODULES: ${ENABLED_MODULES:-common,accounting,infra}
+      APP_ROOT_PATH: ${APP_ROOT_PATH:-/pjtmgr}
       SKIP_LIFESPAN_ALEMBIC: "1"
+      CATALOG_RESEARCH_AUTO_ENABLED: "false"
       CATALOG_RESEARCH_BACKEND: ${CATALOG_RESEARCH_BACKEND:-service}
       CATALOG_RESEARCH_SERVICE_URL: ${CATALOG_RESEARCH_SERVICE_URL:-http://catalog-research-service:8765}
       CATALOG_RESEARCH_SERVICE_TOKEN: ${CATALOG_RESEARCH_SERVICE_TOKEN:-}
@@ -83,6 +84,34 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
+    restart: unless-stopped
+
+  worker:
+    container_name: pjtmgr-worker
+    build:
+      context: /service/services/pjtmgr
+    depends_on:
+      db:
+        condition: service_healthy
+      catalog-research-service:
+        condition: service_healthy
+    env_file:
+      - /service/services/pjtmgr/.env
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://pjtmgr:${POSTGRES_PASSWORD}@db:5432/pjtmgr}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY is required}
+      ENABLED_MODULES: ${ENABLED_MODULES:-common,accounting,infra}
+      SKIP_LIFESPAN_ALEMBIC: "1"
+      CATALOG_RESEARCH_AUTO_ENABLED: "true"
+      CATALOG_RESEARCH_AUTO_INTERVAL_SECONDS: ${CATALOG_RESEARCH_AUTO_INTERVAL_SECONDS:-180}
+      CATALOG_RESEARCH_AUTO_IDLE_SECONDS: ${CATALOG_RESEARCH_AUTO_IDLE_SECONDS:-600}
+      CATALOG_RESEARCH_BACKEND: ${CATALOG_RESEARCH_BACKEND:-service}
+      CATALOG_RESEARCH_SERVICE_URL: ${CATALOG_RESEARCH_SERVICE_URL:-http://catalog-research-service:8765}
+      CATALOG_RESEARCH_SERVICE_TOKEN: ${CATALOG_RESEARCH_SERVICE_TOKEN:-}
+    command: ["python", "-m", "app.core.startup.catalog_research_worker"]
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
 volumes:
