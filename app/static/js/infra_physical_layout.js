@@ -1271,8 +1271,10 @@ function updateLayoutAutoCollapseBtn() {
   btn.setAttribute("aria-label", btn.title);
 }
 
-function focusLayoutDetailPanel() {
-  if (!_layoutAutoCollapse || window.innerWidth <= 960) return;
+function focusLayoutDetailPanel(options = {}) {
+  const forceMobile = !!options.forceMobile;
+  if (window.innerWidth <= 960 && !forceMobile) return;
+  if (!_layoutAutoCollapse && !forceMobile) return;
   setLayoutTreeCollapsed(true);
 }
 
@@ -1319,7 +1321,7 @@ function selectNode(type, id, data) {
   else if (type === "room") renderRoomView(content, data);
   else if (type === "line") renderRoomView(content, _findRoomData(data.room_id) || data);
   else if (type === "rack") renderRoomView(content, _findRoomData(data.room_id) || data);
-  focusLayoutDetailPanel();
+  focusLayoutDetailPanel({ forceMobile: type === "rack" && window.innerWidth <= 760 });
 }
 
 function renderEmptyContent() {
