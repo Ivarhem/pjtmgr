@@ -5344,3 +5344,21 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     margin-bottom: 0 !important;
   }
 }
+
+/* Remove parent-shell dead space below mobile selected-rack detail (2026-04-28) */
+@media (max-width: 760px) {
+  #layout-content:has(.floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed)) {
+    overflow: hidden;
+  }
+  #layout-content .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) {
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+  }
+  #layout-content .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    inset: 0 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+}
