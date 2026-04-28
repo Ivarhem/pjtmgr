@@ -5025,3 +5025,17 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
   .catalog-category-panel { min-width: min(82vw, 320px); max-width: min(82vw, 360px); }
   .catalog-layout:not(.layout-tree-collapsed) .catalog-main-panel { min-width: 360px; }
 }
+
+
+/* Asset workspace split compatibility (2026-04-28) */
+.asset-layout.workspace-layout { gap: 8px; }
+.asset-detail-minimize.workspace-panel-toggle { width: 20px; height: 28px; padding: 0; }
+.asset-list-panel.workspace-panel-main { min-width: 0; }
+.asset-detail-panel.workspace-panel-right { min-width: 0; }
+.asset-layout.is-detail-open .asset-detail-panel.workspace-panel-right { min-width: min(420px, 42vw); }
+.asset-layout:not(.is-detail-open) .asset-list-panel.workspace-panel-main { width: calc(100% - 18px); flex: 1 1 auto; }
+@media (max-width: 900px) {
+  .asset-layout { --asset-layout-height: calc(100dvh - 150px); }
+  .asset-layout.is-detail-open .asset-list-panel { flex: 0 0 min(58%, var(--asset-list-width)); width: min(58%, var(--asset-list-width)); }
+  .asset-layout.is-detail-open .asset-detail-panel.workspace-panel-right { min-width: min(82vw, 360px); }
+}

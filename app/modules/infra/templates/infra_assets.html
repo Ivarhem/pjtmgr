@@ -2,7 +2,7 @@
 {% block title %}자산 인벤토리{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260422b">
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428workspace2">
 {% endblock %}
 
 {% block content %}
@@ -32,8 +32,8 @@
   <span class="edit-mode-selection is-hidden" id="edit-mode-selection"></span>
 </div>
 
-<div id="asset-layout" class="asset-layout">
-  <div class="asset-list-panel">
+<div id="asset-layout" class="asset-layout workspace-layout">
+  <div class="asset-list-panel workspace-panel-main">
     <div class="catalog-toolbar asset-filter-toolbar">
       <input type="text" id="filter-search" class="input-search" placeholder="자산명, 호스트명, IP, 장비ID">
       <select id="filter-status" class="input-select">
@@ -47,20 +47,20 @@
       </div>
     </div>
     <div class="card">
-      <div id="grid-assets" class="ag-theme-quartz infra-grid"></div>
+      <div id="grid-assets" class="ag-theme-quartz infra-grid app-grid app-grid-fill"></div>
       <div class="grid-add-row-bar">
         <button id="btn-add-asset-row-bottom" class="grid-add-row-btn" type="button">+ 자산 추가</button>
       </div>
     </div>
   </div>
 
-  <div id="asset-splitter" class="asset-splitter is-hidden" aria-hidden="true"></div>
+  <div id="asset-splitter" class="asset-splitter workspace-splitter is-hidden" aria-hidden="true"></div>
 
-  <div class="asset-detail-handle-wrap">
-    <button class="asset-detail-minimize" id="btn-minimize-detail" title="상세 패널 열기/닫기">❯</button>
+  <div class="asset-detail-handle-wrap workspace-panel-handle">
+    <button class="asset-detail-minimize workspace-panel-toggle" id="btn-minimize-detail" title="상세 패널 열기/닫기">❯</button>
   </div>
 
-  <div id="asset-detail-panel" class="asset-detail-panel is-hidden">
+  <div id="asset-detail-panel" class="asset-detail-panel workspace-panel workspace-panel-right is-hidden">
     <div class="asset-detail-empty" id="asset-detail-empty">
       자산을 선택하면 오른쪽에서 상세 정보를 확인할 수 있습니다.
     </div>
@@ -523,5 +523,5 @@
 {% block scripts %}
 <script src="{{ request.scope.root_path or "" }}/static/js/modal_combobox.js?v=20260413e"></script>
 <script src="{{ request.scope.root_path or "" }}/static/js/grid_edit_mode.js?v=20260413e"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_assets.js?v=20260428v"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_assets.js?v=20260428workspace2"></script>
 {% endblock %}
