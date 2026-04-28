@@ -398,7 +398,7 @@ function renderContractsGrid(contracts) {
         const v = p.value;
         if (!v) return '';
         const done = p.data.is_completed;
-        const cls = done ? 'stage-badge completed' : 'stage-badge active';
+        const cls = done ? 'ui-badge ui-status-neutral stage-badge completed' : 'ui-badge ui-status-success stage-badge active';
         return `<span class="${cls}">${v}</span>`;
       },
     },
@@ -418,7 +418,7 @@ function renderContractsGrid(contracts) {
           if (r === 'END고객') cls = 'end';
           else if (r === '매출처') cls = 'revenue';
           else if (r === '매입처') cls = 'cost';
-          return `<span class="role-badge ${cls}">${r}</span>`;
+          return `<span class="ui-badge role-badge ${cls}">${r}</span>`;
         }).join('');
       },
     },
@@ -488,7 +488,7 @@ function renderMasterContactGrid(contacts) {
         return p.value.map(r => {
           const cls = ROLE_CLASS[r.role_type] || '';
           const defCls = r.is_default ? ' default' : '';
-          return `<span class="contact-role-badge ${cls}${defCls}">${r.role_type}${r.is_default ? '(기본)' : ''}</span>`;
+          return `<span class="ui-badge contact-role-badge ${cls}${defCls}">${r.role_type}${r.is_default ? '(기본)' : ''}</span>`;
         }).join('');
       },
     },

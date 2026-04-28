@@ -3951,7 +3951,7 @@ async function renderHistoryTab(container) {
         <div class="asset-timeline-marker asset-timeline-marker-${row.event_type || "note"}"></div>
         <div class="asset-timeline-main">
           <div class="asset-timeline-meta">
-            <span class="badge">${typeLabel}</span>
+            <span class="ui-badge ui-status-neutral badge">${typeLabel}</span>
             <span>${row.occurred_at ? formatDateTime(row.occurred_at) : "시각 미기재"}</span>
           </div>
           <div class="asset-timeline-title">${escapeHtml(row.summary || `${_selectedAsset.asset_name} ${typeLabel}`)}</div>

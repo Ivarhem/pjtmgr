@@ -2072,7 +2072,7 @@ const ifaceColDefs = [
     field: "capacity_type", headerName: "구분", width: 80,
     cellRenderer: (p) => {
       const span = document.createElement("span");
-      span.className = "badge badge-" + (p.value === "fixed" ? "active" : p.value === "base" ? "planned" : "on-hold");
+      span.className = "ui-badge badge badge-" + (p.value === "fixed" ? "active ui-status-success" : p.value === "base" ? "planned ui-status-info" : "on-hold ui-status-warning");
       span.textContent = p.value === "fixed" ? "고정" : p.value === "base" ? "기본" : "최대";
       return span;
     },
@@ -2390,7 +2390,7 @@ function renderCatalogImportPreview(result) {
         value = row.errors?.join(", ") || "";
       } else if (col.key === "status") {
         const badge = document.createElement("span");
-        badge.className = `badge ${getCatalogImportStatusBadgeClass(row.status)}`;
+        badge.className = `ui-badge badge ${getCatalogImportStatusBadgeClass(row.status)}`;
         badge.textContent = row.status_label || CATALOG_IMPORT_STATUS_LABELS[row.status] || "-";
         td.appendChild(badge);
         tr.appendChild(td);

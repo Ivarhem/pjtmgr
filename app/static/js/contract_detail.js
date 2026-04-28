@@ -470,9 +470,9 @@ function renderPeriodInfoSections() {
           <span class="period-info-toggle">${collapsed ? '▶' : '▼'}</span>
           <b>${safePeriodLabel}</b>
           <span class="info-item"><b>사업기간</b> ${safeRange}</span>
-          <span class="info-item"><b>진행단계</b> <span class="badge badge-${p.stage === '계약완료' ? 'done' : 'progress'}">${safeStage}</span></span>
-          <span class="info-item">${p.is_completed ? '<span class="contract-status-badge closed">완료</span>' : '<span class="contract-status-badge active">진행중</span>'}</span>
-          <span class="info-item">${p.is_planned ? '<span class="contract-status-badge active">계획사업</span>' : '<span class="contract-status-badge planned-new">수시사업</span>'}</span>
+          <span class="info-item"><b>진행단계</b> <span class="ui-badge badge badge-${p.stage === '계약완료' ? 'done ui-status-neutral' : 'progress ui-status-info'}">${safeStage}</span></span>
+          <span class="info-item">${p.is_completed ? '<span class="ui-badge ui-status-neutral contract-status-badge closed">완료</span>' : '<span class="ui-badge ui-status-success contract-status-badge active">진행중</span>'}</span>
+          <span class="info-item">${p.is_planned ? '<span class="ui-badge ui-status-success contract-status-badge active">계획사업</span>' : '<span class="ui-badge ui-status-info contract-status-badge planned-new">수시사업</span>'}</span>
           <span class="period-header-actions">
             <button class="btn btn-xs" onclick="event.stopPropagation(); togglePeriodCompleted(${p.id}, ${!p.is_completed})" title="${p.is_completed ? '진행중으로 변경' : '사업완료 처리'}">${p.is_completed ? '진행중으로 변경' : '사업완료'}</button>
             <button class="btn btn-xs btn-text-danger period-delete-btn" onclick="event.stopPropagation(); deletePeriodById(${p.id}, ${JSON.stringify(p.period_label || '')})" title="Period 삭제">삭제</button>
@@ -1421,12 +1421,12 @@ function initLedgerGrid(ledgerRows) {
       : value === '매입' ? 'type-badge-cost'
       : value === '입금' ? 'type-badge-receipt'
       : '';
-    return `<span class="type-badge ${cls}">${value}</span>`;
+    return `<span class="ui-badge type-badge ${cls}">${value}</span>`;
   };
   const renderStatusBadge = (value) => {
     if (!value) return '';
     const cls = value === '확정' ? 'status-badge-confirmed' : 'status-badge-pending';
-    return `<span class="status-badge ${cls}">${value}</span>`;
+    return `<span class="ui-badge status-badge ${cls}">${value}</span>`;
   };
   const colDefs = [
     { headerName: '', field: '_chk', width: 40, pinned: 'left', lockPosition: true,
@@ -1471,8 +1471,8 @@ function initLedgerGrid(ledgerRows) {
       },
       cellRenderer: p => {
         if (p.value == null) return '';
-        if (p.value <= 0) return '<span class="receipt-badge receipt-badge-paid">완료</span>';
-        return `<span class="receipt-badge receipt-badge-unpaid">${fmt(p.value)}원 미수</span>`;
+        if (p.value <= 0) return '<span class="ui-badge receipt-badge receipt-badge-paid">완료</span>';
+        return `<span class="ui-badge receipt-badge receipt-badge-unpaid">${fmt(p.value)}원 미수</span>`;
       },
     },
     { field: 'description', headerName: '메모', editable: true, flex: 1 },
