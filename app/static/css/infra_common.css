@@ -5232,3 +5232,42 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     border-radius: var(--ui-radius-lg, 12px);
   }
 }
+
+/* Mobile rack detail: draw the full rack and let the full-screen panel scroll (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card {
+    overflow: visible;
+    display: block;
+    padding-bottom: 28px;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-layout {
+    display: block;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-main {
+    display: block;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-meta {
+    margin-top: 14px;
+    display: flex;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .u-diagram {
+    overflow: visible;
+    min-height: auto;
+    height: auto;
+    max-height: none;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .u-slot {
+    min-height: 32px;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .u-slot-content {
+    min-height: 32px;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .equipment-block {
+    min-height: 28px;
+    font-size: 12px;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .u-slot-number {
+    width: 42px;
+    font-size: 11px;
+  }
+}
