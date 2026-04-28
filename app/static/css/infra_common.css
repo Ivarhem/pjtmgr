@@ -5309,3 +5309,22 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     overflow: visible;
   }
 }
+
+/* Ensure mobile selected-rack full-screen panel is the scroll container (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) {
+    height: calc(100dvh - 250px);
+    max-height: calc(100dvh - 250px);
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    padding-bottom: 20px;
+  }
+}
