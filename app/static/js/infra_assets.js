@@ -600,6 +600,7 @@ const ASSET_INFO_COLS = [
     field: "status",
     headerName: "상태",
     width: 110,
+    minWidth: 92,
     editable: () => isGridFieldEditable("status"),
     cellEditor: "agSelectCellEditor",
     cellEditorParams: { values: Object.keys(ASSET_STATUS_MAP) },
@@ -890,6 +891,20 @@ function fitGridColumnsIfNeeded() {
   setTimeout(() => gridApi.sizeColumnsToFit(), 0);
 }
 
+
+function isMobileGridViewport() {
+  return window.matchMedia?.("(max-width: 760px)")?.matches || window.innerWidth <= 760;
+}
+
+function applyAssetMobileColumnDefaults() {
+  if (!gridApi?.applyColumnState || hasStoredGridColumnState() || !isMobileGridViewport()) return false;
+  const essential = new Set(["_selected", "asset_name", "primary_ip", "status"]);
+  const state = columnDefs
+    .filter((col) => col.field)
+    .map((col) => ({ colId: col.field, hide: !essential.has(col.field) }));
+  return !!gridApi.applyColumnState({ state, applyOrder: false });
+}
+
 function initAssetColChooser() {
   const btn = document.getElementById("btn-asset-col-chooser");
   const menu = document.getElementById("asset-col-chooser-menu");
@@ -948,6 +963,7 @@ function applyClassificationLevelHeaders() {
   _suppressColumnSave = true;
   gridApi.setGridOption("columnDefs", columnDefs);
   const restored = restoreGridColumnState();
+  if (!restored) applyAssetMobileColumnDefaults();
   if (!restored) fitGridColumnsIfNeeded();
   _suppressColumnSave = false;
 }
@@ -1364,6 +1380,7 @@ async function initGrid() {
   _suppressColumnSave = true;
   await loadClassificationLevelAliases();
   const restored = restoreGridColumnState();
+  if (!restored) applyAssetMobileColumnDefaults();
   if (!restored) fitGridColumnsIfNeeded();
   _suppressColumnSave = false;
   // 초기 context 복원이 base/initContextSelectors보다 늦거나 빨라도 한 번은 로드되도록 재시도

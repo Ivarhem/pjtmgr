@@ -499,6 +499,20 @@ function fitCatalogGridColumnsIfNeeded() {
   setTimeout(() => catalogGridApi.sizeColumnsToFit(), 0);
 }
 
+
+function isMobileGridViewport() {
+  return window.matchMedia?.("(max-width: 760px)")?.matches || window.innerWidth <= 760;
+}
+
+function applyCatalogMobileColumnDefaults() {
+  if (!catalogGridApi?.applyColumnState || hasStoredCatalogGridColumnState() || !isMobileGridViewport()) return false;
+  const essential = new Set(["_select", "vendor", "name", "verification_status"]);
+  const state = catalogColDefs
+    .filter((col) => col.field)
+    .map((col) => ({ colId: col.field, hide: !essential.has(col.field) }));
+  return !!catalogGridApi.applyColumnState({ state, applyOrder: false });
+}
+
 /* ── 목록 그리드 ── */
 
 function buildCatalogColDefs() {
@@ -516,12 +530,13 @@ function buildCatalogColDefs() {
       resizable: false,
       pinned: "left",
     },
-    { field: "vendor", headerName: "제조사", width: 120, sort: "asc" },
-    { field: "name", headerName: "모델명", flex: 1, minWidth: 160 },
+    { field: "vendor", headerName: "제조사", width: 120, minWidth: 96, sort: "asc" },
+    { field: "name", headerName: "모델명", flex: 1, minWidth: 180 },
     {
       field: "verification_status",
       headerName: "검증상태",
       width: 105,
+      minWidth: 96,
       valueFormatter: (p) => getVerificationStatusLabel(p.value),
       cellClassRules: {
         "cell-muted": (p) => !p.value || p.value === "unverified",
@@ -712,6 +727,7 @@ function initCatalogGrid() {
     },
   });
   const restored = restoreCatalogGridColumnState();
+  if (!restored) applyCatalogMobileColumnDefaults();
   if (!restored) fitCatalogGridColumnsIfNeeded();
   initCatalogColChooser();
 }
