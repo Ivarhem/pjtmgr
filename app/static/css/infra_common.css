@@ -5006,3 +5006,22 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
 .mdm-detail-section {
   min-height: 0;
 }
+
+
+/* Workspace split layout primitives and catalog left-panel collapse */
+.workspace-layout { display: flex; min-width: 0; min-height: 0; }
+.workspace-panel, .workspace-panel-main { min-width: 0; min-height: 0; }
+.workspace-panel-handle { width: 18px; flex: 0 0 18px; display: flex; align-items: center; justify-content: center; }
+.workspace-panel-toggle { width: 20px; height: 28px; border: none; border-radius: var(--ui-radius-pill, 999px); background: transparent; color: var(--text-color-secondary); font-size: 16px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: none; }
+.workspace-panel-toggle:hover { color: var(--text-color); background: var(--secondary-color); }
+.catalog-tree-handle-wrap { width: 18px; flex: 0 0 18px; display: flex; align-items: center; justify-content: center; }
+.catalog-tree-toggle { transition: transform 0.16s ease, color 0.16s ease, background-color 0.16s ease; }
+.catalog-layout.layout-tree-collapsed .catalog-category-panel,
+.catalog-layout.layout-tree-collapsed .catalog-category-splitter { display: none; }
+.catalog-layout.layout-tree-collapsed .catalog-tree-toggle { transform: rotate(180deg); }
+.catalog-layout.layout-tree-collapsed .catalog-main-panel { width: calc(100% - 18px); flex: 1 1 auto; }
+@media (max-width: 900px) {
+  .catalog-layout { height: calc(100dvh - 170px); max-height: calc(100dvh - 170px); }
+  .catalog-category-panel { min-width: min(82vw, 320px); max-width: min(82vw, 360px); }
+  .catalog-layout:not(.layout-tree-collapsed) .catalog-main-panel { min-width: 360px; }
+}

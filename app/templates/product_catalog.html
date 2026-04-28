@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}제품 카탈로그{% endblock %}
-{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428i">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428workspace">{% endblock %}
 {% block content %}
 <div class="tab-nav">
   <a href="{{ request.scope.root_path or "" }}/product-catalog" class="tab-btn active">제품 카탈로그</a>
@@ -13,8 +13,8 @@
 
 <p class="data-note">하드웨어, 소프트웨어, 서비스, 모델 등 제품 기준정보와 수명주기 정보를 관리합니다. 카탈로그 메인 화면에서 기준 트리와 제품을 함께 관리하며, 자산 메타도 선택한 분류에서 함께 가져옵니다.</p>
 
-<div class="catalog-layout">
-  <section class="catalog-category-panel">
+<div class="catalog-layout workspace-layout" id="catalog-layout">
+  <section class="catalog-category-panel workspace-panel workspace-panel-left">
     <div class="catalog-category-header">
       <h2 id="catalog-classification-title">최종 분류</h2>
       <div class="infra-inline-actions layout-tree-header-actions">
@@ -52,9 +52,13 @@
     <div id="catalog-classification-tree" class="classification-tree"></div>
   </section>
 
-  <div class="catalog-category-splitter" id="catalog-category-splitter"></div>
+  <div class="catalog-category-splitter workspace-splitter" id="catalog-category-splitter"></div>
 
-  <div class="catalog-main-panel">
+  <div class="catalog-tree-handle-wrap workspace-panel-handle" id="catalog-tree-handle-wrap">
+    <button class="catalog-tree-toggle workspace-panel-toggle" id="btn-toggle-catalog-tree" title="분류 패널 열기/닫기">❮</button>
+  </div>
+
+  <div class="catalog-main-panel workspace-panel-main">
     <div class="catalog-list-panel">
       <div class="catalog-toolbar">
         <input type="text" id="catalog-search" class="input-search" placeholder="제조사/모델 검색">
@@ -569,5 +573,5 @@
 
 {% block scripts %}
 <script src="{{ request.scope.root_path or "" }}/static/js/modal_combobox.js?v=20260413e"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260428v"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260428workspace"></script>
 {% endblock %}

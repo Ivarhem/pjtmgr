@@ -31,6 +31,7 @@ let _catalogPermissions = {
 };
 const CATALOG_CLASSIFICATION_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 const CATALOG_CATEGORY_WIDTH_KEY = "catalog_category_width";
+const CATALOG_CATEGORY_OPEN_KEY = "catalog_category_open";
 const CATALOG_LIST_WIDTH_KEY = "catalog_list_width";
 const CATALOG_GRID_COLUMN_STATE_KEY = "catalog_grid_column_state_v3";
 const CATALOG_CLASSIFICATION_COLLAPSED_KEY = "catalog_classification_collapsed_nodes";
@@ -1792,9 +1793,33 @@ function toggleCatalogDetailPanel() {
   }
 }
 
+function setCatalogCategoryOpen(isOpen) {
+  const layout = document.getElementById("catalog-layout") || document.querySelector(".catalog-layout");
+  const btn = document.getElementById("btn-toggle-catalog-tree");
+  if (!layout) return;
+  layout.classList.toggle("layout-tree-collapsed", !isOpen);
+  if (btn) {
+    btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    btn.title = isOpen ? "분류 패널 접기" : "분류 패널 열기";
+  }
+  localStorage.setItem(CATALOG_CATEGORY_OPEN_KEY, isOpen ? "1" : "0");
+}
+
+function toggleCatalogCategoryPanel() {
+  const layout = document.getElementById("catalog-layout") || document.querySelector(".catalog-layout");
+  const isOpen = !layout?.classList.contains("layout-tree-collapsed");
+  setCatalogCategoryOpen(!isOpen);
+}
+
+function initCatalogCategoryPanelState() {
+  const stored = localStorage.getItem(CATALOG_CATEGORY_OPEN_KEY);
+  setCatalogCategoryOpen(stored !== "0");
+  document.getElementById("btn-toggle-catalog-tree")?.addEventListener("click", toggleCatalogCategoryPanel);
+}
+
 function initCategorySplitter() {
   const splitter = document.getElementById("catalog-category-splitter");
-  const layout = document.querySelector(".catalog-layout");
+  const layout = document.getElementById("catalog-layout") || document.querySelector(".catalog-layout");
   if (!splitter || !layout) return;
   const storedWidth = Number(localStorage.getItem(CATALOG_CATEGORY_WIDTH_KEY) || 0);
   if (storedWidth >= 280 && storedWidth <= 520) {
@@ -2978,6 +3003,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initIfaceGrid();
   initTabs();
   activateCatalogTab("info");
+  initCatalogCategoryPanelState();
   initCategorySplitter();
   initSplitter();
   bindProductSimilarityInputs();
