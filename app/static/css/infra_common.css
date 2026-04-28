@@ -5316,3 +5316,24 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     border-bottom: none;
   }
 }
+
+/* Mobile selected rack: end the detail at content height; do not stretch card/panel visually (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    background: transparent !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-card,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    background: var(--surface-color) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--ui-radius-lg, 12px) !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-card::after,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card::after {
+    content: none !important;
+    display: none !important;
+  }
+}
