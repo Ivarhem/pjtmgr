@@ -531,6 +531,49 @@ body.hide-desc .data-note { display: none; }
 .page-header h1 { font-size: 24px; font-weight: 700; color: var(--text-color); letter-spacing: -0.5px; }
 .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* Unified page/section title bars */
+.page-shell { display: flex; flex-direction: column; min-height: 0; }
+.page-titlebar,
+.section-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.page-titlebar { margin-bottom: 20px; }
+.section-titlebar { margin-bottom: 10px; }
+.page-titlebar h1,
+.page-header h1 { margin: 0; font-size: 24px; font-weight: 700; color: var(--text-color); letter-spacing: -0.5px; }
+.section-titlebar h2,
+.section-titlebar h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-color); }
+.page-titlebar-actions,
+.section-titlebar-actions,
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Unified checkbox/form field primitives */
+.form-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-color-secondary); }
+.field-label { color: var(--text-color-secondary); font-size: 13px; }
+.check-row,
+.check-group label,
+.check-pill,
+.form-grid label.chk-inline,
+.info-edit-field.chk-inline,
+label.chk-inline {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+}
+.check-row input[type="checkbox"],
+.check-group input[type="checkbox"],
+.check-pill input[type="checkbox"],
+.chk-inline input[type="checkbox"] { width: 15px; height: 15px; min-width: 15px; padding: 0; margin: 0; flex-shrink: 0; }
+.check-group { display: flex; flex-direction: column; gap: 8px; }
+.check-pill { padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 999px; background: var(--surface-color); }
+
 /* 버튼 */
 .btn {
   padding: 9px 18px;

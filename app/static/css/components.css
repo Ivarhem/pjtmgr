@@ -35,6 +35,37 @@
 }
 
 
+/* Unified toolbar aliases. Existing filter/catalog toolbars can migrate gradually. */
+.toolbar,
+.toolbar-card,
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toolbar-card,
+.filter-bar {
+  margin-bottom: 16px;
+  background: var(--surface-color);
+  padding: 12px 16px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+}
+.toolbar-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-color-secondary); }
+.toolbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toolbar-spacer { margin-left: auto; }
+
+/* Unified grid sizing primitives. Parent layouts should own height; grids fill safely. */
+.app-grid { width: 100%; min-height: 0; overflow: hidden; border-radius: var(--card-radius); border: 1px solid var(--border-color); }
+.app-grid-fill { flex: 1 1 auto; height: 100%; min-height: 0; }
+.app-grid-short { height: 280px; }
+.app-grid-mid { height: 400px; }
+.app-grid-tall { height: min(640px, calc(100dvh - 220px)); min-height: 420px; }
+.split-layout-fill { height: calc(100dvh - 150px); min-height: 520px; min-width: 0; }
+
+
 /* 필터바 유틸 */
 .filter-item-ml { margin-left: 4px; }
 .filter-bar-end { margin-left: auto; }

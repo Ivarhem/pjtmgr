@@ -2,29 +2,23 @@
 {% block title %}프로젝트 - 프로젝트관리{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
-<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260422c">
-{% endblock %}
-
-{% block head_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428ui">
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-titlebar">
   <h1>프로젝트</h1>
-  <div class="infra-inline-actions">
-    <label class="chk-inline"><input type="checkbox" id="chk-active-projects" checked> 완료되지 않은 사업만</label>
+  <div class="page-titlebar-actions">
+    <label class="check-row"><input type="checkbox" id="chk-active-projects" checked> 완료되지 않은 사업만</label>
     <button class="btn btn-primary btn-sm" id="btn-add-project">프로젝트 등록</button>
   </div>
 </div>
 
-<div id="project-layout" class="asset-layout">
+<div id="project-layout" class="asset-layout split-layout-fill">
   <!-- Left: Project list grid -->
   <div class="asset-list-panel">
     <div class="card">
-      <div id="grid-projects" class="ag-theme-quartz infra-grid project-grid-surface"></div>
+      <div id="grid-projects" class="ag-theme-quartz infra-grid app-grid app-grid-fill project-grid-surface"></div>
     </div>
   </div>
 
@@ -51,21 +45,21 @@
         <div class="phase-timeline" id="phase-timeline"></div>
 
         <!-- Phases -->
-        <div class="page-header mt-md">
+        <div class="section-titlebar mt-md">
           <h3>단계</h3>
-          <button class="btn btn-sm btn-primary" id="btn-add-phase">단계 등록</button>
+          <div class="section-titlebar-actions"><button class="btn btn-sm btn-primary" id="btn-add-phase">단계 등록</button></div>
         </div>
         <div class="card mb-md">
-          <div id="grid-phases" class="ag-theme-quartz infra-grid infra-grid-dashboard-side project-detail-grid-surface"></div>
+          <div id="grid-phases" class="ag-theme-quartz infra-grid app-grid app-grid-short project-detail-grid-surface"></div>
         </div>
 
         <!-- Deliverables -->
-        <div class="page-header mt-md">
+        <div class="section-titlebar mt-md">
           <h3>산출물</h3>
-          <button class="btn btn-sm btn-primary" id="btn-add-deliverable">산출물 등록</button>
+          <div class="section-titlebar-actions"><button class="btn btn-sm btn-primary" id="btn-add-deliverable">산출물 등록</button></div>
         </div>
         <div class="card">
-          <div id="grid-deliverables" class="ag-theme-quartz infra-grid infra-grid-dashboard-side project-detail-grid-surface"></div>
+          <div id="grid-deliverables" class="ag-theme-quartz infra-grid app-grid app-grid-short project-detail-grid-surface"></div>
         </div>
       </div>
     </div>
@@ -84,13 +78,13 @@
         <label><span class="label-text">사업명<span class="req">*</span></span>
           <input type="text" id="project-name" required>
         </label>
-        <label>
-          사업완료여부
-          <label class="chk-inline">
+        <div class="form-field">
+          <span class="field-label">사업완료여부</span>
+          <label class="check-row">
             <input type="checkbox" id="project-completed">
             완료
           </label>
-        </label>
+        </div>
         <label>
           시작일
           <input type="date" id="start-date">
