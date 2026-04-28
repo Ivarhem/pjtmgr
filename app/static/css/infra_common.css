@@ -5301,3 +5301,18 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     margin-bottom: 0 !important;
   }
 }
+
+/* Mobile selected rack: make the full-screen detail read as one continuous card (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    background: var(--surface-color);
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-card,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card {
+    min-height: 100% !important;
+    border-radius: 0 !important;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+}
