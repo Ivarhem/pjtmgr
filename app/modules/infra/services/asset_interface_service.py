@@ -123,6 +123,24 @@ def generate_interfaces_from_catalog(
     db: Session, asset_id: int, current_user: User
 ) -> list[AssetInterface]:
     _require_inventory_edit(current_user)
+    created = sync_interfaces_from_catalog_model(db, asset_id, replace_catalog_generated=False)
+    db.commit()
+    for iface in created:
+        db.refresh(iface)
+    return created
+
+
+def sync_interfaces_from_catalog_model(
+    db: Session,
+    asset_id: int,
+    *,
+    replace_catalog_generated: bool = True,
+) -> list[AssetInterface]:
+    """Create asset interfaces from the assigned hardware catalog model.
+
+    When replacing, only previously catalog-generated rows (hw_interface_id set) are
+    deleted. Manual interfaces/LAGs/VLANs are preserved.
+    """
     asset = _ensure_asset_exists(db, asset_id)
 
     if not asset.model_id:
@@ -136,49 +154,123 @@ def generate_interfaces_from_catalog(
         )
     )
 
-    created: list[AssetInterface] = []
-    for spec in hw_specs:
-        type_lower = spec.interface_type.lower()
-        is_modular = spec.capacity_type == "modular"
+    if replace_catalog_generated:
+        old_generated = list(
+            db.scalars(
+                select(AssetInterface).where(
+                    AssetInterface.asset_id == asset_id,
+                    AssetInterface.hw_interface_id.is_not(None),
+                )
+            )
+        )
+        for iface in old_generated:
+            db.delete(iface)
+        if old_generated:
+            db.flush()
 
-        for i in range(spec.count):
+    created: list[AssetInterface] = []
+    name_group_indexes: dict[str, int] = {}
+    existing_names = set(
+        db.scalars(select(AssetInterface.name).where(AssetInterface.asset_id == asset_id))
+    )
+    sort_base = db.scalar(
+        select(AssetInterface.sort_order)
+        .where(AssetInterface.asset_id == asset_id)
+        .order_by(AssetInterface.sort_order.desc())
+        .limit(1)
+    )
+    next_sort = (sort_base or 0) + 1
+
+    for spec in hw_specs:
+        name_prefix = _catalog_name_prefix(spec)
+        if name_prefix is None:
+            continue
+        port_type = _catalog_port_type(spec)
+        is_modular = spec.capacity_type == "modular"
+        if name_prefix == "MGMT":
+            group_index = 0
+        else:
+            group_index = name_group_indexes.setdefault(name_prefix, len(name_group_indexes))
+
+        for i in range(spec.count or 0):
             if is_modular:
                 slot_label = spec.note or f"slot{spec.id}"
                 name = f"{slot_label}/port{i + 1}"
                 oper_status = "not_present"
             else:
-                name = f"{type_lower}-0/0/{i}"
+                name = _port_name(name_prefix, group_index, i + 1)
                 oper_status = None
 
-            # Idempotent: skip if name already exists
-            existing = db.scalar(
-                select(AssetInterface.id).where(
-                    AssetInterface.asset_id == asset_id,
-                    AssetInterface.name == name,
-                )
-            )
-            if existing is not None:
+            # Idempotent/preserve manual: skip conflicting names.
+            if name in existing_names:
                 continue
+            existing_names.add(name)
 
             iface = AssetInterface(
                 asset_id=asset_id,
                 hw_interface_id=spec.id,
                 name=name,
                 if_type="physical",
+                port_type=port_type,
                 speed=spec.speed,
                 media_type=spec.connector_type,
                 admin_status="up",
                 oper_status=oper_status,
-                sort_order=len(created),
+                sort_order=next_sort,
             )
+            next_sort += 1
             db.add(iface)
             created.append(iface)
 
-    db.commit()
-    for iface in created:
-        db.refresh(iface)
     return created
 
+
+
+def _catalog_name_prefix(spec: HardwareInterface) -> str | None:
+    text = " ".join(filter(None, [spec.interface_type, spec.speed, spec.connector_type, spec.note])).lower()
+    if "console" in text:
+        return None
+    if "mgmt" in text or "management" in text:
+        return "MGMT"
+    if "infini" in text:
+        return "IB"
+    if "200g" in text:
+        return "200GE"
+    if "100g" in text:
+        return "100GE"
+    if "50g" in text:
+        return "50GE"
+    if "25g" in text:
+        return "25GE"
+    if "10g" in text or "sfp+" in text or "10ge" in text:
+        return "TE"
+    if "40g" in text or "qsfp+" in text:
+        return "40GE"
+    if "1g" in text or "ge" in text or "ethernet" in text or "rj45" in text or "sfp" in text:
+        return "GE"
+    return (spec.interface_type or "IF").upper().replace(" ", "-")[:30]
+
+
+def _catalog_port_type(spec: HardwareInterface) -> str | None:
+    connector = (spec.connector_type or "").strip()
+    if connector:
+        normalized = connector.replace("RJ-45", "RJ45").replace("RJ 45", "RJ45")
+        return normalized[:30]
+    interface_type = (spec.interface_type or "").strip()
+    if interface_type:
+        for token in ["SFP56", "SFP28", "SFP+", "SFP", "QSFP28", "QSFP+", "QSFP", "RJ45"]:
+            if token.lower() in interface_type.lower():
+                return token
+        return interface_type[:30]
+    return None
+
+
+def _port_name(name_prefix: str, group_index: int, number: int) -> str:
+    if name_prefix == "MGMT":
+        return f"MGMT-0/{number}"
+    if name_prefix == "IB":
+        return f"IB-{group_index}/0/{number}"
+    return f"{name_prefix}-{group_index}/0/{number}"
 
 # ── Private helpers ──
 

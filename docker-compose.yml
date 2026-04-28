@@ -39,7 +39,7 @@ services:
       - ./app:/app/app
       - ./alembic:/app/alembic
       - ./alembic.ini:/app/alembic.ini
-    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 9000 --reload --reload-dir /app/app"]
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 9000"]
     ports:
       - "${APP_HOST_PORT:-9000}:9000"
     healthcheck:
@@ -48,6 +48,33 @@ services:
       timeout: 5s
       start_period: 15s
       retries: 3
+    restart: unless-stopped
+
+  worker:
+    container_name: pjtmgr-worker
+    build:
+      context: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://pjtmgr:${POSTGRES_PASSWORD}@db:5432/pjtmgr}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY is required}
+      ENABLED_MODULES: ${ENABLED_MODULES:-common,accounting,infra}
+      SKIP_LIFESPAN_ALEMBIC: "1"
+      CATALOG_RESEARCH_AUTO_ENABLED: "true"
+      CATALOG_RESEARCH_AUTO_INTERVAL_SECONDS: ${CATALOG_RESEARCH_AUTO_INTERVAL_SECONDS:-180}
+      CATALOG_RESEARCH_AUTO_IDLE_SECONDS: ${CATALOG_RESEARCH_AUTO_IDLE_SECONDS:-600}
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    command: ["python", "-m", "app.core.startup.catalog_research_worker"]
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
 volumes:

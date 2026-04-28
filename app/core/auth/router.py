@@ -8,6 +8,7 @@ from app.core.auth.authorization import get_permissions
 from app.modules.common.models.user import User
 from app.core.exceptions import UnauthorizedError
 from app.modules.common.schemas.auth import ChangePasswordRequest, LoginRequest
+from app.modules.common.services import setting as setting_service
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -47,4 +48,24 @@ def get_me(current_user: User = Depends(get_current_user)) -> dict:
         "department": current_user.department,
         "must_change_password": current_user.must_change_password,
         "permissions": get_permissions(current_user),
+    }
+
+
+@router.get("/bootstrap")
+def get_auth_bootstrap(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Common page bootstrap: current user + lightweight settings in one request."""
+    return {
+        "me": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "role": current_user.role_obj.name if current_user.role_obj else None,
+            "role_id": current_user.role_id,
+            "department": current_user.department,
+            "must_change_password": current_user.must_change_password,
+            "permissions": get_permissions(current_user),
+        },
+        "settings": {
+            "org_name": setting_service.get_setting(db, "org_name"),
+            "password_min_length": setting_service.get_password_min_length(db),
+        },
     }

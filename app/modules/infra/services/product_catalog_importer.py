@@ -15,6 +15,7 @@ from app.modules.infra.models.software_spec import SoftwareSpec
 from app.modules.infra.models.model_spec import ModelSpec
 from app.modules.infra.services.catalog_alias_service import resolve_vendor_canonical
 from app.modules.infra.services.catalog_similarity_service import build_normalized_catalog_fields
+from app.modules.infra.services.product_catalog_service import derive_catalog_family_fields
 
 # ── 공통 유틸 ──
 
@@ -96,18 +97,18 @@ def _make_empty_result() -> dict:
 # ── SPEC 시트 컬럼 정의 ──
 # Row 1 = 헤더, Row 2+ = 데이터
 _SPEC_HEADERS = [
-    "vendor", "name", "product_type", "category",
+    "vendor", "name", "model_family", "product_type", "category",
     "size_unit", "width_mm", "height_mm", "depth_mm", "weight_kg",
-    "power_count", "power_type", "power_watt",
-    "cpu_summary", "memory_summary", "throughput_summary",
+    "power_count", "power_type", "power_watt", "power_summary",
+    "cpu_summary", "memory_summary", "storage_summary", "throughput_summary",
     "os_firmware", "spec_url", "reference_url",
 ]
 
 _SPEC_HEADER_LABELS = [
-    "제조사", "모델명", "제품유형", "분류",
+    "제조사", "모델명", "모델계열", "제품유형", "분류",
     "Size(U)", "폭(mm)", "높이(mm)", "깊이(mm)", "무게(kg)",
-    "전원수량", "전원유형", "전원(W)",
-    "CPU 요약", "메모리 요약", "처리량 요약",
+    "전원수량", "전원유형", "전원(W)", "전원 요약",
+    "CPU 요약", "메모리 요약", "스토리지/HDD 요약", "처리량 요약",
     "OS/FW", "스펙 URL", "참조 URL",
 ]
 
@@ -233,10 +234,13 @@ def parse_spec_sheet(file_bytes: bytes) -> dict:
             "row_num": excel_row,
             "vendor": data.get("vendor"),
             "name": data.get("name"),
+            "model_family": data.get("model_family"),
             "category": data.get("category"),
             "size_unit": data.get("size_unit"),
             "power_count": data.get("power_count"),
+            "power_summary": data.get("power_summary"),
             "cpu_summary": data.get("cpu_summary"),
+            "storage_summary": data.get("storage_summary"),
             "errors": row_errors or None,
         })
 
@@ -297,10 +301,11 @@ def import_spec(
         spec_data = {k: v for k, v in row_data.items() if k in _SPEC_ONLY}
         catalog_data.setdefault("source_name", "spec.xlsx")
         catalog_data.setdefault("source_confidence", "imported")
-        catalog_data.setdefault("verification_status", "imported")
+        catalog_data.setdefault("verification_status", "verified")
         catalog_data["import_batch_id"] = batch_id
         catalog_data["last_verified_at"] = imported_at
         catalog_data.pop("asset_type_key", None)
+        catalog_data.update(derive_catalog_family_fields(catalog_data.get("vendor"), catalog_data.get("name"), catalog_data.get("product_type"), catalog_data.get("model_family"), catalog_data.get("is_family_level")))
         catalog_data.update(build_normalized_catalog_fields(catalog_data.get("vendor"), catalog_data.get("name")))
 
         ex = existing.get((vendor, name))
@@ -535,7 +540,7 @@ def import_eosl(
         if changed:
             ex.source_name = ex.source_name or "spec.xlsx"
             ex.source_confidence = ex.source_confidence or "imported"
-            ex.verification_status = "imported"
+            ex.verification_status = "verified"
             ex.import_batch_id = batch_id
             ex.last_verified_at = imported_at
 
@@ -699,11 +704,12 @@ def import_software(
         spec_data = {k: v for k, v in row_data.items() if k in software_only}
         catalog_data.setdefault("source_name", "software_import.xlsx")
         catalog_data.setdefault("source_confidence", "imported")
-        catalog_data.setdefault("verification_status", "imported")
+        catalog_data.setdefault("verification_status", "verified")
         catalog_data["import_batch_id"] = batch_id
         catalog_data["last_verified_at"] = imported_at
         catalog_data["product_type"] = catalog_data.get("product_type") or "software"
         catalog_data.pop("asset_type_key", None)
+        catalog_data.update(derive_catalog_family_fields(catalog_data.get("vendor"), catalog_data.get("name"), catalog_data.get("product_type"), catalog_data.get("model_family"), catalog_data.get("is_family_level")))
         catalog_data.update(build_normalized_catalog_fields(catalog_data.get("vendor"), catalog_data.get("name")))
 
         ex = existing.get((vendor, name))
@@ -865,11 +871,12 @@ def import_model(
         spec_data = {k: v for k, v in row_data.items() if k in model_only}
         catalog_data.setdefault("source_name", "model_import.xlsx")
         catalog_data.setdefault("source_confidence", "imported")
-        catalog_data.setdefault("verification_status", "imported")
+        catalog_data.setdefault("verification_status", "verified")
         catalog_data["import_batch_id"] = batch_id
         catalog_data["last_verified_at"] = imported_at
         catalog_data["product_type"] = catalog_data.get("product_type") or "model"
         catalog_data.pop("asset_type_key", None)
+        catalog_data.update(derive_catalog_family_fields(catalog_data.get("vendor"), catalog_data.get("name"), catalog_data.get("product_type"), catalog_data.get("model_family"), catalog_data.get("is_family_level")))
         catalog_data.update(build_normalized_catalog_fields(catalog_data.get("vendor"), catalog_data.get("name")))
 
         ex = existing.get((vendor, name))

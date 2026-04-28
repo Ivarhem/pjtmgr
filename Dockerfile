@@ -5,6 +5,7 @@ WORKDIR /app
 # 시스템 의존성 (PostgreSQL 클라이언트 + MCP runtime + Codex CLI)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
+    curl \
     nodejs \
     npm \
     && npm install -g mcporter @openai/codex \

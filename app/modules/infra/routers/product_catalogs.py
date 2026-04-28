@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Response, status
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from app.core.auth.dependencies import get_current_user
+from app.core.auth.authorization import get_permissions
 from app.core.database import get_db
 from app.modules.common.models.user import User
 from app.modules.infra.schemas.product_catalog import (
+    ProductCatalogBulkActionResponse,
     ProductCatalogBulkUpsertRequest,
     ProductCatalogBulkUpsertResponse,
+    ProductCatalogBulkVerificationStatusUpdate,
     ProductCatalogCreate,
     ProductCatalogDetail,
     ProductCatalogRead,
     ProductCatalogUpdate,
+    ProductCatalogVerificationStatusUpdate,
 )
 from app.modules.infra.schemas.catalog_similarity import (
     CatalogSimilarityCheckRequest,
@@ -23,15 +28,25 @@ from app.modules.infra.schemas.catalog_similarity import (
     ProductRestoreRequest,
 )
 from app.modules.infra.schemas.product_catalog_research import (
+    ProductCatalogBatchResearchRequest,
+    ProductCatalogBatchResearchResponse,
     ProductCatalogResearchRequest,
     ProductCatalogResearchResponse,
+    ProductCatalogSkuExpansionApplyRequest,
+    ProductCatalogSkuExpansionApplyResponse,
+    ProductCatalogSkuExpansionPreviewResponse,
 )
 from app.modules.infra.services.catalog_merge_service import (
     merge_products,
     dismiss_similarity,
     restore_similarity,
 )
-from app.modules.infra.services.catalog_research_service import research_catalog_product
+from app.modules.infra.services.catalog_research_service import (
+    apply_product_sku_expansion,
+    batch_research_catalog_products,
+    preview_product_sku_expansion,
+    research_catalog_product,
+)
 from app.modules.infra.schemas.hardware_spec import (
     HardwareSpecCreate,
     HardwareSpecRead,
@@ -53,7 +68,11 @@ from app.modules.infra.schemas.hardware_interface import (
     HardwareInterfaceRead,
     HardwareInterfaceUpdate,
 )
+from app.modules.common.services.user_preference import get_preference
+from app.modules.infra.services.catalog_attribute_service import list_attribute_options, list_attributes
+from app.modules.infra.services.classification_layout_service import get_layout_detail, list_layouts
 from app.modules.infra.services.product_catalog_service import (
+    bulk_set_product_verification_status,
     bulk_upsert_products,
     create_interface,
     create_product,
@@ -62,6 +81,8 @@ from app.modules.infra.services.product_catalog_service import (
     get_product_detail,
     list_interfaces,
     list_products,
+    mark_product_verified,
+    set_product_verification_status,
     upsert_generic_profile,
     upsert_model_spec,
     upsert_software_spec,
@@ -89,6 +110,42 @@ def list_products_endpoint(
     return list_products(db, vendor, product_type, q)
 
 
+@router.get("/bootstrap")
+def catalog_bootstrap_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    """제품 카탈로그 초기 화면에 필요한 기준정보/목록을 한 번에 반환한다."""
+    attr_defs = list_attributes(db, active_only=False)
+    layouts = list_layouts(db, scope_type="global", active_only=True)
+    preferred_raw = get_preference(db, current_user.id, "catalog.layout_preset_id")
+    preferred_id = int(preferred_raw) if str(preferred_raw or "").isdigit() else None
+    target_layout = (
+        next((item for item in layouts if preferred_id and item.id == preferred_id), None)
+        or next((item for item in layouts if item.is_default), None)
+        or (layouts[0] if layouts else None)
+    )
+    layout_detail = get_layout_detail(db, target_layout.id) if target_layout else None
+
+    active_options_by_attribute_key = {}
+    for attr in attr_defs:
+        active_options_by_attribute_key[attr.attribute_key] = list_attribute_options(db, attr.id, active_only=True)
+
+    return jsonable_encoder({
+        "me": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "permissions": get_permissions(current_user),
+        },
+        "label_lang": get_preference(db, current_user.id, "catalog.label_lang") or "ko",
+        "attributes": attr_defs,
+        "layouts": layouts,
+        "layout_detail": layout_detail,
+        "active_options_by_attribute_key": active_options_by_attribute_key,
+        "products": list_products(db, None, None, None),
+    })
+
+
 @router.post(
     "", response_model=ProductCatalogRead, status_code=status.HTTP_201_CREATED
 )
@@ -107,6 +164,17 @@ def bulk_upsert_products_endpoint(
     current_user: User = Depends(get_current_user),
 ) -> ProductCatalogBulkUpsertResponse:
     return ProductCatalogBulkUpsertResponse(**bulk_upsert_products(db, payload.rows, current_user))
+
+
+@router.patch("/bulk/verification-status", response_model=ProductCatalogBulkActionResponse)
+def bulk_update_verification_status_endpoint(
+    payload: ProductCatalogBulkVerificationStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogBulkActionResponse:
+    return ProductCatalogBulkActionResponse(**bulk_set_product_verification_status(
+        db, payload.product_ids, payload.verification_status, current_user
+    ))
 
 
 @router.post("/similarity-check", response_model=CatalogSimilarityCheckResponse)
@@ -181,6 +249,66 @@ def research_product_endpoint(
         fill_only=payload.fill_only,
         force=payload.force,
     ))
+
+
+@router.post("/research/batch", response_model=ProductCatalogBatchResearchResponse)
+def batch_research_products_endpoint(
+    payload: ProductCatalogBatchResearchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogBatchResearchResponse:
+    return ProductCatalogBatchResearchResponse(**batch_research_catalog_products(
+        db,
+        current_user=current_user,
+        limit=payload.limit,
+        fill_only=payload.fill_only,
+        force=payload.force,
+        include_pending_review=payload.include_pending_review,
+    ))
+
+
+@router.get("/{product_id}/sku-expansion-preview", response_model=ProductCatalogSkuExpansionPreviewResponse)
+def preview_product_sku_expansion_endpoint(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogSkuExpansionPreviewResponse:
+    return ProductCatalogSkuExpansionPreviewResponse(**preview_product_sku_expansion(db, product_id))
+
+
+@router.post("/{product_id}/sku-expansion-apply", response_model=ProductCatalogSkuExpansionApplyResponse)
+def apply_product_sku_expansion_endpoint(
+    product_id: int,
+    payload: ProductCatalogSkuExpansionApplyRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogSkuExpansionApplyResponse:
+    return ProductCatalogSkuExpansionApplyResponse(**apply_product_sku_expansion(
+        db,
+        product_id,
+        current_user,
+        selected_names=payload.selected_names,
+        delete_family_after_expand=payload.delete_family,
+    ))
+
+
+@router.post("/{product_id}/mark-verified", response_model=ProductCatalogRead)
+def mark_product_verified_endpoint(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogRead:
+    return mark_product_verified(db, product_id, current_user)
+
+
+@router.patch("/{product_id}/verification-status", response_model=ProductCatalogRead)
+def set_product_verification_status_endpoint(
+    product_id: int,
+    payload: ProductCatalogVerificationStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProductCatalogRead:
+    return set_product_verification_status(db, product_id, payload.verification_status, current_user)
 
 
 @router.patch("/{product_id}", response_model=ProductCatalogRead)

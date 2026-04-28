@@ -441,6 +441,13 @@ def create_asset(db: Session, payload: AssetCreate, current_user: User) -> Asset
             if attempt == 2:
                 raise
 
+    # 카탈로그 하드웨어 인터페이스 자동 생성
+    try:
+        from app.modules.infra.services.asset_interface_service import sync_interfaces_from_catalog_model
+        sync_interfaces_from_catalog_model(db, asset.id, replace_catalog_generated=True)
+    except BusinessRuleError:
+        pass
+
     # 귀속사업 연결
     if payload.period_id is not None:
         pa = PeriodAsset(
@@ -535,8 +542,17 @@ def update_asset(
         changes["center"] = refs["center_code"]
         changes["rack_no"] = refs["rack_code"]
 
+    model_changed = "model_id" in changes and changes.get("model_id") is not None and changes.get("model_id") != asset.model_id
+
     for field, value in changes.items():
         setattr(asset, field, value)
+
+    if model_changed:
+        try:
+            from app.modules.infra.services.asset_interface_service import sync_interfaces_from_catalog_model
+            sync_interfaces_from_catalog_model(db, asset.id, replace_catalog_generated=True)
+        except BusinessRuleError:
+            pass
 
     should_sync_period = has_period_change or target_partner_id != asset.partner_id
     if should_sync_period:

@@ -12,20 +12,13 @@
   </script>
 
   <!-- AG Grid Community -->
-  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/dist/ag-grid-community.min.js"></script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{{ request.scope.root_path or "" }}/static/vendor/ag-grid/ag-grid-community.min.js?v=32.0.0b"></script>
+  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/vendor/ag-grid/ag-grid.css?v=32.0.0" />
+  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/vendor/ag-grid/ag-theme-quartz.css?v=32.0.0" />
   
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-grid.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.0.0/styles/ag-theme-quartz-dark.css" />
-  
-  <script src="{{ request.scope.root_path or "" }}/static/js/utils.js?v=20260413d"></script>
-  <!-- HTMX -->
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-  
-  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/base.css">
-  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/components.css">
+  <script src="{{ request.scope.root_path or "" }}/static/js/utils.js?v=20260428b"></script>
+  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/base.css?v=20260428b">
+  <link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/components.css?v=20260428b">
   {% block styles %}{% endblock %}
 </head>
 <body data-root-path="{{ request.scope.root_path or "" }}">
@@ -58,7 +51,7 @@
       </div>
     </div>
     {% endif %}
-    {% if "infra" in enabled_modules and mc == "infra" %}
+    {% if "infra" in enabled_modules and (mc == "infra" or "accounting" not in enabled_modules) %}
     <span class="topbar-sep"></span>
     <div class="ctx-selector">
       <label class="ctx-label">고객사</label>
@@ -112,7 +105,7 @@
     <nav class="subnav">
       <ul class="subnav-links">
         {# --- 영업관리 (accounting 컨텍스트일 때만) --- #}
-        {% if "accounting" in enabled_modules and mc == "accounting" %}
+        {% if "accounting" in enabled_modules and "infra" in enabled_modules and mc == "accounting" %}
 
         <li><a href="{{ request.scope.root_path or "" }}/my-contracts"><i class="icon" data-lucide="user-check"></i><span>내 사업<small class="subnav-sub">내가 담당하는 사업 목록</small></span></a></li>
         <li><a href="{{ request.scope.root_path or "" }}/contracts"><i class="icon" data-lucide="file-stack"></i><span>사업 관리<small class="subnav-sub">전체 사업 조회·등록·수정</small></span></a></li>
@@ -121,7 +114,7 @@
         {% endif %}
 
         {# --- 프로젝트관리 (infra 컨텍스트일 때만) --- #}
-        {% if "infra" in enabled_modules and mc == "infra" %}
+        {% if "infra" in enabled_modules and "accounting" in enabled_modules and mc == "infra" %}
 
         <li><a href="{{ request.scope.root_path or "" }}/periods" id="nav-project-link"><i class="icon" data-lucide="folder-kanban"></i><span>프로젝트<small class="subnav-sub">프로젝트 현황·일정·산출물</small></span></a></li>
         <li><a href="{{ request.scope.root_path or "" }}/assets"><i class="icon" data-lucide="server"></i><span>자산<small class="subnav-sub">장비 인벤토리·상세 관리</small></span></a></li>
@@ -159,7 +152,7 @@
         <li><a href="{{ request.scope.root_path or "" }}/partners"><i class="icon" data-lucide="building-2"></i><span>거래처 관리<small class="subnav-sub">고객사·공급사 정보 관리</small></span></a></li>
         <li><a href="{{ request.scope.root_path or "" }}/product-catalog"><i class="icon" data-lucide="sliders-horizontal"></i><span>카탈로그<small class="subnav-sub">제품 카탈로그·기준정보 관리</small></span></a></li>
         <li><a href="{{ request.scope.root_path or "" }}/audit-logs"><i class="icon" data-lucide="clipboard-list"></i><span>로그<small class="subnav-sub">데이터 변경 이력 조회</small></span></a></li>
-        <li class="admin-only is-hidden"><a href="{{ request.scope.root_path or "" }}/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
+        <li><a href="{{ request.scope.root_path or "" }}/system"><i class="icon" data-lucide="settings"></i><span>시스템 관리<small class="subnav-sub">조직·용어·모듈 설정</small></span></a></li>
       </ul>
     </nav>
   </div>
@@ -234,9 +227,12 @@
       });
     })();
     // Auth and settings fetch
+    window.__bootstrapPromise = window.__bootstrapPromise || fetch(`${rootPath}/api/v1/auth/bootstrap`).then(r => r.ok ? r.json() : null);
+    window.__mePromise = window.__mePromise || window.__bootstrapPromise.then(b => b?.me || null);
+    window.__settingsPromise = window.__settingsPromise || window.__bootstrapPromise.then(b => b?.settings || null);
     Promise.all([
-      fetch(`${rootPath}/api/v1/auth/me`).then(r => r.ok ? r.json() : null),
-      fetch(`${rootPath}/api/v1/settings`).then(r => r.ok ? r.json() : null),
+      window.__mePromise,
+      window.__settingsPromise,
     ]).then(([me, settings]) => {
       if (me) {
         document.getElementById('topbar-user').textContent = me.name;
@@ -252,7 +248,7 @@
       }
 
       // 고객사/프로젝트 셀렉터 초기화 (infra 모듈 활성 시)
-      {% if "infra" in enabled_modules and mc == "infra" %}
+      {% if "infra" in enabled_modules and (mc == "infra" or "accounting" not in enabled_modules) %}
       if (me) initContextSelectors();
       {% endif %}
 
@@ -275,8 +271,8 @@
         const res = await fetch(`${rootPath}/api/v1/infra-dashboard/unsubmitted`);
         if (!res.ok) return;
         const items = await res.json();
+        sessionStorage.setItem('infra_notif_shown', '1');
         if (items.length > 0) {
-          sessionStorage.setItem('infra_notif_shown', '1');
           const toast = document.createElement('div');
           toast.className = 'toast toast-warning';
           const text = document.createTextNode(`미제출 산출물 ${items.length}건이 있습니다. `);

@@ -163,6 +163,16 @@ def score_product_similarity(
         if len(digit_overlap) >= 2:
             score += 15
 
+    candidate_family = (candidate.model_family or _infer_family_from_name(candidate.name) or "").strip().upper() or None
+    if candidate_family:
+        normalized_family = normalize_product_name(candidate_family)
+        source_looks_like_sku = bool(normalized_name and normalized_family and normalized_name.startswith(normalized_family) and normalized_name != normalized_family)
+        candidate_is_family = bool(candidate.is_family_level or candidate_name == normalized_family)
+        if source_looks_like_sku and candidate_is_family:
+            score = min(score, 74)
+        elif source_looks_like_sku and not candidate_is_family:
+            score += 8
+
     return min(score, 99)
 
 
@@ -171,6 +181,16 @@ def build_normalized_catalog_fields(vendor: str | None, name: str | None) -> dic
         "normalized_vendor": normalize_vendor_name(vendor),
         "normalized_name": normalize_product_name(name),
     }
+
+
+def _infer_family_from_name(name: str | None) -> str | None:
+    cleaned = (name or "").strip()
+    if not cleaned:
+        return None
+    match = re.match(r"^([A-Za-z]+\d+[A-Za-z]*)-[A-Za-z0-9].*$", cleaned)
+    if match:
+        return match.group(1).upper()
+    return None
 
 
 def _normalize_text(value: str | None) -> str:

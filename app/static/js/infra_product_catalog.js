@@ -7,6 +7,12 @@ const LICENSE_UNIT_LABELS = {
   site: "사이트별", host: "호스트별", core: "코어별", user: "사용자별",
   device: "장비별", instance: "인스턴스별", session: "세션별", cpu: "CPU별",
 };
+const VERIFICATION_STATUS_OPTIONS = [
+  ["unverified", "미검증"],
+  ["source_found", "출처확인"],
+  ["pending_review", "검토대기"],
+  ["verified", "검증완료"],
+];
 
 let catalogGridApi, ifaceGridApi;
 let currentProductId = null;
@@ -26,7 +32,7 @@ let _catalogPermissions = {
 const CATALOG_CLASSIFICATION_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 const CATALOG_CATEGORY_WIDTH_KEY = "catalog_category_width";
 const CATALOG_LIST_WIDTH_KEY = "catalog_list_width";
-const CATALOG_GRID_COLUMN_STATE_KEY = "catalog_grid_column_state_v2";
+const CATALOG_GRID_COLUMN_STATE_KEY = "catalog_grid_column_state_v3";
 const CATALOG_CLASSIFICATION_COLLAPSED_KEY = "catalog_classification_collapsed_nodes";
 const CATALOG_DETAIL_OPEN_KEY = "catalog_detail_open";
 const CATALOG_DETAIL_LAST_ID_KEY = "catalog_detail_last_id";
@@ -91,11 +97,18 @@ const CATALOG_IMPORT_STATUS_LABELS = {
   invalid: "검증오류",
 };
 
+const VERIFICATION_STATUS_LABELS = {
+  unverified: "미검증",
+  source_found: "출처확인",
+  pending_review: "검증대기",
+  verified: "검증완료",
+};
+
 const CATALOG_LEVEL_ALIAS_DEFAULTS = ["대구분", "중구분", "소구분", "세구분", "상세구분"];
 
 async function loadCatalogPermissions() {
   try {
-    const me = window.__me || await apiFetch("/api/v1/auth/me");
+    const me = window.__me || (window.__mePromise ? await window.__mePromise : await apiFetch("/api/v1/auth/me"));
     _catalogPermissions = {
       canManageCatalogProducts: !!me?.permissions?.can_manage_catalog_products,
       canManageCatalogTaxonomy: !!me?.permissions?.can_manage_catalog_taxonomy,
@@ -489,8 +502,33 @@ function fitCatalogGridColumnsIfNeeded() {
 
 function buildCatalogColDefs() {
   const cols = [
+    {
+      headerName: "",
+      field: "_select",
+      width: 46,
+      minWidth: 46,
+      maxWidth: 46,
+      checkboxSelection: true,
+      headerCheckboxSelection: true,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      pinned: "left",
+    },
     { field: "vendor", headerName: "제조사", width: 120, sort: "asc" },
     { field: "name", headerName: "모델명", flex: 1, minWidth: 160 },
+    {
+      field: "verification_status",
+      headerName: "검증상태",
+      width: 105,
+      valueFormatter: (p) => getVerificationStatusLabel(p.value),
+      cellClassRules: {
+        "cell-muted": (p) => !p.value || p.value === "unverified",
+        "cell-info": (p) => p.value === "source_found",
+        "cell-warn": (p) => p.value === "pending_review",
+        "cell-success": (p) => p.value === "verified",
+      },
+    },
   ];
 
   /* 레이아웃에 배치된 속성 키 (순서 보존) */
@@ -656,7 +694,8 @@ function initCatalogGrid() {
     columnDefs: catalogColDefs,
     rowData: [],
     defaultColDef: { resizable: true, sortable: true, filter: true },
-    rowSelection: "single",
+    rowSelection: "multiple",
+    suppressRowClickSelection: true,
     animateRows: true,
     enableCellTextSelection: true,
     ...buildStandardGridBehavior({
@@ -719,6 +758,7 @@ function renderCatalogColChooserMenu() {
 }
 
 async function loadCatalog() {
+  if (!catalogGridApi) return;
   try {
     const rawData = await apiFetch("/api/v1/product-catalog");
     const data = await projectCatalogRowsForCurrentLayout(rawData);
@@ -1079,10 +1119,6 @@ async function fillFormFromSimilarProduct(productId) {
     if (attrMap.platform) {
       const platSelect = document.getElementById("product-attr-platform");
       if (platSelect) platSelect.value = attrMap.platform;
-    }
-    // Reference URL
-    if (d.reference_url) {
-      document.getElementById("product-reference-url").value = d.reference_url;
     }
     updateCatalogClassificationHint();
     showToast("유사 제품 정보를 불러왔습니다. 모델명을 수정하세요.", "info");
@@ -1856,6 +1892,35 @@ function _infoRow(label, value) {
   return row;
 }
 
+function getVerificationStatusLabel(status) {
+  return VERIFICATION_STATUS_LABELS[status] || status || "-";
+}
+
+function getCatalogSourceTone(product) {
+  const confidence = String(product?.source_confidence || "").toLowerCase();
+  const sourceName = String(product?.source_name || "").toLowerCase();
+  if (confidence === "official" || confidence === "high" || sourceName.includes("official") || sourceName.includes("공식")) return "official";
+  if (confidence === "partner" || sourceName.includes("partner") || sourceName.includes("파트너") || sourceName.includes("채널")) return "partner";
+  if (confidence || product?.source_url || product?.reference_url) return "unofficial";
+  return "unknown";
+}
+
+function applySourceToneToFilledFields(product) {
+  const tone = getCatalogSourceTone(product);
+  const selector = [
+    "#spec-form input", "#spec-form textarea", "#spec-form select",
+    "#eosl-form input", "#eosl-form textarea", "#eosl-form select"
+  ].join(",");
+  document.querySelectorAll(selector).forEach((el) => {
+    el.classList.remove("catalog-source-official", "catalog-source-partner", "catalog-source-unofficial");
+    el.removeAttribute("data-source-tone");
+    const value = String(el.value || "").trim();
+    if (!value || tone === "unknown") return;
+    el.classList.add(`catalog-source-${tone}`);
+    el.dataset.sourceTone = tone;
+  });
+}
+
 function renderDetail(d) {
   currentProductType = d.product_type || "hardware";
   document.getElementById("detail-title").textContent = `${d.vendor} ${d.name}`;
@@ -1871,11 +1936,14 @@ function renderDetail(d) {
   infoGrid.appendChild(_infoRow("모델명", d.name));
   infoGrid.appendChild(_infoRow(level1Alias, getCatalogAttributeLabel("domain", attrMap.domain) || "-"));
   infoGrid.appendChild(_infoRow("버전", d.version || "-"));
+  infoGrid.appendChild(_infoRow("모델 계열", d.model_family || "-"));
+  infoGrid.appendChild(_infoRow("레벨", d.is_family_level ? "시리즈/라인업" : "SKU/상세모델"));
   infoGrid.appendChild(_infoRow(leafAlias, d.classification_level_5_name || d.classification_level_4_name || d.classification_level_3_name || d.classification_level_2_name || d.classification_level_1_name || "-"));
   infoGrid.appendChild(_infoRow("분류 경로", buildCatalogPathLabel(d)));
-  infoGrid.appendChild(_infoRow("참조 URL", d.reference_url || "-"));
   infoGrid.appendChild(_infoRow("출처", d.source_name || "-"));
-  infoGrid.appendChild(_infoRow("검증상태", d.verification_status || "-"));
+  infoGrid.appendChild(_infoRow("검증상태", getVerificationStatusLabel(d.verification_status)));
+  infoGrid.appendChild(_infoRow("조사일", fmtDate(d.researched_at)));
+  infoGrid.appendChild(_infoRow("조사 Provider", d.research_provider || "-"));
   infoGrid.appendChild(_infoRow("검증일", fmtDate(d.last_verified_at)));
   infoGrid.appendChild(_infoRow("라이선스 유형", LICENSE_TYPE_LABELS[d.default_license_type] || d.default_license_type || "-"));
   infoGrid.appendChild(_infoRow("라이선스 기준", LICENSE_UNIT_LABELS[d.default_license_unit] || d.default_license_unit || "-"));
@@ -1889,6 +1957,8 @@ function renderDetail(d) {
   document.getElementById("software-deployment-type").value = sw.deployment_type ?? "";
   document.getElementById("software-runtime-env").value = sw.runtime_env ?? "";
   document.getElementById("software-support-vendor").value = sw.support_vendor ?? "";
+  const softwareReferenceUrlInput = document.getElementById("software-reference-url");
+  if (softwareReferenceUrlInput) softwareReferenceUrlInput.value = d.reference_url || "";
   document.getElementById("software-architecture-note").value = sw.architecture_note ?? "";
 
   const model = d.model_spec || {};
@@ -1898,6 +1968,8 @@ function renderDetail(d) {
   document.getElementById("model-deployment-scope").value = model.deployment_scope ?? "";
   document.getElementById("model-context-window").value = model.context_window ?? "";
   document.getElementById("model-endpoint-format").value = model.endpoint_format ?? "";
+  const modelReferenceUrlInput = document.getElementById("model-reference-url");
+  if (modelReferenceUrlInput) modelReferenceUrlInput.value = d.reference_url || "";
   document.getElementById("model-capability-note").value = model.capability_note ?? "";
 
   const generic = d.generic_profile || {};
@@ -1907,6 +1979,8 @@ function renderDetail(d) {
   document.getElementById("generic-exposure-scope").value = generic.exposure_scope ?? "";
   document.getElementById("generic-data-classification").value = generic.data_classification ?? "";
   document.getElementById("generic-default-runtime").value = generic.default_runtime ?? "";
+  const genericReferenceUrlInput = document.getElementById("generic-reference-url");
+  if (genericReferenceUrlInput) genericReferenceUrlInput.value = d.reference_url || "";
   document.getElementById("generic-summary-note").value = generic.summary_note ?? "";
 
   // HW 스펙 탭
@@ -1919,9 +1993,10 @@ function renderDetail(d) {
   document.getElementById("spec-power-count").value = s.power_count ?? "";
   document.getElementById("spec-power-type").value = s.power_type ?? "";
   document.getElementById("spec-power-watt").value = s.power_watt ?? "";
+  document.getElementById("spec-power-summary").value = s.power_summary ?? "";
   document.getElementById("spec-cpu-summary").value = s.cpu_summary ?? "";
   document.getElementById("spec-memory-summary").value = s.memory_summary ?? "";
-  document.getElementById("spec-throughput-summary").value = s.throughput_summary ?? "";
+  document.getElementById("spec-storage-summary").value = s.storage_summary ?? "";
   document.getElementById("spec-os-firmware").value = s.os_firmware ?? "";
   document.getElementById("spec-spec-url").value = s.spec_url ?? "";
 
@@ -1933,7 +2008,16 @@ function renderDetail(d) {
   // EOSL 탭
   document.getElementById("eosl-eos-date").value = d.eos_date || "";
   document.getElementById("eosl-eosl-date").value = d.eosl_date || "";
+  const eoslSourceUrlInput = document.getElementById("eosl-source-url");
+  if (eoslSourceUrlInput) eoslSourceUrlInput.value = d.source_url || "";
   document.getElementById("eosl-eosl-note").value = d.eosl_note || "";
+
+  applySourceToneToFilledFields(d);
+
+  const verifyButton = document.getElementById("btn-mark-verified");
+  if (verifyButton) {
+    verifyButton.disabled = !_catalogPermissions.canManageCatalogProducts || d.verification_status === "verified";
+  }
 }
 
 function renderKindSpecificInfoGrid(elementId, rows) {
@@ -2040,13 +2124,15 @@ async function openCreateProduct() {
   document.getElementById("product-name-ref-id").value = "";
   document.getElementById("product-type").value = "hardware";
   document.getElementById("product-version").value = "";
+  document.getElementById("product-model-family").value = "";
+  document.getElementById("product-is-family-level").checked = false;
   await loadVendorList();
   syncVendorCombobox("");
   await syncCatalogAttributeInputs({}, true);
   document.getElementById("product-attr-imp-type").dataset.autoSet = "true";
-  document.getElementById("product-reference-url").value = "";
   document.getElementById("product-license-type").value = "";
   document.getElementById("product-license-unit").value = "";
+  document.getElementById("product-verification-status").value = "unverified";
   document.getElementById("modal-product-title").textContent = "제품 등록";
   document.getElementById("btn-save-product").textContent = "등록";
   resetProductSimilarityBox();
@@ -2076,9 +2162,11 @@ async function openEditProduct() {
       product_family: attrMap.product_family,
       platform: attrMap.platform,
     }, true);
-    document.getElementById("product-reference-url").value = d.reference_url || "";
+    document.getElementById("product-model-family").value = d.model_family || "";
+    document.getElementById("product-is-family-level").checked = !!d.is_family_level;
     document.getElementById("product-license-type").value = d.default_license_type || "";
     document.getElementById("product-license-unit").value = d.default_license_unit || "";
+    document.getElementById("product-verification-status").value = d.verification_status || "unverified";
     document.getElementById("modal-product-title").textContent = "제품 수정";
     document.getElementById("btn-save-product").textContent = "저장";
     await loadProductNameList(currentProductId);
@@ -2117,9 +2205,11 @@ async function saveProduct() {
     name,
     product_type: productType,
     version: document.getElementById("product-version").value || null,
-    reference_url: document.getElementById("product-reference-url").value || null,
+    model_family: document.getElementById("product-model-family").value || null,
+    is_family_level: document.getElementById("product-is-family-level").checked,
     default_license_type: document.getElementById("product-license-type").value || null,
     default_license_unit: document.getElementById("product-license-unit").value || null,
+    verification_status: document.getElementById("product-verification-status").value || "unverified",
     attributes: buildCatalogAttributePayload(attrValues),
   };
 
@@ -2220,6 +2310,7 @@ function getCatalogImportColumns(domain) {
       { key: "version", label: "버전" },
       { key: "category", label: "분류" },
       { key: "model_family", label: "모델계열" },
+      { key: "is_family_level", label: "레벨" },
       { key: "modality", label: "모달리티" },
       { key: "context_window", label: "컨텍스트" },
       { key: "__errors", label: "오류" },
@@ -2306,6 +2397,8 @@ function renderCatalogImportPreview(result) {
         return;
       } else if (col.key === "product_type") {
         value = PRODUCT_KIND_LABELS[row.product_type] || row.product_type || "-";
+      } else if (col.key === "is_family_level") {
+        value = row.is_family_level ? "시리즈" : "SKU";
       } else {
         value = row[col.key] ?? "-";
       }
@@ -2420,6 +2513,40 @@ async function deleteProduct() {
 
 /* ── 스펙 저장 ── */
 
+async function runSkuExpansionFlow(options = {}) {
+  if (!_catalogPermissions.canManageCatalogProducts) {
+    showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
+    return;
+  }
+  if (!currentProductId) return;
+  try {
+    const preview = await apiFetch(`/api/v1/product-catalog/${currentProductId}/sku-expansion-preview`);
+    if (!preview.candidates || preview.candidates.length === 0) {
+      if (!options.silentWhenEmpty) showToast(preview.message || "확장 가능한 SKU 후보가 없습니다.", "info");
+      return;
+    }
+    const lines = preview.candidates.map((item) => `- ${item}`).join("\n");
+    const confirmed = window.confirm(`${preview.name} 패밀리에서 다음 SKU를 추가할까요?\n\n${lines}\n\n확인하면 기존 패밀리 엔트리는 삭제됩니다.`);
+    if (!confirmed) return;
+    const result = await apiFetch(`/api/v1/product-catalog/${currentProductId}/sku-expansion-apply`, {
+      method: "POST",
+      body: { selected_names: preview.candidates, delete_family: true },
+    });
+    showToast(result.message || `SKU ${result.created}건 생성 완료`);
+    await loadCatalog();
+    if (result.deleted_family) {
+      closeCatalogDetail();
+    } else if (result.created_products && result.created_products.length > 0) {
+      await selectProduct({ id: result.created_products[0].id });
+    } else if (currentProductId) {
+      await selectProduct({ id: currentProductId });
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+
 async function runCatalogResearch(fillOnly = true) {
   if (!_catalogPermissions.canManageCatalogProducts) {
     showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
@@ -2438,13 +2565,114 @@ async function runCatalogResearch(fillOnly = true) {
     if (result.skipped) {
       showToast(`재조사 건너뜀 · ${result.skip_reason || "already_done"}`);
     } else {
-      showToast(`조사 반영 완료 · spec ${result.spec_applied}/${result.spec_candidates} · eosl ${result.eosl_applied}/${result.eosl_candidates} · 인터페이스 ${result.interfaces_created}/${result.interface_candidates}`);
+      showToast(`조사 반영 완료 · 상태 검증대기 · spec ${result.spec_applied}/${result.spec_candidates} · eosl ${result.eosl_applied}/${result.eosl_candidates} · 인터페이스 ${result.interfaces_created}/${result.interface_candidates}`);
     }
+    await loadCatalog();
+    if (currentProductId) await selectProduct({ id: currentProductId });
+    if (!result.skipped && result.sku_expansion_candidates && result.sku_expansion_candidates.length) {
+      await runSkuExpansionFlow({ silentWhenEmpty: true });
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+function getSelectedCatalogProductIds() {
+  if (!catalogGridApi) return [];
+  return (catalogGridApi.getSelectedRows?.() || [])
+    .map((row) => Number(row.id))
+    .filter((id) => Number.isFinite(id) && id > 0);
+}
+
+function getVerificationStatusPrompt(defaultStatus = "pending_review") {
+  const labels = VERIFICATION_STATUS_OPTIONS.map(([value, label]) => `${value}: ${label}`).join("\n");
+  const input = window.prompt(`변경할 검증상태를 입력하세요.\n${labels}`, defaultStatus);
+  if (input === null) return null;
+  const status = String(input || "").trim();
+  if (!VERIFICATION_STATUS_OPTIONS.some(([value]) => value === status)) {
+    showToast("검증상태 값이 올바르지 않습니다.", "warning");
+    return null;
+  }
+  return status;
+}
+
+async function updateProductVerificationStatus(status = null) {
+  if (!_catalogPermissions.canManageCatalogProducts) {
+    showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
+    return;
+  }
+  if (!currentProductId) return;
+  const nextStatus = status || getVerificationStatusPrompt("pending_review");
+  if (!nextStatus) return;
+  try {
+    await apiFetch(`/api/v1/product-catalog/${currentProductId}/verification-status`, {
+      method: "PATCH",
+      body: { verification_status: nextStatus },
+    });
+    showToast(`검증상태가 ${getVerificationStatusLabel(nextStatus)}로 변경되었습니다.`);
     await loadCatalog();
     await selectProduct({ id: currentProductId });
   } catch (err) {
     showToast(err.message, "error");
   }
+}
+
+async function bulkUpdateCatalogVerificationStatus() {
+  if (!_catalogPermissions.canManageCatalogProducts) {
+    showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
+    return;
+  }
+  const ids = getSelectedCatalogProductIds();
+  if (!ids.length) {
+    showToast("일괄 변경할 제품을 체크해 주세요.", "warning");
+    return;
+  }
+  const nextStatus = getVerificationStatusPrompt("pending_review");
+  if (!nextStatus) return;
+  if (!window.confirm(`선택한 ${ids.length}개 제품의 검증상태를 ${getVerificationStatusLabel(nextStatus)}로 변경할까요?`)) return;
+  try {
+    const result = await apiFetch(`/api/v1/product-catalog/bulk/verification-status`, {
+      method: "PATCH",
+      body: { product_ids: ids, verification_status: nextStatus },
+    });
+    showToast(`검증상태 일괄 변경 완료 · ${result.updated}/${result.requested}건`);
+    await loadCatalog();
+    if (currentProductId) await selectProduct({ id: currentProductId });
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function runBatchCatalogResearch() {
+  if (!_catalogPermissions.canManageCatalogProducts) {
+    showToast("카탈로그 제품 관리 권한이 없습니다.", "warning");
+    return;
+  }
+
+  const raw = window.prompt("이번에 조사할 미검증 하드웨어 개수", "3");
+  if (raw === null) return;
+  const limit = Math.max(1, Math.min(20, parseInt(raw, 10) || 0));
+  if (!limit) {
+    showToast("1~20 사이 숫자를 입력해 주세요.", "warning");
+    return;
+  }
+
+  try {
+    showToast(`미검증 ${limit}건 deep research 시작...`, "info");
+    const result = await apiFetch(`/api/v1/product-catalog/research/batch`, {
+      method: "POST",
+      body: { limit, fill_only: true, force: false, include_pending_review: false },
+    });
+    showToast(`배치 조사 완료 · 성공 ${result.success} · 건너뜀 ${result.skipped} · 실패 ${result.failed}`);
+    await loadCatalog();
+    if (currentProductId) await selectProduct({ id: currentProductId });
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function markProductVerified() {
+  await updateProductVerificationStatus("verified");
 }
 
 async function saveSpec() {
@@ -2468,9 +2696,10 @@ async function saveSpec() {
     power_count: gn("spec-power-count"),
     power_type: g("spec-power-type"),
     power_watt: gn("spec-power-watt"),
+    power_summary: g("spec-power-summary"),
     cpu_summary: g("spec-cpu-summary"),
     memory_summary: g("spec-memory-summary"),
-    throughput_summary: g("spec-throughput-summary"),
+    storage_summary: g("spec-storage-summary"),
     os_firmware: g("spec-os-firmware"),
     spec_url: g("spec-spec-url"),
   };
@@ -2494,6 +2723,7 @@ async function saveEosl() {
   const payload = {
     eos_date: document.getElementById("eosl-eos-date").value || null,
     eosl_date: document.getElementById("eosl-eosl-date").value || null,
+    source_url: document.getElementById("eosl-source-url")?.value || null,
     eosl_note: document.getElementById("eosl-eosl-note").value || null,
   };
 
@@ -2528,6 +2758,10 @@ async function saveSoftwareSpec() {
 
   try {
     await apiFetch(`/api/v1/product-catalog/${currentProductId}/software-spec`, { method: "POST", body: payload });
+    await apiFetch(`/api/v1/product-catalog/${currentProductId}`, {
+      method: "PATCH",
+      body: { reference_url: document.getElementById("software-reference-url")?.value || null },
+    });
     showToast("소프트웨어 상세가 저장되었습니다.");
   } catch (err) {
     showToast(err.message, "error");
@@ -2557,6 +2791,10 @@ async function saveModelSpec() {
 
   try {
     await apiFetch(`/api/v1/product-catalog/${currentProductId}/model-spec`, { method: "POST", body: payload });
+    await apiFetch(`/api/v1/product-catalog/${currentProductId}`, {
+      method: "PATCH",
+      body: { reference_url: document.getElementById("model-reference-url")?.value || null },
+    });
     showToast("모델 상세가 저장되었습니다.");
   } catch (err) {
     showToast(err.message, "error");
@@ -2585,6 +2823,10 @@ async function saveGenericProfile() {
 
   try {
     await apiFetch(`/api/v1/product-catalog/${currentProductId}/generic-profile`, { method: "POST", body: payload });
+    await apiFetch(`/api/v1/product-catalog/${currentProductId}`, {
+      method: "PATCH",
+      body: { reference_url: document.getElementById("generic-reference-url")?.value || null },
+    });
     showToast("공통 프로필이 저장되었습니다.");
   } catch (err) {
     showToast(err.message, "error");
@@ -2793,6 +3035,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   document.getElementById("btn-add-product").addEventListener("click", openCreateProduct);
   document.getElementById("btn-minimize-catalog-detail").addEventListener("click", toggleCatalogDetailPanel);
+  document.getElementById("btn-mark-verified")?.addEventListener("click", markProductVerified);
+  document.getElementById("btn-bulk-verification-status")?.addEventListener("click", bulkUpdateCatalogVerificationStatus);
   document.getElementById("btn-edit-product").addEventListener("click", openEditProduct);
   document.getElementById("btn-delete-product").addEventListener("click", deleteProduct);
   document.getElementById("btn-cancel-product").addEventListener("click", () => {

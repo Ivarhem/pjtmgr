@@ -1038,29 +1038,34 @@ function fillSelectOptions(select, items, valueKey, labelBuilder, placeholderTex
 
 /* ── Data loading ── */
 
+async function loadAssetsForPartner(partnerId, projectId = null) {
+  if (!gridApi || !partnerId) return false;
+  let url = "/api/v1/assets/inventory?partner_id=" + partnerId;
+  const effectiveProjectId = projectId || (getCtxProjectId ? getCtxProjectId() : null);
+  if (effectiveProjectId && isProjectFilterActive()) url += "&period_id=" + effectiveProjectId;
+  const statusFilter = document.getElementById("filter-status")?.value || "";
+  const q = document.getElementById("filter-search")?.value?.trim() || "";
+  if (statusFilter) url += "&status=" + statusFilter;
+  if (q) url += "&q=" + encodeURIComponent(q);
+  const layoutId = localStorage.getItem("catalog_layout_preset_id");
+  if (layoutId && Number.isFinite(Number(layoutId))) url += "&layout_id=" + layoutId;
+  if (_catalogLabelLang) url += "&lang=" + _catalogLabelLang;
+  const data = await apiFetch(url);
+  _partnerAssetsCache = data;
+  gridApi.setGridOption("rowData", data);
+  restoreAssetDetailState(data);
+  return true;
+}
+
 async function loadAssets() {
   const cid = getCtxPartnerId();
+  if (!gridApi) return;
   if (!cid) {
     gridApi.setGridOption("rowData", []);
     return;
   }
-  let url = "/api/v1/assets/inventory?partner_id=" + cid;
-  const pid = getCtxProjectId();
-  if (pid && isProjectFilterActive()) url += "&period_id=" + pid;
-  const statusFilter = document.getElementById("filter-status").value;
-  const q = document.getElementById("filter-search").value.trim();
-  if (statusFilter) url += "&status=" + statusFilter;
-  if (q) url += "&q=" + encodeURIComponent(q);
-  // 카탈로그 프리셋 + 한/영 설정 전달
-  const layoutId = localStorage.getItem("catalog_layout_preset_id");
-  if (layoutId && Number.isFinite(Number(layoutId))) url += "&layout_id=" + layoutId;
-  if (_catalogLabelLang) url += "&lang=" + _catalogLabelLang;
-
   try {
-    const data = await apiFetch(url);
-    _partnerAssetsCache = data;
-    gridApi.setGridOption("rowData", data);
-    restoreAssetDetailState(data);
+    await loadAssetsForPartner(cid);
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -1361,8 +1366,29 @@ async function initGrid() {
   const restored = restoreGridColumnState();
   if (!restored) fitGridColumnsIfNeeded();
   _suppressColumnSave = false;
-  // 초기 로드는 ctx-changed 이벤트에서 처리 (initContextSelectors 완료 후 dispatch)
-  if (getCtxPartnerId()) loadAssets();
+  // 초기 context 복원이 base/initContextSelectors보다 늦거나 빨라도 한 번은 로드되도록 재시도
+  scheduleAssetInitialLoad();
+}
+
+function scheduleAssetInitialLoad(attempt = 0) {
+  if (!gridApi) return;
+  const partnerId = getCtxPartnerId ? getCtxPartnerId() : null;
+  if (partnerId) {
+    loadAssetsForPartner(partnerId).catch((err) => showToast(err.message, "error"));
+    return;
+  }
+  if (attempt === 4) {
+    apiFetch("/api/v1/preferences/infra.pinned_partner_id")
+      .then((pref) => {
+        const pinned = Number(pref?.value || 0);
+        if (pinned && !getCtxPartnerId()) return loadAssetsForPartner(pinned);
+        return null;
+      })
+      .catch(() => null);
+  }
+  if (attempt < 24) {
+    setTimeout(() => scheduleAssetInitialLoad(attempt + 1), 250);
+  }
 }
 
 
@@ -1809,6 +1835,7 @@ async function renderDetailTab(tab) {
   _currentTab = tab;
 
   const container = document.getElementById("detail-content");
+  container.classList.toggle("asset-network-detail", tab === "network");
   while (container.firstChild) container.removeChild(container.firstChild);
 
   document.querySelectorAll(".detail-tabs .tab-btn").forEach(b => {
@@ -2083,11 +2110,12 @@ async function renderNetworkTab(container) {
   });
 
   const interfaceSection = createDetailSectionCard("인터페이스 & IP", "인터페이스 구조와 IP 할당 상태를 함께 확인합니다.", interfaceActions);
+  interfaceSection.classList.add("asset-interface-section");
   container.appendChild(interfaceSection);
 
   // Grid container — explicit height, same pattern as other grids
   const gridEl = document.createElement("div");
-  gridEl.className = "ag-theme-quartz infra-grid-mid";
+  gridEl.className = "ag-theme-quartz infra-grid-mid asset-interface-grid";
   interfaceSection.appendChild(gridEl);
 
   try {
@@ -2147,6 +2175,7 @@ async function renderNetworkTab(container) {
           return el;
         }},
       { field: "if_type", headerName: "유형", width: 90 },
+      { field: "port_type", headerName: "포트 타입", width: 100 },
       { field: "_speed_display", headerName: "속도", width: 100 },
       { field: "admin_status", headerName: "상태", width: 80 },
       { field: "_ip_summary", headerName: "IP 할당", flex: 1, minWidth: 200 },
@@ -2192,6 +2221,8 @@ async function openInterfaceModal(iface) {
   document.getElementById("iface-id").value = iface ? iface.id : "";
   document.getElementById("iface-name").value = iface ? iface.name : "";
   document.getElementById("iface-type").value = iface ? iface.if_type : "physical";
+  const portTypeInput = document.getElementById("iface-port-type");
+  if (portTypeInput) portTypeInput.value = iface ? (iface.port_type || "") : "";
   document.getElementById("iface-speed").value = iface ? (iface.speed || "") : "";
   document.getElementById("iface-media").value = iface ? (iface.media_type || "") : "";
   document.getElementById("iface-slot").value = iface ? (iface.slot || "") : "";
@@ -4657,7 +4688,7 @@ async function deleteSelectedAssets() {
 /* ── Events ── */
 document.addEventListener("DOMContentLoaded", async () => {
   initAssetSplitter();
-  initGrid();
+  await initGrid();
 });
 // btn-toggle-edit: GridEditMode 생성자가 바인딩
 document.getElementById("btn-save-edit").addEventListener("click", assetSaveEditMode);
@@ -4801,7 +4832,7 @@ window.addEventListener("ctx-changed", async () => {
     loadPeriodsCache(partnerId),
     loadClassificationLevelAliases(),
   ]);
-  loadAssets();
+  if (gridApi) await loadAssets();
 });
 window.addEventListener("resize", () => {
   fitGridColumnsIfNeeded();

@@ -27,6 +27,7 @@ class AssetInterface(TimestampMixin, Base):
 
     name: Mapped[str] = mapped_column(String(100))
     if_type: Mapped[str] = mapped_column(String(30), default="physical")
+    port_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
     slot: Mapped[str | None] = mapped_column(String(30), nullable=True)
     slot_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

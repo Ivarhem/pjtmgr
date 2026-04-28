@@ -177,5 +177,6 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ request.scope.root_path or "" }}/static/vendor/chartjs/chart.umd.js?v=4b"></script>
 <script src="{{ request.scope.root_path or "" }}/static/js/dashboard.js?v=20260413e"></script>
 {% endblock %}

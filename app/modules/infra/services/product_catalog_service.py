@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+import re
 
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -52,7 +53,161 @@ from app.modules.infra.services.product_catalog_attribute_service import (
 )
 
 
+VERIFICATION_STATUS_UNVERIFIED = "unverified"
+VERIFICATION_STATUS_SOURCE_FOUND = "source_found"
+VERIFICATION_STATUS_PENDING_REVIEW = "pending_review"
+VERIFICATION_STATUS_VERIFIED = "verified"
+VERIFICATION_STATUS_ALIASES = {
+    "": None,
+    "unverified": VERIFICATION_STATUS_UNVERIFIED,
+    "pending_review": VERIFICATION_STATUS_PENDING_REVIEW,
+    "review_needed": VERIFICATION_STATUS_PENDING_REVIEW,
+    "source_found": VERIFICATION_STATUS_SOURCE_FOUND,
+    "source-only": VERIFICATION_STATUS_SOURCE_FOUND,
+    "source_only": VERIFICATION_STATUS_SOURCE_FOUND,
+    "verified": VERIFICATION_STATUS_VERIFIED,
+    "completed": VERIFICATION_STATUS_VERIFIED,
+    "reviewed": VERIFICATION_STATUS_VERIFIED,
+    "manual": VERIFICATION_STATUS_VERIFIED,
+    "imported": VERIFICATION_STATUS_VERIFIED,
+}
+
+
 # ── ProductCatalog CRUD ──
+
+
+def _utcnow_naive() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _normalize_verification_status(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if text in VERIFICATION_STATUS_ALIASES:
+        return VERIFICATION_STATUS_ALIASES[text]
+    return text or None
+
+
+def _clean_model_family(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _infer_hardware_model_family(vendor: str | None, name: str | None) -> tuple[str | None, bool | None]:
+    cleaned = (name or "").strip()
+    if not cleaned:
+        return None, None
+    vendor_key = (vendor or "").strip().lower()
+    upper = cleaned.upper()
+    compact = re.sub(r"[^A-Z0-9]+", "", upper)
+
+    if vendor_key == "cisco":
+        catalyst_match = re.match(r"^CATALYST\s+(\d{4})$", upper)
+        if catalyst_match:
+            return f"C{catalyst_match.group(1)}", True
+        match = re.match(r"^([A-Za-z]+\d+[A-Za-z]*)-[A-Za-z0-9].*$", cleaned)
+        if match:
+            return match.group(1).upper(), False
+        if re.match(r"^[A-Za-z]+\d+[A-Za-z]*$", cleaned):
+            return cleaned.upper(), True
+
+    if vendor_key == "juniper":
+        match = re.match(r"^(EX\d{4})(?:-[A-Z0-9].*)?$", compact)
+        if match:
+            family = match.group(1)
+            return family, compact == family
+
+    if vendor_key == "arista":
+        match = re.search(r"(7050X3)", compact)
+        if match:
+            return match.group(1), compact == match.group(1)
+
+    if vendor_key == "aruba":
+        if compact == "CX6300":
+            return "CX 6300", True
+
+    return None, None
+
+
+def derive_catalog_family_fields(vendor: str | None, name: str | None, product_type: str | None, model_family: str | None = None, is_family_level: bool | None = None) -> dict:
+    cleaned_name = (name or "").strip()
+    cleaned_family = _clean_model_family(model_family)
+    type_key = (product_type or "hardware").strip().lower()
+
+    inferred_family = None
+    inferred_is_family = None
+    if cleaned_name and type_key == "hardware":
+        inferred_family, inferred_is_family = _infer_hardware_model_family(vendor, cleaned_name)
+
+    if cleaned_family is None:
+        cleaned_family = inferred_family
+
+    if is_family_level is None:
+        if inferred_is_family is not None and cleaned_family and cleaned_family.casefold() == (inferred_family or cleaned_family).casefold():
+            is_family_level = inferred_is_family
+        else:
+            is_family_level = bool(cleaned_family and cleaned_name and cleaned_family.casefold() == cleaned_name.casefold())
+
+    return {
+        "model_family": cleaned_family,
+        "is_family_level": bool(is_family_level),
+    }
+
+
+def _prepare_product_create_data(data: dict) -> dict:
+    data = dict(data)
+    data["research_provider"] = (data.get("research_provider") or "").strip() or None
+    data.update(derive_catalog_family_fields(data.get("vendor"), data.get("name"), data.get("product_type"), data.get("model_family"), data.get("is_family_level")))
+    status = _normalize_verification_status(data.get("verification_status")) or VERIFICATION_STATUS_UNVERIFIED
+    data["verification_status"] = status
+    if status == VERIFICATION_STATUS_VERIFIED:
+        data["last_verified_at"] = data.get("last_verified_at") or _utcnow_naive()
+    else:
+        data["last_verified_at"] = None
+    return data
+
+
+def _apply_product_verification_rules(product: ProductCatalog, changes: dict) -> dict:
+    changes = dict(changes)
+    if "research_provider" in changes:
+        changes["research_provider"] = (changes.get("research_provider") or "").strip() or None
+
+    identity_changed = False
+    if "vendor" in changes and changes.get("vendor") != product.vendor:
+        identity_changed = True
+    if "name" in changes and changes.get("name") != product.name:
+        identity_changed = True
+
+    if identity_changed and "verification_status" not in changes:
+        changes["verification_status"] = VERIFICATION_STATUS_UNVERIFIED
+        changes["researched_at"] = None
+        changes["research_provider"] = None
+        changes["last_verified_at"] = None
+
+    if any(field in changes for field in ("vendor", "name", "product_type", "model_family", "is_family_level")):
+        derived = derive_catalog_family_fields(
+            changes.get("vendor", product.vendor),
+            changes.get("name", product.name),
+            changes.get("product_type", product.product_type),
+            changes.get("model_family", product.model_family),
+            changes.get("is_family_level", product.is_family_level),
+        )
+        if "model_family" in changes or derived["model_family"] is not None or product.model_family is not None:
+            changes["model_family"] = derived["model_family"]
+        changes["is_family_level"] = derived["is_family_level"]
+
+    if "verification_status" in changes:
+        status = _normalize_verification_status(changes.get("verification_status")) or VERIFICATION_STATUS_UNVERIFIED
+        changes["verification_status"] = status
+        if status == VERIFICATION_STATUS_VERIFIED:
+            changes["last_verified_at"] = changes.get("last_verified_at") or _utcnow_naive()
+        else:
+            changes["last_verified_at"] = None
+
+    return changes
 
 
 def list_products(
@@ -134,8 +289,11 @@ def create_product(
     payload.vendor = resolve_vendor_canonical(db, payload.vendor) or payload.vendor
     _ensure_vendor_name_unique(db, payload.vendor, payload.name)
     attribute_payload = _resolve_product_attribute_payload(payload)
+    product_data = _prepare_product_create_data(
+        payload.model_dump(exclude={"product_type", "attributes"})
+    )
     product = ProductCatalog(
-        **payload.model_dump(exclude={"product_type", "attributes"}),
+        **product_data,
         product_type=payload.product_type,
         **build_normalized_catalog_fields(payload.vendor, payload.name),
     )
@@ -168,6 +326,7 @@ def update_product(
     if new_vendor != product.vendor or new_name != product.name:
         _ensure_vendor_name_unique(db, new_vendor, new_name, product_id)
     attribute_payload = _resolve_product_attribute_payload(payload, product=product)
+    changes = _apply_product_verification_rules(product, changes)
 
     for field, value in changes.items():
         setattr(product, field, value)
@@ -189,6 +348,46 @@ def update_product(
     if "vendor" in changes or "name" in changes:
         _recalc_product_similarity(db, product.id)
     return _serialize_product(db, product)
+
+
+def set_product_verification_status(db: Session, product_id: int, status: str | None, current_user: User) -> ProductCatalog:
+    normalized = _normalize_verification_status(status) or VERIFICATION_STATUS_UNVERIFIED
+    return update_product(
+        db,
+        product_id,
+        ProductCatalogUpdate(verification_status=normalized),
+        current_user,
+    )
+
+
+def bulk_set_product_verification_status(db: Session, product_ids: list[int], status: str | None, current_user: User) -> dict:
+    _require_edit(current_user)
+    normalized = _normalize_verification_status(status) or VERIFICATION_STATUS_UNVERIFIED
+    unique_ids = list(dict.fromkeys(int(pid) for pid in (product_ids or []) if pid))
+    updated: list[int] = []
+    for product_id in unique_ids:
+        product = get_product(db, product_id)
+        if product.is_placeholder:
+            continue
+        product.verification_status = normalized
+        if normalized == VERIFICATION_STATUS_VERIFIED:
+            product.last_verified_at = _utcnow_naive()
+        else:
+            product.last_verified_at = None
+        updated.append(product.id)
+    if updated:
+        audit.log(
+            db, user_id=current_user.id, action="bulk_update", entity_type="product_catalog",
+            entity_id=None, summary=f"제품 검증상태 일괄 변경: {len(updated)}건 -> {normalized}",
+            module="infra",
+        )
+    db.commit()
+    invalidate_product_list_cache(db)
+    return {"requested": len(unique_ids), "updated": len(updated), "product_ids": updated}
+
+
+def mark_product_verified(db: Session, product_id: int, current_user: User) -> ProductCatalog:
+    return set_product_verification_status(db, product_id, VERIFICATION_STATUS_VERIFIED, current_user)
 
 
 def delete_product(db: Session, product_id: int, current_user: User) -> None:
@@ -931,6 +1130,8 @@ def _build_bulk_upsert_payload(row: ProductCatalogBulkUpsertRow) -> dict:
         "name": row.name.strip(),
         "product_type": (row.product_type or "hardware").strip(),
         "version": (row.version or None),
+        "model_family": (row.model_family.strip() if isinstance(row.model_family, str) and row.model_family.strip() else None),
+        "is_family_level": row.is_family_level,
         "reference_url": (row.reference_url or None),
         "eos_date": row.eos_date,
         "eosl_date": row.eosl_date,

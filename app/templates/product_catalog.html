@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}제품 카탈로그{% endblock %}
-{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260422e">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428i">{% endblock %}
 {% block content %}
 <div class="tab-nav">
   <a href="{{ request.scope.root_path or "" }}/product-catalog" class="tab-btn active">제품 카탈로그</a>
@@ -63,6 +63,7 @@
         </select>
         <div class="col-chooser-wrapper" id="catalog-col-chooser-wrap">
           <button type="button" class="btn btn-compact" id="btn-catalog-col-chooser">열 설정</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-bulk-verification-status">선택 상태변경</button>
           <div class="col-chooser-menu is-hidden" id="catalog-col-chooser-menu"></div>
         </div>
       </div>
@@ -87,6 +88,7 @@
         <div class="catalog-detail-header">
           <h2 id="detail-title"></h2>
           <div class="header-actions">
+            <button class="btn btn-primary btn-sm" id="btn-mark-verified">검증완료</button>
             <button class="btn btn-secondary btn-sm" id="btn-edit-product">수정</button>
             <button class="btn btn-danger btn-sm" id="btn-delete-product">삭제</button>
           </div>
@@ -113,22 +115,41 @@
           </div>
           <div class="catalog-kind-panel" id="catalog-panel-hardware" data-kind-scope="hardware">
             <p class="catalog-kind-lead">하드웨어 제품은 물리 스펙과 인터페이스 수용량을 함께 관리합니다.</p>
-            <div class="spec-form" id="spec-form">
-              <div class="form-grid">
-                <label>Size (U) <input type="number" id="spec-size-unit"></label>
-                <label>폭 (mm) <input type="number" id="spec-width-mm"></label>
-                <label>높이 (mm) <input type="number" id="spec-height-mm"></label>
-                <label>깊이 (mm) <input type="number" id="spec-depth-mm"></label>
-                <label>무게 (kg) <input type="number" step="0.1" id="spec-weight-kg"></label>
-                <label>전원 수량 <input type="number" id="spec-power-count"></label>
-                <label>전원 유형 <input type="text" id="spec-power-type" placeholder="AC / DC"></label>
-                <label>전원 (W) <input type="number" id="spec-power-watt"></label>
-                <label class="full-width">CPU 요약 <input type="text" id="spec-cpu-summary"></label>
-                <label class="full-width">메모리 요약 <input type="text" id="spec-memory-summary"></label>
-                <label class="full-width">처리량 요약 <input type="text" id="spec-throughput-summary"></label>
-                <label class="full-width">OS/Firmware <input type="text" id="spec-os-firmware"></label>
-                <label class="full-width">스펙 URL <input type="url" id="spec-spec-url"></label>
-              </div>
+            <div class="spec-form catalog-kind-groups" id="spec-form">
+              <section class="catalog-kind-group">
+                <h4>물리 크기</h4>
+                <div class="form-grid">
+                  <label>Size (U) <input type="number" id="spec-size-unit"></label>
+                  <label>폭 (mm) <input type="number" id="spec-width-mm"></label>
+                  <label>높이 (mm) <input type="number" id="spec-height-mm"></label>
+                  <label>깊이 (mm) <input type="number" id="spec-depth-mm"></label>
+                  <label>무게 (kg) <input type="number" step="0.1" id="spec-weight-kg"></label>
+                </div>
+              </section>
+              <section class="catalog-kind-group">
+                <h4>전원</h4>
+                <div class="form-grid">
+                  <label>전원 수량 <input type="number" id="spec-power-count"></label>
+                  <label>전원 유형 <input type="text" id="spec-power-type" placeholder="AC / DC"></label>
+                  <label>전원 (W) <input type="number" id="spec-power-watt"></label>
+                  <label class="full-width">전원 요약 <input type="text" id="spec-power-summary" placeholder="예: hot-plug redundant PSU options ..."></label>
+                </div>
+              </section>
+              <section class="catalog-kind-group">
+                <h4>성능/시스템</h4>
+                <div class="form-grid">
+                  <label class="full-width">CPU 요약 <input type="text" id="spec-cpu-summary"></label>
+                  <label class="full-width">메모리 요약 <input type="text" id="spec-memory-summary"></label>
+                  <label class="full-width">스토리지/HDD 요약 <input type="text" id="spec-storage-summary"></label>
+                  <label class="full-width">OS/Firmware <input type="text" id="spec-os-firmware"></label>
+                </div>
+              </section>
+              <section class="catalog-kind-group">
+                <h4>출처</h4>
+                <div class="form-grid">
+                  <label class="full-width">스펙 URL <input type="url" id="spec-spec-url"></label>
+                </div>
+              </section>
             </div>
           </div>
 
@@ -139,14 +160,30 @@
             <div class="catalog-kind-card">
               <h3>소프트웨어/미들웨어 기준</h3>
               <p class="catalog-kind-lead">라이선스, 배포형태, 실행환경 같은 운영 기준 속성을 관리합니다.</p>
-              <div class="form-grid">
-                <label>에디션 <input type="text" id="software-edition"></label>
-                <label>라이선스 유형 <input type="text" id="software-license-type" placeholder="subscription, perpetual"></label>
-                <label>라이선스 단위 <input type="text" id="software-license-unit" placeholder="core, user, instance"></label>
-                <label>배포 형태 <input type="text" id="software-deployment-type" placeholder="on-prem, saas, container"></label>
-                <label>실행 환경 <input type="text" id="software-runtime-env" placeholder="Linux, Kubernetes, JVM"></label>
-                <label>지원 벤더 <input type="text" id="software-support-vendor"></label>
-                <label class="full-width">아키텍처 비고 <textarea id="software-architecture-note" rows="4"></textarea></label>
+              <div class="catalog-kind-groups">
+                <section class="catalog-kind-group">
+                  <h4>버전/라이선스</h4>
+                  <div class="form-grid">
+                    <label>에디션 <input type="text" id="software-edition"></label>
+                    <label>라이선스 유형 <input type="text" id="software-license-type" placeholder="subscription, perpetual"></label>
+                    <label>라이선스 단위 <input type="text" id="software-license-unit" placeholder="core, user, instance"></label>
+                  </div>
+                </section>
+                <section class="catalog-kind-group">
+                  <h4>배포/운영</h4>
+                  <div class="form-grid">
+                    <label>배포 형태 <input type="text" id="software-deployment-type" placeholder="on-prem, saas, container"></label>
+                    <label>실행 환경 <input type="text" id="software-runtime-env" placeholder="Linux, Kubernetes, JVM"></label>
+                    <label>지원 벤더 <input type="text" id="software-support-vendor"></label>
+                  </div>
+                </section>
+                <section class="catalog-kind-group">
+                  <h4>출처/비고</h4>
+                  <div class="form-grid">
+                    <label class="full-width">소프트웨어 URL <input type="url" id="software-reference-url" placeholder="https://..."></label>
+                    <label class="full-width">아키텍처 비고 <textarea id="software-architecture-note" rows="4"></textarea></label>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -158,14 +195,30 @@
             <div class="catalog-kind-card">
               <h3>모델/LLM 기준</h3>
               <p class="catalog-kind-lead">제공자, 모델 계열, 모달리티, 컨텍스트 윈도우 등 후속 자산 참조에 필요한 기준 속성을 관리합니다.</p>
-              <div class="form-grid">
-                <label>제공자 <input type="text" id="model-provider"></label>
-                <label>모델 계열 <input type="text" id="model-family"></label>
-                <label>모달리티 <input type="text" id="model-modality" placeholder="text, image, multimodal"></label>
-                <label>배포 범위 <input type="text" id="model-deployment-scope" placeholder="api, self-hosted, internal"></label>
-                <label>컨텍스트 윈도우 <input type="number" id="model-context-window" min="0"></label>
-                <label>엔드포인트 형식 <input type="text" id="model-endpoint-format" placeholder="chat, responses, batch"></label>
-                <label class="full-width">기능 비고 <textarea id="model-capability-note" rows="4"></textarea></label>
+              <div class="catalog-kind-groups">
+                <section class="catalog-kind-group">
+                  <h4>모델 식별</h4>
+                  <div class="form-grid">
+                    <label>제공자 <input type="text" id="model-provider"></label>
+                    <label>모델 계열 <input type="text" id="model-family"></label>
+                    <label>모달리티 <input type="text" id="model-modality" placeholder="text, image, multimodal"></label>
+                  </div>
+                </section>
+                <section class="catalog-kind-group">
+                  <h4>배포/호출</h4>
+                  <div class="form-grid">
+                    <label>배포 범위 <input type="text" id="model-deployment-scope" placeholder="api, self-hosted, internal"></label>
+                    <label>컨텍스트 윈도우 <input type="number" id="model-context-window" min="0"></label>
+                    <label>엔드포인트 형식 <input type="text" id="model-endpoint-format" placeholder="chat, responses, batch"></label>
+                  </div>
+                </section>
+                <section class="catalog-kind-group">
+                  <h4>출처/비고</h4>
+                  <div class="form-grid">
+                    <label class="full-width">모델 URL <input type="url" id="model-reference-url" placeholder="https://..."></label>
+                    <label class="full-width">기능 비고 <textarea id="model-capability-note" rows="4"></textarea></label>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
@@ -177,36 +230,53 @@
             <div class="catalog-kind-card">
               <h3>서비스/업무기능/데이터셋 기준</h3>
               <p class="catalog-kind-lead">운영 주체, 중요도, 노출 범위, 데이터 분류 같은 공통 운영 메타를 우선 관리합니다.</p>
-              <div class="form-grid">
-                <label>소유 범위 <input type="text" id="generic-owner-scope" placeholder="전사, 본부, 특정팀"></label>
-                <label>서비스 수준 <input type="text" id="generic-service-level" placeholder="mission-critical, internal, standard"></label>
-                <label>중요도 <input type="text" id="generic-criticality" placeholder="high, medium, low"></label>
-                <label>노출 범위 <input type="text" id="generic-exposure-scope" placeholder="internal, external, restricted"></label>
-                <label>데이터 분류 <input type="text" id="generic-data-classification" placeholder="public, internal, confidential"></label>
-                <label>기본 실행환경 <input type="text" id="generic-default-runtime" placeholder="SaaS, Batch, API, Data Lake"></label>
-                <label class="full-width">요약 비고 <textarea id="generic-summary-note" rows="4"></textarea></label>
+              <div class="catalog-kind-groups">
+                <section class="catalog-kind-group">
+                  <h4>소유/중요도</h4>
+                  <div class="form-grid">
+                    <label>소유 범위 <input type="text" id="generic-owner-scope" placeholder="전사, 본부, 특정팀"></label>
+                    <label>서비스 수준 <input type="text" id="generic-service-level" placeholder="mission-critical, internal, standard"></label>
+                    <label>중요도 <input type="text" id="generic-criticality" placeholder="high, medium, low"></label>
+                  </div>
+                </section>
+                <section class="catalog-kind-group">
+                  <h4>노출/데이터</h4>
+                  <div class="form-grid">
+                    <label>노출 범위 <input type="text" id="generic-exposure-scope" placeholder="internal, external, restricted"></label>
+                    <label>데이터 분류 <input type="text" id="generic-data-classification" placeholder="public, internal, confidential"></label>
+                    <label>기본 실행환경 <input type="text" id="generic-default-runtime" placeholder="SaaS, Batch, API, Data Lake"></label>
+                  </div>
+                </section>
+                <section class="catalog-kind-group">
+                  <h4>출처/비고</h4>
+                  <div class="form-grid">
+                    <label class="full-width">참조 URL <input type="url" id="generic-reference-url" placeholder="https://..."></label>
+                    <label class="full-width">요약 비고 <textarea id="generic-summary-note" rows="4"></textarea></label>
+                  </div>
+                </section>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- 인터페이스 탭 -->
-          <div class="catalog-tab-panel" id="tab-interfaces">
-            <div class="catalog-section-header">
-              <button class="btn btn-primary btn-sm" id="btn-add-interface">+ 인터페이스 추가</button>
-            </div>
-            <div id="grid-interfaces" class="ag-theme-quartz catalog-sub-grid"></div>
+        <!-- 인터페이스 탭 -->
+        <div class="catalog-tab-panel" id="tab-interfaces">
+          <div class="catalog-section-header">
+            <button class="btn btn-primary btn-sm" id="btn-add-interface">+ 인터페이스 추가</button>
           </div>
+          <div id="grid-interfaces" class="ag-theme-quartz catalog-sub-grid"></div>
+        </div>
 
-          <!-- EOS/EOSL 탭 -->
-          <div class="catalog-tab-panel" id="tab-eosl">
-            <div class="catalog-section-header">
-              <button class="btn btn-primary btn-sm" id="btn-save-eosl">EOSL 저장</button>
-            </div>
-            <div class="form-grid">
-              <label>EOS 일자 <input type="date" id="eosl-eos-date"></label>
-              <label>EOSL 일자 <input type="date" id="eosl-eosl-date"></label>
-              <label class="full-width">EOSL 비고 <textarea id="eosl-eosl-note" rows="3"></textarea></label>
-            </div>
+        <!-- EOS/EOSL 탭 -->
+        <div class="catalog-tab-panel" id="tab-eosl">
+          <div class="catalog-section-header">
+            <button class="btn btn-primary btn-sm" id="btn-save-eosl">EOSL 저장</button>
+          </div>
+          <div class="form-grid">
+            <label>EOS 일자 <input type="date" id="eosl-eos-date"></label>
+            <label>EOSL 일자 <input type="date" id="eosl-eosl-date"></label>
+            <label class="full-width">EOSL URL <input type="url" id="eosl-source-url" placeholder="https://..."></label>
+            <label class="full-width">EOSL 비고 <textarea id="eosl-eosl-note" rows="3"></textarea></label>
           </div>
         </div>
       </div>
@@ -249,12 +319,13 @@
     </label>
     <hr class="full-width product-optional-divider">
     <label>버전 <input type="text" id="product-version" placeholder="선택 사항"></label>
+    <label>모델 계열 <input type="text" id="product-model-family" placeholder="예: C9300, PA-3200"></label>
+    <label class="full-width"><input type="checkbox" id="product-is-family-level"> 이 항목 자체가 시리즈/라인업 대표 모델임</label>
     <label>플랫폼
       <select id="product-attr-platform">
         <option value="">-- 플랫폼 선택 --</option>
       </select>
     </label>
-    <label class="full-width">참조 URL <input type="url" id="product-reference-url" placeholder="https://..."></label>
     <hr class="full-width product-optional-divider">
     <label>라이선스 유형
       <select id="product-license-type">
@@ -276,6 +347,14 @@
         <option value="instance">인스턴스별</option>
         <option value="session">세션별</option>
         <option value="cpu">CPU별</option>
+      </select>
+    </label>
+    <label>검증상태
+      <select id="product-verification-status">
+        <option value="unverified">미검증</option>
+        <option value="source_found">출처확인</option>
+        <option value="pending_review">검토대기</option>
+        <option value="verified">검증완료</option>
       </select>
     </label>
     <p class="modal-hint full-width" id="product-classification-hint"></p>
@@ -490,5 +569,5 @@
 
 {% block scripts %}
 <script src="{{ request.scope.root_path or "" }}/static/js/modal_combobox.js?v=20260413e"></script>
-<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260422e"></script>
+<script src="{{ request.scope.root_path or "" }}/static/js/infra_product_catalog.js?v=20260428l"></script>
 {% endblock %}

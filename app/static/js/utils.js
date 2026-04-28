@@ -96,22 +96,36 @@ function applyTermLabels() {
  * @param {Object} [opts.body] - 요청 바디 (자동 JSON.stringify)
  * @returns {Promise<any>} 응답 JSON
  */
+const _apiFetchGetCache = new Map();
+
 async function apiFetch(url, opts = {}) {
-  const fetchOpts = { method: opts.method || 'GET', headers: {} };
+  const method = opts.method || 'GET';
+  const cacheable = method === 'GET' && opts.cache !== false;
+  if (cacheable && _apiFetchGetCache.has(url)) {
+    return _apiFetchGetCache.get(url);
+  }
+  if (method !== 'GET') _apiFetchGetCache.clear();
+  const fetchOpts = { method, headers: {} };
   if (opts.body) {
     fetchOpts.headers['Content-Type'] = 'application/json';
     fetchOpts.body = JSON.stringify(opts.body);
   }
-  const res = await fetch(withRootPath(url), fetchOpts);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const detail = body.detail;
-    const msg = Array.isArray(detail) ? detail.map(e => e.msg || JSON.stringify(e)).join('; ')
-              : (typeof detail === 'string' ? detail : `요청 실패 (${res.status})`);
-    throw new Error(msg);
-  }
-  if (res.status === 204) return null;
-  return res.json();
+  const promise = fetch(withRootPath(url), fetchOpts).then(async (res) => {
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const detail = body.detail;
+      const msg = Array.isArray(detail) ? detail.map(e => e.msg || JSON.stringify(e)).join('; ')
+                : (typeof detail === 'string' ? detail : `요청 실패 (${res.status})`);
+      throw new Error(msg);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  }).catch((err) => {
+    if (cacheable) _apiFetchGetCache.delete(url);
+    throw err;
+  });
+  if (cacheable) _apiFetchGetCache.set(url, promise);
+  return promise;
 }
 
 /** 날짜 문자열 포맷 (YYYY-MM-DD)

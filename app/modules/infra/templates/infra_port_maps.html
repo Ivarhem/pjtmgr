@@ -2,13 +2,7 @@
 {% block title %}포트맵 - SI Project Inventory{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-grid.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32/styles/ag-theme-quartz.min.css">
-<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css">
-{% endblock %}
-
-{% block head_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32/dist/ag-grid-community.min.js"></script>
+<link rel="stylesheet" href="{{ request.scope.root_path or "" }}/static/css/infra_common.css?v=20260428k">
 {% endblock %}
 
 {% block content %}
@@ -61,8 +55,8 @@
   <span class="edit-mode-selection is-hidden" id="edit-mode-selection"></span>
 </div>
 
-<div id="portmaps-content" class="card">
-  <div id="grid-portmaps" class="ag-theme-quartz infra-grid infra-grid-tall"></div>
+<div id="portmaps-content" class="card portmap-grid-card">
+  <div id="grid-portmaps" class="ag-theme-quartz infra-grid infra-grid-tall audit-grid-surface"></div>
   <div class="grid-add-row-bar">
     <button id="btn-add-portmap-row-bottom" class="grid-add-row-btn" type="button">+ 배선 추가</button>
   </div>

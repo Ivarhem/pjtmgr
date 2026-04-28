@@ -57,6 +57,7 @@ PRODUCTS = [
     ("MONITORAPP", "AIWAF", "hardware"),
     ("PIOLINK", "WEBFRONT-K", "hardware"),
     ("PIOLINK", "PAS-K", "hardware"),
+
     ("Radware", "DefensePro", "hardware"),
     ("Gigamon", "GigaVUE HC1", "hardware"),
     ("Infoblox", "BloxOne DDI", "software"),

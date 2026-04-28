@@ -31,3 +31,4 @@ gunicorn==23.0.0
 psycopg[binary]>=3.2.0
 bcrypt>=4.0.0
 pytest==8.4.1
+pdfminer.six>=20240706

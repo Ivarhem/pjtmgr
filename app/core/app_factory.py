@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.templating import Jinja2Templates
 from jinja2 import ChoiceLoader, FileSystemLoader
 from starlette.middleware.sessions import SessionMiddleware
@@ -41,11 +42,22 @@ from app.core.startup.lifespan import lifespan
 _APP_ROOT = Path(__file__).resolve().parent.parent
 
 
+class CacheControlStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope: Scope):
+        response = await super().get_response(path, scope)
+        if scope.get("method") in {"GET", "HEAD"} and response.status_code == 200:
+            # Static references include version query strings in templates. Cache them aggressively.
+            response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+        return response
+
+
+
 def create_app() -> FastAPI:
     root_path = os.getenv("APP_ROOT_PATH", "")
     app = FastAPI(title="사업관리 통합 플랫폼", lifespan=lifespan, root_path=root_path)
-    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+    app.mount("/static", CacheControlStaticFiles(directory="app/static"), name="static")
 
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.add_middleware(ModuleContextMiddleware)
     app.add_middleware(AuthMiddleware)
     app.add_middleware(

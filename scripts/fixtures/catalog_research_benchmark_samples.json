@@ -1,0 +1,245 @@
+[
+  {
+    "vendor": "Cisco",
+    "name": "Nexus 93180YC-FX3",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Juniper",
+    "name": "MX204",
+    "classification": "router",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "F5",
+    "name": "BIG-IP i5800",
+    "classification": "application delivery controller",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "A10 Networks",
+    "name": "Thunder 1040S",
+    "classification": "application delivery controller",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Palo Alto Networks",
+    "name": "PA-3220",
+    "classification": "firewall",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Fortinet",
+    "name": "FortiGate 200F",
+    "classification": "firewall",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Arista",
+    "name": "7050X3",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Aruba",
+    "name": "CX 6300",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Dell",
+    "name": "PowerEdge R760",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "IBM",
+    "name": "Power E1080",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "NetApp",
+    "name": "FAS2750",
+    "classification": "storage appliance",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Pure Storage",
+    "name": "FlashArray X20",
+    "classification": "storage appliance",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Cisco",
+    "name": "Catalyst 9300-48T",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Juniper",
+    "name": "EX4400-48P",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "F5",
+    "name": "BIG-IP i10600",
+    "classification": "application delivery controller",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "A10 Networks",
+    "name": "Thunder 4435",
+    "classification": "application delivery controller",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Palo Alto Networks",
+    "name": "PA-1410",
+    "classification": "firewall",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Fortinet",
+    "name": "FortiGate 600F",
+    "classification": "firewall",
+    "focus": [
+      "interfaces",
+      "eosl"
+    ]
+  },
+  {
+    "vendor": "Arista",
+    "name": "DCS-7280SR3-48YC8",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Aruba",
+    "name": "CX 8325-48Y8C",
+    "classification": "network switch",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Dell",
+    "name": "PowerEdge R660",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "IBM",
+    "name": "Power S1022",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "NetApp",
+    "name": "AFF A250",
+    "classification": "storage appliance",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Pure Storage",
+    "name": "FlashArray X50",
+    "classification": "storage appliance",
+    "focus": [
+      "interfaces",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "HPE",
+    "name": "ProLiant DL380 Gen11",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Lenovo",
+    "name": "ThinkSystem SR650 V3",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  },
+  {
+    "vendor": "Supermicro",
+    "name": "SYS-220U-TNR",
+    "classification": "server",
+    "focus": [
+      "size_unit",
+      "spec_url"
+    ]
+  }
+]

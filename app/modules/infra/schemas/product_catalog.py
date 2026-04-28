@@ -27,9 +27,13 @@ class ProductCatalogCreate(BaseModel):
     source_name: str | None = None
     source_url: str | None = None
     source_confidence: str | None = None
+    researched_at: datetime | None = None
+    research_provider: str | None = None
     last_verified_at: datetime | None = None
     verification_status: str | None = None
     import_batch_id: str | None = None
+    model_family: str | None = None
+    is_family_level: bool | None = None
     attributes: list[ProductCatalogAttributeValueWrite] | None = None
     default_license_type: str | None = None
     default_license_unit: str | None = None
@@ -47,9 +51,13 @@ class ProductCatalogUpdate(BaseModel):
     source_name: str | None = None
     source_url: str | None = None
     source_confidence: str | None = None
+    researched_at: datetime | None = None
+    research_provider: str | None = None
     last_verified_at: datetime | None = None
     verification_status: str | None = None
     import_batch_id: str | None = None
+    model_family: str | None = None
+    is_family_level: bool | None = None
     attributes: list[ProductCatalogAttributeValueWrite] | None = None
     default_license_type: str | None = None
     default_license_unit: str | None = None
@@ -70,9 +78,13 @@ class ProductCatalogRead(BaseModel):
     source_name: str | None
     source_url: str | None
     source_confidence: str | None
+    researched_at: datetime | None
+    research_provider: str | None
     last_verified_at: datetime | None
     verification_status: str | None
     import_batch_id: str | None
+    model_family: str | None
+    is_family_level: bool
     attributes: list[ProductCatalogAttributeValueRead] = []
     classification_level_1_name: str | None = None
     classification_level_2_name: str | None = None
@@ -96,6 +108,21 @@ class ProductCatalogDetail(ProductCatalogRead):
     interfaces: list[HardwareInterfaceRead] = []
 
 
+class ProductCatalogVerificationStatusUpdate(BaseModel):
+    verification_status: str
+
+
+class ProductCatalogBulkVerificationStatusUpdate(BaseModel):
+    product_ids: list[int]
+    verification_status: str
+
+
+class ProductCatalogBulkActionResponse(BaseModel):
+    requested: int
+    updated: int
+    product_ids: list[int] = []
+
+
 class ProductCatalogBulkUpsertRow(BaseModel):
     product_id: int | None = None
     vendor: str
@@ -106,6 +133,8 @@ class ProductCatalogBulkUpsertRow(BaseModel):
     imp_type: str | None = None
     product_family: str | None = None
     platform: str | None = None
+    model_family: str | None = None
+    is_family_level: bool | None = None
     reference_url: str | None = None
     eos_date: date | None = None
     eosl_date: date | None = None

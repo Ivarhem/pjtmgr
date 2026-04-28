@@ -11,6 +11,7 @@ class AssetInterfaceCreate(BaseModel):
     hw_interface_id: int | None = None
     name: str
     if_type: str = "physical"
+    port_type: str | None = None
     slot: str | None = None
     slot_position: int | None = None
     speed: str | None = None
@@ -26,6 +27,7 @@ class AssetInterfaceUpdate(BaseModel):
     parent_id: int | None = None
     name: str | None = None
     if_type: str | None = None
+    port_type: str | None = None
     slot: str | None = None
     slot_position: int | None = None
     speed: str | None = None
@@ -46,6 +48,7 @@ class AssetInterfaceRead(BaseModel):
     hw_interface_id: int | None
     name: str
     if_type: str
+    port_type: str | None
     slot: str | None
     slot_position: int | None
     speed: str | None

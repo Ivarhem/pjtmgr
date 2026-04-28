@@ -50,9 +50,10 @@ Return this exact JSON shape:
     "power_count": null,
     "power_type": null,
     "power_watt": null,
+    "power_summary": null,
     "cpu_summary": null,
     "memory_summary": null,
-    "throughput_summary": null,
+    "storage_summary": null,
     "os_firmware": null,
     "spec_url": null
   }},
@@ -79,8 +80,12 @@ Rules:
 - Use null when unknown.
 - size_unit must be integer rack unit if known.
 - interfaces should describe base/default onboard or appliance ports, not optional add-on cards unless clearly default.
+- For configurable CPU/memory/storage/power options, preserve the vendor wording/range in *_summary fields instead of inventing a single fixed value. Only fill structured power_count/power_type/power_watt when explicit and stable.
 - capacity_type must be one of fixed, base, max.
 - eos/eosl dates must be ISO format only.
+- Do not infer lifecycle dates from unrelated products, generic lifecycle pages, warranty dates, software dates, or document publish dates.
+- If an official lifecycle page lists a family but not the exact model/SKU, return the lifecycle source_url and leave dates null.
+- eosl_date must not be earlier than eos_date; if the dates conflict, return null for the uncertain date(s).
 - uncertain_fields should contain names like size_unit, power_count, eosl_date, interfaces.
 - Never wrap in markdown.
 """
