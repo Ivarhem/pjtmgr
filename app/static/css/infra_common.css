@@ -5337,3 +5337,30 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     display: none !important;
   }
 }
+
+/* Mobile selected rack: let the scroll view size to content while covering the workspace (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    position: relative !important;
+    inset: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side-card,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}
