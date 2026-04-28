@@ -4948,3 +4948,13 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
 .infra-grid.app-grid-mid { height: 400px; }
 .infra-grid.app-grid-tall { height: min(640px, calc(100dvh - 220px)); min-height: 420px; }
 .project-partners-grid.app-grid-fill { min-height: 420px; }
+
+
+/* Visual primitive compatibility aliases (2026-04-28) */
+.badge-planned, .badge-in_progress, .badge-env-dev, .badge-required { background: var(--info-soft-bg); color: var(--info-soft-text); border-color: var(--info-soft-border); }
+.badge-active, .badge-approved, .badge-compliant, .badge-submitted, .badge-env-prod { background: var(--success-soft-bg); color: var(--success-soft-text); border-color: var(--success-soft-border); }
+.badge-completed, .badge-decommissioned, .badge-not_checked, .badge-not_started { background: var(--neutral-soft-bg); color: var(--neutral-soft-text); border-color: var(--neutral-soft-border); }
+.badge-on-hold, .badge-standby, .badge-exception, .badge-pending, .badge-env-staging { background: var(--warning-soft-bg); color: var(--warning-soft-text); border-color: var(--warning-soft-border); }
+.badge-denied, .badge-non_compliant { background: var(--danger-soft-bg); color: var(--danger-soft-text); border-color: var(--danger-soft-border); }
+.badge-env-dr { background: var(--violet-soft-bg); color: var(--violet-soft-text); border-color: var(--violet-soft-border); }
+.badge-planned, .badge-active, .badge-completed, .badge-on-hold, .badge-standby, .badge-decommissioned, .badge-env-prod, .badge-env-dev, .badge-env-staging, .badge-env-dr, .badge-required, .badge-approved, .badge-denied, .badge-not_checked, .badge-compliant, .badge-non_compliant, .badge-exception, .badge-not_started, .badge-in_progress, .badge-pending, .badge-submitted { border: 1px solid; border-radius: var(--ui-radius-pill); padding: 2px 10px; font-size: var(--ui-font-caption); font-weight: 700; }

@@ -48,6 +48,24 @@
   --violet-soft-text: #6f42c1;
   --primary-soft-bg: #e8f0fe;
   --primary-soft-border: #c5d7f7;
+  --primary-soft-text: #1a3a5c;
+  --neutral-soft-bg: #f1f3f5;
+  --neutral-soft-border: #dee2e6;
+  --neutral-soft-text: #495057;
+
+  /* Unified visual tokens */
+  --ui-radius-xs: 4px;
+  --ui-radius-sm: 6px;
+  --ui-radius-md: 8px;
+  --ui-radius-lg: 12px;
+  --ui-radius-pill: 999px;
+  --ui-font-caption: 11px;
+  --ui-font-meta: 12px;
+  --ui-font-label: 13px;
+  --ui-font-body: 14px;
+  --ui-font-section: 16px;
+  --ui-font-title: 24px;
+  --ui-badge-height: 22px;
   --bg-color-secondary: #f0f0f0;
   --bg-primary: #ffffff;
 
@@ -128,6 +146,10 @@ body.dark-mode {
   --violet-soft-text: #c4b5fd;
   --primary-soft-bg: #1c2a3a;
   --primary-soft-border: #2f4d6d;
+  --primary-soft-text: #93c5fd;
+  --neutral-soft-bg: #2a2a2a;
+  --neutral-soft-border: #495057;
+  --neutral-soft-text: #adb5bd;
   --bg-color-secondary: #2a2a2a;
   --bg-primary: #1e1e1e;
 
