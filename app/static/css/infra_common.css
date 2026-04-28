@@ -5110,3 +5110,48 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     box-shadow: var(--modal-shadow);
   }
 }
+
+/* Mobile full-screen detail panels (2026-04-28)
+   Detail panels should become focused full-screen views after selecting data. */
+@media (max-width: 760px) {
+  .catalog-main-panel.is-detail-open .catalog-list-panel,
+  .asset-layout.is-detail-open .asset-list-panel {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .catalog-main-panel.is-detail-open .catalog-splitter,
+  .asset-layout.is-detail-open .asset-splitter {
+    display: none;
+  }
+
+  .catalog-main-panel.is-detail-open .catalog-detail-handle-wrap,
+  .asset-layout.is-detail-open .asset-detail-handle-wrap {
+    position: absolute;
+    right: 10px;
+    top: 12px;
+    transform: none;
+    z-index: 41;
+  }
+
+  .catalog-main-panel.is-detail-open .catalog-detail-panel,
+  .asset-layout.is-detail-open .asset-detail-panel.workspace-panel-right {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    padding: 0 4px;
+    overflow: auto;
+    background: var(--bg-color);
+    box-shadow: none;
+  }
+
+  .catalog-main-panel.is-detail-open .catalog-detail-content,
+  .asset-layout.is-detail-open #asset-detail-shell {
+    min-height: 100%;
+  }
+}
