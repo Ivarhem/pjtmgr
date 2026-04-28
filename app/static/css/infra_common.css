@@ -5328,3 +5328,19 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     padding-bottom: 4px;
   }
 }
+
+/* Trim residual bottom whitespace in mobile selected-rack detail (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    padding: 0 !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card > :last-child,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-layout > :last-child,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-meta > :last-child {
+    margin-bottom: 0 !important;
+  }
+}
