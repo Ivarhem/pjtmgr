@@ -699,3 +699,55 @@ body.dark-mode .toast { box-shadow: var(--modal-shadow); }
 .badge-done { background: var(--neutral-soft-bg); color: var(--neutral-soft-text); border-color: var(--neutral-soft-border); }
 .badge-progress { background: var(--info-soft-bg); color: var(--info-soft-text); border-color: var(--info-soft-border); }
 .role-badge.end, .contact-role-badge.end { background: var(--primary-soft-bg); color: var(--primary-soft-text, var(--primary-color)); border-color: var(--primary-soft-border); }
+
+
+/* Unified surface primitives and compatibility aliases */
+.ui-surface,
+.ui-card,
+.ui-panel,
+.card,
+.info-card,
+.summary-card,
+.login-card,
+.change-password-card,
+.sys-section,
+.import-section,
+.trade-section,
+.dash-section {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ui-radius-lg, 12px);
+  box-shadow: var(--card-shadow);
+}
+.ui-surface-flat,
+.ui-card-flat {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--ui-radius-lg, 12px);
+  box-shadow: none;
+}
+.ui-box,
+.placeholder-box,
+.import-msg-box {
+  border-radius: var(--ui-radius-md, 8px);
+}
+.ui-section-title,
+.sys-section-title,
+.dash-section-title,
+.cust-section-title,
+.asset-detail-section-title {
+  font-size: var(--ui-font-section, 16px);
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+.ui-caption,
+.card-label {
+  font-size: var(--ui-font-meta, 12px);
+  color: var(--text-color-secondary);
+}
+.ui-value,
+.card-value {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}

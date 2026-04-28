@@ -4958,3 +4958,51 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
 .badge-denied, .badge-non_compliant { background: var(--danger-soft-bg); color: var(--danger-soft-text); border-color: var(--danger-soft-border); }
 .badge-env-dr { background: var(--violet-soft-bg); color: var(--violet-soft-text); border-color: var(--violet-soft-border); }
 .badge-planned, .badge-active, .badge-completed, .badge-on-hold, .badge-standby, .badge-decommissioned, .badge-env-prod, .badge-env-dev, .badge-env-staging, .badge-env-dr, .badge-required, .badge-approved, .badge-denied, .badge-not_checked, .badge-compliant, .badge-non_compliant, .badge-exception, .badge-not_started, .badge-in_progress, .badge-pending, .badge-submitted { border: 1px solid; border-radius: var(--ui-radius-pill); padding: 2px 10px; font-size: var(--ui-font-caption); font-weight: 700; }
+
+
+/* Surface/card compatibility aliases (2026-04-28) */
+.pc-card,
+.infra-import-compact-panel,
+.catalog-category-panel,
+.catalog-main-panel,
+.catalog-kind-card,
+.catalog-layout-panel,
+.catalog-layout-item-panel,
+.catalog-management-card,
+.mdm-list-panel,
+.mdm-detail-panel,
+.mdm-similar-panel,
+.mdm-similar-card,
+.catalog-integrity-sidebar-card,
+.physical-panel,
+.floor-plan-side-card,
+.rack-info-card,
+.project-info-card {
+  border-radius: var(--ui-radius-lg, 12px);
+}
+.catalog-kind-card,
+.catalog-management-card,
+.catalog-integrity-sidebar-card,
+.physical-panel,
+.floor-plan-side-card,
+.rack-info-card,
+.project-info-card,
+.mdm-similar-card,
+.pc-card {
+  border-color: var(--border-color);
+  background: var(--surface-color);
+}
+.catalog-section-header,
+.asset-detail-section-header,
+.mdm-panel-toolbar,
+.catalog-integrity-panel-head,
+.panel-header {
+  border-radius: var(--ui-radius-md, 8px);
+}
+.catalog-category-panel .classification-tree,
+.catalog-detail-panel,
+.asset-detail-panel,
+.asset-detail-section,
+.mdm-detail-section {
+  min-height: 0;
+}
