@@ -5039,3 +5039,74 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
   .asset-layout.is-detail-open .asset-list-panel { flex: 0 0 min(58%, var(--asset-list-width)); width: min(58%, var(--asset-list-width)); }
   .asset-layout.is-detail-open .asset-detail-panel.workspace-panel-right { min-width: min(82vw, 360px); }
 }
+
+/* Mobile drawer groundwork for workspace panels (2026-04-28)
+   Reuses existing open/collapsed state; no JS behavior change. */
+@media (max-width: 760px) {
+  .workspace-layout {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .catalog-layout {
+    height: calc(100dvh - 150px);
+    max-height: calc(100dvh - 150px);
+  }
+  .catalog-layout:not(.layout-tree-collapsed) .catalog-category-panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    width: min(86vw, 360px);
+    min-width: 0;
+    max-width: min(86vw, 360px);
+    box-shadow: var(--modal-shadow);
+  }
+  .catalog-layout:not(.layout-tree-collapsed) .catalog-category-splitter {
+    display: none;
+  }
+  .catalog-layout:not(.layout-tree-collapsed) .catalog-tree-handle-wrap {
+    position: absolute;
+    left: min(86vw, 360px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 31;
+  }
+  .catalog-layout .catalog-main-panel {
+    width: calc(100% - 18px);
+    flex: 1 1 auto;
+  }
+  .catalog-main-panel.is-detail-open .catalog-list-panel {
+    min-width: 0;
+  }
+
+  .asset-layout {
+    --asset-layout-height: calc(100dvh - 150px);
+    position: relative;
+    overflow: hidden;
+  }
+  .asset-layout.is-detail-open .asset-list-panel {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+  .asset-layout.is-detail-open .asset-splitter {
+    display: none;
+  }
+  .asset-layout.is-detail-open .asset-detail-handle-wrap {
+    position: absolute;
+    right: min(86vw, 380px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 31;
+  }
+  .asset-layout.is-detail-open .asset-detail-panel.workspace-panel-right {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 30;
+    width: min(86vw, 380px);
+    min-width: 0;
+    max-width: min(86vw, 380px);
+    padding: 0 4px;
+    background: var(--bg-color);
+    box-shadow: var(--modal-shadow);
+  }
+}
