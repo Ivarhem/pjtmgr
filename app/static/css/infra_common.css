@@ -5274,3 +5274,38 @@ body.dark-mode #eosl-form :is(input, textarea, select).catalog-source-unofficial
     font-size: 11px;
   }
 }
+
+/* Mobile rack detail card should contain the entire rack + metadata, not scroll the rack internally (2026-04-28) */
+@media (max-width: 760px) {
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .floor-plan-side {
+    align-items: flex-start;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-card {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-layout,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-main,
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-mount-side-meta {
+    flex: 0 0 auto;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .u-diagram {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .floor-plan-shell.has-selected-rack:not(.floor-plan-side-collapsed) .rack-unplaced-section {
+    max-height: none;
+    overflow: visible;
+  }
+}
