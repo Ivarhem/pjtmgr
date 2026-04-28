@@ -958,3 +958,79 @@ label.chk-inline { flex-direction: row; align-items: center; gap: 8px; cursor: p
   .form-grid { grid-template-columns: 1fr; }
   .modal { padding: 24px 16px; }
 }
+
+/* Mobile topbar context layout (2026-04-28)
+   Keep right-side actions visible by moving customer/project context to a compact second row. */
+@media (max-width: 768px) {
+  .topbar {
+    height: 88px;
+    padding: 6px 10px;
+    align-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+  }
+  .mobile-nav-toggle { order: 0; flex: 0 0 auto; }
+  .nav-brand { order: 1; flex: 0 0 auto; }
+  .module-dropdown { order: 2; flex: 0 1 auto; min-width: 0; }
+  .module-dropdown-btn { max-width: 124px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-right {
+    order: 3;
+    margin-left: auto;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+  .topbar-right .theme-toggle { width: 30px; height: 30px; }
+  .topbar-user { display: none; }
+  .btn-logout { padding: 6px 8px; font-size: 12px; }
+  .topbar-sep { display: none; }
+  .ctx-selector,
+  .ctx-scope-filter {
+    order: 4;
+  }
+  .ctx-selector {
+    margin-left: 0;
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 4px;
+  }
+  .ctx-selector .ctx-label { font-size: 9px; }
+  .ctx-combo { flex: 1 1 auto; min-width: 0; }
+  .ctx-input,
+  #ctx-partner,
+  .ctx-project-link {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 28px;
+    padding: 3px 7px;
+    font-size: 11px;
+  }
+  .ctx-project-selector { flex: 1.2 1 0; }
+  .ctx-project-clear { width: 18px; flex: 0 0 18px; }
+  .ctx-scope-filter {
+    margin-left: 0;
+    flex: 0 0 62px;
+    height: 28px;
+    min-width: 0;
+    padding: 2px 4px;
+    font-size: 11px;
+  }
+  .nav-container {
+    top: 88px;
+    height: calc(100vh - 88px);
+  }
+  .main-content {
+    margin-top: 88px;
+  }
+  body.mobile-nav-open::after { top: 88px; }
+}
+
+@media (max-width: 420px) {
+  .module-dropdown-btn { max-width: 104px; }
+  .topbar-right { gap: 4px; }
+  .topbar-right .theme-toggle { width: 28px; height: 28px; }
+  .btn-logout { max-width: 44px; overflow: hidden; padding: 6px; }
+  .ctx-selector .ctx-label { display: none; }
+  .ctx-scope-filter { flex-basis: 54px; }
+}
